@@ -82,7 +82,7 @@ export function QuoteCard() {
         </div>
         
         <blockquote className="relative">
-          <p className="text-lg font-serif text-card-foreground leading-relaxed break-keep">
+          <p className="text-lg font-serif text-card-foreground leading-relaxed break-keep text-pretty">
             &quot;{quote.text}&quot;
           </p>
           <footer className="mt-3 flex items-center gap-2">

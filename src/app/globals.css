@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Pretendard Font */
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
+
 /* grit.on App Design System */
 :root {
   /* Colors - Modern Clean Palette */
@@ -66,7 +69,7 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   
-  --font-sans: var(--font-sans), system-ui, sans-serif;
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
   --font-serif: var(--font-serif), serif;
   
   --radius-lg: var(--radius);
@@ -88,6 +91,33 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--background);
   color: var(--foreground);
+  /* Korean text optimization */
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  line-height: 1.6;
+  /* Letter spacing for Pretendard (약 -1.5%) */
+  letter-spacing: -0.015em;
+}
+
+/* Heading text balance for mobile */
+h1, h2, h3, h4, h5, h6 {
+  text-wrap: balance;
+  word-break: keep-all;
+}
+
+/* Paragraph and long text optimization */
+p, span, li, blockquote {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+/* Prevent orphans in Korean text */
+.text-balance {
+  text-wrap: balance;
+}
+
+.text-pretty {
+  text-wrap: pretty;
 }
 
 /* Utilities */

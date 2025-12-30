@@ -314,7 +314,7 @@ export default function PracticePage() {
                 <div className="shrink-0 w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center">
                   <Sparkles className="w-4 h-4 text-yellow-600" />
                 </div>
-                <p className="text-sm text-muted-foreground font-medium text-left leading-snug">
+                <p className="text-sm text-muted-foreground font-medium text-left leading-snug text-pretty">
                   &quot;{tip}&quot;
                 </p>
               </div>

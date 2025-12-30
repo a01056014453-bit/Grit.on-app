@@ -1,15 +1,8 @@
 import type { Metadata, Viewport } from "next";
-import { Noto_Sans_KR, Noto_Serif_KR } from "next/font/google";
+import { Noto_Serif_KR } from "next/font/google";
 import "./globals.css";
 
-const notoSansKR = Noto_Sans_KR({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-sans",
-  display: "swap",
-});
-
-const notoserif = Noto_Serif_KR({
+const notoSerif = Noto_Serif_KR({
   subsets: ["latin"],
   weight: ["400", "700"],
   variable: "--font-serif",
@@ -78,7 +71,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko">
-      <body className={`${notoSansKR.variable} ${notoserif.variable} antialiased`}>{children}</body>
+      <body className={`${notoSerif.variable} antialiased`}>{children}</body>
     </html>
   );
 }

@@ -183,7 +183,7 @@ export default function AnalysisPage() {
               <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
                 <span className="text-xs font-bold text-primary">{index + 1}</span>
               </div>
-              <p className="text-sm text-muted-foreground leading-relaxed">{rec}</p>
+              <p className="text-sm text-muted-foreground leading-relaxed text-pretty">{rec}</p>
             </div>
           ))}
         </div>
