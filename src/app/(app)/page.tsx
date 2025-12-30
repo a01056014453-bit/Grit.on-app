@@ -2,13 +2,25 @@ import Link from "next/link";
 import { Clock, Calendar, TrendingUp, Play } from "lucide-react";
 import { StatsCard, QuoteCard, DailyGoal } from "@/components/app";
 
-// Dummy data
+// Mock user data
+const mockUser = {
+  name: "지민",
+  instrument: "피아노",
+  level: "중급",
+  currentPiece: "쇼팽 발라드 1번",
+};
+
+// Mock statistics data
 const mockStats = {
-  totalHours: 0,
-  weekSessions: 0,
-  streakDays: 0,
-  todayMinutes: 0,
+  totalHours: 127,
+  weekSessions: 12,
+  streakDays: 23,
+  todayMinutes: 45,
   dailyGoal: 60,
+  weeklyGoal: 420,
+  weeklyProgress: 285,
+  averageScore: 82,
+  totalRecordings: 47,
 };
 
 function getGreeting() {
@@ -28,7 +40,7 @@ export default function HomePage() {
         <div>
           <h1 className="text-2xl font-serif font-bold text-slate-900 leading-tight">
             {greeting},<br />
-            <span className="text-primary">연습생</span>님
+            <span className="text-primary">{mockUser.name}</span>님
           </h1>
           <p className="text-sm text-slate-500 mt-1">
             오늘도 훌륭한 연주를 기대해요

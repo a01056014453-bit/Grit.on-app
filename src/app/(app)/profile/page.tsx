@@ -9,15 +9,25 @@ import {
   LogOut,
   ChevronRight,
   Crown,
+  BarChart2,
+  CheckCircle2,
+  CalendarDays,
+  Timer,
 } from "lucide-react";
 
 const mockUser = {
-  name: "연습생",
-  email: "user@example.com",
+  name: "김지민",
+  email: "jimin.kim@gmail.com",
   instrument: "피아노",
+  level: "중급",
   dailyGoal: 60,
   plan: "free",
-  joinDate: "2024.01.01",
+  joinDate: "2024.03.15",
+  totalPracticeHours: 127.5,
+  totalAnalysis: 47,
+  streakDays: 23,
+  longestStreak: 31,
+  averageScore: 82,
 };
 
 const settingsItems = [
@@ -84,7 +94,7 @@ export default function ProfilePage() {
             </p>
           </div>
           {mockUser.plan === "free" && (
-            <button className="bg-white text-primary text-xs font-semibold px-3 py-1.5 rounded-full">
+            <button className="bg-white text-primary text-xs font-semibold px-3 py-1.5 rounded-full shadow-sm">
               업그레이드
             </button>
           )}
@@ -92,8 +102,8 @@ export default function ProfilePage() {
       </div>
 
       {/* Settings List */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden mb-6">
-        <h3 className="px-4 py-3 text-sm font-semibold text-gray-900 border-b border-gray-100">
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden mb-8">
+        <h3 className="px-4 py-3 text-sm font-semibold text-gray-900 border-b border-gray-100 bg-gray-50/50">
           설정
         </h3>
         {settingsItems.map((item, index) => (
@@ -114,28 +124,38 @@ export default function ProfilePage() {
       </div>
 
       {/* Stats */}
-      <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm mb-6">
-        <h3 className="text-sm font-semibold text-gray-900 mb-3">
+      <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm mb-8">
+        <h3 className="text-sm font-semibold text-gray-900 mb-4">
           나의 연습 통계
         </h3>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <div className="text-2xl font-bold text-gray-900">0</div>
-            <div className="text-xs text-gray-500">총 연습 시간</div>
-          </div>
-          <div>
-            <div className="text-2xl font-bold text-gray-900">0</div>
-            <div className="text-xs text-gray-500">분석 완료</div>
-          </div>
-          <div>
-            <div className="text-2xl font-bold text-gray-900">0</div>
-            <div className="text-xs text-gray-500">연속 일수</div>
-          </div>
-          <div>
-            <div className="text-2xl font-bold text-gray-900">
-              {mockUser.joinDate}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-between h-24">
+            <Timer className="w-5 h-5 text-blue-500 mb-2" />
+            <div>
+              <div className="text-xl font-bold text-gray-900">{mockUser.totalPracticeHours}<span className="text-xs font-normal text-gray-500 ml-1">시간</span></div>
+              <div className="text-xs text-gray-500">총 연습 시간</div>
             </div>
-            <div className="text-xs text-gray-500">가입일</div>
+          </div>
+          <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-between h-24">
+            <CheckCircle2 className="w-5 h-5 text-green-500 mb-2" />
+            <div>
+              <div className="text-xl font-bold text-gray-900">{mockUser.totalAnalysis}<span className="text-xs font-normal text-gray-500 ml-1">개</span></div>
+              <div className="text-xs text-gray-500">분석 완료</div>
+            </div>
+          </div>
+          <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-between h-24">
+            <BarChart2 className="w-5 h-5 text-orange-500 mb-2" />
+            <div>
+              <div className="text-xl font-bold text-gray-900">{mockUser.streakDays}<span className="text-xs font-normal text-gray-500 ml-1">일</span></div>
+              <div className="text-xs text-gray-500">연속 연습</div>
+            </div>
+          </div>
+          <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-between h-24">
+            <CalendarDays className="w-5 h-5 text-purple-500 mb-2" />
+            <div>
+              <div className="text-sm font-bold text-gray-900 mt-1">{mockUser.joinDate}</div>
+              <div className="text-xs text-gray-500 mt-1">가입일</div>
+            </div>
           </div>
         </div>
       </div>
@@ -143,7 +163,7 @@ export default function ProfilePage() {
       {/* Logout */}
       <button
         onClick={handleLogout}
-        className="w-full flex items-center justify-center gap-2 py-3 text-red-500 text-sm font-medium hover:bg-red-50 rounded-lg transition-colors"
+        className="w-full flex items-center justify-center gap-2 py-3 text-red-500 text-sm font-medium hover:bg-red-50 rounded-xl transition-colors mb-20"
       >
         <LogOut className="w-4 h-4" />
         로그아웃
