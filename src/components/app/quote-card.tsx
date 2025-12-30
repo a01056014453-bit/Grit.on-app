@@ -72,7 +72,7 @@ export function QuoteCard() {
   const quote = quotes[dayOfYear % quotes.length];
 
   return (
-    <div className="relative overflow-hidden bg-white rounded-2xl p-6 shadow-sm border border-slate-100 group hover:shadow-soft transition-shadow duration-300">
+    <div className="relative overflow-hidden bg-card rounded-2xl p-6 shadow-sm border border-border group hover:shadow-soft transition-shadow duration-300">
       <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-primary/50 to-primary/10" />
       
       <div className="flex flex-col gap-4">
@@ -82,12 +82,12 @@ export function QuoteCard() {
         </div>
         
         <blockquote className="relative">
-          <p className="text-lg font-serif text-slate-800 leading-relaxed break-keep">
+          <p className="text-lg font-serif text-card-foreground leading-relaxed break-keep">
             &quot;{quote.text}&quot;
           </p>
           <footer className="mt-3 flex items-center gap-2">
-            <div className="h-px w-8 bg-slate-200" />
-            <cite className="text-xs font-medium text-slate-500 not-italic">
+            <div className="h-px w-8 bg-border" />
+            <cite className="text-xs font-medium text-muted-foreground not-italic">
               {quote.author}
             </cite>
           </footer>

@@ -38,15 +38,15 @@ export default function HomePage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8 pt-2">
         <div>
-          <h1 className="text-2xl font-serif font-bold text-slate-900 leading-tight">
+          <h1 className="text-2xl font-serif font-bold text-foreground leading-tight">
             {greeting},<br />
             <span className="text-primary">{mockUser.name}</span>님
           </h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             오늘도 훌륭한 연주를 기대해요
           </p>
         </div>
-        <div className="w-12 h-12 rounded-full bg-slate-100 border-2 border-white shadow-soft flex items-center justify-center overflow-hidden">
+        <div className="w-12 h-12 rounded-full bg-secondary border-2 border-background shadow-soft flex items-center justify-center overflow-hidden">
             <span className="text-lg">🎹</span>
         </div>
       </div>
@@ -89,7 +89,7 @@ export default function HomePage() {
       {/* Start Practice Button */}
       <Link
         href="/practice"
-        className="group relative flex items-center justify-center gap-3 w-full bg-gradient-to-r from-primary to-violet-600 text-white rounded-2xl py-4 text-lg font-bold shadow-lg shadow-primary/30 transition-all duration-300 hover:scale-[1.02] hover:shadow-primary/50 mb-8 overflow-hidden"
+        className="group relative flex items-center justify-center gap-3 w-full bg-gradient-to-r from-primary to-violet-600 text-primary-foreground rounded-2xl py-4 text-lg font-bold shadow-lg shadow-primary/30 transition-all duration-300 hover:scale-[1.02] hover:shadow-primary/50 mb-8 overflow-hidden"
       >
         <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500 rounded-2xl" />
         <Play className="w-6 h-6 fill-white" />
@@ -97,19 +97,19 @@ export default function HomePage() {
       </Link>
 
       {/* Today's Focus Section - Heatmap Style */}
-      <div className="rounded-2xl overflow-hidden border border-slate-100 bg-white shadow-sm mb-24">
-        <div className="px-5 py-4 border-b border-slate-50 flex items-center justify-between">
+      <div className="rounded-2xl overflow-hidden border border-border bg-card shadow-sm mb-24">
+        <div className="px-5 py-4 border-b border-border flex items-center justify-between">
           <div>
-            <h3 className="text-base font-bold text-slate-900">
+            <h3 className="text-base font-bold text-card-foreground">
               오늘의 집중 구간
             </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-muted-foreground mt-0.5">
               AI가 분석한 취약 소절
             </p>
           </div>
-          <button className="text-xs font-medium text-primary hover:text-primary/80">
+          <Link href="/analysis" className="text-xs font-medium text-primary hover:text-primary/80">
             전체 분석 &rarr;
-          </button>
+          </Link>
         </div>
         
         <div className="p-5">
@@ -120,7 +120,7 @@ export default function HomePage() {
                const isMid = [6, 11, 15, 22].includes(i);
                const isLow = [8, 9, 25].includes(i);
                
-               let bgClass = "bg-slate-50";
+               let bgClass = "bg-muted";
                if (isHigh) bgClass = "bg-orange-500";
                else if (isMid) bgClass = "bg-amber-400";
                else if (isLow) bgClass = "bg-blue-400";
@@ -135,7 +135,7 @@ export default function HomePage() {
             })}
           </div>
           
-          <div className="flex items-center justify-center gap-6 text-xs text-slate-500">
+          <div className="flex items-center justify-center gap-6 text-xs text-muted-foreground">
             <div className="flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full bg-orange-500" />
               <span>집중 연습</span>

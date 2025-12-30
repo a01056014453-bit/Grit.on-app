@@ -19,7 +19,7 @@ export function StatsCard({
   return (
     <div
       className={cn(
-        "group relative overflow-hidden bg-white rounded-2xl p-4 shadow-sm border border-slate-100 transition-all duration-300 hover:shadow-soft hover:-translate-y-0.5",
+        "group relative overflow-hidden bg-card rounded-2xl p-4 shadow-sm border border-border transition-all duration-300 hover:shadow-soft hover:-translate-y-0.5",
         className
       )}
     >
@@ -32,10 +32,10 @@ export function StatsCard({
           <Icon className="w-4 h-4 text-primary" />
         </div>
         <div className="flex items-baseline gap-1">
-          <span className="text-2xl font-bold text-slate-900 tracking-tight">{value}</span>
-          <span className="text-xs font-medium text-slate-500">{unit}</span>
+          <span className="text-2xl font-bold text-card-foreground tracking-tight">{value}</span>
+          <span className="text-xs font-medium text-muted-foreground">{unit}</span>
         </div>
-        <div className="text-xs text-slate-400 mt-1 font-medium">{label}</div>
+        <div className="text-xs text-muted-foreground mt-1 font-medium">{label}</div>
       </div>
     </div>
   );

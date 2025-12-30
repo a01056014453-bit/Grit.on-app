@@ -58,7 +58,7 @@ export function BottomNavigation() {
                   "relative flex flex-col items-center justify-center w-14 h-14 rounded-xl transition-all duration-300",
                   active
                     ? "text-primary bg-primary/10"
-                    : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
                 )}
               >
                 <item.icon

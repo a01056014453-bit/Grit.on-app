@@ -41,6 +41,8 @@ src/
 │       ├── page.tsx        # 홈 (대시보드)
 │       ├── practice/       # 연습 세션
 │       ├── recordings/     # 녹음 기록
+│       │   └── [id]/       # 녹음 상세
+│       ├── analysis/       # AI 분석 결과
 │       ├── plans/          # 연습 계획
 │       └── profile/        # 프로필/설정
 ├── components/
@@ -57,7 +59,9 @@ src/
 |------|------|------|
 | 홈 | `/` | 대시보드, 통계, 오늘의 목표 |
 | 연습 | `/practice` | 연습 타이머, 녹음 |
-| 녹음 | `/recordings` | 녹음 목록, 분석 결과 |
+| 녹음 | `/recordings` | 녹음 목록 |
+| 녹음 상세 | `/recordings/[id]` | 개별 녹음 상세, 재생 |
+| 분석 | `/analysis` | AI 분석 결과 |
 | 계획 | `/plans` | 주간 계획, 오늘의 할 일 |
 | 프로필 | `/profile` | 설정, 계정 관리 |
 
@@ -74,11 +78,17 @@ src/
 
 ### 컴포넌트
 
+**앱 컴포넌트 (`components/app/`)**
+- `AppShell` - 앱 전체 레이아웃 쉘
 - `BottomNavigation` - 하단 탭 바
 - `StatsCard` - 통계 카드
 - `ProgressRing` - 원형 프로그레스
 - `QuoteCard` - 명언 카드
 - `DailyGoal` - 오늘의 목표
+
+**UI 컴포넌트 (`components/ui/`)**
+- `Button` - 버튼
+- `Modal` - 모달 다이얼로그
 
 ## PWA 지원
 

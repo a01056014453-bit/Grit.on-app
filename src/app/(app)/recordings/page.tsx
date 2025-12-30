@@ -1,4 +1,7 @@
-import { Music, Clock, TrendingUp } from "lucide-react";
+"use client";
+
+import Link from "next/link";
+import { Music, Clock, TrendingUp, ChevronRight } from "lucide-react";
 
 const mockRecordings = [
   {
@@ -133,20 +136,21 @@ export default function RecordingsPage() {
       {/* Recordings List */}
       <div className="space-y-3">
         {mockRecordings.map((recording) => (
-          <div
+          <Link
             key={recording.id}
-            className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm"
+            href={`/recordings/${recording.id}`}
+            className="block bg-white rounded-xl p-4 border border-gray-100 shadow-sm hover:shadow-md hover:border-primary/20 transition-all active:scale-[0.99]"
           >
             <div className="flex items-start gap-3">
               <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center shrink-0">
                 <Music className="w-6 h-6 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="text-lg font-bold text-gray-900 truncate">
+                <h3 className="text-base font-bold text-gray-900 truncate">
                   {recording.pieceTitle}
                 </h3>
                 <p className="text-sm text-slate-400">{recording.composer}</p>
-                <div className="flex items-center gap-3 mt-3">
+                <div className="flex items-center gap-2 mt-2">
                   <div className="flex items-center gap-1 text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-md">
                     <Clock className="w-3 h-3" />
                     {formatDuration(recording.duration)}
@@ -155,16 +159,19 @@ export default function RecordingsPage() {
                     <TrendingUp className="w-3 h-3" />
                     {recording.score}점
                   </div>
+                  {recording.focusAreas > 0 && (
+                    <div className="text-xs text-orange-500 font-medium bg-orange-50 px-2 py-1 rounded-md">
+                      {recording.focusAreas}개 집중구간
+                    </div>
+                  )}
                 </div>
               </div>
-              <div className="text-right flex flex-col items-end">
+              <div className="flex flex-col items-end justify-between h-full">
                 <div className="text-xs text-slate-400">{recording.date}</div>
-                <div className="text-xs text-orange-500 font-medium mt-1 bg-orange-50 px-2 py-1 rounded-md">
-                  {recording.focusAreas}개 집중구간
-                </div>
+                <ChevronRight className="w-4 h-4 text-gray-400 mt-4" />
               </div>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
     </div>

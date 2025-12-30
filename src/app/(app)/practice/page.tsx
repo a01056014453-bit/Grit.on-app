@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Play, Pause, Square, Music, Clock, Sparkles } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { Play, Pause, Square, Music, Clock, Sparkles, ChevronRight, Check, Trophy, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Modal } from "@/components/ui/modal";
 
 // Mock songs library
 const mockSongs = [
@@ -69,15 +71,61 @@ const PRACTICE_TIPS = [
 ];
 
 export default function PracticePage() {
+  const router = useRouter();
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  const [elapsedTime] = useState(0);
+  const [elapsedTime, setElapsedTime] = useState(0);
   const [tip, setTip] = useState("");
-  const [selectedSong] = useState(mockSongs[0]);
+  const [selectedSong, setSelectedSong] = useState(mockSongs[0]);
+  const [isSongModalOpen, setIsSongModalOpen] = useState(false);
+  const [isCompleteModalOpen, setIsCompleteModalOpen] = useState(false);
+  const [completedTime, setCompletedTime] = useState(0);
+  const [waveformHeights, setWaveformHeights] = useState<number[]>(Array(24).fill(20));
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const waveformRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     setTip(PRACTICE_TIPS[Math.floor(Math.random() * PRACTICE_TIPS.length)]);
   }, []);
+
+  // Timer logic
+  useEffect(() => {
+    if (isRecording && !isPaused) {
+      timerRef.current = setInterval(() => {
+        setElapsedTime((prev) => prev + 1);
+      }, 1000);
+    } else {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    }
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [isRecording, isPaused]);
+
+  // Waveform animation
+  useEffect(() => {
+    if (isRecording && !isPaused) {
+      waveformRef.current = setInterval(() => {
+        setWaveformHeights(Array(24).fill(0).map(() => 20 + Math.random() * 80));
+      }, 150);
+    } else {
+      if (waveformRef.current) {
+        clearInterval(waveformRef.current);
+      }
+      if (isPaused) {
+        setWaveformHeights(Array(24).fill(20));
+      }
+    }
+    return () => {
+      if (waveformRef.current) {
+        clearInterval(waveformRef.current);
+      }
+    };
+  }, [isRecording, isPaused]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -85,41 +133,69 @@ export default function PracticePage() {
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
+  const handleStopRecording = () => {
+    setIsRecording(false);
+    setIsPaused(false);
+    setCompletedTime(elapsedTime);
+    setIsCompleteModalOpen(true);
+    setElapsedTime(0);
+  };
+
+  const handleCloseCompleteModal = () => {
+    setIsCompleteModalOpen(false);
+  };
+
+  const handleViewRecording = () => {
+    setIsCompleteModalOpen(false);
+    router.push("/recordings/1");
+  };
+
+  const handleSelectSong = (song: typeof mockSongs[0]) => {
+    setSelectedSong(song);
+    setIsSongModalOpen(false);
+  };
+
   return (
     <div className="px-4 py-6 max-w-lg mx-auto">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-xl font-bold text-gray-900">연습 세션</h1>
-        <p className="text-sm text-gray-500 mt-0.5">
+        <h1 className="text-xl font-bold text-foreground">연습 세션</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">
           녹음 버튼을 눌러 연습을 시작하세요
         </p>
       </div>
 
       {/* Piece Selection */}
-      <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm mb-6 active:scale-[0.99] transition-transform cursor-pointer">
+      <div
+        onClick={() => !isRecording && setIsSongModalOpen(true)}
+        className={`bg-card rounded-xl p-4 border border-border shadow-sm mb-6 transition-transform cursor-pointer ${
+          !isRecording ? "active:scale-[0.99]" : "opacity-60"
+        }`}
+      >
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
             <Music className="w-6 h-6 text-primary" />
           </div>
           <div className="flex-1">
-            <p className="text-sm font-bold text-gray-900">{selectedSong.title}</p>
-            <p className="text-xs text-gray-500">{selectedSong.composer} · {selectedSong.opus}</p>
+            <p className="text-sm font-bold text-card-foreground">{selectedSong.title}</p>
+            <p className="text-xs text-muted-foreground">{selectedSong.composer} · {selectedSong.opus}</p>
           </div>
-          <div className="text-right">
+          <div className="flex items-center gap-2">
             <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-1 rounded-full">
               {selectedSong.difficulty}
             </span>
+            {!isRecording && <ChevronRight className="w-4 h-4 text-muted-foreground" />}
           </div>
         </div>
       </div>
 
       {/* Timer Display */}
-      <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm mb-12 relative overflow-hidden">
+      <div className="bg-card rounded-2xl p-8 border border-border shadow-sm mb-12 relative overflow-hidden">
         <div className="text-center relative z-10">
-          <div className="text-6xl font-bold text-gray-900 font-mono mb-2 tracking-tighter">
+          <div className="text-6xl font-bold text-foreground font-mono mb-2 tracking-tighter">
             {formatTime(elapsedTime)}
           </div>
-          <div className="flex items-center justify-center gap-2 text-sm text-gray-500 mb-8">
+          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-8">
             <Clock className="w-4 h-4" />
             <span>순연습시간</span>
           </div>
@@ -128,30 +204,30 @@ export default function PracticePage() {
           <div className="h-24 flex items-center justify-center">
             {isRecording ? (
               <div className="flex items-end gap-1.5 h-16 w-full justify-center px-4">
-                {[...Array(24)].map((_, i) => (
+                {waveformHeights.map((height, i) => (
                   <div
                     key={i}
                     className="w-1.5 bg-primary rounded-full transition-all duration-150"
                     style={{
-                      height: !isPaused ? `${20 + Math.random() * 80}%` : "20%",
-                      opacity: !isPaused ? 0.6 + Math.random() * 0.4 : 0.3,
+                      height: `${height}%`,
+                      opacity: isPaused ? 0.3 : 0.6 + (height / 100) * 0.4,
                     }}
                   />
                 ))}
               </div>
             ) : (
-              <div className="bg-slate-50 rounded-xl p-4 w-full flex items-center gap-3 animate-fade-in">
+              <div className="bg-secondary rounded-xl p-4 w-full flex items-center gap-3 animate-fade-in">
                 <div className="shrink-0 w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center">
                   <Sparkles className="w-4 h-4 text-yellow-600" />
                 </div>
-                <p className="text-sm text-slate-600 font-medium text-left leading-snug">
-                  "{tip}"
+                <p className="text-sm text-muted-foreground font-medium text-left leading-snug">
+                  &quot;{tip}&quot;
                 </p>
               </div>
             )}
           </div>
         </div>
-        
+
         {/* Background decoration */}
         <div className="absolute top-0 right-0 -mt-8 -mr-8 w-32 h-32 bg-primary/5 rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-0 -mb-8 -ml-8 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl" />
@@ -180,11 +256,8 @@ export default function PracticePage() {
               )}
             </Button>
             <Button
-              onClick={() => {
-                setIsRecording(false);
-                setIsPaused(false);
-              }}
-              className="w-16 h-16 rounded-full bg-red-500 hover:bg-red-600"
+              onClick={handleStopRecording}
+              className="w-16 h-16 rounded-full bg-destructive hover:bg-destructive/90"
             >
               <Square className="w-6 h-6 text-white" fill="white" />
             </Button>
@@ -193,10 +266,119 @@ export default function PracticePage() {
       </div>
 
       {isRecording && (
-        <p className="text-center text-sm text-gray-500 mt-4">
+        <p className="text-center text-sm text-muted-foreground mt-4">
           {isPaused ? "일시정지됨" : "녹음 중..."}
         </p>
       )}
+
+      {/* Song Selection Modal */}
+      <Modal
+        isOpen={isSongModalOpen}
+        onClose={() => setIsSongModalOpen(false)}
+        title="연습곡 선택"
+      >
+        <div className="p-4 space-y-2">
+          {mockSongs.map((song) => (
+            <button
+              key={song.id}
+              onClick={() => handleSelectSong(song)}
+              className={`w-full p-4 rounded-xl border transition-all text-left ${
+                selectedSong.id === song.id
+                  ? "border-primary bg-primary/5"
+                  : "border-border bg-card hover:bg-accent"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                  selectedSong.id === song.id ? "bg-primary/10" : "bg-secondary"
+                }`}>
+                  <Music className={`w-5 h-5 ${
+                    selectedSong.id === song.id ? "text-primary" : "text-muted-foreground"
+                  }`} />
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-foreground">{song.title}</p>
+                  <p className="text-xs text-muted-foreground">{song.composer} · {song.opus}</p>
+                </div>
+                <div className="text-right">
+                  {selectedSong.id === song.id ? (
+                    <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
+                      <Check className="w-4 h-4 text-white" />
+                    </div>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">{song.lastPracticed}</span>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 mt-2 ml-13">
+                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                  song.difficulty === "고급"
+                    ? "bg-orange-100 text-orange-600"
+                    : "bg-blue-100 text-blue-600"
+                }`}>
+                  {song.difficulty}
+                </span>
+                <span className="text-xs text-muted-foreground">{song.duration}</span>
+              </div>
+            </button>
+          ))}
+        </div>
+      </Modal>
+
+      {/* Practice Complete Modal */}
+      <Modal
+        isOpen={isCompleteModalOpen}
+        onClose={handleCloseCompleteModal}
+        title=""
+        showClose={false}
+      >
+        <div className="p-6 text-center">
+          {/* Success Icon */}
+          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Trophy className="w-10 h-10 text-green-600" />
+          </div>
+
+          <h3 className="text-xl font-bold text-foreground mb-1">연습 완료!</h3>
+          <p className="text-muted-foreground mb-6">오늘도 훌륭한 연습이었어요</p>
+
+          {/* Stats */}
+          <div className="bg-secondary rounded-xl p-4 mb-6">
+            <div className="flex items-center justify-center gap-3 mb-3">
+              <Music className="w-5 h-5 text-primary" />
+              <span className="font-medium text-foreground">{selectedSong.title}</span>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <div className="text-2xl font-bold text-foreground">{formatTime(completedTime)}</div>
+                <div className="text-xs text-muted-foreground">연습 시간</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-primary flex items-center justify-center gap-1">
+                  <TrendingUp className="w-5 h-5" />
+                  +3
+                </div>
+                <div className="text-xs text-muted-foreground">예상 점수</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="space-y-2">
+            <button
+              onClick={handleViewRecording}
+              className="w-full py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary/90 transition-colors"
+            >
+              분석 결과 보기
+            </button>
+            <button
+              onClick={handleCloseCompleteModal}
+              className="w-full py-3 text-muted-foreground rounded-xl font-medium hover:bg-accent transition-colors"
+            >
+              닫기
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
