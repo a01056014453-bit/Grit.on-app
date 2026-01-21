@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Play, Music, Calendar, User } from "lucide-react";
+import { Home, Play, HelpCircle, GraduationCap, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -18,14 +18,14 @@ const navItems = [
     label: "연습",
   },
   {
-    href: "/recordings",
-    icon: Music,
-    label: "녹음",
+    href: "/help",
+    icon: HelpCircle,
+    label: "해결요청",
   },
   {
-    href: "/plans",
-    icon: Calendar,
-    label: "계획",
+    href: "/rooms",
+    icon: GraduationCap,
+    label: "입시룸",
   },
   {
     href: "/profile",
