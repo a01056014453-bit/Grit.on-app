@@ -14,9 +14,12 @@ export default function SongDetailPage() {
   const songId = params.id as string;
   const song = mockSongs.find((s) => s.id === songId);
 
-  // 새로운 곡인 경우 query parameter에서 제목 가져오기
+  // 새로운 곡인 경우 query parameter에서 작곡가/제목 가져오기
+  const composerFromQuery = searchParams.get("composer");
   const titleFromQuery = searchParams.get("title");
-  const songTitle = song?.title || titleFromQuery || "";
+  const songTitle = song?.title || (composerFromQuery && titleFromQuery
+    ? `${composerFromQuery} ${titleFromQuery}`
+    : titleFromQuery || "");
 
   if (!song && !titleFromQuery) {
     return (
@@ -26,7 +29,7 @@ export default function SongDetailPage() {
     );
   }
 
-  const aiInfo = getSongAIInfoByIdOrTitle(songId, songTitle);
+  const aiInfo = getSongAIInfoByIdOrTitle(songId, titleFromQuery || song?.title || "", composerFromQuery || undefined);
 
   const toggleSection = (section: string) => {
     setExpandedSection(expandedSection === section ? null : section);

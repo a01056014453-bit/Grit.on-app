@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Search, Sparkles, Clock, Music, ChevronRight, Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { mockSongs, mockSongAIInfo } from "@/data";
+import { mockSongs, mockSongAIInfo, composerList } from "@/data";
 
 // 최근 분석 히스토리 (mock)
 const recentAnalysis = [
@@ -22,6 +22,14 @@ export default function AnalysisPage() {
   const filteredSongs = searchQuery.length >= 2
     ? mockSongs.filter((song) =>
         song.title.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : [];
+
+  // 작곡가 자동완성
+  const filteredComposers = newSong.composer.length >= 2
+    ? composerList.filter((c) =>
+        c.label.toLowerCase().includes(newSong.composer.toLowerCase()) ||
+        c.key.includes(newSong.composer.toLowerCase())
       )
     : [];
 
@@ -203,11 +211,29 @@ export default function AnalysisPage() {
                 </label>
                 <input
                   type="text"
-                  placeholder="예: F. Chopin"
+                  placeholder="2글자 이상 입력"
                   value={newSong.composer}
                   onChange={(e) => setNewSong({ ...newSong, composer: e.target.value })}
                   className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                  autoFocus
                 />
+                {filteredComposers.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {filteredComposers.map((c) => (
+                      <button
+                        key={c.key}
+                        onClick={() => setNewSong({ ...newSong, composer: c.label })}
+                        className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                          newSong.composer === c.label
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-secondary text-foreground border-border hover:bg-secondary/80"
+                        }`}
+                      >
+                        {c.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div>
@@ -228,9 +254,7 @@ export default function AnalysisPage() {
               onClick={() => {
                 if (newSong.composer.length >= 2 && newSong.title.length >= 2) {
                   const newId = `new-${Date.now()}`;
-                  const fullTitle = `${newSong.composer} ${newSong.title}`;
-                  // Navigate to the song detail page with the new song
-                  router.push(`/songs/${newId}?title=${encodeURIComponent(fullTitle)}`);
+                  router.push(`/songs/${newId}?composer=${encodeURIComponent(newSong.composer)}&title=${encodeURIComponent(newSong.title)}`);
                   setIsModalOpen(false);
                   setNewSong({ composer: "", title: "" });
                 }

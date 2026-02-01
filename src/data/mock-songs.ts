@@ -297,45 +297,162 @@ function parseSongTitle(title: string): { composer: string; songName: string } {
   return { composer: "알 수 없음", songName: title };
 }
 
+/** 주요 작곡가 데이터베이스 */
+interface ComposerData {
+  composerFull: string;
+  composerImage?: string;
+  period: string;
+  background: string;
+  historicalContext: string;
+}
+
+const composerDatabase: Record<string, ComposerData> = {
+  chopin: {
+    composerFull: "Frédéric François Chopin (1810-1849)",
+    composerImage: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e8/Frederic_Chopin_photo.jpeg/250px-Frederic_Chopin_photo.jpeg",
+    period: "낭만주의",
+    background: "프레데리크 쇼팽은 1810년 폴란드 바르샤바 근교 젤라조바 볼라에서 태어났습니다. 7세에 첫 작품을 출판하고 8세에 공개 연주회를 가진 신동이었습니다. 1830년 폴란드를 떠나 파리에 정착했으며, 피아노만을 위한 작품에 집중하여 녹턴, 발라드, 스케르초, 폴로네즈, 마주르카 등에서 걸작을 남겼습니다. '피아노의 시인'이라 불리며, 섬세한 감수성과 시적 표현이 특징입니다. 39세의 나이로 파리에서 사망했습니다.",
+    historicalContext: "19세기 전반 유럽은 낭만주의 운동이 절정에 달하던 시기로, 음악에서 개인적 감정 표현과 민족주의가 중시되었습니다. 쇼팽은 폴란드 망명자로서 조국의 비극을 음악에 담았으며, 파리 살롱 문화의 중심에서 활동했습니다.",
+  },
+  beethoven: {
+    composerFull: "Ludwig van Beethoven (1770-1827)",
+    composerImage: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/Joseph_Karl_Stieler%27s_Beethoven_mit_dem_Manuskript_der_Missa_solemnis.jpg/250px-Joseph_Karl_Stieler%27s_Beethoven_mit_dem_Manuskript_der_Missa_solemnis.jpg",
+    period: "고전주의 / 초기 낭만주의",
+    background: "루트비히 판 베토벤은 1770년 독일 본에서 궁정 음악가 집안에 태어났습니다. 1792년 빈으로 이주하여 하이든에게 사사했으며, 피아니스트이자 작곡가로 명성을 쌓았습니다. 1796년경부터 청력 감퇴가 시작되었으나 이를 극복하고 위대한 작품들을 남겼습니다. 고전주의와 낭만주의를 잇는 가장 중요한 작곡가로, 교향곡, 소나타, 협주곡, 현악 사중주 등 모든 장르에서 음악사에 혁명을 일으켰습니다.",
+    historicalContext: "프랑스 혁명(1789) 이후 유럽 전역에 자유와 평등의 이념이 확산되던 시기입니다. 베토벤은 계몽주의와 혁명 정신에 공감했으며, 이는 그의 음악에서 개인적 감정 표현의 강조와 기존 형식의 확장으로 나타났습니다.",
+  },
+  debussy: {
+    composerFull: "Claude Achille Debussy (1862-1918)",
+    composerImage: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Claude_Debussy_by_Atelier_Nadar.jpg/250px-Claude_Debussy_by_Atelier_Nadar.jpg",
+    period: "인상주의",
+    background: "클로드 드뷔시는 1862년 파리 근교 생제르맹앙레에서 태어났습니다. 파리 음악원에서 수학했으며, 1884년 로마 대상을 수상했습니다. 바그너의 영향에서 벗어나 독자적인 음악 언어를 개발했으며, '인상주의 음악의 창시자'로 불립니다. 색채감 있는 화성, 온음계, 5음 음계 등을 활용하여 전통적 화성 체계를 확장했습니다.",
+    historicalContext: "19세기 말~20세기 초 프랑스에서 상징주의 문학과 인상주의 회화가 전성기를 맞던 시기입니다. 드뷔시는 말라르메, 모네 등 당대 예술가들과 교류하며 음악에서도 인상주의적 표현을 추구했습니다.",
+  },
+  liszt: {
+    composerFull: "Franz Liszt (1811-1886)",
+    composerImage: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/Franz_Liszt_by_Herman_Biow-_1843.png/250px-Franz_Liszt_by_Herman_Biow-_1843.png",
+    period: "낭만주의",
+    background: "프란츠 리스트는 1811년 헝가리에서 태어났습니다. 19세기 최고의 피아노 비르투오소로서 유럽 전역을 순회 연주했고, '피아노의 파가니니'라 불렸습니다. 작곡가로서도 교향시라는 장르를 개척했으며, 피아노 기법을 혁명적으로 확장했습니다. 만년에는 신부 서품을 받고 종교 음악에 헌신했습니다.",
+    historicalContext: "낭만주의 음악이 절정에 달하던 19세기 중반, 비르투오소 연주자에 대한 대중적 열광이 최고조에 달했습니다. 리스트는 현대적 의미의 독주 리사이틀을 처음 만든 인물이기도 합니다.",
+  },
+  schumann: {
+    composerFull: "Robert Schumann (1810-1856)",
+    composerImage: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/da/Robert_Schumann_1839.jpg/250px-Robert_Schumann_1839.jpg",
+    period: "낭만주의",
+    background: "로베르트 슈만은 1810년 독일 츠비카우에서 태어났습니다. 원래 피아니스트를 꿈꿨으나 손가락 부상으로 연주 활동을 포기하고 작곡과 음악 평론에 전념했습니다. 음악 잡지 '새 음악 시보(Neue Zeitschrift für Musik)'를 창간하여 쇼팽, 브람스 등 젊은 작곡가들을 소개했습니다. 피아니스트 클라라 비크와의 결혼(1840)은 음악사에서 가장 유명한 러브스토리 중 하나입니다. 말년에 정신 질환으로 고통받다 1856년 사망했습니다.",
+    historicalContext: "1830-40년대 독일 낭만주의 운동의 중심에서 문학과 음악의 결합을 추구했습니다. 슈만은 문학적 교양이 깊었으며, 장 파울, E.T.A. 호프만 등 낭만주의 작가들의 영향을 받아 음악에 문학적 프로그램을 적극적으로 도입했습니다.",
+  },
+  bach: {
+    composerFull: "Johann Sebastian Bach (1685-1750)",
+    composerImage: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6a/Johann_Sebastian_Bach.jpg/250px-Johann_Sebastian_Bach.jpg",
+    period: "바로크",
+    background: "요한 제바스티안 바흐는 1685년 독일 아이제나흐에서 음악가 집안에 태어났습니다. 교회 오르가니스트, 궁정 악장, 토마스 교회 칸토르 등을 역임하며 평생 방대한 양의 작품을 남겼습니다. 대위법의 최고 대가로, 바로크 음악을 집대성한 '음악의 아버지'로 불립니다. 평균율 클라비어곡집, 골드베르크 변주곡, 푸가의 기법 등은 서양 음악의 근간을 이루는 작품입니다.",
+    historicalContext: "바로크 시대 후기(1700-1750)는 대위법 음악이 최고의 복잡성과 완성도에 도달한 시기입니다. 바흐는 독일 프로테스탄트 교회 음악의 전통 위에서 이탈리아와 프랑스 양식을 종합하여 독자적인 음악 세계를 구축했습니다.",
+  },
+  mozart: {
+    composerFull: "Wolfgang Amadeus Mozart (1756-1791)",
+    composerImage: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/Croce-Mozart-Detail.jpg/250px-Croce-Mozart-Detail.jpg",
+    period: "고전주의",
+    background: "볼프강 아마데우스 모차르트는 1756년 오스트리아 잘츠부르크에서 태어났습니다. 음악사상 가장 위대한 신동으로, 5세에 작곡을 시작하고 6세에 유럽 궁정 순회 연주를 시작했습니다. 오페라, 교향곡, 협주곡, 실내악, 종교 음악 등 모든 장르에서 600곡 이상의 작품을 남겼습니다. 35세의 젊은 나이에 빈에서 사망했습니다.",
+    historicalContext: "18세기 후반 빈 고전주의 음악의 황금기입니다. 계몽주의 사상이 확산되고 시민 사회가 성장하면서 음악의 대중화가 진행되었습니다. 모차르트는 하이든, 베토벤과 함께 빈 고전파 3대 거장으로 불립니다.",
+  },
+  brahms: {
+    composerFull: "Johannes Brahms (1833-1897)",
+    composerImage: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/JohannesBrahms.jpg/250px-JohannesBrahms.jpg",
+    period: "낭만주의",
+    background: "요하네스 브람스는 1833년 독일 함부르크에서 태어났습니다. 슈만에 의해 '음악의 미래를 이끌 젊은이'로 소개되어 일약 유명해졌습니다. 베토벤의 전통을 계승하면서도 낭만주의적 서정성을 결합한 독자적 양식을 구축했습니다. 교향곡, 협주곡, 실내악, 가곡 등에서 걸작을 남겼으며, 특히 4곡의 교향곡은 베토벤 이후 가장 중요한 교향곡으로 평가됩니다.",
+    historicalContext: "19세기 후반 독일 음악계는 브람스를 중심으로 한 절대음악파와 바그너-리스트를 중심으로 한 신독일악파로 나뉘어 있었습니다. 브람스는 형식미와 고전적 전통을 중시하면서도 깊은 감정적 내용을 담아냈습니다.",
+  },
+  rachmaninoff: {
+    composerFull: "Sergei Vasilievich Rachmaninoff (1873-1943)",
+    composerImage: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Sergei_Rachmaninoff_cph.3a40575.jpg/250px-Sergei_Rachmaninoff_cph.3a40575.jpg",
+    period: "후기 낭만주의",
+    background: "세르게이 라흐마니노프는 1873년 러시아에서 태어났습니다. 피아니스트, 작곡가, 지휘자로 활동했으며, 20세기 최고의 피아니스트 중 한 명으로 꼽힙니다. 피아노 협주곡 2번과 3번은 피아노 협주곡 레퍼토리에서 가장 사랑받는 작품입니다. 1917년 러시아 혁명 이후 미국으로 망명하여 연주 활동에 전념했습니다.",
+    historicalContext: "19세기 말~20세기 초 러시아 낭만주의 전통의 마지막 세대입니다. 차이코프스키의 영향을 받았으며, 현대 음악의 흐름과는 거리를 두고 후기 낭만주의 어법을 고수했습니다.",
+  },
+  tchaikovsky: {
+    composerFull: "Pyotr Ilyich Tchaikovsky (1840-1893)",
+    composerImage: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/Portr%C3%A4t_des_Komponisten_Pjotr_I._Tschaikowski_%281840-1893%29.jpg/250px-Portr%C3%A4t_des_Komponisten_Pjotr_I._Tschaikowski_%281840-1893%29.jpg",
+    period: "낭만주의",
+    background: "표트르 일리치 차이코프스키는 1840년 러시아에서 태어났습니다. 러시아 음악을 세계적 수준으로 끌어올린 작곡가로, 교향곡, 협주곡, 오페라, 발레 음악 등에서 걸작을 남겼습니다. 특히 발레 음악 '백조의 호수', '잠자는 숲속의 미녀', '호두까기 인형'은 발레 역사상 가장 중요한 작품입니다. 피아노 협주곡 1번, 바이올린 협주곡도 널리 사랑받습니다.",
+    historicalContext: "19세기 후반 러시아 음악의 황금기로, 러시아 5인조와 차이코프스키가 각각 민족주의적, 국제주의적 노선에서 러시아 음악의 정체성을 확립했습니다.",
+  },
+  ravel: {
+    composerFull: "Maurice Ravel (1875-1937)",
+    composerImage: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/Maurice_Ravel_1925.jpg/250px-Maurice_Ravel_1925.jpg",
+    period: "인상주의 / 신고전주의",
+    background: "모리스 라벨은 1875년 프랑스 바스크 지방에서 태어났습니다. 파리 음악원에서 포레에게 사사했으며, 드뷔시와 함께 프랑스 인상주의 음악을 대표합니다. 정교한 관현악법과 완벽주의적 작곡 기법으로 유명하며, '오케스트라의 마법사'라 불립니다. 볼레로, 피아노 협주곡, 다프니스와 클로에 등이 대표작입니다.",
+    historicalContext: "20세기 초 프랑스 음악은 인상주의에서 신고전주의로 전환되던 시기입니다. 라벨은 인상주의적 색채감과 고전적 형식미를 결합한 독자적 양식을 구축했습니다.",
+  },
+  schubert: {
+    composerFull: "Franz Peter Schubert (1797-1828)",
+    composerImage: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Franz_Schubert_by_Wilhelm_August_Rieder_1875.jpg/250px-Franz_Schubert_by_Wilhelm_August_Rieder_1875.jpg",
+    period: "초기 낭만주의",
+    background: "프란츠 슈베르트는 1797년 빈에서 태어났습니다. 31세의 짧은 생애 동안 600곡 이상의 가곡, 9곡의 교향곡, 다수의 피아노 소나타와 실내악을 남겼습니다. '가곡의 왕'으로 불리며, 독일 리트(Lied)를 예술 장르로 격상시켰습니다. 생전에는 크게 인정받지 못했으나 사후 높이 평가받았습니다.",
+    historicalContext: "베토벤과 동시대를 살았던 슈베르트는 고전주의에서 낭만주의로의 전환기를 대표합니다. 비더마이어 시대 빈의 시민 문화 속에서 친밀한 살롱 음악의 전통을 발전시켰습니다.",
+  },
+};
+
+/** 작곡가 자동완성 목록 (key → 표시 이름) */
+export const composerList: { key: string; label: string }[] = Object.entries(composerDatabase).map(
+  ([key, data]) => ({
+    key,
+    label: data.composerFull.split(" (")[0],
+  })
+);
+
+/** 작곡가 이름으로 데이터베이스 검색 */
+function findComposerData(composerName: string): ComposerData | null {
+  const name = composerName.toLowerCase();
+  for (const [key, data] of Object.entries(composerDatabase)) {
+    if (name.includes(key)) {
+      return data;
+    }
+  }
+  return null;
+}
+
 /** 동적으로 AI 정보 생성 (등록되지 않은 곡용) */
-export function generateSongAIInfo(id: string, title: string): SongAIInfo {
-  const { composer, songName } = parseSongTitle(title);
+export function generateSongAIInfo(id: string, title: string, composerName?: string): SongAIInfo {
+  const parsed = parseSongTitle(title);
+  const composer = composerName || parsed.composer;
+  const songName = composerName ? title : parsed.songName;
+  const composerData = findComposerData(composer);
 
   return {
     id,
     composer,
-    composerFull: composer,
+    composerFull: composerData?.composerFull || composer,
+    composerImage: composerData?.composerImage,
     title: songName,
     opus: "",
     year: "",
-    period: "클래식",
+    period: composerData?.period || "클래식",
     difficulty: "중급",
     keySignature: "",
     tempo: "",
     duration: "",
-    composerBackground: `${composer}에 대한 상세 정보를 불러오는 중입니다. 실제 서비스에서는 AI가 작곡가의 생애, 음악적 특징, 주요 작품 등에 대한 정보를 제공합니다.`,
-    historicalContext: `이 곡이 작곡된 시대적 배경에 대한 정보입니다. AI가 해당 시대의 음악적, 문화적, 역사적 맥락을 분석하여 제공합니다.`,
-    workBackground: `"${songName}"에 대한 작품 배경 정보입니다. 곡의 작곡 동기, 초연 정보, 헌정 대상, 음악사적 의의 등을 AI가 분석하여 제공합니다.`,
+    composerBackground: composerData?.background || `${composer}에 대한 상세 정보는 현재 준비 중입니다.`,
+    historicalContext: composerData?.historicalContext || `이 곡이 작곡된 시대적 배경 정보는 현재 준비 중입니다.`,
+    workBackground: `"${songName}"은(는) ${composerData?.composerFull || composer}의 작품입니다. 이 곡에 대한 상세 배경 정보는 현재 준비 중입니다.`,
     structure: [
-      { section: "분석 중", measures: "-", description: "곡의 구조를 AI가 분석 중입니다. 각 섹션의 특징과 마디 정보가 제공될 예정입니다." },
+      { section: "전체", measures: "-", description: "곡의 상세 구조 분석은 현재 준비 중입니다." },
     ],
     technicalTips: [
-      "이 곡의 테크닉 팁을 AI가 분석 중입니다.",
-      "실제 서비스에서는 곡의 기교적 난점과 연습 방법이 제공됩니다.",
+      "곡의 기교적 특징과 연습 방법은 현재 준비 중입니다.",
     ],
     musicalTips: [
-      "이 곡의 음악적 해석 가이드를 AI가 분석 중입니다.",
-      "실제 서비스에서는 표현, 프레이징, 다이내믹 등에 대한 조언이 제공됩니다.",
+      "곡의 음악적 해석 가이드는 현재 준비 중입니다.",
     ],
     famousPerformers: [],
   };
 }
 
 /** ID 또는 제목으로 AI 정보 가져오기 */
-export function getSongAIInfoByIdOrTitle(id: string, title: string): SongAIInfo {
+export function getSongAIInfoByIdOrTitle(id: string, title: string, composerName?: string): SongAIInfo {
   const existingInfo = mockSongAIInfo[id];
   if (existingInfo) {
     return existingInfo;
   }
-  return generateSongAIInfo(id, title);
+  return generateSongAIInfo(id, title, composerName);
 }
