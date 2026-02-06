@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Clock, Calendar, TrendingUp, Play, Zap, Music2, Circle, Sparkles, ChevronRight } from "lucide-react";
+import { Clock, Calendar, TrendingUp, Play, Zap, Music2, Circle, Sparkles, ChevronRight, BookOpen, Timer } from "lucide-react";
 import { StatsCard, QuoteCard, DailyGoal } from "@/components/app";
 import { mockDrillCards, mockUser, mockStats, hasAIAnalysis, getGreeting, getTotalPlanMinutes, groupDrillsBySong, mockSongs } from "@/data";
 
@@ -72,20 +72,53 @@ export default function HomePage() {
         <span className="relative">연습 시작하기</span>
       </Link>
 
-      {/* AI Song Analysis Card */}
-      <Link
-        href="/analysis"
-        className="flex items-center gap-4 w-full bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4 mb-8 hover:shadow-md transition-all"
-      >
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shrink-0">
-          <Sparkles className="w-5 h-5 text-white" />
-        </div>
-        <div className="flex-1">
-          <p className="font-semibold text-foreground text-sm">AI 곡 분석하기</p>
-          <p className="text-xs text-muted-foreground">작품 정보와 연주 가이드 확인하기</p>
-        </div>
-        <ChevronRight className="w-5 h-5 text-muted-foreground" />
-      </Link>
+      {/* Feature Cards */}
+      <div className="space-y-3 mb-8">
+        {/* AI Song Analysis Card */}
+        <Link
+          href="/analysis"
+          className="flex items-center gap-4 w-full bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4 hover:shadow-md transition-all"
+        >
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shrink-0">
+            <Sparkles className="w-5 h-5 text-white" />
+          </div>
+          <div className="flex-1">
+            <p className="font-semibold text-foreground text-sm">AI 곡 분석하기</p>
+            <p className="text-xs text-muted-foreground">작품 정보와 연주 가이드 확인하기</p>
+          </div>
+          <ChevronRight className="w-5 h-5 text-muted-foreground" />
+        </Link>
+
+        {/* Music Terms Search Card */}
+        <Link
+          href="/music-terms"
+          className="flex items-center gap-4 w-full bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 hover:shadow-md transition-all"
+        >
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center shrink-0">
+            <BookOpen className="w-5 h-5 text-white" />
+          </div>
+          <div className="flex-1">
+            <p className="font-semibold text-foreground text-sm">음악용어 검색</p>
+            <p className="text-xs text-muted-foreground">악보 기호와 용어 뜻 알아보기</p>
+          </div>
+          <ChevronRight className="w-5 h-5 text-muted-foreground" />
+        </Link>
+
+        {/* Metronome Card */}
+        <Link
+          href="/metronome"
+          className="flex items-center gap-4 w-full bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4 hover:shadow-md transition-all"
+        >
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center shrink-0">
+            <Timer className="w-5 h-5 text-white" />
+          </div>
+          <div className="flex-1">
+            <p className="font-semibold text-foreground text-sm">메트로놈</p>
+            <p className="text-xs text-muted-foreground">정확한 템포로 연습하기</p>
+          </div>
+          <ChevronRight className="w-5 h-5 text-muted-foreground" />
+        </Link>
+      </div>
 
       {/* Today's Practice Plan - Grouped by Song */}
       {hasAIAnalysis && (
