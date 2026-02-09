@@ -7,7 +7,7 @@ import { savePracticeSession, getAllSessions, type PracticeSession } from "@/lib
 import { mockSongs as initialSongs, getRandomTip, mockDrillCards, hasAIAnalysis, groupDrillsBySong, composerList } from "@/data";
 import type { PracticeType, Song } from "@/types";
 import Link from "next/link";
-import { Music2, ChevronRight, Plus, Check, X, Clock } from "lucide-react";
+import { Music2, ChevronRight, Plus, Check, X, Clock, RotateCcw, Repeat, ArrowRight, Trash2 } from "lucide-react";
 import {
   PieceSelector,
   PracticeTimer,
@@ -31,6 +31,29 @@ interface CompletedSession {
 interface RecordedAudio {
   url: string;
   duration: number;
+}
+
+interface Drill {
+  id: string;
+  song: string;
+  measures: string;
+  title: string;
+  mode: "duration" | "recurrence";
+  duration: number;
+  recurrence: number;
+}
+
+interface Routine {
+  id: string;
+  name: string;
+  drills: Drill[];
+  days: number[]; // 0=일, 1=월, ... 6=토, empty=매일
+  createdAt: string;
+}
+
+interface DailyCompletion {
+  date: string; // YYYY-MM-DD
+  completedDrillIds: string[];
 }
 
 export default function PracticePage() {
@@ -66,6 +89,26 @@ export default function PracticePage() {
   const [newDrill, setNewDrill] = useState({
     selectedSong: "", // 기존 곡 선택
     isNewSong: false, // 새 곡 추가 모드
+    composer: "",
+    songTitle: "",
+    measures: "",
+    title: "",
+    mode: "duration" as "duration" | "recurrence",
+    duration: 5,
+    recurrence: 3,
+  });
+  const [routines, setRoutines] = useState<Routine[]>([]);
+  const [isRoutineModalOpen, setIsRoutineModalOpen] = useState(false);
+  const [carryOverDrills, setCarryOverDrills] = useState<Drill[]>([]);
+  const [showCarryOver, setShowCarryOver] = useState(true);
+  const [newRoutine, setNewRoutine] = useState({
+    name: "",
+    days: [] as number[],
+    drills: [] as Drill[],
+  });
+  const [routineDrill, setRoutineDrill] = useState({
+    selectedSong: "",
+    isNewSong: false,
     composer: "",
     songTitle: "",
     measures: "",
@@ -123,16 +166,65 @@ export default function PracticePage() {
     }
   }, []);
 
+  // Helper: Get today's date string (YYYY-MM-DD)
+  const getTodayStr = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+
+  // Helper: Get yesterday's date string
+  const getYesterdayStr = () => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+
   useEffect(() => {
     setTip(getRandomTip());
     // Check if Wake Lock API is supported
     setWakeLockSupported("wakeLock" in navigator);
     // Load recent sessions
     loadRecentSessions();
+
     // Load custom drills from localStorage
     const savedDrills = localStorage.getItem("grit-on-custom-drills");
     if (savedDrills) {
       setCustomDrills(JSON.parse(savedDrills));
+    }
+
+    // Load routines
+    const savedRoutines = localStorage.getItem("grit-on-routines");
+    if (savedRoutines) {
+      setRoutines(JSON.parse(savedRoutines));
+    }
+
+    // Load today's completed drills
+    const todayStr = getTodayStr();
+    const todayCompletion = localStorage.getItem(`grit-on-completed-${todayStr}`);
+    if (todayCompletion) {
+      const data = JSON.parse(todayCompletion);
+      setCompletedDrills(new Set(data.completedDrillIds || []));
+    }
+
+    // Check for carry-over drills from yesterday
+    const yesterdayStr = getYesterdayStr();
+    const yesterdayCompletion = localStorage.getItem(`grit-on-completed-${yesterdayStr}`);
+    const yesterdayDrills = localStorage.getItem(`grit-on-drills-${yesterdayStr}`);
+
+    if (yesterdayDrills) {
+      const allYesterdayDrills: Drill[] = JSON.parse(yesterdayDrills);
+      const completedIds = yesterdayCompletion
+        ? new Set(JSON.parse(yesterdayCompletion).completedDrillIds || [])
+        : new Set();
+
+      const incomplete = allYesterdayDrills.filter(d => !completedIds.has(d.id));
+      if (incomplete.length > 0) {
+        // Check if user already dismissed carry-over for today
+        const dismissedCarryOver = localStorage.getItem(`grit-on-carryover-dismissed-${todayStr}`);
+        if (!dismissedCarryOver) {
+          setCarryOverDrills(incomplete);
+        }
+      }
     }
   }, [loadRecentSessions]);
 
@@ -348,8 +440,146 @@ export default function PracticePage() {
       } else {
         newSet.add(drillId);
       }
+      // Save to localStorage with today's date
+      const todayStr = getTodayStr();
+      localStorage.setItem(`grit-on-completed-${todayStr}`, JSON.stringify({
+        date: todayStr,
+        completedDrillIds: Array.from(newSet),
+      }));
       return newSet;
     });
+  };
+
+  // Accept carry-over drills (add them to today's drills)
+  const handleAcceptCarryOver = () => {
+    const newCustomDrills = [
+      ...customDrills,
+      ...carryOverDrills.map(d => ({
+        ...d,
+        id: `carryover-${Date.now()}-${d.id}`, // New ID for today
+      })),
+    ];
+    setCustomDrills(newCustomDrills);
+    localStorage.setItem("grit-on-custom-drills", JSON.stringify(newCustomDrills));
+    setCarryOverDrills([]);
+    setShowCarryOver(false);
+  };
+
+  // Dismiss carry-over drills
+  const handleDismissCarryOver = () => {
+    const todayStr = getTodayStr();
+    localStorage.setItem(`grit-on-carryover-dismissed-${todayStr}`, "true");
+    setCarryOverDrills([]);
+    setShowCarryOver(false);
+  };
+
+  // Save today's drills for carry-over checking tomorrow
+  useEffect(() => {
+    const todayStr = getTodayStr();
+    const drillsToSave = customDrills.map(d => ({
+      id: d.id,
+      song: d.song,
+      measures: d.measures,
+      title: d.title,
+      mode: d.mode,
+      duration: d.duration,
+      recurrence: d.recurrence,
+    }));
+    if (drillsToSave.length > 0) {
+      localStorage.setItem(`grit-on-drills-${todayStr}`, JSON.stringify(drillsToSave));
+    }
+  }, [customDrills]);
+
+  // Add routine drill
+  const handleAddRoutineDrill = () => {
+    let songName = "";
+    if (routineDrill.isNewSong) {
+      songName = routineDrill.composer.trim() && routineDrill.songTitle.trim()
+        ? `${routineDrill.composer.trim()} ${routineDrill.songTitle.trim()}`
+        : routineDrill.composer.trim() || routineDrill.songTitle.trim();
+    } else {
+      songName = routineDrill.selectedSong;
+    }
+
+    if (!songName || !routineDrill.measures.trim()) return;
+
+    const drill: Drill = {
+      id: `routine-drill-${Date.now()}`,
+      song: songName,
+      measures: routineDrill.measures.trim(),
+      title: routineDrill.title.trim() || "연습",
+      mode: routineDrill.mode,
+      duration: routineDrill.mode === "duration" ? routineDrill.duration : 0,
+      recurrence: routineDrill.mode === "recurrence" ? routineDrill.recurrence : 0,
+    };
+
+    setNewRoutine(prev => ({ ...prev, drills: [...prev.drills, drill] }));
+    setRoutineDrill({
+      selectedSong: "",
+      isNewSong: false,
+      composer: "",
+      songTitle: "",
+      measures: "",
+      title: "",
+      mode: "duration",
+      duration: 5,
+      recurrence: 3,
+    });
+  };
+
+  // Save routine
+  const handleSaveRoutine = () => {
+    if (!newRoutine.name.trim() || newRoutine.drills.length === 0) return;
+
+    const routine: Routine = {
+      id: `routine-${Date.now()}`,
+      name: newRoutine.name.trim(),
+      drills: newRoutine.drills,
+      days: newRoutine.days,
+      createdAt: new Date().toISOString(),
+    };
+
+    const updatedRoutines = [...routines, routine];
+    setRoutines(updatedRoutines);
+    localStorage.setItem("grit-on-routines", JSON.stringify(updatedRoutines));
+    setNewRoutine({ name: "", days: [], drills: [] });
+    setIsRoutineModalOpen(false);
+  };
+
+  // Delete routine
+  const handleDeleteRoutine = (routineId: string) => {
+    const updatedRoutines = routines.filter(r => r.id !== routineId);
+    setRoutines(updatedRoutines);
+    localStorage.setItem("grit-on-routines", JSON.stringify(updatedRoutines));
+  };
+
+  // Apply routine to today's drills
+  const handleApplyRoutine = (routine: Routine) => {
+    const newDrills = routine.drills.map(d => ({
+      ...d,
+      id: `custom-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    }));
+    const updatedDrills = [...customDrills, ...newDrills];
+    setCustomDrills(updatedDrills);
+    localStorage.setItem("grit-on-custom-drills", JSON.stringify(updatedDrills));
+  };
+
+  // Toggle routine day
+  const handleToggleRoutineDay = (day: number) => {
+    setNewRoutine(prev => ({
+      ...prev,
+      days: prev.days.includes(day)
+        ? prev.days.filter(d => d !== day)
+        : [...prev.days, day].sort(),
+    }));
+  };
+
+  // Get today's applicable routines
+  const getTodayRoutines = () => {
+    const dayOfWeek = new Date().getDay();
+    return routines.filter(r =>
+      r.days.length === 0 || r.days.includes(dayOfWeek)
+    );
   };
 
   // Composer autocomplete
@@ -600,6 +830,105 @@ export default function PracticePage() {
             </div>
           </div>
 
+          {/* Carry-over Drills from Yesterday */}
+          {carryOverDrills.length > 0 && showCarryOver && (
+            <div className="bg-amber-50 rounded-2xl p-4 border border-amber-200">
+              <div className="flex items-center gap-2 mb-3">
+                <RotateCcw className="w-4 h-4 text-amber-600" />
+                <span className="font-semibold text-amber-800 text-sm">어제 못 끝낸 연습</span>
+                <span className="text-xs text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">
+                  {carryOverDrills.length}개
+                </span>
+              </div>
+              <div className="space-y-2 mb-3">
+                {carryOverDrills.map((drill) => (
+                  <div key={drill.id} className="bg-white rounded-lg px-3 py-2 text-sm text-gray-700">
+                    <span className="font-medium">{drill.song}</span>
+                    <span className="text-gray-400 mx-1">·</span>
+                    <span>{drill.measures}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleAcceptCarryOver}
+                  className="flex-1 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-1"
+                >
+                  <ArrowRight className="w-4 h-4" />
+                  오늘 추가하기
+                </button>
+                <button
+                  onClick={handleDismissCarryOver}
+                  className="px-4 py-2 bg-white text-gray-500 rounded-lg text-sm border border-gray-200"
+                >
+                  무시
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Routines Section */}
+          {routines.length > 0 && (
+            <div className="bg-white rounded-2xl p-4 border border-gray-200">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Repeat className="w-4 h-4 text-violet-600" />
+                  <span className="font-semibold text-black text-sm">나의 루틴</span>
+                </div>
+                <button
+                  onClick={() => setIsRoutineModalOpen(true)}
+                  className="text-xs text-gray-500 hover:text-black"
+                >
+                  + 새 루틴
+                </button>
+              </div>
+              <div className="space-y-2">
+                {routines.map((routine) => {
+                  const isForToday = routine.days.length === 0 || routine.days.includes(new Date().getDay());
+                  return (
+                    <div
+                      key={routine.id}
+                      className={`rounded-xl border overflow-hidden ${
+                        isForToday ? "border-violet-200 bg-violet-50" : "border-gray-200 bg-gray-50"
+                      }`}
+                    >
+                      <div className="px-3 py-2.5 flex items-center justify-between">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-black">{routine.name}</p>
+                          <p className="text-xs text-gray-500">
+                            {routine.drills.length}개 항목
+                            {routine.days.length > 0 && (
+                              <span className="ml-1">
+                                · {routine.days.map(d => dayNames[d]).join(", ")}
+                              </span>
+                            )}
+                            {routine.days.length === 0 && " · 매일"}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {isForToday && (
+                            <button
+                              onClick={() => handleApplyRoutine(routine)}
+                              className="px-2.5 py-1 bg-violet-600 text-white rounded-lg text-xs font-medium"
+                            >
+                              적용
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleDeleteRoutine(routine.id)}
+                            className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-red-100 group"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-gray-400 group-hover:text-red-500" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Today's Plan with Progress */}
           <div className="bg-white rounded-2xl p-4 border border-gray-200">
             <div className="flex items-center justify-between mb-3">
@@ -610,6 +939,15 @@ export default function PracticePage() {
                 </span>
               </div>
               <div className="flex items-center gap-2">
+                {routines.length === 0 && (
+                  <button
+                    onClick={() => setIsRoutineModalOpen(true)}
+                    className="w-7 h-7 bg-violet-100 rounded-full flex items-center justify-center hover:bg-violet-200 transition-colors"
+                    title="루틴 만들기"
+                  >
+                    <Repeat className="w-4 h-4 text-violet-600" />
+                  </button>
+                )}
                 <button
                   onClick={() => setIsAddDrillModalOpen(true)}
                   className="w-7 h-7 bg-black rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors"
@@ -972,6 +1310,215 @@ export default function PracticePage() {
               className="w-full mt-4 py-3 bg-black text-white rounded-xl font-semibold disabled:opacity-30 disabled:cursor-not-allowed"
             >
               추가하기
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Routine Modal */}
+      {isRoutineModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-5 w-full max-w-md animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-black">루틴 만들기</h3>
+              <button
+                onClick={() => {
+                  setIsRoutineModalOpen(false);
+                  setNewRoutine({ name: "", days: [], drills: [] });
+                  setRoutineDrill({
+                    selectedSong: "",
+                    isNewSong: false,
+                    composer: "",
+                    songTitle: "",
+                    measures: "",
+                    title: "",
+                    mode: "duration",
+                    duration: 5,
+                    recurrence: 3,
+                  });
+                }}
+                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center"
+              >
+                <X className="w-4 h-4 text-gray-600" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Routine Name */}
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">루틴 이름</label>
+                <input
+                  type="text"
+                  value={newRoutine.name}
+                  onChange={(e) => setNewRoutine({ ...newRoutine, name: e.target.value })}
+                  placeholder="예: 아침 기초 연습"
+                  className="w-full px-3 py-2.5 bg-gray-50 rounded-lg text-sm border-0 focus:outline-none focus:ring-2 focus:ring-black"
+                />
+              </div>
+
+              {/* Days Selection */}
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-2 block">반복 요일 (선택 안하면 매일)</label>
+                <div className="flex gap-1.5">
+                  {dayNames.map((name, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleToggleRoutineDay(idx)}
+                      className={`w-9 h-9 rounded-full text-xs font-medium transition-colors ${
+                        newRoutine.days.includes(idx)
+                          ? "bg-black text-white"
+                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      }`}
+                    >
+                      {name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Drills in Routine */}
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-2 block">
+                  연습 항목 ({newRoutine.drills.length}개)
+                </label>
+
+                {newRoutine.drills.length > 0 && (
+                  <div className="space-y-1.5 mb-3">
+                    {newRoutine.drills.map((drill, idx) => (
+                      <div
+                        key={drill.id}
+                        className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2"
+                      >
+                        <span className="text-xs text-gray-400 w-4">{idx + 1}</span>
+                        <div className="flex-1 text-sm">
+                          <span className="font-medium text-black">{drill.song}</span>
+                          <span className="text-gray-400 mx-1">·</span>
+                          <span className="text-gray-600">{drill.measures}</span>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setNewRoutine(prev => ({
+                              ...prev,
+                              drills: prev.drills.filter((_, i) => i !== idx),
+                            }));
+                          }}
+                          className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-red-100"
+                        >
+                          <X className="w-3 h-3 text-gray-400 hover:text-red-500" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Add drill to routine */}
+                <div className="bg-gray-50 rounded-xl p-3 space-y-2">
+                  {/* Song Selection for Routine */}
+                  {!routineDrill.isNewSong ? (
+                    <div className="space-y-1.5">
+                      {existingSongs.slice(0, 3).map((song) => (
+                        <button
+                          key={song}
+                          onClick={() => setRoutineDrill({ ...routineDrill, selectedSong: song })}
+                          className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-colors ${
+                            routineDrill.selectedSong === song
+                              ? "bg-black text-white"
+                              : "bg-white text-gray-700 hover:bg-gray-100"
+                          }`}
+                        >
+                          {song}
+                        </button>
+                      ))}
+                      <button
+                        onClick={() => setRoutineDrill({ ...routineDrill, isNewSong: true, selectedSong: "" })}
+                        className="w-full py-2 border border-dashed border-gray-300 rounded-lg text-xs text-gray-500 hover:border-black hover:text-black flex items-center justify-center gap-1"
+                      >
+                        <Plus className="w-3 h-3" />
+                        다른 곡
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-gray-600">새 곡</span>
+                        <button
+                          onClick={() => setRoutineDrill({ ...routineDrill, isNewSong: false, composer: "", songTitle: "" })}
+                          className="text-xs text-gray-500"
+                        >
+                          취소
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        value={routineDrill.composer}
+                        onChange={(e) => setRoutineDrill({ ...routineDrill, composer: e.target.value })}
+                        placeholder="작곡가"
+                        className="w-full px-3 py-2 bg-white rounded-lg text-xs border border-gray-200"
+                      />
+                      <input
+                        type="text"
+                        value={routineDrill.songTitle}
+                        onChange={(e) => setRoutineDrill({ ...routineDrill, songTitle: e.target.value })}
+                        placeholder="곡명"
+                        className="w-full px-3 py-2 bg-white rounded-lg text-xs border border-gray-200"
+                      />
+                    </div>
+                  )}
+
+                  <input
+                    type="text"
+                    value={routineDrill.measures}
+                    onChange={(e) => setRoutineDrill({ ...routineDrill, measures: e.target.value })}
+                    placeholder="마디 구간 (예: 1-16마디)"
+                    className="w-full px-3 py-2 bg-white rounded-lg text-xs border border-gray-200"
+                  />
+
+                  <div className="flex gap-2">
+                    <select
+                      value={routineDrill.mode}
+                      onChange={(e) => setRoutineDrill({ ...routineDrill, mode: e.target.value as "duration" | "recurrence" })}
+                      className="flex-1 px-3 py-2 bg-white rounded-lg text-xs border border-gray-200"
+                    >
+                      <option value="duration">시간 (분)</option>
+                      <option value="recurrence">횟수 (회)</option>
+                    </select>
+                    <input
+                      type="number"
+                      value={routineDrill.mode === "duration" ? routineDrill.duration : routineDrill.recurrence}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value) || 1;
+                        if (routineDrill.mode === "duration") {
+                          setRoutineDrill({ ...routineDrill, duration: val });
+                        } else {
+                          setRoutineDrill({ ...routineDrill, recurrence: val });
+                        }
+                      }}
+                      className="w-20 px-3 py-2 bg-white rounded-lg text-xs border border-gray-200 text-center"
+                      min={1}
+                    />
+                  </div>
+
+                  <button
+                    onClick={handleAddRoutineDrill}
+                    disabled={
+                      (!routineDrill.isNewSong && !routineDrill.selectedSong) ||
+                      (routineDrill.isNewSong && !routineDrill.composer.trim() && !routineDrill.songTitle.trim()) ||
+                      !routineDrill.measures.trim()
+                    }
+                    className="w-full py-2 bg-violet-600 text-white rounded-lg text-xs font-medium disabled:opacity-30"
+                  >
+                    항목 추가
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={handleSaveRoutine}
+              disabled={!newRoutine.name.trim() || newRoutine.drills.length === 0}
+              className="w-full mt-4 py-3 bg-black text-white rounded-xl font-semibold disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              루틴 저장
             </button>
           </div>
         </div>
