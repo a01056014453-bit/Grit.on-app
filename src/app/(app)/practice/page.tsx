@@ -16,6 +16,7 @@ import {
   PracticeCompleteModal,
   AIAnalysisConsentModal,
 } from "@/components/practice";
+import { AlertCircle, MonitorOff } from "lucide-react";
 
 interface CompletedSession {
   totalTime: number;
@@ -44,7 +45,11 @@ export default function PracticePage() {
   const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
   const [recordedAudio, setRecordedAudio] = useState<RecordedAudio | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [autoPausedMessage, setAutoPausedMessage] = useState<string | null>(null);
+  const [wakeLockSupported, setWakeLockSupported] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
+  const wasRecordingBeforeHiddenRef = useRef(false);
 
   // Audio recorder hook
   const {
@@ -68,13 +73,15 @@ export default function PracticePage() {
     stopRecording,
     reset,
   } = useAudioRecorder({
-    decibelThreshold: 40, // 낮은 임계값으로 민감하게 감지
+    decibelThreshold: 40,
     minSoundDuration: 100,
-    calibrationDuration: 800, // 빠른 캘리브레이션
+    calibrationDuration: 800,
   });
 
   useEffect(() => {
     setTip(getRandomTip());
+    // Check if Wake Lock API is supported
+    setWakeLockSupported("wakeLock" in navigator);
   }, []);
 
   useEffect(() => {
@@ -83,13 +90,98 @@ export default function PracticePage() {
     }
   }, [hasPermission, requestPermission]);
 
+  // Wake Lock: Keep screen on during recording
+  const requestWakeLock = useCallback(async () => {
+    if (!wakeLockSupported) return;
+
+    try {
+      wakeLockRef.current = await navigator.wakeLock.request("screen");
+      console.log("Wake Lock activated");
+
+      wakeLockRef.current.addEventListener("release", () => {
+        console.log("Wake Lock released");
+      });
+    } catch (err) {
+      console.log("Wake Lock failed:", err);
+    }
+  }, [wakeLockSupported]);
+
+  const releaseWakeLock = useCallback(() => {
+    if (wakeLockRef.current) {
+      wakeLockRef.current.release();
+      wakeLockRef.current = null;
+    }
+  }, []);
+
+  // Page visibility change handler
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // Page is hidden (user switched tab, minimized, etc.)
+        if (isRecording && !isPaused) {
+          wasRecordingBeforeHiddenRef.current = true;
+          pauseRecording();
+          setAutoPausedMessage("화면 이탈로 연습이 자동 일시정지되었습니다");
+        }
+      } else {
+        // Page is visible again
+        // Re-request wake lock when page becomes visible
+        if (isRecording) {
+          requestWakeLock();
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [isRecording, isPaused, pauseRecording, requestWakeLock]);
+
+  // Warn before page unload during recording
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isRecording) {
+        e.preventDefault();
+        e.returnValue = "연습 중입니다. 페이지를 나가면 녹음이 중단됩니다.";
+        return e.returnValue;
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [isRecording]);
+
+  // Manage wake lock based on recording state
+  useEffect(() => {
+    if (isRecording && !isPaused) {
+      requestWakeLock();
+    } else {
+      releaseWakeLock();
+    }
+
+    return () => {
+      releaseWakeLock();
+    };
+  }, [isRecording, isPaused, requestWakeLock, releaseWakeLock]);
+
   const handleStartRecording = useCallback(async () => {
     setSessionStartTime(new Date());
+    setAutoPausedMessage(null);
     await startRecording();
   }, [startRecording]);
 
+  const handleResumeRecording = useCallback(() => {
+    setAutoPausedMessage(null);
+    wasRecordingBeforeHiddenRef.current = false;
+    resumeRecording();
+  }, [resumeRecording]);
+
   const handleStopRecording = useCallback(async () => {
     stopRecording();
+    releaseWakeLock();
 
     if (sessionStartTime) {
       const session = {
@@ -111,7 +203,6 @@ export default function PracticePage() {
         console.error("Failed to save session:", err);
       }
 
-      // 녹음된 오디오 URL 생성
       if (audioBlob) {
         const audioUrl = URL.createObjectURL(audioBlob);
         setRecordedAudio({ url: audioUrl, duration: practiceTime });
@@ -120,8 +211,10 @@ export default function PracticePage() {
 
     setCompletedSession({ totalTime, practiceTime, practiceType });
     setIsCompleteModalOpen(true);
+    setAutoPausedMessage(null);
   }, [
     stopRecording,
+    releaseWakeLock,
     sessionStartTime,
     selectedSong,
     totalTime,
@@ -199,6 +292,35 @@ export default function PracticePage() {
         {error && <p className="text-sm text-destructive mt-1">{error}</p>}
       </div>
 
+      {/* Auto-pause notification */}
+      {autoPausedMessage && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 flex items-start gap-3 animate-in slide-in-from-top duration-300">
+          <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center shrink-0">
+            <MonitorOff className="w-5 h-5 text-amber-600" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-medium text-amber-800">{autoPausedMessage}</p>
+            <p className="text-xs text-amber-600 mt-1">
+              다시 시작하려면 재생 버튼을 눌러주세요
+            </p>
+          </div>
+          <button
+            onClick={() => setAutoPausedMessage(null)}
+            className="text-amber-400 hover:text-amber-600"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Wake Lock Status (when recording) */}
+      {isRecording && !isPaused && wakeLockSupported && (
+        <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2 mb-4 flex items-center gap-2 text-xs text-green-700">
+          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+          화면 자동 꺼짐 방지 활성화됨
+        </div>
+      )}
+
       {/* Piece Selection */}
       <PieceSelector
         selectedSong={selectedSong}
@@ -261,7 +383,7 @@ export default function PracticePage() {
         hasPermission={hasPermission}
         onStart={handleStartRecording}
         onPause={pauseRecording}
-        onResume={resumeRecording}
+        onResume={handleResumeRecording}
         onStop={handleStopRecording}
         onRequestPermission={requestPermission}
       />
