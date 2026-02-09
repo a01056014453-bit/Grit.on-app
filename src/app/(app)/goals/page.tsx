@@ -479,6 +479,18 @@ export default function GoalsPage() {
       completedDrillIds: yesterdayDrills.map(d => d.id),
     }));
 
+    // Save sample drills for today
+    const todayKey = getDateKey(0);
+    const todayDrills = [
+      ...sampleDrills["F. Chopin Ballade Op.23 No.1"],
+      ...sampleDrills["L. v. Beethoven Sonata Op.13 No.8"],
+    ];
+    localStorage.setItem(`grit-on-drills-${todayKey}`, JSON.stringify(todayDrills));
+    localStorage.setItem(`grit-on-completed-${todayKey}`, JSON.stringify({
+      date: todayKey,
+      completedDrillIds: todayDrills.map(d => d.id),
+    }));
+
     const sessions = [
       // 5일 전
       {
@@ -525,6 +537,19 @@ export default function GoalsPage() {
         practiceTime: 2400,
         synced: false,
         practiceType: "routine" as const,
+        label: "연습",
+        audioBlob: sampleAudio,
+      },
+      // 오늘 (with audio)
+      {
+        pieceId: "1",
+        pieceName: samplePieces[0].name,
+        startTime: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2시간 전
+        endTime: new Date(Date.now() - 1 * 60 * 60 * 1000), // 1시간 전
+        totalTime: 3600,
+        practiceTime: 3000,
+        synced: false,
+        practiceType: "partial" as const,
         label: "연습",
         audioBlob: sampleAudio,
       },
