@@ -153,38 +153,46 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
   );
 
   // 피아노 소리인지 판별 (주파수 분석 기반)
-  // 피아노 특성: 1) 넓은 주파수 분포 2) 고주파 성분 풍부 3) 급격한 onset
-  // 목소리 특성: 1) 중저주파에 에너지 집중 2) 고주파 적음 3) 지속적인 소리
+  // 피아노 특성: 1) 매우 넓은 주파수 분포 2) 강한 고주파 성분 3) 급격한 onset
+  // 목소리 특성: 1) 100-1000Hz에 에너지 집중 2) 고주파 약함 3) 지속적인 소리
   const isPianoLikeSound = useCallback(
     (frequencyData: Uint8Array, sampleRate: number): boolean => {
       // 각 주파수 대역의 에너지 계산
-      const lowEnergy = getFrequencyBandEnergy(frequencyData, sampleRate, LOW_FREQ, MID_FREQ);
-      const midEnergy = getFrequencyBandEnergy(frequencyData, sampleRate, MID_FREQ, HIGH_FREQ);
-      const highEnergy = getFrequencyBandEnergy(frequencyData, sampleRate, HIGH_FREQ, VERY_HIGH_FREQ);
-      const veryHighEnergy = getFrequencyBandEnergy(frequencyData, sampleRate, VERY_HIGH_FREQ, 8000);
+      const veryLowEnergy = getFrequencyBandEnergy(frequencyData, sampleRate, 50, LOW_FREQ); // 50-100Hz
+      const lowEnergy = getFrequencyBandEnergy(frequencyData, sampleRate, LOW_FREQ, MID_FREQ); // 100-500Hz (목소리 기본 주파수)
+      const midEnergy = getFrequencyBandEnergy(frequencyData, sampleRate, MID_FREQ, HIGH_FREQ); // 500-2000Hz
+      const highEnergy = getFrequencyBandEnergy(frequencyData, sampleRate, HIGH_FREQ, VERY_HIGH_FREQ); // 2000-4000Hz
+      const veryHighEnergy = getFrequencyBandEnergy(frequencyData, sampleRate, VERY_HIGH_FREQ, 8000); // 4000-8000Hz
 
       // 전체 에너지
-      const totalEnergy = lowEnergy + midEnergy + highEnergy + veryHighEnergy;
-      if (totalEnergy < 50) return false; // 에너지가 너무 낮으면 무시
+      const totalEnergy = veryLowEnergy + lowEnergy + midEnergy + highEnergy + veryHighEnergy;
+      if (totalEnergy < 80) return false; // 에너지가 너무 낮으면 무시 (임계값 높임)
 
-      // 고주파 비율 계산 (피아노는 고주파 성분이 풍부)
-      const highFreqRatio = (highEnergy + veryHighEnergy) / totalEnergy;
+      // 각 대역 비율 계산
+      const lowMidRatio = (lowEnergy + midEnergy) / totalEnergy; // 목소리 주 대역 (100-2000Hz)
+      const highFreqRatio = (highEnergy + veryHighEnergy) / totalEnergy; // 고주파 (2000Hz+)
+      const veryHighRatio = veryHighEnergy / totalEnergy; // 초고주파 (4000Hz+)
 
-      // 스펙트럼 분포 분석
-      // 목소리: lowEnergy가 지배적 (60%+), highFreqRatio 낮음 (<0.2)
-      // 피아노: 더 균등한 분포, highFreqRatio 높음 (>0.2)
-      const lowFreqRatio = lowEnergy / totalEnergy;
+      // 목소리 패턴 감지 (매우 엄격하게)
+      // 목소리: 100-2000Hz 대역에 에너지 집중 (70%+), 고주파 부족 (<20%)
+      const isVoiceLike = lowMidRatio > 0.65 && highFreqRatio < 0.25;
 
-      // 피아노 판별 조건:
-      // 1. 고주파 비율이 충분히 높음 (>15%) OR
-      // 2. 저주파에만 집중되지 않음 (저주파 비율 < 50%)
-      const isPiano = highFreqRatio > 0.15 || lowFreqRatio < 0.5;
+      // 피아노 판별 조건 (더 엄격하게):
+      // 1. 고주파 비율이 충분히 높음 (>25%) AND
+      // 2. 초고주파도 존재 (>8%) - 피아노의 특징적인 배음
+      const hasPianoCharacteristics = highFreqRatio > 0.25 && veryHighRatio > 0.08;
 
-      // 목소리 패턴 감지 (강하게 필터링)
-      // 목소리: 저주파 집중 + 고주파 부족
-      const isVoiceLike = lowFreqRatio > 0.55 && highFreqRatio < 0.12;
+      // 스펙트럼 분포 균일성 체크 (피아노는 더 균등하게 분포)
+      const energyValues = [veryLowEnergy, lowEnergy, midEnergy, highEnergy, veryHighEnergy];
+      const maxEnergy = Math.max(...energyValues);
+      const minEnergy = Math.min(...energyValues.filter(e => e > 10)); // 10 이상인 것만
+      const spreadRatio = minEnergy / maxEnergy; // 균등할수록 1에 가까움
 
-      return isPiano && !isVoiceLike;
+      // 피아노: 균등 분포 (spreadRatio > 0.15) 또는 강한 고주파 특성
+      const hasEvenSpread = spreadRatio > 0.15;
+
+      // 최종 판별: 피아노 특성이 있고 목소리 패턴이 아님
+      return (hasPianoCharacteristics || hasEvenSpread) && !isVoiceLike;
     },
     [getFrequencyBandEnergy]
   );
