@@ -1,8 +1,6 @@
-import { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface StatsCardProps {
-  icon: LucideIcon;
   value: number | string;
   unit: string;
   label: string;
@@ -10,7 +8,6 @@ interface StatsCardProps {
 }
 
 export function StatsCard({
-  icon: Icon,
   value,
   unit,
   label,
@@ -19,18 +16,17 @@ export function StatsCard({
   return (
     <div
       className={cn(
-        "bg-card rounded-2xl p-4 shadow-sm border border-border",
+        "text-center py-4",
         className
       )}
     >
-      <div className="w-8 h-8 rounded-lg bg-primary/5 flex items-center justify-center mb-3">
-        <Icon className="w-4 h-4 text-primary" />
+      <div className="flex items-baseline justify-center gap-1">
+        <span className="text-2xl font-bold bg-gradient-to-r from-black to-violet-500 bg-clip-text text-transparent">
+          {value}
+        </span>
+        <span className="text-sm text-gray-400">{unit}</span>
       </div>
-      <div className="flex items-baseline gap-1">
-        <span className="text-2xl font-semibold text-card-foreground">{value}</span>
-        <span className="text-xs text-muted-foreground">{unit}</span>
-      </div>
-      <div className="text-xs text-muted-foreground mt-1">{label}</div>
+      <div className="text-xs text-gray-500 mt-1">{label}</div>
     </div>
   );
 }

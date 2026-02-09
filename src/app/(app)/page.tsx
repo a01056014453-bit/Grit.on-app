@@ -1,7 +1,11 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Clock, Calendar, TrendingUp, Play, Zap, Music2, Circle, Sparkles, ChevronRight, BookOpen, Timer } from "lucide-react";
+import { Play, Zap, Music2, Circle, ChevronRight, BookOpen, Timer } from "lucide-react";
 import { StatsCard, QuoteCard, DailyGoal } from "@/components/app";
 import { mockDrillCards, mockUser, mockStats, hasAIAnalysis, getGreeting, getTotalPlanMinutes, groupDrillsBySong, mockSongs } from "@/data";
+import { getTodayPracticeTime, getPracticeStats, getAllSessions } from "@/lib/db";
 
 const totalPlanMinutes = getTotalPlanMinutes(mockDrillCards);
 const groupedDrills = groupDrillsBySong(mockDrillCards);
@@ -9,49 +13,144 @@ const groupedDrills = groupDrillsBySong(mockDrillCards);
 export default function HomePage() {
   const greeting = getGreeting();
 
+  // 실제 연습 데이터 상태
+  const [todayMinutes, setTodayMinutes] = useState(0);
+  const [dailyGoal, setDailyGoal] = useState(60);
+  const [totalHours, setTotalHours] = useState(0);
+  const [weekSessions, setWeekSessions] = useState(0);
+  const [streakDays, setStreakDays] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadPracticeData() {
+      try {
+        // 오늘의 연습 시간 가져오기
+        const todayData = await getTodayPracticeTime();
+        const todayPracticeMinutes = Math.round(todayData.practiceTime / 60);
+        setTodayMinutes(todayPracticeMinutes);
+
+        // 총 연습 시간 가져오기
+        const stats = await getPracticeStats();
+        setTotalHours(Math.round(stats.totalPracticeTime / 3600));
+
+        // 이번 주 세션 수 계산
+        const allSessions = await getAllSessions();
+        const now = new Date();
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - now.getDay());
+        weekStart.setHours(0, 0, 0, 0);
+
+        const thisWeekSessions = allSessions.filter(s => {
+          const sessionDate = new Date(s.startTime);
+          return sessionDate >= weekStart;
+        });
+        setWeekSessions(thisWeekSessions.length);
+
+        // 연속 일수 계산
+        const streak = calculateStreak(allSessions);
+        setStreakDays(streak);
+
+        // localStorage에서 일일 목표 가져오기
+        const savedGoal = localStorage.getItem('grit-on-daily-goal');
+        if (savedGoal) {
+          setDailyGoal(parseInt(savedGoal, 10));
+        }
+      } catch (error) {
+        console.error('Failed to load practice data:', error);
+        // 에러 시 mock 데이터 사용
+        setTodayMinutes(mockStats.todayMinutes);
+        setTotalHours(mockStats.totalHours);
+        setWeekSessions(mockStats.weekSessions);
+        setStreakDays(mockStats.streakDays);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadPracticeData();
+  }, []);
+
+  // 연속 일수 계산 함수
+  function calculateStreak(sessions: { startTime: Date }[]): number {
+    if (sessions.length === 0) return 0;
+
+    // 날짜별로 세션 그룹화
+    const dateSet = new Set<string>();
+    sessions.forEach(s => {
+      const date = new Date(s.startTime);
+      date.setHours(0, 0, 0, 0);
+      dateSet.add(date.toISOString());
+    });
+
+    const dates = Array.from(dateSet).sort().reverse();
+    if (dates.length === 0) return 0;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString();
+
+    // 오늘 또는 어제부터 시작
+    let streak = 0;
+    let checkDate = new Date(today);
+
+    // 오늘 연습했는지 확인
+    if (!dateSet.has(todayStr)) {
+      // 어제 연습했는지 확인
+      checkDate.setDate(checkDate.getDate() - 1);
+      if (!dateSet.has(checkDate.toISOString())) {
+        return 0;
+      }
+    }
+
+    // 연속 일수 계산
+    while (dateSet.has(checkDate.toISOString())) {
+      streak++;
+      checkDate.setDate(checkDate.getDate() - 1);
+    }
+
+    return streak;
+  }
+
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto">
+    <div className="px-4 py-6 max-w-lg mx-auto bg-white min-h-screen">
       {/* Header */}
       <div className="flex items-center justify-between mb-8 pt-2">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground leading-tight">
+          <h1 className="text-2xl font-bold text-black leading-tight">
             {greeting},<br />
-            <span className="text-primary">{mockUser.name}</span>님
+            {mockUser.name}님
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-sm text-gray-500 mt-1">
             오늘도 훌륭한 연주를 기대해요
           </p>
         </div>
-        <div className="w-12 h-12 rounded-full bg-secondary border-2 border-background shadow-soft flex items-center justify-center overflow-hidden">
-            <span className="text-lg">🎹</span>
+        <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
+          <span className="text-lg">🎹</span>
         </div>
       </div>
 
       {/* Daily Goal - Hero Section */}
       <div className="mb-6">
         <DailyGoal
-          completed={mockStats.todayMinutes}
-          target={mockStats.dailyGoal}
+          completed={isLoading ? 0 : todayMinutes}
+          target={dailyGoal}
         />
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
+      <div className="bg-white rounded-2xl border border-gray-100 mb-6 divide-x divide-gray-100 grid grid-cols-3">
         <StatsCard
-          icon={Clock}
-          value={mockStats.totalHours}
+          value={isLoading ? 0 : totalHours}
           unit="시간"
           label="총 연습"
         />
         <StatsCard
-          icon={Calendar}
-          value={mockStats.weekSessions}
+          value={isLoading ? 0 : weekSessions}
           unit="세션"
           label="이번 주"
         />
         <StatsCard
-          icon={TrendingUp}
-          value={mockStats.streakDays}
+          value={isLoading ? 0 : streakDays}
           unit="일"
           label="연속"
         />
@@ -65,11 +164,10 @@ export default function HomePage() {
       {/* Start Practice Button */}
       <Link
         href="/practice"
-        className="group relative flex items-center justify-center gap-3 w-full bg-gradient-to-r from-primary to-violet-600 text-primary-foreground rounded-2xl py-4 text-lg font-bold shadow-lg shadow-primary/30 transition-all duration-300 hover:scale-[1.02] hover:shadow-primary/50 mb-4 overflow-hidden"
+        className="flex items-center justify-center gap-3 w-full bg-black text-white rounded-2xl py-4 text-lg font-semibold transition-transform active:scale-[0.98] mb-4"
       >
-        <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500 rounded-2xl" />
         <Play className="w-6 h-6 fill-white" />
-        <span className="relative">연습 시작하기</span>
+        <span>연습 시작하기</span>
       </Link>
 
       {/* Feature Cards */}
@@ -77,46 +175,46 @@ export default function HomePage() {
         {/* AI Song Analysis Card */}
         <Link
           href="/analysis"
-          className="flex items-center gap-4 w-full bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4 hover:shadow-md transition-all"
+          className="flex items-center gap-4 w-full bg-white border border-gray-200 rounded-xl p-4 hover:bg-gray-50 transition-colors"
         >
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shrink-0">
-            <Sparkles className="w-5 h-5 text-white" />
+          <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
+            <Zap className="w-5 h-5 text-gray-700" />
           </div>
           <div className="flex-1">
-            <p className="font-semibold text-foreground text-sm">AI 곡 분석하기</p>
-            <p className="text-xs text-muted-foreground">작품 정보와 연주 가이드 확인하기</p>
+            <p className="font-semibold text-black text-sm">AI 곡 분석하기</p>
+            <p className="text-xs text-gray-500">작품 정보와 연주 가이드 확인하기</p>
           </div>
-          <ChevronRight className="w-5 h-5 text-muted-foreground" />
+          <ChevronRight className="w-5 h-5 text-gray-400" />
         </Link>
 
         {/* Music Terms Search Card */}
         <Link
           href="/music-terms"
-          className="flex items-center gap-4 w-full bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 hover:shadow-md transition-all"
+          className="flex items-center gap-4 w-full bg-white border border-gray-200 rounded-xl p-4 hover:bg-gray-50 transition-colors"
         >
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center shrink-0">
-            <BookOpen className="w-5 h-5 text-white" />
+          <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
+            <BookOpen className="w-5 h-5 text-gray-700" />
           </div>
           <div className="flex-1">
-            <p className="font-semibold text-foreground text-sm">음악용어 검색</p>
-            <p className="text-xs text-muted-foreground">악보 기호와 용어 뜻 알아보기</p>
+            <p className="font-semibold text-black text-sm">음악용어 검색</p>
+            <p className="text-xs text-gray-500">악보 기호와 용어 뜻 알아보기</p>
           </div>
-          <ChevronRight className="w-5 h-5 text-muted-foreground" />
+          <ChevronRight className="w-5 h-5 text-gray-400" />
         </Link>
 
         {/* Metronome Card */}
         <Link
           href="/metronome"
-          className="flex items-center gap-4 w-full bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4 hover:shadow-md transition-all"
+          className="flex items-center gap-4 w-full bg-white border border-gray-200 rounded-xl p-4 hover:bg-gray-50 transition-colors"
         >
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center shrink-0">
-            <Timer className="w-5 h-5 text-white" />
+          <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
+            <Timer className="w-5 h-5 text-gray-700" />
           </div>
           <div className="flex-1">
-            <p className="font-semibold text-foreground text-sm">메트로놈</p>
-            <p className="text-xs text-muted-foreground">정확한 템포로 연습하기</p>
+            <p className="font-semibold text-black text-sm">메트로놈</p>
+            <p className="text-xs text-gray-500">정확한 템포로 연습하기</p>
           </div>
-          <ChevronRight className="w-5 h-5 text-muted-foreground" />
+          <ChevronRight className="w-5 h-5 text-gray-400" />
         </Link>
       </div>
 
@@ -125,13 +223,12 @@ export default function HomePage() {
         <div className="mb-6">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <Zap className="w-4 h-4 text-primary" />
-              <h3 className="text-base font-bold text-foreground">오늘의 연습 플랜</h3>
-              <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">
+              <h3 className="text-base font-bold text-black">오늘의 연습 플랜</h3>
+              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
                 {totalPlanMinutes}분
               </span>
             </div>
-            <Link href="/plans" className="text-xs font-medium text-primary hover:text-primary/80">
+            <Link href="/plans" className="text-xs font-medium text-gray-500 hover:text-black">
               전체 보기 &rarr;
             </Link>
           </div>
@@ -141,51 +238,50 @@ export default function HomePage() {
             {groupedDrills.map((group) => (
               <div
                 key={group.song}
-                className="rounded-xl bg-card border border-border overflow-hidden"
+                className="rounded-xl bg-white border border-gray-200 overflow-hidden"
               >
                 {/* 곡 헤더 - 탭하면 곡 정보 페이지로 */}
                 <Link
                   href={`/songs/${mockSongs.find((s) => s.title === group.song)?.id || "1"}`}
-                  className="flex items-center gap-3 px-4 py-3 bg-secondary/50 border-b border-border hover:bg-secondary/70 transition-colors"
+                  className="flex items-center gap-3 px-4 py-3 bg-gray-50 border-b border-gray-200 hover:bg-gray-100 transition-colors"
                 >
-                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Music2 className="w-4 h-4 text-primary" />
+                  <div className="w-8 h-8 rounded-lg bg-black flex items-center justify-center">
+                    <Music2 className="w-4 h-4 text-white" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-foreground truncate">{group.song}</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-sm font-semibold text-black truncate">{group.song}</p>
+                    <p className="text-xs text-gray-500">
                       {group.drills.length}개 항목 · {group.totalDuration}분
                     </p>
                   </div>
-                  <Sparkles className="w-4 h-4 text-amber-500" />
                 </Link>
 
                 {/* 드릴 체크리스트 */}
-                <div className="divide-y divide-border">
+                <div className="divide-y divide-gray-100">
                   {group.drills.map((drill) => (
                     <Link
                       key={drill.id}
                       href={`/practice?type=partial&measures=${drill.measures}&tempo=${drill.tempo}`}
-                      className="flex items-center gap-3 px-4 py-3 hover:bg-secondary/30 transition-colors active:bg-secondary/50"
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors active:bg-gray-100"
                     >
                       {/* 체크 아이콘 */}
-                      <Circle className="w-5 h-5 text-muted-foreground/50 shrink-0" />
+                      <Circle className="w-5 h-5 text-gray-300 shrink-0" />
 
                       {/* 내용 */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium text-foreground">{drill.title}</p>
-                          <span className="text-[10px] text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded shrink-0">
+                          <p className="text-sm font-medium text-black">{drill.title}</p>
+                          <span className="text-[10px] text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded shrink-0">
                             {drill.recurrence}회
                           </span>
                         </div>
-                        <p className="text-xs text-muted-foreground">{drill.measures}</p>
+                        <p className="text-xs text-gray-500">{drill.measures}</p>
                       </div>
 
                       {/* 템포 & 시간 */}
                       <div className="text-right shrink-0">
-                        <p className="text-xs font-medium text-foreground">♩={drill.tempo}</p>
-                        <p className="text-[10px] text-muted-foreground">{drill.duration}분</p>
+                        <p className="text-xs font-medium text-black">♩={drill.tempo}</p>
+                        <p className="text-[10px] text-gray-500">{drill.duration}분</p>
                       </div>
                     </Link>
                   ))}
@@ -195,12 +291,11 @@ export default function HomePage() {
           </div>
 
           {/* 시간 캡 안내 */}
-          <p className="text-xs text-muted-foreground text-center mt-3">
+          <p className="text-xs text-gray-400 text-center mt-3">
             과부하 방지를 위해 {totalPlanMinutes}분 이내로 구성됨
           </p>
         </div>
       )}
-
     </div>
   );
 }

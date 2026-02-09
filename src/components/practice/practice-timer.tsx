@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock, Sparkles, Play, Pause } from "lucide-react";
+import { Clock, Sparkles, Play, Pause, Calendar } from "lucide-react";
 import { formatTime } from "@/lib/format";
 
 interface RecordedAudio {
@@ -16,6 +16,7 @@ interface PracticeTimerProps {
   recordedAudio?: RecordedAudio | null;
   isPlaying?: boolean;
   onPlayRecording?: () => void;
+  startTime?: Date | null;
 }
 
 export function PracticeTimer({
@@ -26,15 +27,34 @@ export function PracticeTimer({
   recordedAudio,
   isPlaying,
   onPlayRecording,
+  startTime,
 }: PracticeTimerProps) {
+  const formatDateTime = (date: Date) => {
+    return date.toLocaleTimeString("ko-KR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
   return (
-    <div className="bg-card rounded-2xl p-8 border border-border shadow-sm mb-6 relative overflow-hidden">
+    <div className="bg-white rounded-2xl p-8 border border-gray-100 mb-6 relative overflow-hidden">
       <div className="text-center relative z-10">
+        {/* Session Time Info */}
+        {isRecording && startTime && (
+          <div className="flex items-center justify-center gap-4 mb-4 text-sm">
+            <div className="flex items-center gap-1.5 text-gray-500">
+              <Calendar className="w-4 h-4" />
+              <span>시작</span>
+              <span className="font-semibold text-black">{formatDateTime(startTime)}</span>
+            </div>
+          </div>
+        )}
+
         {/* Main Timer - Practice Time */}
-        <div className="text-6xl font-bold text-foreground font-mono mb-1 tracking-tighter">
+        <div className="text-6xl font-bold text-black font-mono mb-1 tracking-tighter">
           {formatTime(practiceTime)}
         </div>
-        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-6">
+        <div className="flex items-center justify-center gap-2 text-sm text-gray-500 mb-6">
           <Clock className="w-4 h-4" />
           <span>순연습시간</span>
           {isRecording && (
@@ -51,9 +71,9 @@ export function PracticeTimer({
             /* 녹음 재생 UI */
             <button
               onClick={onPlayRecording}
-              className="flex items-center gap-3 bg-primary/10 hover:bg-primary/20 rounded-xl px-6 py-4 transition-colors"
+              className="flex items-center gap-3 bg-gray-100 hover:bg-gray-200 rounded-xl px-6 py-4 transition-colors"
             >
-              <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center">
+              <div className="w-12 h-12 rounded-full bg-black flex items-center justify-center">
                 {isPlaying ? (
                   <Pause className="w-5 h-5 text-white" />
                 ) : (
@@ -61,10 +81,10 @@ export function PracticeTimer({
                 )}
               </div>
               <div className="text-left">
-                <p className="text-sm font-semibold text-foreground">
+                <p className="text-sm font-semibold text-black">
                   {isPlaying ? "재생 중..." : "녹음 다시 듣기"}
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-gray-500">
                   {formatTime(recordedAudio.duration)}
                 </p>
               </div>
@@ -75,7 +95,7 @@ export function PracticeTimer({
               {Array.from({ length: 20 }).map((_, i) => (
                 <div
                   key={i}
-                  className={`w-1.5 rounded-full bg-primary transition-all duration-150`}
+                  className={`w-1.5 rounded-full bg-black transition-all duration-150`}
                   style={{
                     height: isPaused ? "15%" : `${20 + Math.random() * 60}%`,
                     opacity: isPaused ? 0.3 : 0.6,
@@ -85,21 +105,17 @@ export function PracticeTimer({
             </div>
           ) : (
             /* 팁 표시 */
-            <div className="bg-secondary rounded-xl p-4 w-full flex items-center gap-3 animate-fade-in">
-              <div className="shrink-0 w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center">
-                <Sparkles className="w-4 h-4 text-yellow-600" />
+            <div className="bg-gray-50 rounded-xl p-4 w-full flex items-center gap-3 animate-fade-in">
+              <div className="shrink-0 w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                <Sparkles className="w-4 h-4 text-gray-600" />
               </div>
-              <p className="text-sm text-muted-foreground font-medium text-left leading-snug text-pretty">
+              <p className="text-sm text-gray-600 font-medium text-left leading-snug text-pretty">
                 &quot;{tip}&quot;
               </p>
             </div>
           )}
         </div>
       </div>
-
-      {/* Background decoration */}
-      <div className="absolute top-0 right-0 -mt-8 -mr-8 w-32 h-32 bg-primary/5 rounded-full blur-3xl" />
-      <div className="absolute bottom-0 left-0 -mb-8 -ml-8 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl" />
     </div>
   );
 }

@@ -1,51 +1,85 @@
 "use client";
 
-import Link from "next/link";
-import { Music, Clock } from "lucide-react";
-import type { RecentRecording } from "@/types";
+import { Music, Clock, Calendar } from "lucide-react";
+import type { PracticeSession } from "@/lib/db";
+import { formatTime } from "@/lib/format";
 
 interface RecentRecordingsListProps {
-  recordings: RecentRecording[];
+  sessions: PracticeSession[];
 }
 
-export function RecentRecordingsList({ recordings }: RecentRecordingsListProps) {
+export function RecentRecordingsList({ sessions }: RecentRecordingsListProps) {
+  const formatDate = (date: Date) => {
+    const d = new Date(date);
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffMins < 1) return "방금 전";
+    if (diffMins < 60) return `${diffMins}분 전`;
+    if (diffHours < 24) return `${diffHours}시간 전`;
+    if (diffDays < 7) return `${diffDays}일 전`;
+    return d.toLocaleDateString("ko-KR", { month: "short", day: "numeric" });
+  };
+
+  const formatTimeRange = (start: Date, end: Date) => {
+    const s = new Date(start);
+    const e = new Date(end);
+    return `${s.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })} - ${e.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}`;
+  };
+
+  if (sessions.length === 0) {
+    return (
+      <div className="mt-8 mb-4">
+        <h3 className="text-sm font-semibold text-black mb-3">최근 연습</h3>
+        <div className="bg-gray-50 rounded-xl p-6 text-center">
+          <Music className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+          <p className="text-sm text-gray-500">아직 연습 기록이 없습니다</p>
+          <p className="text-xs text-gray-400 mt-1">녹음 버튼을 눌러 연습을 시작하세요</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mt-8 mb-4">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-foreground">최근 녹음</h3>
-        <Link href="/practice/recordings" className="text-xs text-primary font-medium">
-          전체 보기 &rarr;
-        </Link>
-      </div>
+      <h3 className="text-sm font-semibold text-black mb-3">최근 연습</h3>
       <div className="space-y-2">
-        {recordings.map((recording) => (
-          <Link
-            key={recording.id}
-            href={`/practice/recordings/${recording.id}`}
-            className="block bg-card rounded-xl p-3 border border-border hover:border-primary/30 transition-all"
+        {sessions.slice(0, 5).map((session) => (
+          <div
+            key={session.id}
+            className="bg-white rounded-xl p-4 border border-gray-100"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Music className="w-5 h-5 text-primary" />
+              <div className="w-10 h-10 rounded-xl bg-black flex items-center justify-center">
+                <Music className="w-5 h-5 text-white" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">{recording.title}</p>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <p className="text-sm font-semibold text-black truncate">
+                  {session.pieceName}
+                </p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs text-gray-500 flex items-center gap-1">
                     <Clock className="w-3 h-3" />
-                    {recording.duration}
+                    {formatTime(session.practiceTime)}
                   </span>
-                  <span className="text-xs text-primary font-medium">~{recording.score}점</span>
-                  {recording.focusAreas > 0 && (
-                    <span className="text-[10px] text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded">
-                      {recording.focusAreas}개 집중구간
-                    </span>
-                  )}
+                  <span className="text-xs text-gray-400">
+                    {formatTimeRange(session.startTime, session.endTime)}
+                  </span>
                 </div>
               </div>
-              <span className="text-xs text-muted-foreground">{recording.date}</span>
+              <div className="text-right">
+                <span className="text-xs text-gray-500">{formatDate(session.startTime)}</span>
+                <div className="text-xs font-medium text-green-600 mt-1">
+                  {session.totalTime > 0
+                    ? `${Math.round((session.practiceTime / session.totalTime) * 100)}%`
+                    : "0%"}
+                </div>
+              </div>
             </div>
-          </Link>
+          </div>
         ))}
       </div>
     </div>

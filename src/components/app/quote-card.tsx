@@ -1,5 +1,3 @@
-import { Sparkles } from "lucide-react";
-
 const quotes = [
   {
     text: "음악가에게 휴식은 없다. 쉬는 날도 연습하는 날이다.",
@@ -72,30 +70,26 @@ export function QuoteCard() {
   const quote = quotes[dayOfYear % quotes.length];
 
   return (
-    <div className="relative overflow-hidden bg-card rounded-2xl p-6 shadow-sm border border-border group hover:shadow-soft transition-shadow duration-300">
-      <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-primary/50 to-primary/10" />
-      
+    <div className="bg-gray-50 rounded-2xl p-6">
       <div className="flex flex-col gap-4">
-        <div className="flex items-center gap-2 text-primary/80">
-          <Sparkles className="w-4 h-4" />
-          <span className="text-xs font-bold tracking-wider uppercase text-primary/60">Daily Inspiration</span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold tracking-wider uppercase text-gray-400">
+            오늘의 한 마디
+          </span>
         </div>
-        
-        <blockquote className="relative">
-          <p className="text-lg font-serif text-card-foreground leading-relaxed break-keep text-pretty">
+
+        <blockquote>
+          <p className="text-lg font-serif text-black leading-relaxed break-keep text-pretty">
             &quot;{quote.text}&quot;
           </p>
           <footer className="mt-3 flex items-center gap-2">
-            <div className="h-px w-8 bg-border" />
-            <cite className="text-xs font-medium text-muted-foreground not-italic">
+            <div className="h-px w-8 bg-gray-300" />
+            <cite className="text-xs font-medium text-gray-500 not-italic">
               {quote.author}
             </cite>
           </footer>
         </blockquote>
       </div>
-      
-      {/* Decorative background element */}
-      <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors duration-500" />
     </div>
   );
 }
