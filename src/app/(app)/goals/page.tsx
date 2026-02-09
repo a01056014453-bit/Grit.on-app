@@ -430,16 +430,16 @@ export default function GoalsPage() {
     // Sample drills for each piece
     const sampleDrills: Record<string, Drill[]> = {
       "F. Chopin Ballade Op.23 No.1": [
-        { id: "sample-drill-1", song: "F. Chopin Ballade Op.23 No.1", measures: "57-60마디", title: "리듬 흔들림", tempo: 76, recurrence: 4 },
-        { id: "sample-drill-2", song: "F. Chopin Ballade Op.23 No.1", measures: "23-26마디", title: "양손 어긋남", tempo: 72, recurrence: 3 },
-        { id: "sample-drill-3", song: "F. Chopin Ballade Op.23 No.1", measures: "81-84마디", title: "페달 잔향 겹침", tempo: 80, recurrence: 2 },
+        { id: "sample-drill-1", song: "F. Chopin Ballade Op.23 No.1", measures: "57-60마디", title: "오른손 암보, 왼손 포지셔닝 확실하게", tempo: 76, recurrence: 4 },
+        { id: "sample-drill-2", song: "F. Chopin Ballade Op.23 No.1", measures: "23-26마디", title: "왼손 레가토 연결, 손목 유연하게", tempo: 72, recurrence: 3 },
+        { id: "sample-drill-3", song: "F. Chopin Ballade Op.23 No.1", measures: "81-84마디", title: "페달 타이밍 정확하게, 소리 겹침 주의", tempo: 80, recurrence: 2 },
       ],
       "L. v. Beethoven Sonata Op.13 No.8": [
-        { id: "sample-drill-4", song: "L. v. Beethoven Sonata Op.13 No.8", measures: "33-38마디", title: "다이나믹 부족", tempo: 84, recurrence: 2 },
-        { id: "sample-drill-5", song: "L. v. Beethoven Sonata Op.13 No.8", measures: "1-8마디", title: "서주 템포", tempo: 60, recurrence: 3 },
+        { id: "sample-drill-4", song: "L. v. Beethoven Sonata Op.13 No.8", measures: "33-38마디", title: "크레센도 표현, pp에서 ff까지 다이나믹", tempo: 84, recurrence: 2 },
+        { id: "sample-drill-5", song: "L. v. Beethoven Sonata Op.13 No.8", measures: "1-8마디", title: "서주 Grave 템포 유지, 무게감 있게", tempo: 60, recurrence: 3 },
       ],
       "J.S. Bach Prelude in C Major": [
-        { id: "sample-drill-6", song: "J.S. Bach Prelude in C Major", measures: "1-16마디", title: "아르페지오 균일성", tempo: 72, recurrence: 5 },
+        { id: "sample-drill-6", song: "J.S. Bach Prelude in C Major", measures: "1-16마디", title: "아르페지오 균일하게, 손가락 독립성 연습", tempo: 72, recurrence: 5 },
       ],
     };
 
