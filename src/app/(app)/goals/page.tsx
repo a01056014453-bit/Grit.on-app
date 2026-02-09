@@ -2,9 +2,26 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Play, ChevronLeft, ChevronRight, Check, X, Clock, Music } from "lucide-react";
+import { ArrowLeft, Play, ChevronLeft, ChevronRight, Check, X, Clock, Music, CheckCircle2 } from "lucide-react";
 import { StatsCard } from "@/components/app";
 import { getAllSessions, getPracticeStats, savePracticeSession, type PracticeSession } from "@/lib/db";
+import { mockDrillCards, groupDrillsBySong } from "@/data";
+
+interface Drill {
+  id: string;
+  song: string;
+  measures: string;
+  title: string;
+  mode?: "duration" | "recurrence";
+  duration?: number;
+  recurrence?: number;
+  tempo?: number;
+}
+
+interface CompletedDrillsData {
+  date: string;
+  completedDrillIds: string[];
+}
 
 export default function GoalsPage() {
   const router = useRouter();
@@ -168,6 +185,68 @@ export default function GoalsPage() {
     return `${date.getMonth() + 1}월 ${date.getDate()}일 ${dayNames[date.getDay()]}요일`;
   };
 
+  // Get practice type label
+  const getPracticeTypeLabel = (type?: string) => {
+    switch (type) {
+      case "runthrough":
+        return { label: "전곡 연습", color: "bg-blue-100 text-blue-700" };
+      case "partial":
+        return { label: "구간 연습", color: "bg-purple-100 text-purple-700" };
+      case "routine":
+        return { label: "루틴 연습", color: "bg-green-100 text-green-700" };
+      default:
+        return { label: "연습", color: "bg-gray-100 text-gray-700" };
+    }
+  };
+
+  // Helper: Format date to YYYY-MM-DD
+  const formatDateKey = (date: Date) => {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  };
+
+  // Get completed drills for a specific date
+  const getCompletedDrillsForDate = (date: Date): Drill[] => {
+    const dateKey = formatDateKey(date);
+
+    // Get completed drill IDs
+    const completedData = localStorage.getItem(`grit-on-completed-${dateKey}`);
+    if (!completedData) return [];
+
+    const parsed: CompletedDrillsData = JSON.parse(completedData);
+    const completedIds = new Set(parsed.completedDrillIds || []);
+
+    if (completedIds.size === 0) return [];
+
+    // Get all available drills (mock + custom)
+    const mockDrills = groupDrillsBySong(mockDrillCards).flatMap(g => g.drills);
+    const customDrillsData = localStorage.getItem("grit-on-custom-drills");
+    const customDrills: Drill[] = customDrillsData ? JSON.parse(customDrillsData) : [];
+
+    // Also check for drills saved on that specific date
+    const dateDrillsData = localStorage.getItem(`grit-on-drills-${dateKey}`);
+    const dateDrills: Drill[] = dateDrillsData ? JSON.parse(dateDrillsData) : [];
+
+    const allDrills = [...mockDrills, ...customDrills, ...dateDrills];
+
+    // Filter to only completed drills
+    return allDrills.filter(d => completedIds.has(d.id));
+  };
+
+  // Group drills by song name
+  const groupDrillsBySongName = (drills: Drill[]) => {
+    const grouped: Record<string, Drill[]> = {};
+    drills.forEach(drill => {
+      if (!grouped[drill.song]) {
+        grouped[drill.song] = [];
+      }
+      grouped[drill.song].push(drill);
+    });
+    return Object.entries(grouped);
+  };
+
+  const selectedDateDrills = selectedDate ? getCompletedDrillsForDate(selectedDate) : [];
+  const groupedSelectedDrills = groupDrillsBySongName(selectedDateDrills);
+
   // Create sample sessions for testing
   const createSampleSessions = async () => {
     const samplePieces = [
@@ -175,6 +254,58 @@ export default function GoalsPage() {
       { id: "2", name: "L. v. Beethoven Sonata Op.13 No.8" },
       { id: "3", name: "J.S. Bach Prelude in C Major" },
     ];
+
+    // Sample drills for each piece
+    const sampleDrills: Record<string, Drill[]> = {
+      "F. Chopin Ballade Op.23 No.1": [
+        { id: "sample-drill-1", song: "F. Chopin Ballade Op.23 No.1", measures: "57-60마디", title: "리듬 흔들림", tempo: 76, recurrence: 4 },
+        { id: "sample-drill-2", song: "F. Chopin Ballade Op.23 No.1", measures: "23-26마디", title: "양손 어긋남", tempo: 72, recurrence: 3 },
+        { id: "sample-drill-3", song: "F. Chopin Ballade Op.23 No.1", measures: "81-84마디", title: "페달 잔향 겹침", tempo: 80, recurrence: 2 },
+      ],
+      "L. v. Beethoven Sonata Op.13 No.8": [
+        { id: "sample-drill-4", song: "L. v. Beethoven Sonata Op.13 No.8", measures: "33-38마디", title: "다이나믹 부족", tempo: 84, recurrence: 2 },
+        { id: "sample-drill-5", song: "L. v. Beethoven Sonata Op.13 No.8", measures: "1-8마디", title: "서주 템포", tempo: 60, recurrence: 3 },
+      ],
+      "J.S. Bach Prelude in C Major": [
+        { id: "sample-drill-6", song: "J.S. Bach Prelude in C Major", measures: "1-16마디", title: "아르페지오 균일성", tempo: 72, recurrence: 5 },
+      ],
+    };
+
+    // Helper to get date key
+    const getDateKey = (daysAgo: number) => {
+      const d = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
+
+    // Save sample drills and completion for 3 days ago
+    const threeDaysAgoKey = getDateKey(3);
+    const threeDaysDrills = [
+      ...sampleDrills["F. Chopin Ballade Op.23 No.1"],
+      ...sampleDrills["L. v. Beethoven Sonata Op.13 No.8"],
+    ];
+    localStorage.setItem(`grit-on-drills-${threeDaysAgoKey}`, JSON.stringify(threeDaysDrills));
+    localStorage.setItem(`grit-on-completed-${threeDaysAgoKey}`, JSON.stringify({
+      date: threeDaysAgoKey,
+      completedDrillIds: threeDaysDrills.map(d => d.id),
+    }));
+
+    // Save sample drills for 5 days ago
+    const fiveDaysAgoKey = getDateKey(5);
+    const fiveDaysDrills = sampleDrills["F. Chopin Ballade Op.23 No.1"];
+    localStorage.setItem(`grit-on-drills-${fiveDaysAgoKey}`, JSON.stringify(fiveDaysDrills));
+    localStorage.setItem(`grit-on-completed-${fiveDaysAgoKey}`, JSON.stringify({
+      date: fiveDaysAgoKey,
+      completedDrillIds: fiveDaysDrills.slice(0, 2).map(d => d.id), // Only 2 completed
+    }));
+
+    // Save sample drills for yesterday
+    const yesterdayKey = getDateKey(1);
+    const yesterdayDrills = sampleDrills["J.S. Bach Prelude in C Major"];
+    localStorage.setItem(`grit-on-drills-${yesterdayKey}`, JSON.stringify(yesterdayDrills));
+    localStorage.setItem(`grit-on-completed-${yesterdayKey}`, JSON.stringify({
+      date: yesterdayKey,
+      completedDrillIds: yesterdayDrills.map(d => d.id),
+    }));
 
     const sessions = [
       // 5일 전
@@ -350,51 +481,56 @@ export default function GoalsPage() {
 
         {/* Calendar Grid */}
         <div className="grid grid-cols-7 gap-2">
-          {calendarData.map((cell, idx) => (
-            <button
-              key={idx}
-              className="flex flex-col items-center"
-              onClick={() => cell.date && cell.sessionCount > 0 && setSelectedDate(cell.date)}
-              disabled={!cell.date || cell.sessionCount === 0}
-            >
-              {cell.date ? (
-                <>
-                  {/* Clover Shape Cell */}
-                  <div
-                    className={`w-10 h-10 rounded-[12px] flex items-center justify-center transition-transform ${
-                      cell.sessionCount > 0
-                        ? "bg-amber-200 hover:scale-105 cursor-pointer"
-                        : "bg-gray-100"
-                    }`}
-                  >
-                    {cell.sessionCount > 0 ? (
-                      cell.sessionCount === 1 ? (
-                        <Check className="w-5 h-5 text-white" strokeWidth={3} />
-                      ) : (
-                        <span className="text-gray-800 font-bold text-sm">{cell.sessionCount}</span>
-                      )
-                    ) : null}
-                  </div>
-                  {/* Date Number */}
-                  <span
-                    className={`text-xs mt-1 font-medium ${
-                      cell.isToday
-                        ? "bg-black text-white rounded-full w-6 h-6 flex items-center justify-center"
-                        : cell.dayOfWeek === 0
-                        ? "text-red-500"
-                        : cell.dayOfWeek === 6
-                        ? "text-blue-500"
-                        : "text-gray-600"
-                    }`}
-                  >
-                    {cell.date.getDate()}
-                  </span>
-                </>
-              ) : (
-                <div className="w-10 h-10" />
-              )}
-            </button>
-          ))}
+          {calendarData.map((cell, idx) => {
+            const isPastOrToday = cell.date && cell.date.getTime() <= today.getTime();
+            return (
+              <button
+                key={idx}
+                className="flex flex-col items-center"
+                onClick={() => cell.date && isPastOrToday && setSelectedDate(cell.date)}
+                disabled={!cell.date || !isPastOrToday}
+              >
+                {cell.date ? (
+                  <>
+                    {/* Clover Shape Cell */}
+                    <div
+                      className={`w-10 h-10 rounded-[12px] flex items-center justify-center transition-transform ${
+                        cell.sessionCount > 0
+                          ? "bg-amber-200 hover:scale-105 cursor-pointer"
+                          : isPastOrToday
+                          ? "bg-gray-100 hover:bg-gray-200 cursor-pointer"
+                          : "bg-gray-50"
+                      }`}
+                    >
+                      {cell.sessionCount > 0 ? (
+                        cell.sessionCount === 1 ? (
+                          <Check className="w-5 h-5 text-white" strokeWidth={3} />
+                        ) : (
+                          <span className="text-gray-800 font-bold text-sm">{cell.sessionCount}</span>
+                        )
+                      ) : null}
+                    </div>
+                    {/* Date Number */}
+                    <span
+                      className={`text-xs mt-1 font-medium ${
+                        cell.isToday
+                          ? "bg-black text-white rounded-full w-6 h-6 flex items-center justify-center"
+                          : cell.dayOfWeek === 0
+                          ? "text-red-500"
+                          : cell.dayOfWeek === 6
+                          ? "text-blue-500"
+                          : "text-gray-600"
+                      }`}
+                    >
+                      {cell.date.getDate()}
+                    </span>
+                  </>
+                ) : (
+                  <div className="w-10 h-10" />
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -406,7 +542,12 @@ export default function GoalsPage() {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <p className="font-bold text-black text-lg">{formatDateDisplay(selectedDate)}</p>
-                <p className="text-sm text-gray-500">{selectedDateSessions.length}개 세션</p>
+                <p className="text-sm text-gray-500">
+                  {selectedDateDrills.length > 0 && `${selectedDateDrills.length}개 드릴`}
+                  {selectedDateDrills.length > 0 && selectedDateSessions.length > 0 && " · "}
+                  {selectedDateSessions.length > 0 && `${selectedDateSessions.length}개 세션`}
+                  {selectedDateDrills.length === 0 && selectedDateSessions.length === 0 && "기록 없음"}
+                </p>
               </div>
               <button
                 onClick={() => setSelectedDate(null)}
@@ -416,53 +557,105 @@ export default function GoalsPage() {
               </button>
             </div>
 
-            {/* Sessions List */}
-            <div className="space-y-3">
-              {selectedDateSessions.map((session) => (
-                <div
-                  key={session.id}
-                  className="bg-gray-50 rounded-xl p-4"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-black flex items-center justify-center">
-                      <Music className="w-5 h-5 text-white" />
+            {/* Completed Drills - Grouped by Song */}
+            {groupedSelectedDrills.length > 0 && (
+              <div className="space-y-3 mb-4">
+                {groupedSelectedDrills.map(([songName, drills]) => (
+                  <div key={songName} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                    {/* Song Header */}
+                    <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
+                      <p className="font-semibold text-black text-sm">{songName}</p>
                     </div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-black text-sm">{session.pieceName}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs text-gray-500 flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {formatTime(session.practiceTime)}
-                        </span>
-                        <span className="text-xs text-gray-400">
-                          {new Date(session.startTime).toLocaleTimeString("ko-KR", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-xs font-medium text-green-600">
-                        {session.totalTime > 0
-                          ? `${Math.round((session.practiceTime / session.totalTime) * 100)}%`
-                          : "0%"}
-                      </span>
+                    {/* Drills */}
+                    <div className="divide-y divide-gray-100">
+                      {drills.map((drill) => (
+                        <div
+                          key={drill.id}
+                          className="px-4 py-2.5 flex items-center gap-3"
+                        >
+                          <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
+                          <p className="flex-1 text-sm text-gray-600 line-through">
+                            {drill.measures}
+                            {drill.title && ` - ${drill.title}`}
+                            {drill.tempo && ` 템포 ${drill.tempo}`}
+                            {drill.recurrence ? ` ${drill.recurrence}회` : drill.duration ? ` ${drill.duration}분` : ""}
+                          </p>
+                        </div>
+                      ))}
                     </div>
                   </div>
+                ))}
+              </div>
+            )}
+
+            {/* Sessions List */}
+            {selectedDateSessions.length > 0 && (
+              <>
+                <p className="text-xs font-medium text-gray-500 mb-2">연습 세션</p>
+                <div className="space-y-2">
+                  {selectedDateSessions.map((session) => {
+                    const typeInfo = getPracticeTypeLabel(session.practiceType);
+                    return (
+                      <div
+                        key={session.id}
+                        className="bg-gray-50 rounded-xl p-3"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-black flex items-center justify-center">
+                            <Music className="w-5 h-5 text-white" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-semibold text-black text-sm">{session.pieceName}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded ${typeInfo.color}`}>
+                                {typeInfo.label}
+                              </span>
+                              <span className="text-xs text-gray-500 flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {formatTime(session.practiceTime)}
+                              </span>
+                              <span className="text-xs text-gray-400">
+                                {new Date(session.startTime).toLocaleTimeString("ko-KR", {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-sm font-medium text-green-600">
+                              {session.totalTime > 0
+                                ? `${Math.round((session.practiceTime / session.totalTime) * 100)}%`
+                                : "0%"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              ))}
-            </div>
+              </>
+            )}
+
+            {/* Empty State */}
+            {groupedSelectedDrills.length === 0 && selectedDateSessions.length === 0 && (
+              <div className="text-center py-8">
+                <Music className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                <p className="text-sm text-gray-500">이 날 연습 기록이 없습니다</p>
+              </div>
+            )}
 
             {/* Total Stats */}
-            <div className="mt-4 pt-4 border-t border-gray-100">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-500">총 연습 시간</span>
-                <span className="font-bold text-black">
-                  {formatTime(selectedDateSessions.reduce((sum, s) => sum + s.practiceTime, 0))}
-                </span>
+            {selectedDateSessions.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-500">총 연습 시간</span>
+                  <span className="font-bold text-black">
+                    {formatTime(selectedDateSessions.reduce((sum, s) => sum + s.practiceTime, 0))}
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       )}
