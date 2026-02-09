@@ -754,7 +754,7 @@ export default function PracticePage() {
         <div className="bg-gray-100 rounded-lg p-3 mb-4 text-xs font-mono">
           <div className="flex justify-between items-center mb-2">
             <span>현재 음량:</span>
-            <span className={`font-bold ${isPianoDetected ? 'text-green-600' : 'text-gray-600'}`}>
+            <span className={`font-bold ${isPianoDetected ? 'text-green-600' : isSoundDetected ? 'text-amber-600' : 'text-gray-600'}`}>
               {currentDecibel} dB
             </span>
           </div>
@@ -764,13 +764,13 @@ export default function PracticePage() {
           </div>
           <div className="flex justify-between items-center mb-2">
             <span>상태:</span>
-            <span className={isPianoDetected ? 'text-green-600 font-bold' : 'text-gray-500'}>
-              {isCalibrating ? '측정 중...' : isPianoDetected ? '🎹 연습 감지!' : '대기 중'}
+            <span className={isPianoDetected ? 'text-green-600 font-bold' : isSoundDetected ? 'text-amber-600' : 'text-gray-500'}>
+              {isCalibrating ? '측정 중...' : isPianoDetected ? '🎹 피아노 감지!' : isSoundDetected ? '🗣️ 목소리 (무시)' : '대기 중'}
             </span>
           </div>
           <div className="w-full bg-gray-300 rounded-full h-2 mt-2">
             <div
-              className={`h-2 rounded-full transition-all ${isPianoDetected ? 'bg-green-500' : 'bg-blue-500'}`}
+              className={`h-2 rounded-full transition-all ${isPianoDetected ? 'bg-green-500' : isSoundDetected ? 'bg-amber-500' : 'bg-blue-500'}`}
               style={{ width: `${Math.min(100, (currentDecibel / 100) * 100)}%` }}
             />
           </div>
