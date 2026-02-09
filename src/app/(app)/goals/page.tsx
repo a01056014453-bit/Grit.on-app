@@ -334,6 +334,88 @@ export default function GoalsPage() {
     };
   }, [audioUrl]);
 
+  // Generate a simple audio blob for testing
+  const generateSampleAudio = async (): Promise<Blob> => {
+    const audioContext = new AudioContext();
+    const sampleRate = audioContext.sampleRate;
+    const duration = 3; // 3 seconds
+    const numSamples = sampleRate * duration;
+
+    // Create audio buffer
+    const audioBuffer = audioContext.createBuffer(1, numSamples, sampleRate);
+    const channelData = audioBuffer.getChannelData(0);
+
+    // Generate a simple piano-like tone (C4 = 261.63 Hz)
+    const frequencies = [261.63, 329.63, 392.00]; // C4, E4, G4 (C major chord)
+    for (let i = 0; i < numSamples; i++) {
+      const t = i / sampleRate;
+      let sample = 0;
+      for (const freq of frequencies) {
+        // Add harmonics for richer sound
+        sample += Math.sin(2 * Math.PI * freq * t) * 0.3;
+        sample += Math.sin(2 * Math.PI * freq * 2 * t) * 0.15;
+        sample += Math.sin(2 * Math.PI * freq * 3 * t) * 0.1;
+      }
+      // Apply envelope (attack-decay)
+      const envelope = Math.exp(-t * 2) * (1 - Math.exp(-t * 50));
+      channelData[i] = sample * envelope * 0.5;
+    }
+
+    // Convert to WAV blob
+    const wavBuffer = audioBufferToWav(audioBuffer);
+    await audioContext.close();
+    return new Blob([wavBuffer], { type: 'audio/wav' });
+  };
+
+  // Convert AudioBuffer to WAV format
+  const audioBufferToWav = (buffer: AudioBuffer): ArrayBuffer => {
+    const numChannels = buffer.numberOfChannels;
+    const sampleRate = buffer.sampleRate;
+    const format = 1; // PCM
+    const bitDepth = 16;
+    const bytesPerSample = bitDepth / 8;
+    const blockAlign = numChannels * bytesPerSample;
+    const byteRate = sampleRate * blockAlign;
+    const dataSize = buffer.length * blockAlign;
+    const headerSize = 44;
+    const totalSize = headerSize + dataSize;
+
+    const arrayBuffer = new ArrayBuffer(totalSize);
+    const view = new DataView(arrayBuffer);
+
+    // WAV header
+    const writeString = (offset: number, str: string) => {
+      for (let i = 0; i < str.length; i++) {
+        view.setUint8(offset + i, str.charCodeAt(i));
+      }
+    };
+
+    writeString(0, 'RIFF');
+    view.setUint32(4, totalSize - 8, true);
+    writeString(8, 'WAVE');
+    writeString(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, format, true);
+    view.setUint16(22, numChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, byteRate, true);
+    view.setUint16(32, blockAlign, true);
+    view.setUint16(34, bitDepth, true);
+    writeString(36, 'data');
+    view.setUint32(40, dataSize, true);
+
+    // Write audio data
+    const channelData = buffer.getChannelData(0);
+    let offset = 44;
+    for (let i = 0; i < buffer.length; i++) {
+      const sample = Math.max(-1, Math.min(1, channelData[i]));
+      view.setInt16(offset, sample * 0x7FFF, true);
+      offset += 2;
+    }
+
+    return arrayBuffer;
+  };
+
   // Create sample sessions for testing
   const createSampleSessions = async () => {
     const samplePieces = [
@@ -341,6 +423,9 @@ export default function GoalsPage() {
       { id: "2", name: "L. v. Beethoven Sonata Op.13 No.8" },
       { id: "3", name: "J.S. Bach Prelude in C Major" },
     ];
+
+    // Generate sample audio for one session
+    const sampleAudio = await generateSampleAudio();
 
     // Sample drills for each piece
     const sampleDrills: Record<string, Drill[]> = {
@@ -430,7 +515,7 @@ export default function GoalsPage() {
         practiceType: "runthrough" as const,
         label: "연습",
       },
-      // 어제
+      // 어제 (with audio)
       {
         pieceId: "3",
         pieceName: samplePieces[2].name,
@@ -441,6 +526,7 @@ export default function GoalsPage() {
         synced: false,
         practiceType: "routine" as const,
         label: "연습",
+        audioBlob: sampleAudio,
       },
     ];
 
