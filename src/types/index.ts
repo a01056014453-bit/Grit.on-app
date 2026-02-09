@@ -2,3 +2,4 @@
 export * from "./recording";
 export * from "./practice";
 export * from "./plan";
+export * from "./feedback";

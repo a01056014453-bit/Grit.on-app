@@ -223,7 +223,7 @@ export default function PlansPage() {
 
       {/* Add Plan Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center">
+        <div className="fixed inset-0 z-[60] flex items-end justify-center">
           {/* Backdrop */}
           <div
             className="absolute inset-0 bg-black/50"
@@ -231,7 +231,7 @@ export default function PlansPage() {
           />
 
           {/* Modal */}
-          <div className="relative w-full max-w-lg bg-white rounded-t-2xl p-5 pb-8 animate-in slide-in-from-bottom duration-300">
+          <div className="relative w-full max-w-lg bg-white rounded-t-2xl p-5 pb-24 animate-in slide-in-from-bottom duration-300">
             {/* Header */}
             <div className="flex items-center justify-between mb-5">
               <h3 className="text-lg font-bold text-gray-900">새 계획 추가</h3>
