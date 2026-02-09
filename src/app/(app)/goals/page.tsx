@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Target, Play } from "lucide-react";
+import { ArrowLeft, Target, Play, ChevronLeft, ChevronRight } from "lucide-react";
 import { ProgressRing, StatsCard } from "@/components/app";
-import { getAllSessions, getTodayPracticeTime, getPracticeStats } from "@/lib/db";
+import { getAllSessions, getTodayPracticeTime, getPracticeStats, type PracticeSession } from "@/lib/db";
 
 export default function GoalsPage() {
   const router = useRouter();
@@ -18,9 +18,12 @@ export default function GoalsPage() {
   const [totalHours, setTotalHours] = useState(0);
   const [weekSessions, setWeekSessions] = useState(0);
   const [streakDays, setStreakDays] = useState(0);
+  const [allSessions, setAllSessions] = useState<PracticeSession[]>([]);
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  const dayNames = ["일", "월", "화", "수", "목", "금", "토"];
 
   // Calculate streak
   function calculateStreak(sessions: { startTime: Date }[]): number {
@@ -67,19 +70,20 @@ export default function GoalsPage() {
         setTotalHours(Math.round(stats.totalPracticeTime / 3600));
 
         // Week sessions
-        const allSessions = await getAllSessions();
+        const sessions = await getAllSessions();
+        setAllSessions(sessions);
         const weekStart = new Date(today);
         weekStart.setDate(today.getDate() - today.getDay());
         weekStart.setHours(0, 0, 0, 0);
 
-        const thisWeekSessions = allSessions.filter((s) => {
+        const thisWeekSessions = sessions.filter((s) => {
           const sessionDate = new Date(s.startTime);
           return sessionDate >= weekStart;
         });
         setWeekSessions(thisWeekSessions.length);
 
         // Streak
-        const streak = calculateStreak(allSessions);
+        const streak = calculateStreak(sessions);
         setStreakDays(streak);
 
         // Daily goal
@@ -106,6 +110,68 @@ export default function GoalsPage() {
   };
 
   const progress = Math.min((todayMinutes / dailyGoal) * 100, 100);
+
+  // Generate calendar data for a month
+  const getMonthCalendarData = () => {
+    const year = calendarMonth.getFullYear();
+    const month = calendarMonth.getMonth();
+
+    // First day of the month
+    const firstDay = new Date(year, month, 1);
+    const startDayOfWeek = firstDay.getDay();
+
+    // Last day of the month
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+
+    // Create calendar grid
+    const calendar: Array<{ date: Date | null; minutes: number; isToday: boolean }> = [];
+
+    // Add empty cells for days before the first day of month
+    for (let i = 0; i < startDayOfWeek; i++) {
+      calendar.push({ date: null, minutes: 0, isToday: false });
+    }
+
+    // Add days of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(year, month, day);
+      date.setHours(0, 0, 0, 0);
+
+      // Calculate practice minutes for this day
+      const daySessions = allSessions.filter((s) => {
+        const sessionDate = new Date(s.startTime);
+        sessionDate.setHours(0, 0, 0, 0);
+        return sessionDate.getTime() === date.getTime();
+      });
+
+      const minutes = Math.floor(
+        daySessions.reduce((sum, s) => sum + s.practiceTime, 0) / 60
+      );
+
+      calendar.push({
+        date,
+        minutes,
+        isToday: date.getTime() === today.getTime(),
+      });
+    }
+
+    return calendar;
+  };
+
+  const calendarData = getMonthCalendarData();
+  const monthYear = `${calendarMonth.getFullYear()}년 ${calendarMonth.getMonth() + 1}월`;
+
+  const goToPrevMonth = () => {
+    setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1));
+  };
+
+  const goToNextMonth = () => {
+    setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1));
+  };
+
+  const goToToday = () => {
+    setCalendarMonth(new Date());
+  };
 
   if (isLoading) {
     return (
@@ -191,10 +257,91 @@ export default function GoalsPage() {
       </div>
 
       {/* Stats Grid */}
-      <div className="bg-white rounded-2xl border border-gray-200 mb-6 divide-x divide-gray-100 grid grid-cols-3">
+      <div className="bg-white rounded-2xl border border-gray-200 mb-4 divide-x divide-gray-100 grid grid-cols-3">
         <StatsCard value={totalHours} unit="시간" label="총 연습" />
         <StatsCard value={weekSessions} unit="세션" label="이번 주" />
         <StatsCard value={streakDays} unit="일" label="연속" />
+      </div>
+
+      {/* Monthly Calendar */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-4 mb-6">
+        {/* Calendar Header */}
+        <div className="flex items-center justify-between mb-4">
+          <button
+            onClick={goToPrevMonth}
+            className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200"
+          >
+            <ChevronLeft className="w-4 h-4 text-gray-600" />
+          </button>
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-black">{monthYear}</span>
+            {(calendarMonth.getMonth() !== today.getMonth() || calendarMonth.getFullYear() !== today.getFullYear()) && (
+              <button
+                onClick={goToToday}
+                className="text-xs text-violet-600 bg-violet-50 px-2 py-1 rounded-full"
+              >
+                오늘
+              </button>
+            )}
+          </div>
+          <button
+            onClick={goToNextMonth}
+            className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200"
+          >
+            <ChevronRight className="w-4 h-4 text-gray-600" />
+          </button>
+        </div>
+
+        {/* Day Names */}
+        <div className="grid grid-cols-7 gap-1 mb-2">
+          {dayNames.map((name) => (
+            <div key={name} className="text-center text-[10px] text-gray-400 font-medium">
+              {name}
+            </div>
+          ))}
+        </div>
+
+        {/* Calendar Grid */}
+        <div className="grid grid-cols-7 gap-1">
+          {calendarData.map((cell, idx) => (
+            <div key={idx} className="aspect-square flex items-center justify-center">
+              {cell.date ? (
+                <div
+                  className={`w-full h-full rounded-lg flex flex-col items-center justify-center text-xs ${
+                    cell.isToday
+                      ? "bg-black text-white"
+                      : cell.minutes > 0
+                      ? "bg-violet-100 text-violet-700"
+                      : "bg-gray-50 text-gray-400"
+                  }`}
+                >
+                  <span className={`font-medium ${cell.isToday ? "text-white" : ""}`}>
+                    {cell.date.getDate()}
+                  </span>
+                  {cell.minutes > 0 && (
+                    <span className={`text-[9px] ${cell.isToday ? "text-white/80" : "text-violet-500"}`}>
+                      {cell.minutes}분
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <div className="w-full h-full" />
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Legend */}
+        <div className="flex items-center justify-center gap-4 mt-4 text-[10px] text-gray-500">
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded bg-violet-100" />
+            <span>연습함</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded bg-black" />
+            <span>오늘</span>
+          </div>
+        </div>
       </div>
 
       {/* Start Practice Button */}

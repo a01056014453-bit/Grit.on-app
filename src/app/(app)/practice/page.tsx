@@ -813,7 +813,10 @@ export default function PracticePage() {
             <div className="grid grid-cols-7 gap-1">
               {weeklyData.map((day, idx) => (
                 <div key={idx} className="text-center">
-                  <p className="text-[10px] text-gray-400 mb-1">{day.name}</p>
+                  <p className="text-[10px] text-gray-400 mb-0.5">{day.name}</p>
+                  <p className={`text-[10px] mb-1 ${day.isToday ? "font-bold text-black" : "text-gray-400"}`}>
+                    {day.date.getDate()}
+                  </p>
                   <div
                     className={`w-9 h-9 mx-auto rounded-full flex items-center justify-center text-xs font-semibold ${
                       day.isToday
