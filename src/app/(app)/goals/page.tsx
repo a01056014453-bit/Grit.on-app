@@ -186,35 +186,35 @@ export default function GoalsPage() {
       </div>
 
       {/* Monthly Calendar */}
-      <div className="bg-gray-900 rounded-2xl p-4 mb-6">
+      <div className="bg-white rounded-2xl border border-gray-200 p-4 mb-6">
         {/* Calendar Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <span className="font-bold text-white text-lg">{monthYear}</span>
+            <span className="font-bold text-black text-lg">{monthYear}</span>
             <div className="flex items-center gap-1 text-sm">
-              <span className="text-amber-400">✓</span>
-              <span className="text-white font-medium">{practiceDaysCount}</span>
+              <span className="text-amber-500">✓</span>
+              <span className="text-black font-medium">{practiceDaysCount}</span>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={goToPrevMonth}
-              className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-800"
+              className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100"
             >
-              <ChevronLeft className="w-5 h-5 text-white" />
+              <ChevronLeft className="w-5 h-5 text-gray-600" />
             </button>
             <button
               onClick={goToNextMonth}
-              className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-800"
+              className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100"
             >
-              <ChevronRight className="w-5 h-5 text-white" />
+              <ChevronRight className="w-5 h-5 text-gray-600" />
             </button>
             {(calendarMonth.getMonth() !== today.getMonth() || calendarMonth.getFullYear() !== today.getFullYear()) && (
               <button
                 onClick={goToToday}
-                className="px-3 py-1.5 bg-gray-700 text-white text-xs font-medium rounded-full hover:bg-gray-600"
+                className="px-3 py-1.5 bg-black text-white text-xs font-medium rounded-full hover:bg-gray-800"
               >
-                월
+                오늘
               </button>
             )}
           </div>
@@ -226,7 +226,7 @@ export default function GoalsPage() {
             <div
               key={name}
               className={`text-center text-xs font-medium ${
-                idx === 0 ? "text-red-400" : idx === 6 ? "text-blue-400" : "text-gray-400"
+                idx === 0 ? "text-red-500" : idx === 6 ? "text-blue-500" : "text-gray-500"
               }`}
             >
               {name}
@@ -245,7 +245,7 @@ export default function GoalsPage() {
                     className={`w-10 h-10 rounded-[12px] flex items-center justify-center ${
                       cell.sessionCount > 0
                         ? "bg-amber-200"
-                        : "bg-gray-700"
+                        : "bg-gray-100"
                     }`}
                   >
                     {cell.sessionCount > 0 ? (
@@ -260,12 +260,12 @@ export default function GoalsPage() {
                   <span
                     className={`text-xs mt-1 font-medium ${
                       cell.isToday
-                        ? "bg-white text-black rounded-full w-6 h-6 flex items-center justify-center"
+                        ? "bg-black text-white rounded-full w-6 h-6 flex items-center justify-center"
                         : cell.dayOfWeek === 0
-                        ? "text-red-400"
+                        ? "text-red-500"
                         : cell.dayOfWeek === 6
-                        ? "text-blue-400"
-                        : "text-gray-300"
+                        ? "text-blue-500"
+                        : "text-gray-600"
                     }`}
                   >
                     {cell.date.getDate()}
