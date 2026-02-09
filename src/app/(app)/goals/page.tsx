@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Play, ChevronLeft, ChevronRight, Check, X, Clock, Music, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Play, ChevronLeft, ChevronRight, Check, X, Clock, Music } from "lucide-react";
 import { StatsCard } from "@/components/app";
 import { getAllSessions, getPracticeStats, savePracticeSession, type PracticeSession } from "@/lib/db";
 import { mockDrillCards, groupDrillsBySong } from "@/data";
@@ -563,18 +563,20 @@ export default function GoalsPage() {
                 {groupedSelectedDrills.map(([songName, drills]) => (
                   <div key={songName} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                     {/* Song Header */}
-                    <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
-                      <p className="font-semibold text-black text-sm">{songName}</p>
+                    <div className="px-4 py-3">
+                      <p className="font-semibold text-black">{songName}</p>
                     </div>
                     {/* Drills */}
-                    <div className="divide-y divide-gray-100">
+                    <div className="px-4 pb-3 space-y-3">
                       {drills.map((drill) => (
                         <div
                           key={drill.id}
-                          className="px-4 py-2.5 flex items-center gap-3"
+                          className="flex items-center gap-3"
                         >
-                          <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
-                          <p className="flex-1 text-sm text-gray-600 line-through">
+                          <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+                            <Check className="w-4 h-4 text-green-600" strokeWidth={3} />
+                          </div>
+                          <p className="flex-1 text-sm text-gray-500">
                             {drill.measures}
                             {drill.title && ` - ${drill.title}`}
                             {drill.tempo && ` 템포 ${drill.tempo}`}
