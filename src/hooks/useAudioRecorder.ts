@@ -152,51 +152,21 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
     []
   );
 
-  // Detect if sound is likely piano (vs voice/noise)
-  const isPianoSound = useCallback(
-    (frequencyData: Uint8Array, sampleRate: number, decibel: number): boolean => {
-      // 1. 데시벨 기준: 노이즈 플로어보다 높은 소리만
-      const effectiveThreshold = Math.max(decibelThreshold, noiseFloorDecibelRef.current + 5);
-      if (decibel < effectiveThreshold) return false;
+  // 단순화된 소리 감지: 노이즈 플로어보다 높으면 연습으로 카운트
+  const isSoundPlaying = useCallback(
+    (decibel: number): boolean => {
+      // 캘리브레이션 전에는 기본 임계값 사용
+      const noiseFloor = isCalibrationCompleteRef.current
+        ? noiseFloorDecibelRef.current
+        : 35; // 기본 노이즈 플로어
 
-      // 2. 주파수 대역 에너지 분석
-      const pianoEnergy = getFrequencyBandEnergy(frequencyData, sampleRate, PIANO_LOW_FREQ, PIANO_HIGH_FREQ);
-      const voiceEnergy = getFrequencyBandEnergy(frequencyData, sampleRate, VOICE_LOW_FREQ, VOICE_HIGH_FREQ);
-      const highFreqEnergy = getFrequencyBandEnergy(frequencyData, sampleRate, 2000, 4000); // 피아노 고음역
-      const lowFreqEnergy = getFrequencyBandEnergy(frequencyData, sampleRate, 50, 200); // 저음역
+      // 노이즈 플로어 + 마진보다 높으면 소리로 인식
+      // 마진을 3dB로 줄여서 더 민감하게
+      const threshold = noiseFloor + 3;
 
-      // 3. 피아노 특성 판별:
-      // - 피아노는 넓은 주파수 대역에 에너지가 분포
-      // - 말소리는 저주파(기본 주파수)에 에너지가 집중
-      // - 피아노는 하모닉스로 인해 고주파 에너지가 높음
-
-      // 피아노 대역 에너지가 최소한 있어야 함 (더 낮은 임계값)
-      if (pianoEnergy < 10) return false;
-
-      // 피아노 대역 vs 음성 기본 주파수 대역 비율
-      const pianoToVoiceRatio = voiceEnergy > 0 ? pianoEnergy / voiceEnergy : pianoEnergy;
-
-      // 고주파 에너지 비율 (피아노는 고음역 하모닉스가 있음)
-      const highFreqRatio = pianoEnergy > 0 ? highFreqEnergy / pianoEnergy : 0;
-
-      // 전체 스펙트럼 에너지 (피아노는 넓게 분포)
-      const totalEnergy = pianoEnergy + lowFreqEnergy;
-
-      // 피아노 판별 조건 (더 관대하게):
-      // 1. 전체 피아노 대역 에너지가 음성 대역의 60% 이상
-      // 2. 또는 고주파 에너지가 있음 (피아노 하모닉스)
-      // 3. 또는 충분히 큰 소리 (60dB 이상이면 음악적 소리로 간주)
-      // 4. 또는 넓은 주파수 대역에 에너지가 분포 (피아노 특성)
-      const isPiano =
-        (pianoToVoiceRatio >= 0.6) || // 피아노 대역 에너지가 우세
-        (highFreqRatio >= 0.1 && pianoEnergy >= 15) || // 고음역 에너지 있음
-        (decibel >= 60 && pianoEnergy >= 20) || // 충분히 큰 소리
-        (totalEnergy >= 25 && pianoEnergy >= 12) || // 넓은 대역 분포
-        (decibel >= 55 && highFreqEnergy >= 10); // 중간 크기 + 고음역
-
-      return isPiano;
+      return decibel > threshold;
     },
-    [decibelThreshold, getFrequencyBandEnergy]
+    []
   );
 
   // Analyze audio in real-time (uses refs to avoid closure issues)
@@ -263,29 +233,29 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
       }
     }
 
-    // Check if it's piano sound (not just any sound)
-    const pianoDetected = isPianoSound(frequencyData, sampleRate, decibel);
+    // 단순화: 소리가 노이즈 플로어보다 높으면 연습으로 인식
+    const soundDetected = isSoundPlaying(decibel);
 
-    // Time-based hysteresis for piano detection
-    if (pianoDetected) {
+    // Time-based hysteresis for sound detection
+    if (soundDetected) {
       lastPianoDetectedTimeRef.current = currentTime;
     } else {
       lastSilenceDetectedTimeRef.current = currentTime;
     }
 
     // State transitions based on time
-    const timeSinceLastPiano = currentTime - lastPianoDetectedTimeRef.current;
+    const timeSinceLastSound = currentTime - lastPianoDetectedTimeRef.current;
     const timeSinceLastSilence = currentTime - lastSilenceDetectedTimeRef.current;
 
     if (!isActuallyPlayingRef.current) {
-      // Turn ON: 피아노 소리가 감지되고 충분히 지속됨
-      if (pianoDetected && timeSinceLastSilence >= PIANO_ON_DELAY_MS) {
+      // Turn ON: 소리가 감지되면 즉시 (딜레이 최소화)
+      if (soundDetected) {
         isActuallyPlayingRef.current = true;
         soundStartTimeRef.current = currentTime;
       }
     } else {
-      // Turn OFF: 피아노 소리가 없어진 지 충분히 오래됨
-      if (!pianoDetected && timeSinceLastPiano >= PIANO_OFF_DELAY_MS) {
+      // Turn OFF: 소리가 없어진 지 충분히 오래됨 (500ms)
+      if (!soundDetected && timeSinceLastSound >= 500) {
         isActuallyPlayingRef.current = false;
         soundStartTimeRef.current = null;
       }
@@ -303,7 +273,7 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
     }));
 
     animationFrameRef.current = requestAnimationFrame(analyzeAudio);
-  }, [calculateDecibel, isPianoSound]);
+  }, [calculateDecibel, isSoundPlaying]);
 
   // Start recording
   const startRecording = useCallback(async () => {

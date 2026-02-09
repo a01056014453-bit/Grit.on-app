@@ -68,9 +68,9 @@ export default function PracticePage() {
     stopRecording,
     reset,
   } = useAudioRecorder({
-    decibelThreshold: 45, // 더 민감하게 피아노 소리 감지
-    minSoundDuration: 150, // 150ms 이상 지속되면 연습으로 카운트
-    calibrationDuration: 1000,
+    decibelThreshold: 40, // 낮은 임계값으로 민감하게 감지
+    minSoundDuration: 100,
+    calibrationDuration: 800, // 빠른 캘리브레이션
   });
 
   useEffect(() => {
@@ -216,6 +216,34 @@ export default function PracticePage() {
         isPlaying={isPlaying}
         onPlayRecording={handlePlayRecording}
       />
+
+      {/* Debug: Sound Detection Status */}
+      {isRecording && (
+        <div className="bg-gray-100 rounded-lg p-3 mb-4 text-xs font-mono">
+          <div className="flex justify-between items-center mb-2">
+            <span>현재 음량:</span>
+            <span className={`font-bold ${isPianoDetected ? 'text-green-600' : 'text-gray-600'}`}>
+              {currentDecibel} dB
+            </span>
+          </div>
+          <div className="flex justify-between items-center mb-2">
+            <span>기준 소음:</span>
+            <span>{noiseFloor} dB</span>
+          </div>
+          <div className="flex justify-between items-center mb-2">
+            <span>상태:</span>
+            <span className={isPianoDetected ? 'text-green-600 font-bold' : 'text-gray-500'}>
+              {isCalibrating ? '측정 중...' : isPianoDetected ? '🎹 연습 감지!' : '대기 중'}
+            </span>
+          </div>
+          <div className="w-full bg-gray-300 rounded-full h-2 mt-2">
+            <div
+              className={`h-2 rounded-full transition-all ${isPianoDetected ? 'bg-green-500' : 'bg-blue-500'}`}
+              style={{ width: `${Math.min(100, (currentDecibel / 100) * 100)}%` }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Hidden Audio Element */}
       {recordedAudio && (
