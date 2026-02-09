@@ -2,13 +2,10 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Play, Zap, Music2, Circle, ChevronRight, BookOpen, Timer } from "lucide-react";
+import { Play, Zap, ChevronRight, BookOpen, Timer } from "lucide-react";
 import { StatsCard, QuoteCard, DailyGoal } from "@/components/app";
-import { mockDrillCards, mockUser, mockStats, hasAIAnalysis, getGreeting, getTotalPlanMinutes, groupDrillsBySong, mockSongs } from "@/data";
+import { mockUser, mockStats, getGreeting } from "@/data";
 import { getTodayPracticeTime, getPracticeStats, getAllSessions } from "@/lib/db";
-
-const totalPlanMinutes = getTotalPlanMinutes(mockDrillCards);
-const groupedDrills = groupDrillsBySong(mockDrillCards);
 
 export default function HomePage() {
   const greeting = getGreeting();
@@ -218,84 +215,6 @@ export default function HomePage() {
         </Link>
       </div>
 
-      {/* Today's Practice Plan - Grouped by Song */}
-      {hasAIAnalysis && (
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <h3 className="text-base font-bold text-black">오늘의 연습 플랜</h3>
-              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                {totalPlanMinutes}분
-              </span>
-            </div>
-            <Link href="/plans" className="text-xs font-medium text-gray-500 hover:text-black">
-              전체 보기 &rarr;
-            </Link>
-          </div>
-
-          {/* 곡별 체크리스트 */}
-          <div className="space-y-3">
-            {groupedDrills.map((group) => (
-              <div
-                key={group.song}
-                className="rounded-xl bg-white border border-gray-200 overflow-hidden"
-              >
-                {/* 곡 헤더 - 탭하면 곡 정보 페이지로 */}
-                <Link
-                  href={`/songs/${mockSongs.find((s) => s.title === group.song)?.id || "1"}`}
-                  className="flex items-center gap-3 px-4 py-3 bg-gray-50 border-b border-gray-200 hover:bg-gray-100 transition-colors"
-                >
-                  <div className="w-8 h-8 rounded-lg bg-black flex items-center justify-center">
-                    <Music2 className="w-4 h-4 text-white" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-black truncate">{group.song}</p>
-                    <p className="text-xs text-gray-500">
-                      {group.drills.length}개 항목 · {group.totalDuration}분
-                    </p>
-                  </div>
-                </Link>
-
-                {/* 드릴 체크리스트 */}
-                <div className="divide-y divide-gray-100">
-                  {group.drills.map((drill) => (
-                    <Link
-                      key={drill.id}
-                      href={`/practice?type=partial&measures=${drill.measures}&tempo=${drill.tempo}`}
-                      className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors active:bg-gray-100"
-                    >
-                      {/* 체크 아이콘 */}
-                      <Circle className="w-5 h-5 text-gray-300 shrink-0" />
-
-                      {/* 내용 */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium text-black">{drill.title}</p>
-                          <span className="text-[10px] text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded shrink-0">
-                            {drill.recurrence}회
-                          </span>
-                        </div>
-                        <p className="text-xs text-gray-500">{drill.measures}</p>
-                      </div>
-
-                      {/* 템포 & 시간 */}
-                      <div className="text-right shrink-0">
-                        <p className="text-xs font-medium text-black">♩={drill.tempo}</p>
-                        <p className="text-[10px] text-gray-500">{drill.duration}분</p>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* 시간 캡 안내 */}
-          <p className="text-xs text-gray-400 text-center mt-3">
-            과부하 방지를 위해 {totalPlanMinutes}분 이내로 구성됨
-          </p>
-        </div>
-      )}
     </div>
   );
 }
