@@ -28,7 +28,7 @@ interface UseAudioRecorderOptions {
 export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
   // 피아노 소리 감지에 최적화된 기본값
   const {
-    decibelThreshold = 65, // 65dB 이상이면 피아노 연주로 인식 (대화는 ~60dB)
+    decibelThreshold = 50, // 50dB 이상이면 피아노 연주로 인식 (더 민감하게)
     minSoundDuration = 200, // 200ms 이상 지속되어야 연습으로 카운트
     calibrationDuration = 1000, // 1초간 환경 소음 측정
   } = options;
@@ -78,8 +78,8 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
   // Time-based hysteresis refs (ms instead of frames)
   const lastPianoDetectedTimeRef = useRef<number>(0);
   const lastSilenceDetectedTimeRef = useRef<number>(0);
-  const PIANO_ON_DELAY_MS = 50; // 50ms 이상 피아노 소리나야 ON (피아노 어택 빠름)
-  const PIANO_OFF_DELAY_MS = 800; // 800ms 이상 조용해야 OFF (피아노 서스테인/페달 고려)
+  const PIANO_ON_DELAY_MS = 30; // 30ms 이상 피아노 소리나야 ON (더 빠른 반응)
+  const PIANO_OFF_DELAY_MS = 1000; // 1초 이상 조용해야 OFF (피아노 서스테인/페달 고려)
 
   // 피아노 주파수 대역 (Hz)
   // 피아노: A0(27.5Hz) ~ C8(4186Hz), 주요 대역 200Hz ~ 4000Hz
@@ -155,37 +155,44 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
   // Detect if sound is likely piano (vs voice/noise)
   const isPianoSound = useCallback(
     (frequencyData: Uint8Array, sampleRate: number, decibel: number): boolean => {
-      // 1. 데시벨 기준: 피아노는 일반적으로 70dB 이상
-      if (decibel < decibelThreshold) return false;
+      // 1. 데시벨 기준: 노이즈 플로어보다 높은 소리만
+      const effectiveThreshold = Math.max(decibelThreshold, noiseFloorDecibelRef.current + 5);
+      if (decibel < effectiveThreshold) return false;
 
       // 2. 주파수 대역 에너지 분석
       const pianoEnergy = getFrequencyBandEnergy(frequencyData, sampleRate, PIANO_LOW_FREQ, PIANO_HIGH_FREQ);
       const voiceEnergy = getFrequencyBandEnergy(frequencyData, sampleRate, VOICE_LOW_FREQ, VOICE_HIGH_FREQ);
       const highFreqEnergy = getFrequencyBandEnergy(frequencyData, sampleRate, 2000, 4000); // 피아노 고음역
+      const lowFreqEnergy = getFrequencyBandEnergy(frequencyData, sampleRate, 50, 200); // 저음역
 
       // 3. 피아노 특성 판별:
       // - 피아노는 넓은 주파수 대역에 에너지가 분포
       // - 말소리는 저주파(기본 주파수)에 에너지가 집중
       // - 피아노는 하모닉스로 인해 고주파 에너지가 높음
 
-      // 피아노 대역 에너지가 충분히 높아야 함
-      if (pianoEnergy < 30) return false;
+      // 피아노 대역 에너지가 최소한 있어야 함 (더 낮은 임계값)
+      if (pianoEnergy < 10) return false;
 
       // 피아노 대역 vs 음성 기본 주파수 대역 비율
-      // 피아노는 전체적으로 고른 에너지, 말소리는 저주파 집중
       const pianoToVoiceRatio = voiceEnergy > 0 ? pianoEnergy / voiceEnergy : pianoEnergy;
 
       // 고주파 에너지 비율 (피아노는 고음역 하모닉스가 있음)
       const highFreqRatio = pianoEnergy > 0 ? highFreqEnergy / pianoEnergy : 0;
 
-      // 피아노 판별 조건:
-      // 1. 전체 피아노 대역 에너지가 음성 대역보다 높거나 비슷 (ratio >= 0.8)
-      // 2. 또는 고주파 에너지가 충분히 있음 (피아노 고음역)
-      // 3. 데시벨이 높을수록 피아노일 확률 높음 (대화보다 큰 소리)
+      // 전체 스펙트럼 에너지 (피아노는 넓게 분포)
+      const totalEnergy = pianoEnergy + lowFreqEnergy;
+
+      // 피아노 판별 조건 (더 관대하게):
+      // 1. 전체 피아노 대역 에너지가 음성 대역의 60% 이상
+      // 2. 또는 고주파 에너지가 있음 (피아노 하모닉스)
+      // 3. 또는 충분히 큰 소리 (60dB 이상이면 음악적 소리로 간주)
+      // 4. 또는 넓은 주파수 대역에 에너지가 분포 (피아노 특성)
       const isPiano =
-        (pianoToVoiceRatio >= 0.8 && highFreqRatio >= 0.15) || // 일반적인 피아노
-        (decibel >= 75 && pianoEnergy >= 50) || // 큰 피아노 소리
-        (highFreqEnergy >= 40 && decibel >= 60); // 고음역 피아노
+        (pianoToVoiceRatio >= 0.6) || // 피아노 대역 에너지가 우세
+        (highFreqRatio >= 0.1 && pianoEnergy >= 15) || // 고음역 에너지 있음
+        (decibel >= 60 && pianoEnergy >= 20) || // 충분히 큰 소리
+        (totalEnergy >= 25 && pianoEnergy >= 12) || // 넓은 대역 분포
+        (decibel >= 55 && highFreqEnergy >= 10); // 중간 크기 + 고음역
 
       return isPiano;
     },

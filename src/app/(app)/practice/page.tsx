@@ -68,8 +68,8 @@ export default function PracticePage() {
     stopRecording,
     reset,
   } = useAudioRecorder({
-    decibelThreshold: 65,
-    minSoundDuration: 200,
+    decibelThreshold: 45, // 더 민감하게 피아노 소리 감지
+    minSoundDuration: 150, // 150ms 이상 지속되면 연습으로 카운트
     calibrationDuration: 1000,
   });
 

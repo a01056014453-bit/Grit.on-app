@@ -2,9 +2,15 @@ import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import type { SongAIInfo } from "@/data/mock-songs";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// OpenAI 클라이언트를 런타임에 생성 (빌드 시 에러 방지)
+function getOpenAIClient(): OpenAI | null {
+  if (!process.env.OPENAI_API_KEY) {
+    return null;
+  }
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+}
 
 /** JSON 블록 추출 헬퍼 */
 function extractJSON(text: string): string {
@@ -82,7 +88,8 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!process.env.OPENAI_API_KEY) {
+    const openai = getOpenAIClient();
+    if (!openai) {
       return NextResponse.json(
         { error: "OPENAI_API_KEY가 설정되지 않았습니다." },
         { status: 500 }
