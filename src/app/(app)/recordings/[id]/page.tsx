@@ -198,20 +198,6 @@ export default function RecordingDetailPage() {
         </div>
       </div>
 
-      {/* Practice Type */}
-      {session.practiceType && (
-        <div className="bg-primary/5 rounded-xl p-4 mb-4">
-          <div className="text-sm text-primary font-medium">
-            연습 타입: {" "}
-            {session.practiceType === "runthrough"
-              ? "런스루 (처음부터 끝까지)"
-              : session.practiceType === "partial"
-                ? "부분 연습"
-                : "루틴 연습"}
-          </div>
-        </div>
-      )}
-
       {/* Audio Player */}
       {audioUrl ? (
         <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm mb-4">

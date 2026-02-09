@@ -139,15 +139,6 @@ export default function RecordingsPage() {
                         녹음됨
                       </div>
                     )}
-                    {session.practiceType && (
-                      <div className="text-xs text-primary font-medium bg-primary/5 px-2 py-1 rounded-md">
-                        {session.practiceType === "runthrough"
-                          ? "런스루"
-                          : session.practiceType === "partial"
-                            ? "부분연습"
-                            : "루틴"}
-                      </div>
-                    )}
                   </div>
                 </div>
                 <div className="flex flex-col items-end justify-between h-full">

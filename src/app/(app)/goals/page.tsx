@@ -193,19 +193,6 @@ export default function GoalsPage() {
     return `${date.getMonth() + 1}월 ${date.getDate()}일 ${dayNames[date.getDay()]}요일`;
   };
 
-  // Get practice type label
-  const getPracticeTypeLabel = (type?: string) => {
-    switch (type) {
-      case "runthrough":
-        return { label: "전곡 연습", color: "bg-blue-100 text-blue-700" };
-      case "partial":
-        return { label: "구간 연습", color: "bg-purple-100 text-purple-700" };
-      case "routine":
-        return { label: "루틴 연습", color: "bg-green-100 text-green-700" };
-      default:
-        return { label: "연습", color: "bg-gray-100 text-gray-700" };
-    }
-  };
 
   // Helper: Format date to YYYY-MM-DD
   const formatDateKey = (date: Date) => {
@@ -492,32 +479,7 @@ export default function GoalsPage() {
     }
 
     const sessions = [
-      // 5일 전 (with audio)
-      {
-        pieceId: "1",
-        pieceName: samplePieces[0].name,
-        startTime: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000 + 10 * 60 * 60 * 1000),
-        endTime: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000 + 11 * 60 * 60 * 1000),
-        totalTime: 3600,
-        practiceTime: 2700,
-        synced: false,
-        practiceType: "runthrough" as const,
-        label: "연습",
-        audioBlob: sampleAudio,
-      },
-      // 3일 전 - 2개 세션 (with audio)
-      {
-        pieceId: "2",
-        pieceName: samplePieces[1].name,
-        startTime: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000 + 9 * 60 * 60 * 1000),
-        endTime: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000 + 9.5 * 60 * 60 * 1000),
-        totalTime: 1800,
-        practiceTime: 1500,
-        synced: false,
-        practiceType: "partial" as const,
-        label: "연습",
-        audioBlob: sampleAudio,
-      },
+      // 3일 전 (with audio)
       {
         pieceId: "1",
         pieceName: samplePieces[0].name,
@@ -526,20 +488,18 @@ export default function GoalsPage() {
         totalTime: 3600,
         practiceTime: 3000,
         synced: false,
-        practiceType: "runthrough" as const,
         label: "연습",
         audioBlob: sampleAudio,
       },
       // 어제 (with audio)
       {
-        pieceId: "3",
-        pieceName: samplePieces[2].name,
+        pieceId: "2",
+        pieceName: samplePieces[1].name,
         startTime: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000 + 20 * 60 * 60 * 1000),
         endTime: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000 + 20.75 * 60 * 60 * 1000),
         totalTime: 2700,
         practiceTime: 2400,
         synced: false,
-        practiceType: "routine" as const,
         label: "연습",
         audioBlob: sampleAudio,
       },
@@ -552,7 +512,6 @@ export default function GoalsPage() {
         totalTime: 3600,
         practiceTime: 3000,
         synced: false,
-        practiceType: "partial" as const,
         label: "연습",
         audioBlob: sampleAudio,
       },
@@ -813,7 +772,6 @@ export default function GoalsPage() {
                 <p className="text-xs font-medium text-gray-500 mb-2">연습 세션</p>
                 <div className="space-y-2">
                   {selectedDateSessions.map((session) => {
-                    const typeInfo = getPracticeTypeLabel(session.practiceType);
                     const hasAudio = !!session.audioBlob;
                     return (
                       <button
@@ -837,9 +795,6 @@ export default function GoalsPage() {
                           <div className="flex-1">
                             <p className="font-semibold text-black text-sm">{session.pieceName}</p>
                             <div className="flex items-center gap-2 mt-1">
-                              <span className={`text-[10px] px-1.5 py-0.5 rounded ${typeInfo.color}`}>
-                                {typeInfo.label}
-                              </span>
                               <span className="text-xs text-gray-500 flex items-center gap-1">
                                 <Clock className="w-3 h-3" />
                                 {formatTime(session.practiceTime)}
