@@ -175,11 +175,6 @@ export function RecentRecordingsList({ sessions }: RecentRecordingsListProps) {
               </div>
               <div className="text-right">
                 <span className="text-xs text-gray-500">{formatDate(session.startTime)}</span>
-                <div className="text-xs font-medium text-green-600 mt-1">
-                  {session.totalTime > 0
-                    ? `${Math.round((session.practiceTime / session.totalTime) * 100)}%`
-                    : "0%"}
-                </div>
               </div>
             </div>
           </button>

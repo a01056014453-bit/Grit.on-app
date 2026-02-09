@@ -722,13 +722,6 @@ export default function GoalsPage() {
                               </span>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <span className="text-sm font-medium text-green-600">
-                              {session.totalTime > 0
-                                ? `${Math.round((session.practiceTime / session.totalTime) * 100)}%`
-                                : "0%"}
-                            </span>
-                          </div>
                         </div>
                       </button>
                     );
