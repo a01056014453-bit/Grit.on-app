@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Play, ChevronLeft, ChevronRight, Check, X, Clock, Music } from "lucide-react";
 import { StatsCard } from "@/components/app";
-import { getAllSessions, getPracticeStats, type PracticeSession } from "@/lib/db";
+import { getAllSessions, getPracticeStats, savePracticeSession, type PracticeSession } from "@/lib/db";
 
 export default function GoalsPage() {
   const router = useRouter();
@@ -168,6 +168,86 @@ export default function GoalsPage() {
     return `${date.getMonth() + 1}월 ${date.getDate()}일 ${dayNames[date.getDay()]}요일`;
   };
 
+  // Create sample sessions for testing
+  const createSampleSessions = async () => {
+    const samplePieces = [
+      { id: "1", name: "F. Chopin Ballade Op.23 No.1" },
+      { id: "2", name: "L. v. Beethoven Sonata Op.13 No.8" },
+      { id: "3", name: "J.S. Bach Prelude in C Major" },
+    ];
+
+    const sessions = [
+      // 5일 전
+      {
+        pieceId: "1",
+        pieceName: samplePieces[0].name,
+        startTime: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000 + 10 * 60 * 60 * 1000),
+        endTime: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000 + 11 * 60 * 60 * 1000),
+        totalTime: 3600,
+        practiceTime: 2700,
+        synced: false,
+        practiceType: "runthrough" as const,
+        label: "연습",
+      },
+      // 3일 전 - 2개 세션
+      {
+        pieceId: "2",
+        pieceName: samplePieces[1].name,
+        startTime: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000 + 9 * 60 * 60 * 1000),
+        endTime: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000 + 9.5 * 60 * 60 * 1000),
+        totalTime: 1800,
+        practiceTime: 1500,
+        synced: false,
+        practiceType: "partial" as const,
+        label: "연습",
+      },
+      {
+        pieceId: "1",
+        pieceName: samplePieces[0].name,
+        startTime: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000 + 14 * 60 * 60 * 1000),
+        endTime: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000 + 15 * 60 * 60 * 1000),
+        totalTime: 3600,
+        practiceTime: 3000,
+        synced: false,
+        practiceType: "runthrough" as const,
+        label: "연습",
+      },
+      // 어제
+      {
+        pieceId: "3",
+        pieceName: samplePieces[2].name,
+        startTime: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000 + 20 * 60 * 60 * 1000),
+        endTime: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000 + 20.75 * 60 * 60 * 1000),
+        totalTime: 2700,
+        practiceTime: 2400,
+        synced: false,
+        practiceType: "routine" as const,
+        label: "연습",
+      },
+    ];
+
+    for (const session of sessions) {
+      await savePracticeSession(session);
+    }
+
+    // Reload data
+    const newSessions = await getAllSessions();
+    setAllSessions(newSessions);
+
+    const stats = await getPracticeStats();
+    setTotalHours(Math.round(stats.totalPracticeTime / 3600));
+
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - today.getDay());
+    weekStart.setHours(0, 0, 0, 0);
+    const thisWeekSessions = newSessions.filter((s) => {
+      const sessionDate = new Date(s.startTime);
+      return sessionDate >= weekStart;
+    });
+    setWeekSessions(thisWeekSessions.length);
+    setStreakDays(calculateStreak(newSessions));
+  };
+
   const goToPrevMonth = () => {
     setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1));
   };
@@ -194,14 +274,22 @@ export default function GoalsPage() {
   return (
     <div className="px-4 py-6 max-w-lg mx-auto bg-white min-h-screen pb-24">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => router.back()}
+            className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center"
+          >
+            <ArrowLeft className="w-5 h-5 text-gray-600" />
+          </button>
+          <h1 className="text-xl font-bold text-black">연습 기록</h1>
+        </div>
         <button
-          onClick={() => router.back()}
-          className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center"
+          onClick={createSampleSessions}
+          className="text-xs text-gray-500 bg-gray-100 px-3 py-1.5 rounded-full hover:bg-gray-200"
         >
-          <ArrowLeft className="w-5 h-5 text-gray-600" />
+          샘플 추가
         </button>
-        <h1 className="text-xl font-bold text-black">연습 기록</h1>
       </div>
 
       {/* Stats Grid */}
