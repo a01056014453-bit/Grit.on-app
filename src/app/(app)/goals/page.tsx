@@ -424,7 +424,7 @@ export default function GoalsPage() {
       { id: "3", name: "J.S. Bach Prelude in C Major" },
     ];
 
-    // Generate sample audio for one session
+    // Generate sample audio
     const sampleAudio = await generateSampleAudio();
 
     // Sample drills for each piece
@@ -443,56 +443,56 @@ export default function GoalsPage() {
       ],
     };
 
-    // Helper to get date key
-    const getDateKey = (daysAgo: number) => {
-      const d = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000);
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    // Helper to get date key from Date
+    const getDateKeyFromDate = (date: Date) => {
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     };
 
-    // Save sample drills and completion for 3 days ago
-    const threeDaysAgoKey = getDateKey(3);
-    const threeDaysDrills = [
+    // Get all existing sessions to add drills to their dates
+    const existingSessions = await getAllSessions();
+    const existingDates = new Set<string>();
+    existingSessions.forEach(s => {
+      const d = new Date(s.startTime);
+      d.setHours(0, 0, 0, 0);
+      existingDates.add(getDateKeyFromDate(d));
+    });
+
+    // Add drills for all existing session dates
+    const allDrills = [
       ...sampleDrills["F. Chopin Ballade Op.23 No.1"],
       ...sampleDrills["L. v. Beethoven Sonata Op.13 No.8"],
+      ...sampleDrills["J.S. Bach Prelude in C Major"],
     ];
-    localStorage.setItem(`grit-on-drills-${threeDaysAgoKey}`, JSON.stringify(threeDaysDrills));
-    localStorage.setItem(`grit-on-completed-${threeDaysAgoKey}`, JSON.stringify({
-      date: threeDaysAgoKey,
-      completedDrillIds: threeDaysDrills.map(d => d.id),
-    }));
 
-    // Save sample drills for 5 days ago
-    const fiveDaysAgoKey = getDateKey(5);
-    const fiveDaysDrills = sampleDrills["F. Chopin Ballade Op.23 No.1"];
-    localStorage.setItem(`grit-on-drills-${fiveDaysAgoKey}`, JSON.stringify(fiveDaysDrills));
-    localStorage.setItem(`grit-on-completed-${fiveDaysAgoKey}`, JSON.stringify({
-      date: fiveDaysAgoKey,
-      completedDrillIds: fiveDaysDrills.slice(0, 2).map(d => d.id), // Only 2 completed
-    }));
+    existingDates.forEach(dateKey => {
+      // Create unique drill IDs for each date
+      const dateDrills = allDrills.map((d, idx) => ({
+        ...d,
+        id: `${d.id}-${dateKey}`,
+      }));
+      localStorage.setItem(`grit-on-drills-${dateKey}`, JSON.stringify(dateDrills));
+      localStorage.setItem(`grit-on-completed-${dateKey}`, JSON.stringify({
+        date: dateKey,
+        completedDrillIds: dateDrills.map(d => d.id),
+      }));
+    });
 
-    // Save sample drills for yesterday
-    const yesterdayKey = getDateKey(1);
-    const yesterdayDrills = sampleDrills["J.S. Bach Prelude in C Major"];
-    localStorage.setItem(`grit-on-drills-${yesterdayKey}`, JSON.stringify(yesterdayDrills));
-    localStorage.setItem(`grit-on-completed-${yesterdayKey}`, JSON.stringify({
-      date: yesterdayKey,
-      completedDrillIds: yesterdayDrills.map(d => d.id),
-    }));
-
-    // Save sample drills for today
-    const todayKey = getDateKey(0);
-    const todayDrills = [
-      ...sampleDrills["F. Chopin Ballade Op.23 No.1"],
-      ...sampleDrills["L. v. Beethoven Sonata Op.13 No.8"],
-    ];
-    localStorage.setItem(`grit-on-drills-${todayKey}`, JSON.stringify(todayDrills));
-    localStorage.setItem(`grit-on-completed-${todayKey}`, JSON.stringify({
-      date: todayKey,
-      completedDrillIds: todayDrills.map(d => d.id),
-    }));
+    // Also add for today if not already
+    const todayKey = getDateKeyFromDate(new Date());
+    if (!existingDates.has(todayKey)) {
+      const todayDrills = allDrills.map((d, idx) => ({
+        ...d,
+        id: `${d.id}-${todayKey}`,
+      }));
+      localStorage.setItem(`grit-on-drills-${todayKey}`, JSON.stringify(todayDrills));
+      localStorage.setItem(`grit-on-completed-${todayKey}`, JSON.stringify({
+        date: todayKey,
+        completedDrillIds: todayDrills.map(d => d.id),
+      }));
+    }
 
     const sessions = [
-      // 5일 전
+      // 5일 전 (with audio)
       {
         pieceId: "1",
         pieceName: samplePieces[0].name,
@@ -503,8 +503,9 @@ export default function GoalsPage() {
         synced: false,
         practiceType: "runthrough" as const,
         label: "연습",
+        audioBlob: sampleAudio,
       },
-      // 3일 전 - 2개 세션
+      // 3일 전 - 2개 세션 (with audio)
       {
         pieceId: "2",
         pieceName: samplePieces[1].name,
@@ -515,6 +516,7 @@ export default function GoalsPage() {
         synced: false,
         practiceType: "partial" as const,
         label: "연습",
+        audioBlob: sampleAudio,
       },
       {
         pieceId: "1",
@@ -526,6 +528,7 @@ export default function GoalsPage() {
         synced: false,
         practiceType: "runthrough" as const,
         label: "연습",
+        audioBlob: sampleAudio,
       },
       // 어제 (with audio)
       {
@@ -544,8 +547,8 @@ export default function GoalsPage() {
       {
         pieceId: "1",
         pieceName: samplePieces[0].name,
-        startTime: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2시간 전
-        endTime: new Date(Date.now() - 1 * 60 * 60 * 1000), // 1시간 전
+        startTime: new Date(Date.now() - 2 * 60 * 60 * 1000),
+        endTime: new Date(Date.now() - 1 * 60 * 60 * 1000),
         totalTime: 3600,
         practiceTime: 3000,
         synced: false,
@@ -554,6 +557,22 @@ export default function GoalsPage() {
         audioBlob: sampleAudio,
       },
     ];
+
+    // Add drills for new session dates too
+    for (const session of sessions) {
+      const sessionDateKey = getDateKeyFromDate(session.startTime);
+      if (!localStorage.getItem(`grit-on-drills-${sessionDateKey}`)) {
+        const dateDrills = allDrills.map((d, idx) => ({
+          ...d,
+          id: `${d.id}-${sessionDateKey}`,
+        }));
+        localStorage.setItem(`grit-on-drills-${sessionDateKey}`, JSON.stringify(dateDrills));
+        localStorage.setItem(`grit-on-completed-${sessionDateKey}`, JSON.stringify({
+          date: sessionDateKey,
+          completedDrillIds: dateDrills.map(d => d.id),
+        }));
+      }
+    }
 
     for (const session of sessions) {
       await savePracticeSession(session);
