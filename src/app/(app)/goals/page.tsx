@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Play, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, Play, ChevronLeft, ChevronRight, Check } from "lucide-react";
 import { StatsCard } from "@/components/app";
 import { getAllSessions, getPracticeStats, type PracticeSession } from "@/lib/db";
 
@@ -101,11 +101,16 @@ export default function GoalsPage() {
     const daysInMonth = lastDay.getDate();
 
     // Create calendar grid
-    const calendar: Array<{ date: Date | null; minutes: number; isToday: boolean }> = [];
+    const calendar: Array<{
+      date: Date | null;
+      sessionCount: number;
+      isToday: boolean;
+      dayOfWeek: number;
+    }> = [];
 
     // Add empty cells for days before the first day of month
     for (let i = 0; i < startDayOfWeek; i++) {
-      calendar.push({ date: null, minutes: 0, isToday: false });
+      calendar.push({ date: null, sessionCount: 0, isToday: false, dayOfWeek: i });
     }
 
     // Add days of the month
@@ -113,21 +118,18 @@ export default function GoalsPage() {
       const date = new Date(year, month, day);
       date.setHours(0, 0, 0, 0);
 
-      // Calculate practice minutes for this day
+      // Count sessions for this day
       const daySessions = allSessions.filter((s) => {
         const sessionDate = new Date(s.startTime);
         sessionDate.setHours(0, 0, 0, 0);
         return sessionDate.getTime() === date.getTime();
       });
 
-      const minutes = Math.floor(
-        daySessions.reduce((sum, s) => sum + s.practiceTime, 0) / 60
-      );
-
       calendar.push({
         date,
-        minutes,
+        sessionCount: daySessions.length,
         isToday: date.getTime() === today.getTime(),
+        dayOfWeek: date.getDay(),
       });
     }
 
@@ -136,6 +138,9 @@ export default function GoalsPage() {
 
   const calendarData = getMonthCalendarData();
   const monthYear = `${calendarMonth.getFullYear()}년 ${calendarMonth.getMonth() + 1}월`;
+
+  // Count total practice days in the month
+  const practiceDaysCount = calendarData.filter((c) => c.sessionCount > 0).length;
 
   const goToPrevMonth = () => {
     setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1));
@@ -181,83 +186,96 @@ export default function GoalsPage() {
       </div>
 
       {/* Monthly Calendar */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-4 mb-6">
+      <div className="bg-gray-900 rounded-2xl p-4 mb-6">
         {/* Calendar Header */}
         <div className="flex items-center justify-between mb-4">
-          <button
-            onClick={goToPrevMonth}
-            className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200"
-          >
-            <ChevronLeft className="w-4 h-4 text-gray-600" />
-          </button>
+          <div className="flex items-center gap-3">
+            <span className="font-bold text-white text-lg">{monthYear}</span>
+            <div className="flex items-center gap-1 text-sm">
+              <span className="text-amber-400">✓</span>
+              <span className="text-white font-medium">{practiceDaysCount}</span>
+            </div>
+          </div>
           <div className="flex items-center gap-2">
-            <span className="font-semibold text-black">{monthYear}</span>
+            <button
+              onClick={goToPrevMonth}
+              className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-800"
+            >
+              <ChevronLeft className="w-5 h-5 text-white" />
+            </button>
+            <button
+              onClick={goToNextMonth}
+              className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-800"
+            >
+              <ChevronRight className="w-5 h-5 text-white" />
+            </button>
             {(calendarMonth.getMonth() !== today.getMonth() || calendarMonth.getFullYear() !== today.getFullYear()) && (
               <button
                 onClick={goToToday}
-                className="text-xs text-violet-600 bg-violet-50 px-2 py-1 rounded-full"
+                className="px-3 py-1.5 bg-gray-700 text-white text-xs font-medium rounded-full hover:bg-gray-600"
               >
-                오늘
+                월
               </button>
             )}
           </div>
-          <button
-            onClick={goToNextMonth}
-            className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200"
-          >
-            <ChevronRight className="w-4 h-4 text-gray-600" />
-          </button>
         </div>
 
         {/* Day Names */}
-        <div className="grid grid-cols-7 gap-1 mb-2">
-          {dayNames.map((name) => (
-            <div key={name} className="text-center text-[10px] text-gray-400 font-medium">
+        <div className="grid grid-cols-7 gap-2 mb-2">
+          {dayNames.map((name, idx) => (
+            <div
+              key={name}
+              className={`text-center text-xs font-medium ${
+                idx === 0 ? "text-red-400" : idx === 6 ? "text-blue-400" : "text-gray-400"
+              }`}
+            >
               {name}
             </div>
           ))}
         </div>
 
         {/* Calendar Grid */}
-        <div className="grid grid-cols-7 gap-1">
+        <div className="grid grid-cols-7 gap-2">
           {calendarData.map((cell, idx) => (
-            <div key={idx} className="aspect-square flex items-center justify-center">
+            <div key={idx} className="flex flex-col items-center">
               {cell.date ? (
-                <div
-                  className={`w-full h-full rounded-lg flex flex-col items-center justify-center text-xs ${
-                    cell.isToday
-                      ? "bg-black text-white"
-                      : cell.minutes > 0
-                      ? "bg-violet-100 text-violet-700"
-                      : "bg-gray-50 text-gray-400"
-                  }`}
-                >
-                  <span className={`font-medium ${cell.isToday ? "text-white" : ""}`}>
+                <>
+                  {/* Clover Shape Cell */}
+                  <div
+                    className={`w-10 h-10 rounded-[12px] flex items-center justify-center ${
+                      cell.sessionCount > 0
+                        ? "bg-amber-200"
+                        : "bg-gray-700"
+                    }`}
+                  >
+                    {cell.sessionCount > 0 ? (
+                      cell.sessionCount === 1 ? (
+                        <Check className="w-5 h-5 text-white" strokeWidth={3} />
+                      ) : (
+                        <span className="text-gray-800 font-bold text-sm">{cell.sessionCount}</span>
+                      )
+                    ) : null}
+                  </div>
+                  {/* Date Number */}
+                  <span
+                    className={`text-xs mt-1 font-medium ${
+                      cell.isToday
+                        ? "bg-white text-black rounded-full w-6 h-6 flex items-center justify-center"
+                        : cell.dayOfWeek === 0
+                        ? "text-red-400"
+                        : cell.dayOfWeek === 6
+                        ? "text-blue-400"
+                        : "text-gray-300"
+                    }`}
+                  >
                     {cell.date.getDate()}
                   </span>
-                  {cell.minutes > 0 && (
-                    <span className={`text-[9px] ${cell.isToday ? "text-white/80" : "text-violet-500"}`}>
-                      {cell.minutes}분
-                    </span>
-                  )}
-                </div>
+                </>
               ) : (
-                <div className="w-full h-full" />
+                <div className="w-10 h-10" />
               )}
             </div>
           ))}
-        </div>
-
-        {/* Legend */}
-        <div className="flex items-center justify-center gap-4 mt-4 text-[10px] text-gray-500">
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded bg-violet-100" />
-            <span>연습함</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded bg-black" />
-            <span>오늘</span>
-          </div>
         </div>
       </div>
 
