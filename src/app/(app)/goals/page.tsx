@@ -2,16 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Target, Play, ChevronLeft, ChevronRight } from "lucide-react";
-import { ProgressRing, StatsCard } from "@/components/app";
-import { getAllSessions, getTodayPracticeTime, getPracticeStats, type PracticeSession } from "@/lib/db";
+import { ArrowLeft, Play, ChevronLeft, ChevronRight } from "lucide-react";
+import { StatsCard } from "@/components/app";
+import { getAllSessions, getPracticeStats, type PracticeSession } from "@/lib/db";
 
 export default function GoalsPage() {
   const router = useRouter();
-  const [dailyGoal, setDailyGoal] = useState(60);
-  const [todayMinutes, setTodayMinutes] = useState(0);
-  const [isEditingGoal, setIsEditingGoal] = useState(false);
-  const [tempGoal, setTempGoal] = useState(60);
   const [isLoading, setIsLoading] = useState(true);
 
   // Stats
@@ -61,10 +57,6 @@ export default function GoalsPage() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Today's practice time
-        const todayData = await getTodayPracticeTime();
-        setTodayMinutes(Math.round(todayData.practiceTime / 60));
-
         // Total hours
         const stats = await getPracticeStats();
         setTotalHours(Math.round(stats.totalPracticeTime / 3600));
@@ -85,13 +77,6 @@ export default function GoalsPage() {
         // Streak
         const streak = calculateStreak(sessions);
         setStreakDays(streak);
-
-        // Daily goal
-        const savedGoal = localStorage.getItem("grit-on-daily-goal");
-        if (savedGoal) {
-          setDailyGoal(parseInt(savedGoal, 10));
-          setTempGoal(parseInt(savedGoal, 10));
-        }
       } catch (error) {
         console.error("Failed to load data:", error);
       } finally {
@@ -101,15 +86,6 @@ export default function GoalsPage() {
 
     loadData();
   }, []);
-
-  // Save goal
-  const handleSaveGoal = () => {
-    setDailyGoal(tempGoal);
-    localStorage.setItem("grit-on-daily-goal", tempGoal.toString());
-    setIsEditingGoal(false);
-  };
-
-  const progress = Math.min((todayMinutes / dailyGoal) * 100, 100);
 
   // Generate calendar data for a month
   const getMonthCalendarData = () => {
@@ -194,66 +170,7 @@ export default function GoalsPage() {
         >
           <ArrowLeft className="w-5 h-5 text-gray-600" />
         </button>
-        <h1 className="text-xl font-bold text-black">오늘의 목표</h1>
-      </div>
-
-      {/* Goal Card */}
-      <div className="bg-white rounded-2xl p-6 border border-gray-200 mb-4">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Target className="w-5 h-5 text-gray-600" />
-            <span className="font-semibold text-black">일일 목표</span>
-          </div>
-          {!isEditingGoal ? (
-            <button
-              onClick={() => setIsEditingGoal(true)}
-              className="text-sm text-gray-500 hover:text-black"
-            >
-              수정
-            </button>
-          ) : (
-            <button
-              onClick={handleSaveGoal}
-              className="text-sm font-medium text-black"
-            >
-              저장
-            </button>
-          )}
-        </div>
-
-        {isEditingGoal ? (
-          <div className="flex items-center gap-4">
-            <input
-              type="range"
-              min={10}
-              max={180}
-              step={10}
-              value={tempGoal}
-              onChange={(e) => setTempGoal(parseInt(e.target.value, 10))}
-              className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black"
-            />
-            <span className="text-2xl font-bold text-black w-20 text-right">
-              {tempGoal}분
-            </span>
-          </div>
-        ) : (
-          <div className="flex items-center gap-6">
-            <ProgressRing progress={progress} size={80} strokeWidth={6} showValue={false} />
-            <div className="flex-1">
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold bg-gradient-to-r from-black to-violet-500 bg-clip-text text-transparent">
-                  {todayMinutes}
-                </span>
-                <span className="text-gray-500">/ {dailyGoal}분</span>
-              </div>
-              <p className="text-sm text-gray-500 mt-1">
-                {dailyGoal - todayMinutes > 0
-                  ? `${dailyGoal - todayMinutes}분 더 연습하면 목표 달성!`
-                  : "목표 달성 완료! 🎉"}
-              </p>
-            </div>
-          </div>
-        )}
+        <h1 className="text-xl font-bold text-black">연습 기록</h1>
       </div>
 
       {/* Stats Grid */}
