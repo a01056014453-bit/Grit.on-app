@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   User,
   Music,
@@ -20,18 +21,48 @@ import {
   Zap,
   Award,
   BookOpen,
+  Camera,
+  Pencil,
+  X,
+  Trash2,
 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { getAllSessions, getPracticeStats } from "@/lib/db";
 
-const mockUser = {
+const defaultUser = {
   nickname: "피아노하는민지",
   instrument: "피아노",
   grade: "고2",
   type: "전공", // "전공" | "취미"
   dailyGoal: 60,
   plan: "free",
+  profileImage: "", // base64 or URL
 };
+
+const PROFILE_STORAGE_KEY = "grit-on-profile";
+
+function loadProfile() {
+  if (typeof window === "undefined") return defaultUser;
+  try {
+    const saved = localStorage.getItem(PROFILE_STORAGE_KEY);
+    if (saved) return { ...defaultUser, ...JSON.parse(saved) };
+  } catch {}
+  return defaultUser;
+}
+
+function saveProfile(data: Partial<typeof defaultUser>) {
+  try {
+    const current = loadProfile();
+    const updated = { ...current, ...data };
+    localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
+    return updated;
+  } catch {}
+  return { ...defaultUser, ...data };
+}
+
+const gradeOptions = ["중1", "중2", "중3", "고1", "고2", "고3", "대학생", "일반"];
+const typeOptions = ["전공", "취미"];
+const instrumentOptions = ["피아노", "바이올린", "첼로", "플루트", "클라리넷", "기타", "보컬"];
 
 interface AnalysisItem {
   id: string;
@@ -59,7 +90,8 @@ const languageOptions = [
 ];
 
 export default function ProfilePage() {
-  const [dailyGoal, setDailyGoal] = useState(mockUser.dailyGoal);
+  const [profile, setProfile] = useState(defaultUser);
+  const [dailyGoal, setDailyGoal] = useState(defaultUser.dailyGoal);
   const [notifications, setNotifications] = useState(true);
   const [language, setLanguage] = useState("ko");
 
@@ -67,6 +99,15 @@ export default function ProfilePage() {
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [isPhotoMenuOpen, setIsPhotoMenuOpen] = useState(false);
+
+  // 프로필 편집 상태
+  const [editNickname, setEditNickname] = useState("");
+  const [editGrade, setEditGrade] = useState("");
+  const [editType, setEditType] = useState("");
+  const [editInstrument, setEditInstrument] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 데이터 상태
   const [analyses, setAnalyses] = useState<AnalysisItem[]>([]);
@@ -76,6 +117,13 @@ export default function ProfilePage() {
   const [currentStreak, setCurrentStreak] = useState(0);
   const [badges, setBadges] = useState<Badge[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // 초기 프로필 로드
+  useEffect(() => {
+    const saved = loadProfile();
+    setProfile(saved);
+    setDailyGoal(saved.dailyGoal);
+  }, []);
 
   // 데이터 로드
   useEffect(() => {
@@ -241,6 +289,76 @@ export default function ProfilePage() {
     ];
   }
 
+  // 프로필 편집 모달 열기
+  const openEditProfile = () => {
+    setEditNickname(profile.nickname);
+    setEditGrade(profile.grade);
+    setEditType(profile.type);
+    setEditInstrument(profile.instrument);
+    setIsEditProfileOpen(true);
+  };
+
+  // 프로필 저장
+  const handleSaveProfile = () => {
+    if (!editNickname.trim()) return;
+    const updated = saveProfile({
+      nickname: editNickname.trim(),
+      grade: editGrade,
+      type: editType,
+      instrument: editInstrument,
+    });
+    setProfile(updated);
+    setIsEditProfileOpen(false);
+  };
+
+  // 프로필 사진 선택
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // 5MB 제한
+    if (file.size > 5 * 1024 * 1024) {
+      alert("사진 크기는 5MB 이하여야 합니다.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = document.createElement("img");
+      img.onload = () => {
+        // 리사이즈 (200x200)
+        const canvas = document.createElement("canvas");
+        const size = 200;
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext("2d")!;
+
+        // 정사각형 크롭
+        const minDim = Math.min(img.width, img.height);
+        const sx = (img.width - minDim) / 2;
+        const sy = (img.height - minDim) / 2;
+        ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, size, size);
+
+        const base64 = canvas.toDataURL("image/jpeg", 0.8);
+        const updated = saveProfile({ profileImage: base64 });
+        setProfile(updated);
+        setIsPhotoMenuOpen(false);
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+
+    // 같은 파일 재선택 가능하도록 초기화
+    e.target.value = "";
+  };
+
+  // 프로필 사진 삭제
+  const handleRemovePhoto = () => {
+    const updated = saveProfile({ profileImage: "" });
+    setProfile(updated);
+    setIsPhotoMenuOpen(false);
+  };
+
   const handleLogout = () => {
     if (confirm("정말 로그아웃 하시겠습니까?")) {
       localStorage.removeItem("grit-on-logged-in");
@@ -274,30 +392,66 @@ export default function ProfilePage() {
       {/* Profile Header */}
       <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm mb-6">
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-            <User className="w-8 h-8 text-primary" />
-          </div>
+          {/* 프로필 사진 (탭하면 사진 메뉴) */}
+          <button
+            onClick={() => setIsPhotoMenuOpen(true)}
+            className="relative w-16 h-16 rounded-full shrink-0 group"
+          >
+            {profile.profileImage ? (
+              <Image
+                src={profile.profileImage}
+                alt="프로필"
+                fill
+                className="rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                <User className="w-8 h-8 text-gray-400" />
+              </div>
+            )}
+            <div className="absolute inset-0 rounded-full bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+              <div className="absolute -bottom-0.5 -right-0.5 w-6 h-6 bg-violet-600 rounded-full flex items-center justify-center border-2 border-white">
+                <Camera className="w-3 h-3 text-white" />
+              </div>
+            </div>
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handlePhotoSelect}
+            className="hidden"
+          />
+
           <div className="flex-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-xl font-bold text-gray-900">{mockUser.nickname}</h2>
+              <h2 className="text-xl font-bold text-gray-900">{profile.nickname}</h2>
               <div className="flex items-center gap-1.5">
                 <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
-                  {mockUser.grade}
+                  {profile.grade}
                 </span>
                 <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
-                  mockUser.type === "전공"
+                  profile.type === "전공"
                     ? "bg-violet-100 text-violet-600"
                     : "bg-green-100 text-green-600"
                 }`}>
-                  {mockUser.type}
+                  {profile.type}
                 </span>
               </div>
             </div>
             <div className="flex items-center gap-1.5 mt-2">
               <Music className="w-3.5 h-3.5 text-primary" />
-              <span className="text-sm text-gray-600">{mockUser.instrument}</span>
+              <span className="text-sm text-gray-600">{profile.instrument}</span>
             </div>
           </div>
+
+          {/* 편집 버튼 */}
+          <button
+            onClick={openEditProfile}
+            className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors shrink-0"
+          >
+            <Pencil className="w-4 h-4 text-gray-500" />
+          </button>
         </div>
       </div>
 
@@ -308,16 +462,16 @@ export default function ProfilePage() {
             <div className="flex items-center gap-2">
               <Crown className="w-4 h-4" />
               <span className="text-sm font-medium">
-                {mockUser.plan === "free" ? "무료 플랜" : "Pro 플랜"}
+                {profile.plan === "free" ? "무료 플랜" : "Pro 플랜"}
               </span>
             </div>
             <p className="text-xs text-white/80 mt-1">
-              {mockUser.plan === "free"
+              {profile.plan === "free"
                 ? "Pro로 업그레이드하여 무제한 분석을 이용하세요"
                 : "무제한 분석 이용 중"}
             </p>
           </div>
-          {mockUser.plan === "free" && (
+          {profile.plan === "free" && (
             <button
               onClick={() => setIsUpgradeModalOpen(true)}
               className="bg-white text-primary text-xs font-semibold px-3 py-1.5 rounded-full shadow-sm hover:bg-gray-50 transition-colors"
@@ -601,6 +755,158 @@ export default function ProfilePage() {
               )}
             </button>
           ))}
+        </div>
+      </Modal>
+
+      {/* Photo Menu Modal */}
+      <Modal
+        isOpen={isPhotoMenuOpen}
+        onClose={() => setIsPhotoMenuOpen(false)}
+        title="프로필 사진"
+      >
+        <div className="p-4 space-y-2">
+          <button
+            onClick={() => {
+              fileInputRef.current?.click();
+            }}
+            className="w-full flex items-center gap-3 p-4 rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors"
+          >
+            <Camera className="w-5 h-5 text-violet-600" />
+            <span className="text-sm font-medium text-gray-700">
+              {profile.profileImage ? "사진 변경" : "사진 선택"}
+            </span>
+          </button>
+          {profile.profileImage && (
+            <button
+              onClick={handleRemovePhoto}
+              className="w-full flex items-center gap-3 p-4 rounded-xl border border-gray-100 hover:bg-red-50 transition-colors"
+            >
+              <Trash2 className="w-5 h-5 text-red-500" />
+              <span className="text-sm font-medium text-red-500">사진 삭제</span>
+            </button>
+          )}
+        </div>
+      </Modal>
+
+      {/* Edit Profile Modal */}
+      <Modal
+        isOpen={isEditProfileOpen}
+        onClose={() => setIsEditProfileOpen(false)}
+        title="프로필 설정"
+      >
+        <div className="p-4 space-y-5">
+          {/* 프로필 사진 미리보기 */}
+          <div className="flex justify-center">
+            <button
+              onClick={() => {
+                setIsEditProfileOpen(false);
+                setTimeout(() => setIsPhotoMenuOpen(true), 300);
+              }}
+              className="relative w-20 h-20 rounded-full group"
+            >
+              {profile.profileImage ? (
+                <Image
+                  src={profile.profileImage}
+                  alt="프로필"
+                  fill
+                  className="rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center">
+                  <User className="w-10 h-10 text-gray-400" />
+                </div>
+              )}
+              <div className="absolute inset-0 rounded-full bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <Camera className="w-6 h-6 text-white" />
+              </div>
+              <div className="absolute -bottom-0.5 -right-0.5 w-7 h-7 bg-violet-600 rounded-full flex items-center justify-center border-2 border-white">
+                <Camera className="w-3.5 h-3.5 text-white" />
+              </div>
+            </button>
+          </div>
+
+          {/* 닉네임 */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">닉네임</label>
+            <input
+              type="text"
+              value={editNickname}
+              onChange={(e) => setEditNickname(e.target.value)}
+              maxLength={20}
+              placeholder="닉네임을 입력하세요"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+            />
+            <p className="text-xs text-gray-400 mt-1 text-right">{editNickname.length}/20</p>
+          </div>
+
+          {/* 학년 */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">학년</label>
+            <div className="flex flex-wrap gap-2">
+              {gradeOptions.map((g) => (
+                <button
+                  key={g}
+                  onClick={() => setEditGrade(g)}
+                  className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    editGrade === g
+                      ? "bg-violet-600 text-white"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  }`}
+                >
+                  {g}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 전공/취미 */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">유형</label>
+            <div className="flex gap-2">
+              {typeOptions.map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setEditType(t)}
+                  className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                    editType === t
+                      ? "bg-violet-600 text-white"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 악기 */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">악기</label>
+            <div className="flex flex-wrap gap-2">
+              {instrumentOptions.map((inst) => (
+                <button
+                  key={inst}
+                  onClick={() => setEditInstrument(inst)}
+                  className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    editInstrument === inst
+                      ? "bg-violet-600 text-white"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  }`}
+                >
+                  {inst}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 저장 버튼 */}
+          <button
+            onClick={handleSaveProfile}
+            disabled={!editNickname.trim()}
+            className="w-full py-3.5 bg-violet-600 text-white rounded-xl font-semibold text-sm hover:bg-violet-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            저장하기
+          </button>
         </div>
       </Modal>
 
