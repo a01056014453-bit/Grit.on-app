@@ -596,7 +596,7 @@ export default function AnalysisDetailPage() {
           {/* Practice Button */}
           <Link
             href={`/practice?piece=${pieceIdMap[id]}`}
-            className="flex items-center justify-center gap-2 w-full py-3 mt-4 bg-gradient-to-r from-violet-600 to-black text-white rounded-xl text-sm font-semibold"
+            className="flex items-center justify-center gap-2 w-full py-3 mt-4 bg-gradient-to-r from-violet-500 to-violet-900 text-white rounded-xl text-sm font-semibold"
           >
             <Play className="w-4 h-4 fill-white" />
             이 곡 연습 시작하기

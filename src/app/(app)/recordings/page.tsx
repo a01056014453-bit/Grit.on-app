@@ -107,7 +107,7 @@ export default function RecordingsPage() {
           <p className="text-sm text-gray-400">연습을 시작하면 자동으로 저장됩니다</p>
           <Link
             href="/practice"
-            className="inline-block mt-4 px-6 py-2 bg-gradient-to-r from-violet-600 to-black text-white rounded-lg text-sm font-medium"
+            className="inline-block mt-4 px-6 py-2 bg-gradient-to-r from-violet-500 to-violet-900 text-white rounded-lg text-sm font-medium"
           >
             연습 시작하기
           </Link>

@@ -280,7 +280,7 @@ export default function SectionDetailPage() {
       {/* Practice Button */}
       <Link
         href={`/practice?piece=${pieceId}&measures=${section.startMeasure}-${section.endMeasure}`}
-        className="flex items-center justify-center gap-2 w-full py-4 bg-gradient-to-r from-violet-600 to-black text-white rounded-xl text-base font-semibold"
+        className="flex items-center justify-center gap-2 w-full py-4 bg-gradient-to-r from-violet-500 to-violet-900 text-white rounded-xl text-base font-semibold"
       >
         <Play className="w-5 h-5 fill-white" />
         이 구간 연습하기

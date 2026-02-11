@@ -340,7 +340,7 @@ export default function RankingPage() {
       <div className="fixed bottom-20 left-0 right-0 px-4 max-w-lg mx-auto">
         <Link
           href="/practice"
-          className="flex items-center justify-center gap-2 w-full py-4 rounded-2xl bg-gradient-to-r from-violet-600 to-black text-white font-bold shadow-lg shadow-violet-600/30 transition-transform active:scale-[0.98]"
+          className="flex items-center justify-center gap-2 w-full py-4 rounded-2xl bg-gradient-to-r from-violet-500 to-violet-900 text-white font-bold shadow-lg shadow-violet-500/20 transition-transform active:scale-[0.98]"
         >
           <Play className="w-5 h-5 fill-white" />
           연습 시작하고 순위 올리기

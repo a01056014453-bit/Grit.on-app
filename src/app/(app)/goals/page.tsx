@@ -891,7 +891,7 @@ export default function GoalsPage() {
             <div className="flex items-center justify-center gap-6">
               <button
                 onClick={togglePlay}
-                className="w-16 h-16 rounded-full bg-gradient-to-r from-violet-600 to-black flex items-center justify-center hover:opacity-90 transition-opacity"
+                className="w-16 h-16 rounded-full bg-gradient-to-r from-violet-500 to-violet-900 flex items-center justify-center hover:opacity-90 transition-opacity shadow-lg shadow-violet-500/30"
               >
                 {isPlaying ? (
                   <Pause className="w-7 h-7 text-white" />
@@ -929,7 +929,7 @@ export default function GoalsPage() {
       {/* Start Practice Button */}
       <button
         onClick={() => router.push("/practice")}
-        className="fixed bottom-24 left-4 right-4 max-w-lg mx-auto py-4 bg-gradient-to-r from-violet-600 to-black text-white rounded-2xl font-semibold flex items-center justify-center gap-2 shadow-lg shadow-violet-600/30"
+        className="fixed bottom-24 left-4 right-4 max-w-lg mx-auto py-4 bg-gradient-to-r from-violet-500 to-violet-900 text-white rounded-2xl font-semibold flex items-center justify-center gap-2 shadow-lg shadow-violet-500/20"
       >
         <Play className="w-5 h-5 fill-white" />
         연습 시작하기

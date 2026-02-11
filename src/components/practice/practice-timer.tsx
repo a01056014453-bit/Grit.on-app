@@ -158,7 +158,7 @@ export function PracticeTimer({
             {hasPermission === false ? (
               <button
                 onClick={onRequestPermission}
-                className="w-16 h-16 rounded-full bg-gradient-to-r from-violet-600 to-black flex items-center justify-center hover:opacity-90 transition-opacity"
+                className="w-16 h-16 rounded-full bg-gradient-to-r from-violet-500 to-violet-900 flex items-center justify-center hover:opacity-90 transition-opacity shadow-lg shadow-violet-500/30"
               >
                 <Mic className="w-7 h-7 text-white" />
               </button>
@@ -189,7 +189,7 @@ export function PracticeTimer({
               <button
                 onClick={onStart}
                 disabled={hasPermission === null}
-                className="w-16 h-16 rounded-full bg-gradient-to-r from-violet-600 to-black flex items-center justify-center hover:opacity-90 disabled:opacity-50 transition-opacity"
+                className="w-16 h-16 rounded-full bg-gradient-to-r from-violet-500 to-violet-900 flex items-center justify-center hover:opacity-90 disabled:opacity-50 transition-opacity shadow-lg shadow-violet-500/30"
               >
                 <Play className="w-7 h-7 text-white ml-1" fill="currentColor" />
               </button>

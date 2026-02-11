@@ -199,7 +199,7 @@ export function LiveRankingWidget() {
         {/* CTA Button */}
         <Link
           href="/practice"
-          className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-gradient-to-r from-violet-600 to-black text-white font-semibold text-sm transition-transform active:scale-[0.98]"
+          className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-gradient-to-r from-violet-500 to-violet-900 text-white font-semibold text-sm transition-transform active:scale-[0.98]"
         >
           <Play className="w-4 h-4 fill-white" />
           지금 연습 시작하고 랭커 도전하기

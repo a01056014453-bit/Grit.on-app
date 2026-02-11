@@ -301,7 +301,7 @@ export default function AIAnalysisPage() {
                       <div className="p-4 pt-0">
                         <Link
                           href={`/ai-analysis/${piece.id}`}
-                          className="flex items-center justify-center gap-2 w-full py-3 bg-gradient-to-r from-violet-600 to-black text-white rounded-xl text-sm font-semibold"
+                          className="flex items-center justify-center gap-2 w-full py-3 bg-gradient-to-r from-violet-500 to-violet-900 text-white rounded-xl text-sm font-semibold"
                         >
                           <Sparkles className="w-4 h-4" />
                           전체 분석 보기
