@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Play, ChevronRight, BookOpen, Users, GraduationCap } from "lucide-react";
+import { Play, ChevronRight, BookOpen, Users, GraduationCap, Music, Clock, Calendar, Mic } from "lucide-react";
 import { StatsCard, DailyGoal } from "@/components/app";
 import { mockUser, mockStats, getGreeting } from "@/data";
-import { getTodayPracticeTime, getPracticeStats, getAllSessions } from "@/lib/db";
+import { getTodayPracticeTime, getPracticeStats, getAllSessions, PracticeSession } from "@/lib/db";
+import { formatTime } from "@/lib/format";
 
 export default function HomePage() {
   const greeting = getGreeting();
@@ -16,6 +17,7 @@ export default function HomePage() {
   const [totalHours, setTotalHours] = useState(0);
   const [weekSessions, setWeekSessions] = useState(0);
   const [streakDays, setStreakDays] = useState(0);
+  const [recentSessions, setRecentSessions] = useState<PracticeSession[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -46,6 +48,12 @@ export default function HomePage() {
         // 연속 일수 계산
         const streak = calculateStreak(allSessions);
         setStreakDays(streak);
+
+        // 최근 연습 기록 (최신 5개)
+        const sorted = [...allSessions].sort(
+          (a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
+        );
+        setRecentSessions(sorted.slice(0, 5));
 
         // localStorage에서 일일 목표 가져오기
         const savedGoal = localStorage.getItem('grit-on-daily-goal');
@@ -209,6 +217,87 @@ export default function HomePage() {
           </div>
           <ChevronRight className="w-5 h-5 text-gray-400" />
         </Link>
+      </div>
+
+      {/* Recent Practice Records */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-bold text-gray-900">연습 기록</h2>
+          <Link
+            href="/recordings"
+            className="text-sm text-violet-600 font-medium flex items-center gap-0.5"
+          >
+            전체보기
+            <ChevronRight className="w-4 h-4" />
+          </Link>
+        </div>
+
+        {isLoading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-gray-100 rounded-xl h-20 animate-pulse" />
+            ))}
+          </div>
+        ) : recentSessions.length === 0 ? (
+          <div className="text-center py-10 bg-gray-50 rounded-2xl border border-gray-100">
+            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <Mic className="w-6 h-6 text-gray-400" />
+            </div>
+            <p className="text-sm text-gray-500 mb-1">아직 연습 기록이 없습니다</p>
+            <p className="text-xs text-gray-400">연습을 시작하면 여기에 표시됩니다</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {recentSessions.map((session) => {
+              const d = new Date(session.startTime);
+              const now = new Date();
+              const diff = now.getTime() - d.getTime();
+              const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+              let dateStr: string;
+              if (days === 0) {
+                dateStr = `오늘 ${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
+              } else if (days === 1) {
+                dateStr = "어제";
+              } else if (days < 7) {
+                dateStr = `${days}일 전`;
+              } else {
+                dateStr = `${d.getMonth() + 1}월 ${d.getDate()}일`;
+              }
+
+              return (
+                <Link
+                  key={session.id}
+                  href={`/recordings/${session.id}`}
+                  className="flex items-center gap-3 bg-white rounded-xl p-3.5 border border-gray-100 hover:border-violet-200 transition-all active:scale-[0.99]"
+                >
+                  <div className="w-10 h-10 bg-violet-50 rounded-lg flex items-center justify-center shrink-0">
+                    <Music className="w-5 h-5 text-violet-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-semibold text-gray-900 truncate">
+                      {session.pieceName}
+                    </h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="flex items-center gap-1 text-xs text-gray-500">
+                        <Clock className="w-3 h-3" />
+                        {formatTime(session.practiceTime)}
+                      </span>
+                      {session.audioBlob && (
+                        <span className="text-xs text-green-600 font-medium">
+                          녹음
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 text-xs text-gray-400 shrink-0">
+                    <Calendar className="w-3 h-3" />
+                    {dateStr}
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </div>
 
     </div>
