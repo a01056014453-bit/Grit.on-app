@@ -1,18 +1,18 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { DrillCard } from "@/types";
 import { useAudioRecorder } from "@/hooks";
 import { savePracticeSession, getAllSessions, type PracticeSession } from "@/lib/db";
 import { completePracticeTodo } from "@/lib/practice-todo-store";
+import { formatTime } from "@/lib/format";
 import { mockSongs as initialSongs, mockDrillCards, hasAIAnalysis, groupDrillsBySong, composerList } from "@/data";
 import type { PracticeType, Song, PracticeTodo } from "@/types";
 import Link from "next/link";
-import { Music2, ChevronRight, Plus, Check, X, Clock, RotateCcw, Repeat, ArrowRight, Trash2 } from "lucide-react";
+import { Music2, ChevronRight, ChevronLeft, Plus, Check, X, Clock, RotateCcw, Repeat, ArrowRight, Trash2, Calendar, Mic } from "lucide-react";
 import {
   PracticeTimer,
-  RecentRecordingsList,
   SongSelectionModal,
   AddSongModal,
   PracticeAnalysisModal,
@@ -904,6 +904,54 @@ export default function PracticePage() {
 
   const weeklyData = getWeeklyData();
 
+  // 연습 기록 달력
+  const [calMonth, setCalMonth] = useState(new Date().getMonth());
+  const [calYear, setCalYear] = useState(new Date().getFullYear());
+  const [calSelectedDate, setCalSelectedDate] = useState<Date>(new Date());
+
+  const calSessionsByDate = useMemo(() => {
+    const map: Record<string, PracticeSession[]> = {};
+    recentSessions.forEach(s => {
+      const d = new Date(s.startTime);
+      const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+      if (!map[key]) map[key] = [];
+      map[key].push(s);
+    });
+    return map;
+  }, [recentSessions]);
+
+  const calSelectedSessions = useMemo(() => {
+    const key = `${calSelectedDate.getFullYear()}-${calSelectedDate.getMonth()}-${calSelectedDate.getDate()}`;
+    return (calSessionsByDate[key] || []).sort(
+      (a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
+    );
+  }, [calSelectedDate, calSessionsByDate]);
+
+  const calPracticeDays = useMemo(() => {
+    const days = new Set<number>();
+    recentSessions.forEach(s => {
+      const d = new Date(s.startTime);
+      if (d.getFullYear() === calYear && d.getMonth() === calMonth) days.add(d.getDate());
+    });
+    return days.size;
+  }, [recentSessions, calMonth, calYear]);
+
+  const calDaysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const calFirstDay = new Date(calYear, calMonth, 1).getDay();
+  const calToday = new Date();
+  const calDayNames = ["일", "월", "화", "수", "목", "금", "토"];
+  const calWeekdayNames = ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"];
+  const calIsSelectedToday = calSelectedDate.getFullYear() === calToday.getFullYear() && calSelectedDate.getMonth() === calToday.getMonth() && calSelectedDate.getDate() === calToday.getDate();
+  const totalDrillCount = mockDrillCards.length + customDrills.length;
+
+  const navigateCalMonth = (dir: number) => {
+    let m = calMonth + dir, y = calYear;
+    if (m < 0) { m = 11; y--; }
+    if (m > 11) { m = 0; y++; }
+    setCalMonth(m);
+    setCalYear(y);
+  };
+
   // 오늘 연습한 시간 계산 (분)
   const todayPracticed = Math.floor(
     recentSessions
@@ -1008,11 +1056,6 @@ export default function PracticePage() {
         </div>
       )}
 
-      {/* Today's Drill List - 활성 드릴이 없을 때만 표시 */}
-      {!activeDrill && !isRecording && (
-        <TodayDrillList showPlayButton={true} />
-      )}
-
       {/* Timer Display with Controls & Metronome */}
       <PracticeTimer
         totalTime={totalTime}
@@ -1041,43 +1084,101 @@ export default function PracticePage() {
 
       {/* Practice Plan & Calendar Combined */}
       <div className="mt-8 space-y-4">
-          {/* Weekly Overview - Compact */}
-          <div className="bg-white rounded-2xl p-4 border border-gray-200">
-            <div className="flex items-center justify-between mb-3">
-              <span className="font-semibold text-black text-sm">이번 주 연습</span>
-              <Link href="/goals" className="text-xs text-gray-500 flex items-center gap-1">
-                전체 보기
-                <ChevronRight className="w-3 h-3" />
-              </Link>
-            </div>
-            <div className="grid grid-cols-7 gap-1">
-              {weeklyData.map((day, idx) => (
-                <div key={idx} className="text-center">
-                  <p className="text-[10px] text-gray-400 mb-0.5">{day.name}</p>
-                  <p className={`text-[10px] mb-1 ${day.isToday ? "font-bold text-black" : "text-gray-400"}`}>
-                    {day.date.getDate()}
-                  </p>
-                  <div
-                    className={`w-10 h-10 mx-auto rounded-full flex flex-col items-center justify-center ${
-                      day.isToday
-                        ? "bg-black text-white"
-                        : day.minutes > 0
-                        ? "bg-violet-100 text-violet-600"
-                        : "bg-gray-100 text-gray-400"
-                    }`}
-                  >
-                    {day.minutes > 0 ? (
-                      <>
-                        <span className="text-xs font-semibold leading-none">{day.minutes}</span>
-                        <span className="text-[8px] opacity-70">분</span>
-                      </>
-                    ) : (
-                      <span className="text-xs">-</span>
-                    )}
-                  </div>
+          {/* 연습 기록 - Calendar */}
+          <div>
+            <h3 className="text-lg font-bold text-gray-900 mb-3">연습 기록</h3>
+            <div className="bg-white rounded-2xl border border-gray-100 p-4 mb-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-gray-900">{calYear}년 {calMonth + 1}월</span>
+                  {calPracticeDays > 0 && (
+                    <span className="flex items-center gap-1 text-sm text-amber-600 font-medium">
+                      <Check className="w-3.5 h-3.5" />{calPracticeDays}
+                    </span>
+                  )}
                 </div>
-              ))}
+                <div className="flex items-center gap-1">
+                  <button onClick={() => navigateCalMonth(-1)} className="p-1.5 hover:bg-gray-100 rounded-full"><ChevronLeft className="w-4 h-4 text-gray-500" /></button>
+                  <button onClick={() => navigateCalMonth(1)} className="p-1.5 hover:bg-gray-100 rounded-full"><ChevronRight className="w-4 h-4 text-gray-500" /></button>
+                </div>
+              </div>
+              <div className="grid grid-cols-7 gap-1 mb-1">
+                {calDayNames.map((day, i) => (
+                  <div key={day} className={`text-center text-xs font-medium py-1 ${i === 0 ? "text-red-400" : i === 6 ? "text-blue-400" : "text-gray-400"}`}>{day}</div>
+                ))}
+              </div>
+              <div className="grid grid-cols-7 gap-1">
+                {Array(calFirstDay).fill(null).map((_, i) => (
+                  <div key={`e-${i}`} className="flex flex-col items-center py-0.5"><div className="w-8 h-8" /><span className="text-[10px] h-4" /></div>
+                ))}
+                {Array(calDaysInMonth).fill(null).map((_, i) => {
+                  const day = i + 1;
+                  const key = `${calYear}-${calMonth}-${day}`;
+                  const count = calSessionsByDate[key]?.length || 0;
+                  const isToday = day === calToday.getDate() && calMonth === calToday.getMonth() && calYear === calToday.getFullYear();
+                  const isSelected = day === calSelectedDate.getDate() && calMonth === calSelectedDate.getMonth() && calYear === calSelectedDate.getFullYear();
+                  const dow = (calFirstDay + i) % 7;
+                  return (
+                    <button key={day} onClick={() => setCalSelectedDate(new Date(calYear, calMonth, day))} className="flex flex-col items-center py-0.5">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-colors ${isToday ? "bg-black text-white" : count > 0 ? "bg-amber-100 text-amber-700" : "bg-gray-50"} ${isSelected && !isToday ? "ring-2 ring-violet-400" : ""}`}>
+                        {count > 0 ? count : ""}
+                      </div>
+                      <span className={`text-[10px] mt-0.5 ${dow === 0 ? "text-red-400" : dow === 6 ? "text-blue-400" : "text-gray-500"}`}>{day}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
+            <div className="mb-3 mt-4">
+              <h4 className="text-base font-bold text-gray-900">{calSelectedDate.getMonth() + 1}월 {calSelectedDate.getDate()}일 {calWeekdayNames[calSelectedDate.getDay()]}</h4>
+              {calIsSelectedToday ? (
+                <p className="text-sm text-gray-500 mt-0.5">{totalDrillCount}개 드릴 · {calSelectedSessions.length}개 세션</p>
+              ) : calSelectedSessions.length > 0 ? (
+                <p className="text-sm text-gray-500 mt-0.5">{calSelectedSessions.length}개 세션</p>
+              ) : (
+                <p className="text-sm text-gray-400 mt-0.5"></p>
+              )}
+            </div>
+
+            {/* 드릴 리스트 - 모든 날짜 */}
+            <div className="mb-4">
+              <TodayDrillList showPlayButton={true} date={calSelectedDate} />
+            </div>
+
+            {/* 연습 세션 */}
+            {calSelectedSessions.length > 0 && (
+              <p className="text-xs text-gray-500 font-medium mb-2">연습 세션</p>
+            )}
+            {calSelectedSessions.length === 0 && !calIsSelectedToday ? (
+              <div className="text-center py-8 bg-gray-50 rounded-2xl border border-gray-100">
+                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3"><Mic className="w-6 h-6 text-gray-400" /></div>
+                <p className="text-sm text-gray-500 mb-1">이 날은 연습 기록이 없습니다</p>
+                <p className="text-xs text-gray-400">연습을 시작하면 여기에 표시됩니다</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {calSelectedSessions.map((session) => {
+                  const d = new Date(session.startTime);
+                  const h = d.getHours();
+                  const ampm = h < 12 ? "오전" : "오후";
+                  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+                  const timeStr = `${ampm} ${h12.toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
+                  return (
+                    <Link key={session.id} href={`/recordings/${session.id}`} className="flex items-center gap-3 bg-white rounded-xl p-3.5 border border-gray-100 hover:border-violet-200 transition-all active:scale-[0.99]">
+                      <div className="w-10 h-10 bg-violet-50 rounded-lg flex items-center justify-center shrink-0"><Music2 className="w-5 h-5 text-violet-600" /></div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-semibold text-gray-900 truncate">{session.pieceName}</h4>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="flex items-center gap-1 text-xs text-gray-500"><Clock className="w-3 h-3" />{formatTime(session.practiceTime)}</span>
+                          {session.audioBlob && <span className="text-xs text-green-600 font-medium">녹음</span>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 text-xs text-gray-400 shrink-0"><Calendar className="w-3 h-3" />{timeStr}</div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Carry-over Drills from Yesterday */}
@@ -1179,8 +1280,6 @@ export default function PracticePage() {
             </div>
           )}
 
-          {/* Recent Sessions */}
-          <RecentRecordingsList sessions={recentSessions} onSessionDeleted={loadRecentSessions} />
         </div>
 
       {/* Modals */}

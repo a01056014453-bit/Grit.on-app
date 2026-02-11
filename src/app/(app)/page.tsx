@@ -48,6 +48,19 @@ export default function HomePage() {
   const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
   const dailyMessage = dailyMessages[dayOfYear % dailyMessages.length];
 
+  // 프로필 닉네임 (localStorage에서 읽기)
+  const [userName, setUserName] = useState(() => {
+    if (typeof window === "undefined") return mockUser.name;
+    try {
+      const saved = localStorage.getItem("grit-on-profile");
+      if (saved) {
+        const profile = JSON.parse(saved);
+        if (profile.nickname) return profile.nickname;
+      }
+    } catch {}
+    return mockUser.name;
+  });
+
   // 실제 연습 데이터 상태
   const [todayMinutes, setTodayMinutes] = useState(0);
   const [dailyGoal, setDailyGoal] = useState(60);
@@ -213,7 +226,7 @@ export default function HomePage() {
         <div>
           <h1 className="text-2xl font-bold text-black leading-tight">
             {greeting},<br />
-            {mockUser.name}님
+            {userName}님
           </h1>
           <p className="text-sm text-gray-500 mt-1">
             {dailyMessage}

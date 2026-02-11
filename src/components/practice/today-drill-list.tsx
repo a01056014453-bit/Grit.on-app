@@ -9,37 +9,46 @@ import type { DrillCard } from "@/types";
 interface TodayDrillListProps {
   onDrillSelect?: (drill: DrillCard) => void;
   selectedDrillId?: string | null;
-  showPlayButton?: boolean; // 홈 화면에서는 플레이 버튼 표시
+  showPlayButton?: boolean;
+  date?: Date; // 특정 날짜의 드릴 완료 기록 표시
 }
 
-export function TodayDrillList({ onDrillSelect, selectedDrillId, showPlayButton = true }: TodayDrillListProps) {
+export function TodayDrillList({ onDrillSelect, selectedDrillId, showPlayButton = true, date }: TodayDrillListProps) {
   const router = useRouter();
   const [completedDrills, setCompletedDrills] = useState<Set<string>>(new Set());
   const [customDrills, setCustomDrills] = useState<DrillCard[]>([]);
 
+  const now = new Date();
+  const isToday = !date || (date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth() && date.getDate() === now.getDate());
+
+  function formatDateStr(d: Date) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
   // 플레이 버튼 클릭 - 연습 페이지로 이동
   const handleStartPractice = (drill: DrillCard) => {
-    // drill 정보를 localStorage에 저장하고 연습 페이지로 이동
     localStorage.setItem("grit-on-active-drill", JSON.stringify(drill));
     router.push("/practice?drill=" + encodeURIComponent(drill.id));
   };
 
   // localStorage에서 완료된 드릴과 커스텀 드릴 로드
   useEffect(() => {
-    const todayStr = getTodayStr();
+    const targetDate = date || new Date();
+    const dateStr = formatDateStr(targetDate);
 
     // 완료된 드릴 로드
-    const savedCompleted = localStorage.getItem(`grit-on-completed-${todayStr}`);
+    const savedCompleted = localStorage.getItem(`grit-on-completed-${dateStr}`);
     if (savedCompleted) {
       const data = JSON.parse(savedCompleted);
       setCompletedDrills(new Set(data.completedDrillIds || []));
+    } else {
+      setCompletedDrills(new Set());
     }
 
     // 커스텀 드릴 로드
     const savedCustom = localStorage.getItem("grit-on-custom-drills");
     if (savedCustom) {
       const drills = JSON.parse(savedCustom);
-      // DrillCard 형식으로 변환
       const converted: DrillCard[] = drills.map((d: any) => ({
         id: d.id,
         type: "custom",
@@ -55,15 +64,11 @@ export function TodayDrillList({ onDrillSelect, selectedDrillId, showPlayButton 
       }));
       setCustomDrills(converted);
     }
-  }, []);
+  }, [date]);
 
-  function getTodayStr() {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  }
-
-  // 드릴 완료 토글
+  // 드릴 완료 토글 (오늘만 가능)
   const handleToggle = (drillId: string) => {
+    if (!isToday) return;
     setCompletedDrills(prev => {
       const newSet = new Set(prev);
       if (newSet.has(drillId)) {
@@ -71,10 +76,9 @@ export function TodayDrillList({ onDrillSelect, selectedDrillId, showPlayButton 
       } else {
         newSet.add(drillId);
       }
-      // localStorage에 저장
-      const todayStr = getTodayStr();
-      localStorage.setItem(`grit-on-completed-${todayStr}`, JSON.stringify({
-        date: todayStr,
+      const dateStr = formatDateStr(new Date());
+      localStorage.setItem(`grit-on-completed-${dateStr}`, JSON.stringify({
+        date: dateStr,
         completedDrillIds: Array.from(newSet),
       }));
       return newSet;
@@ -88,95 +92,111 @@ export function TodayDrillList({ onDrillSelect, selectedDrillId, showPlayButton 
   const totalCount = allDrills.length;
   const completedCount = allDrills.filter(d => completedDrills.has(d.id)).length;
 
+  // 과거 날짜에 완료 기록이 없으면 표시하지 않음
+  if (!isToday && completedCount === 0) return null;
+
   return (
-    <div className="bg-white rounded-2xl p-4 border border-gray-200">
+    <div>
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className="font-semibold text-black">오늘의 연습</span>
+          <span className="font-semibold text-sm text-violet-700 bg-violet-100 px-4 py-1.5 rounded-full">
+            {isToday ? "오늘의 연습" : "연습 드릴"}
+          </span>
           <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
             {completedCount}/{totalCount}
           </span>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            className="w-7 h-7 bg-violet-100 rounded-full flex items-center justify-center hover:bg-violet-200 transition-colors"
-            title="새로고침"
-          >
-            <Repeat className="w-4 h-4 text-violet-600" />
-          </button>
-          <button
-            className="w-7 h-7 bg-black rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors"
-          >
-            <Plus className="w-4 h-4 text-white" />
-          </button>
-        </div>
+        {isToday && (
+          <div className="flex items-center gap-2">
+            <button
+              className="w-7 h-7 bg-violet-100 rounded-full flex items-center justify-center hover:bg-violet-200 transition-colors"
+              title="새로고침"
+            >
+              <Repeat className="w-4 h-4 text-violet-600" />
+            </button>
+            <button
+              className="w-7 h-7 bg-black rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors"
+            >
+              <Plus className="w-4 h-4 text-white" />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* 곡별 그룹 리스트 */}
       <div className="space-y-3">
-        {groupedDrills.map((group) => (
-          <div key={group.song} className="border border-gray-200 rounded-xl overflow-hidden">
-            {/* Song Header */}
-            <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
-              <p className="text-sm font-semibold text-black">{group.song}</p>
-            </div>
+        {groupedDrills.map((group) => {
+          // 과거 날짜: 완료된 드릴이 있는 곡만 표시
+          const visibleDrills = !isToday
+            ? group.drills.filter(d => completedDrills.has(d.id))
+            : group.drills;
+          if (visibleDrills.length === 0) return null;
 
-            {/* Drills under this song */}
-            <div className="divide-y divide-gray-100">
-              {group.drills.map((drill) => {
-                const isCompleted = completedDrills.has(drill.id);
-                const isSelected = selectedDrillId === drill.id;
+          return (
+            <div key={group.song} className="border border-gray-200 rounded-xl overflow-hidden">
+              {/* Song Header */}
+              <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+                <p className="text-sm font-semibold text-black">{group.song}</p>
+              </div>
 
-                return (
-                  <div
-                    key={drill.id}
-                    onClick={() => !isCompleted && onDrillSelect?.(drill)}
-                    className={`px-4 py-2.5 flex items-center gap-3 ${
-                      isCompleted ? "bg-gray-50" : "bg-white"
-                    } ${isSelected ? "bg-violet-50" : ""} ${
-                      !isCompleted ? "cursor-pointer hover:bg-gray-50" : ""
-                    }`}
-                  >
-                    {/* 플레이 버튼 - 왼쪽 */}
-                    {showPlayButton && !isCompleted && (
+              {/* Drills under this song */}
+              <div className="divide-y divide-gray-100">
+                {visibleDrills.map((drill) => {
+                  const isCompleted = completedDrills.has(drill.id);
+                  const isSelected = selectedDrillId === drill.id;
+
+                  return (
+                    <div
+                      key={drill.id}
+                      onClick={() => isToday && !isCompleted && onDrillSelect?.(drill)}
+                      className={`px-4 py-2.5 flex items-center gap-3 ${
+                        isCompleted ? "bg-gray-50" : "bg-white"
+                      } ${isSelected ? "bg-violet-50" : ""} ${
+                        isToday && !isCompleted ? "cursor-pointer hover:bg-gray-50" : ""
+                      }`}
+                    >
+                      {/* 플레이 버튼 - 왼쪽 (오늘만) */}
+                      {isToday && showPlayButton && !isCompleted && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleStartPractice(drill);
+                          }}
+                          className="shrink-0 w-6 h-6 bg-gradient-to-r from-violet-600 to-primary rounded-full flex items-center justify-center hover:opacity-90 transition-opacity shadow-sm"
+                        >
+                          <Play className="w-3 h-3 text-white fill-white ml-0.5" />
+                        </button>
+                      )}
+                      <div className={`flex-1 min-w-0 ${isCompleted ? "opacity-50" : ""}`}>
+                        <span className={`text-sm ${isCompleted ? "line-through text-gray-400" : "text-gray-700"}`}>
+                          {drill.measures} · {drill.title}
+                          {drill.tempo > 0 && ` 템포 ${drill.tempo}`}
+                          {drill.recurrence > 0 && ` ${drill.recurrence}회`}
+                        </span>
+                      </div>
+                      {/* 체크 버튼 - 오른쪽 */}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleStartPractice(drill);
+                          handleToggle(drill.id);
                         }}
-                        className="shrink-0 w-6 h-6 bg-gradient-to-r from-violet-600 to-primary rounded-full flex items-center justify-center hover:opacity-90 transition-opacity shadow-sm"
+                        className="shrink-0"
+                        disabled={!isToday}
                       >
-                        <Play className="w-3 h-3 text-white fill-white ml-0.5" />
+                        {isCompleted ? (
+                          <CheckCircle2 className="w-5 h-5 text-green-500" />
+                        ) : (
+                          <Circle className={`w-5 h-5 ${isToday ? "text-gray-300 hover:text-violet-500" : "text-gray-200"} transition-colors`} />
+                        )}
                       </button>
-                    )}
-                    <div className={`flex-1 min-w-0 ${isCompleted ? "opacity-50" : ""}`}>
-                      <span className={`text-sm ${isCompleted ? "line-through text-gray-400" : "text-gray-700"}`}>
-                        {drill.measures} · {drill.title}
-                        {drill.tempo > 0 && ` 템포 ${drill.tempo}`}
-                        {drill.recurrence > 0 && ` ${drill.recurrence}회`}
-                      </span>
                     </div>
-                    {/* 체크 버튼 - 오른쪽 */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleToggle(drill.id);
-                      }}
-                      className="shrink-0"
-                    >
-                      {isCompleted ? (
-                        <CheckCircle2 className="w-5 h-5 text-green-500" />
-                      ) : (
-                        <Circle className="w-5 h-5 text-gray-300 hover:text-violet-500 transition-colors" />
-                      )}
-                    </button>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
