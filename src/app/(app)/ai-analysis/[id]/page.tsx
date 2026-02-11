@@ -1,9 +1,36 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { ArrowLeft, Music, User, Clock, BookOpen, Hash, Lightbulb, FileText, ExternalLink } from "lucide-react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { ArrowLeft, Music, User, Clock, BookOpen, Hash, Lightbulb, FileText, ExternalLink, Target, ChevronRight, BarChart3, Play } from "lucide-react";
 import { saveAnalyzedSong } from "@/lib/song-analysis-store";
+import { getPieceById } from "@/data/mock-analyzed-pieces";
+import { getPieceAnalysisById, getUserPracticeData } from "@/data/mock-piece-analysis";
+import type { PieceAnalysis, PiecePracticeData, MeasureProgress } from "@/types/piece";
+
+// 난이도 색상
+const difficultyColors = {
+  easy: "bg-green-100 text-green-700",
+  medium: "bg-yellow-100 text-yellow-700",
+  hard: "bg-orange-100 text-orange-700",
+  very_hard: "bg-red-100 text-red-700",
+};
+
+const difficultyLabels = {
+  easy: "쉬움",
+  medium: "보통",
+  hard: "어려움",
+  very_hard: "매우 어려움",
+};
+
+// 마스터리 색상
+const masteryColors = {
+  not_started: "bg-gray-200",
+  learning: "bg-yellow-400",
+  practicing: "bg-blue-400",
+  mastered: "bg-green-500",
+};
 
 // 곡별 분석 데이터베이스
 const analysisDatabase: Record<string, any> = {
@@ -278,6 +305,29 @@ export default function AnalysisDetailPage() {
 
   const analysis = analysisDatabase[id];
 
+  // 새로운 마디별 분석 데이터
+  const [pieceAnalysis, setPieceAnalysis] = useState<PieceAnalysis | null>(null);
+  const [practiceData, setPracticeData] = useState<PiecePracticeData | null>(null);
+
+  // 새로운 분석 데이터 로드
+  useEffect(() => {
+    // piece_001, piece_002 등으로 매핑
+    const pieceIdMap: Record<string, string> = {
+      "1": "piece_001",
+      "2": "piece_002",
+      "3": "piece_003",
+      "4": "piece_004",
+      "5": "piece_005",
+    };
+    const pieceId = pieceIdMap[id];
+    if (pieceId) {
+      const analysisData = getPieceAnalysisById(pieceId);
+      const practice = getUserPracticeData("user_001", pieceId);
+      if (analysisData) setPieceAnalysis(analysisData);
+      if (practice) setPracticeData(practice);
+    }
+  }, [id]);
+
   // 분석 기록 저장 (이미 분석된 곡이면 최근 조회로 업데이트)
   useEffect(() => {
     if (analysis) {
@@ -289,6 +339,23 @@ export default function AnalysisDetailPage() {
       });
     }
   }, [analysis]);
+
+  const formatPracticeTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    if (hours > 0) {
+      return `${hours}시간 ${minutes}분`;
+    }
+    return `${minutes}분`;
+  };
+
+  const pieceIdMap: Record<string, string> = {
+    "1": "piece_001",
+    "2": "piece_002",
+    "3": "piece_003",
+    "4": "piece_004",
+    "5": "piece_005",
+  };
 
   if (!analysis) {
     return (
@@ -462,6 +529,80 @@ export default function AnalysisDetailPage() {
           ))}
         </div>
       </Section>
+
+      {/* Section-by-Section Analysis */}
+      {pieceAnalysis && (
+        <Section title="마디별 상세 분석" icon={Target}>
+          {/* Practice Stats */}
+          {practiceData && (
+            <div className="mb-4 p-3 bg-violet-50 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <BarChart3 className="w-4 h-4 text-violet-500" />
+                <span className="text-xs font-semibold text-black">내 연습 현황</span>
+              </div>
+              <div className="flex items-center gap-4 text-xs">
+                <div>
+                  <span className="text-gray-500">총 연습: </span>
+                  <span className="font-medium">{formatPracticeTime(practiceData.totalPracticeTime)}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">완성도: </span>
+                  <span className="font-medium text-violet-600">{practiceData.completionPercentage}%</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            {pieceAnalysis.sections.map((section, idx) => {
+              const sectionPractice = practiceData?.measureProgress.find(
+                (p) => p.measureStart === section.startMeasure
+              );
+
+              return (
+                <Link
+                  key={idx}
+                  href={`/ai-analysis/${pieceIdMap[id]}/section/${idx}`}
+                  className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100 hover:border-violet-200 transition-colors"
+                >
+                  <div className="flex flex-col items-center shrink-0 w-14">
+                    <span className="text-xs font-bold text-gray-600">
+                      {section.startMeasure}-{section.endMeasure}
+                    </span>
+                    <span className="text-[10px] text-gray-400">마디</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-black truncate">
+                      {section.sectionName}
+                    </p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded ${difficultyColors[section.technicalDifficulty]}`}>
+                        {difficultyLabels[section.technicalDifficulty]}
+                      </span>
+                      <span className="text-[10px] text-gray-400">
+                        {section.dynamics}
+                      </span>
+                    </div>
+                  </div>
+                  {sectionPractice && (
+                    <div className={`w-3 h-3 rounded-full shrink-0 ${masteryColors[sectionPractice.mastery]}`} />
+                  )}
+                  <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* Practice Button */}
+          <Link
+            href={`/practice?piece=${pieceIdMap[id]}`}
+            className="flex items-center justify-center gap-2 w-full py-3 mt-4 bg-gradient-to-r from-violet-600 to-black text-white rounded-xl text-sm font-semibold"
+          >
+            <Play className="w-4 h-4 fill-white" />
+            이 곡 연습 시작하기
+          </Link>
+        </Section>
+      )}
 
       {/* IMSLP Sheet Music */}
       <Section title="무료 악보 (IMSLP)" icon={Music}>

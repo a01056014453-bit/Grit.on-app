@@ -7,3 +7,4 @@ export * from "./mock-user";
 export * from "./analyzed-songs-store";
 export * from "./ai-cache";
 export * from "./mock-analyzed-pieces";
+export * from "./mock-piece-analysis";
