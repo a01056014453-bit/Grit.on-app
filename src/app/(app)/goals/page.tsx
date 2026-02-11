@@ -607,7 +607,7 @@ export default function GoalsPage() {
       </div>
 
       {/* Monthly Calendar */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-4 mb-6">
+      <div className="bg-white rounded-2xl border border-gray-200 p-4">
         {/* Calendar Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
@@ -659,18 +659,21 @@ export default function GoalsPage() {
         <div className="grid grid-cols-7 gap-2">
           {calendarData.map((cell, idx) => {
             const isPastOrToday = cell.date && cell.date.getTime() <= today.getTime();
+            const isSelected = selectedDate && cell.date && selectedDate.getTime() === cell.date.getTime();
             return (
               <button
                 key={idx}
                 className="flex flex-col items-center"
-                onClick={() => cell.date && isPastOrToday && setSelectedDate(cell.date)}
+                onClick={() => cell.date && isPastOrToday && setSelectedDate(
+                  isSelected ? null : cell.date
+                )}
                 disabled={!cell.date || !isPastOrToday}
               >
                 {cell.date ? (
                   <>
                     {/* Clover Shape Cell */}
                     <div
-                      className={`w-10 h-10 rounded-[12px] flex items-center justify-center transition-transform ${
+                      className={`w-10 h-10 rounded-[12px] flex items-center justify-center transition-all ${
                         cell.sessionCount > 0
                           ? "bg-amber-200 hover:scale-105 cursor-pointer"
                           : isPastOrToday
@@ -686,11 +689,13 @@ export default function GoalsPage() {
                         )
                       ) : null}
                     </div>
-                    {/* Date Number */}
+                    {/* Date Number - 선택된 날짜는 검은 원형 배경 */}
                     <span
-                      className={`text-xs mt-1 font-medium ${
-                        cell.isToday
+                      className={`text-xs mt-1 font-medium transition-all ${
+                        isSelected
                           ? "bg-black text-white rounded-full w-6 h-6 flex items-center justify-center"
+                          : cell.isToday
+                          ? "bg-violet-500 text-white rounded-full w-6 h-6 flex items-center justify-center"
                           : cell.dayOfWeek === 0
                           ? "text-red-500"
                           : cell.dayOfWeek === 6
@@ -710,131 +715,126 @@ export default function GoalsPage() {
         </div>
       </div>
 
-      {/* Session Detail Modal */}
+      {/* Inline Detail List - 캘린더 아래에 자연스럽게 표시 */}
       {selectedDate && (
-        <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50">
-          <div className="bg-white rounded-t-3xl p-6 w-full max-w-lg animate-in slide-in-from-bottom duration-300 max-h-[70vh] overflow-y-auto">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="font-bold text-black text-lg">{formatDateDisplay(selectedDate)}</p>
-                <p className="text-sm text-gray-500">
-                  {selectedDateDrills.length > 0 && `${selectedDateDrills.length}개 드릴`}
-                  {selectedDateDrills.length > 0 && selectedDateSessions.length > 0 && " · "}
-                  {selectedDateSessions.length > 0 && `${selectedDateSessions.length}개 세션`}
-                  {selectedDateDrills.length === 0 && selectedDateSessions.length === 0 && "기록 없음"}
-                </p>
-              </div>
-              <button
-                onClick={() => setSelectedDate(null)}
-                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center"
-              >
-                <X className="w-4 h-4 text-gray-600" />
-              </button>
-            </div>
+        <div className="mt-4 animate-in fade-in duration-200">
+          {/* 구분선 */}
+          <div className="border-t border-gray-200 mb-4" />
 
-            {/* Completed Drills - Grouped by Song */}
-            {groupedSelectedDrills.length > 0 && (
-              <div className="space-y-3 mb-4">
-                {groupedSelectedDrills.map(([songName, drills]) => (
-                  <div key={songName} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                    {/* Song Header */}
-                    <div className="px-4 py-3">
-                      <p className="font-semibold text-black">{songName}</p>
-                    </div>
-                    {/* Drills */}
-                    <div className="px-4 pb-3 space-y-3">
-                      {drills.map((drill) => (
-                        <div
-                          key={drill.id}
-                          className="flex items-center gap-3"
-                        >
-                          <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center shrink-0">
-                            <Check className="w-4 h-4 text-green-600" strokeWidth={3} />
-                          </div>
-                          <p className="flex-1 text-sm text-gray-500">
-                            {drill.measures}
-                            {drill.title && ` - ${drill.title}`}
-                            {drill.tempo && ` 템포 ${drill.tempo}`}
-                            {drill.recurrence ? ` ${drill.recurrence}회` : drill.duration ? ` ${drill.duration}분` : ""}
+          {/* Header */}
+          <div className="mb-4">
+            <p className="font-bold text-black text-lg">{formatDateDisplay(selectedDate)}</p>
+            <p className="text-sm text-gray-500">
+              {selectedDateDrills.length > 0 && `${selectedDateDrills.length}개 드릴`}
+              {selectedDateDrills.length > 0 && selectedDateSessions.length > 0 && " · "}
+              {selectedDateSessions.length > 0 && `${selectedDateSessions.length}개 세션`}
+              {selectedDateDrills.length === 0 && selectedDateSessions.length === 0 && "기록 없음"}
+            </p>
+          </div>
+
+          {/* Completed Drills - Grouped by Song */}
+          {groupedSelectedDrills.length > 0 && (
+            <div className="space-y-3 mb-4">
+              {groupedSelectedDrills.map(([songName, drills]) => (
+                <div key={songName} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                  {/* Song Header */}
+                  <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
+                    <p className="font-semibold text-black text-sm">{songName}</p>
+                  </div>
+                  {/* Drills */}
+                  <div className="divide-y divide-gray-100">
+                    {drills.map((drill) => (
+                      <div
+                        key={drill.id}
+                        className="px-4 py-3 flex items-center gap-3"
+                      >
+                        <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+                          <Check className="w-3 h-3 text-green-600" strokeWidth={3} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-gray-800 font-medium">{drill.measures}</p>
+                          <p className="text-xs text-gray-500 truncate">
+                            {drill.title}
+                            {drill.tempo && ` · 템포 ${drill.tempo}`}
+                            {drill.recurrence ? ` · ${drill.recurrence}회` : drill.duration ? ` · ${drill.duration}분` : ""}
                           </p>
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            )}
+                </div>
+              ))}
+            </div>
+          )}
 
-            {/* Sessions List */}
-            {selectedDateSessions.length > 0 && (
-              <>
-                <p className="text-xs font-medium text-gray-500 mb-2">연습 세션</p>
-                <div className="space-y-2">
-                  {selectedDateSessions.map((session) => {
-                    const hasAudio = !!session.audioBlob;
-                    return (
-                      <button
-                        key={session.id}
-                        onClick={() => hasAudio && handlePlaySession(session)}
-                        disabled={!hasAudio}
-                        className={`w-full text-left bg-gray-50 rounded-xl p-3 ${
-                          hasAudio ? "hover:bg-gray-100 active:bg-gray-200 cursor-pointer" : ""
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                            hasAudio ? "bg-black" : "bg-gray-300"
-                          }`}>
-                            {hasAudio ? (
-                              <Volume2 className="w-5 h-5 text-white" />
-                            ) : (
-                              <Music className="w-5 h-5 text-gray-500" />
-                            )}
-                          </div>
-                          <div className="flex-1">
-                            <p className="font-semibold text-black text-sm">{session.pieceName}</p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-xs text-gray-500 flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                {formatTime(session.practiceTime)}
-                              </span>
-                              <span className="text-xs text-gray-400">
-                                {new Date(session.startTime).toLocaleTimeString("ko-KR", {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })}
-                              </span>
-                            </div>
+          {/* Sessions List */}
+          {selectedDateSessions.length > 0 && (
+            <div className="mb-4">
+              <p className="text-xs font-medium text-gray-500 mb-2">연습 세션</p>
+              <div className="space-y-2">
+                {selectedDateSessions.map((session) => {
+                  const hasAudio = !!session.audioBlob;
+                  return (
+                    <button
+                      key={session.id}
+                      onClick={() => hasAudio && handlePlaySession(session)}
+                      disabled={!hasAudio}
+                      className={`w-full text-left bg-gray-50 rounded-xl p-3 border border-gray-100 ${
+                        hasAudio ? "hover:bg-gray-100 active:bg-gray-200 cursor-pointer" : ""
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                          hasAudio ? "bg-black" : "bg-gray-300"
+                        }`}>
+                          {hasAudio ? (
+                            <Volume2 className="w-5 h-5 text-white" />
+                          ) : (
+                            <Music className="w-5 h-5 text-gray-500" />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-semibold text-black text-sm">{session.pieceName}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs text-gray-500 flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {formatTime(session.practiceTime)}
+                            </span>
+                            <span className="text-xs text-gray-400">
+                              {new Date(session.startTime).toLocaleTimeString("ko-KR", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </span>
                           </div>
                         </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-
-            {/* Empty State */}
-            {groupedSelectedDrills.length === 0 && selectedDateSessions.length === 0 && (
-              <div className="text-center py-8">
-                <Music className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-                <p className="text-sm text-gray-500">이 날 연습 기록이 없습니다</p>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
-            )}
+            </div>
+          )}
 
-            {/* Total Stats */}
-            {selectedDateSessions.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-gray-100">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-500">총 연습 시간</span>
-                  <span className="font-bold text-black">
-                    {formatTime(selectedDateSessions.reduce((sum, s) => sum + s.practiceTime, 0))}
-                  </span>
-                </div>
+          {/* Empty State */}
+          {groupedSelectedDrills.length === 0 && selectedDateSessions.length === 0 && (
+            <div className="text-center py-8 bg-gray-50 rounded-xl border border-gray-100">
+              <Music className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+              <p className="text-sm text-gray-500">이 날 연습 기록이 없습니다</p>
+            </div>
+          )}
+
+          {/* Total Stats */}
+          {selectedDateSessions.length > 0 && (
+            <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-500">총 연습 시간</span>
+                <span className="font-bold text-black">
+                  {formatTime(selectedDateSessions.reduce((sum, s) => sum + s.practiceTime, 0))}
+                </span>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       )}
 

@@ -138,6 +138,26 @@ export function TodayDrillList({ onDrillSelect, selectedDrillId, showPlayButton 
                       !isCompleted ? "cursor-pointer hover:bg-gray-50" : ""
                     }`}
                   >
+                    {/* 플레이 버튼 - 왼쪽 */}
+                    {showPlayButton && !isCompleted && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStartPractice(drill);
+                        }}
+                        className="shrink-0 w-6 h-6 bg-gradient-to-r from-violet-600 to-primary rounded-full flex items-center justify-center hover:opacity-90 transition-opacity shadow-sm"
+                      >
+                        <Play className="w-3 h-3 text-white fill-white ml-0.5" />
+                      </button>
+                    )}
+                    <div className={`flex-1 min-w-0 ${isCompleted ? "opacity-50" : ""}`}>
+                      <span className={`text-sm ${isCompleted ? "line-through text-gray-400" : "text-gray-700"}`}>
+                        {drill.measures} · {drill.title}
+                        {drill.tempo > 0 && ` 템포 ${drill.tempo}`}
+                        {drill.recurrence > 0 && ` ${drill.recurrence}회`}
+                      </span>
+                    </div>
+                    {/* 체크 버튼 - 오른쪽 */}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -151,25 +171,6 @@ export function TodayDrillList({ onDrillSelect, selectedDrillId, showPlayButton 
                         <Circle className="w-5 h-5 text-gray-300 hover:text-violet-500 transition-colors" />
                       )}
                     </button>
-                    <div className={`flex-1 min-w-0 ${isCompleted ? "opacity-50" : ""}`}>
-                      <span className={`text-sm ${isCompleted ? "line-through text-gray-400" : "text-gray-700"}`}>
-                        {drill.measures} · {drill.title}
-                        {drill.tempo > 0 && ` 템포 ${drill.tempo}`}
-                        {drill.recurrence > 0 && ` ${drill.recurrence}회`}
-                      </span>
-                    </div>
-                    {/* 플레이 버튼 */}
-                    {showPlayButton && !isCompleted && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleStartPractice(drill);
-                        }}
-                        className="shrink-0 w-8 h-8 bg-gradient-to-r from-violet-600 to-primary rounded-full flex items-center justify-center hover:opacity-90 transition-opacity shadow-sm"
-                      >
-                        <Play className="w-4 h-4 text-white fill-white ml-0.5" />
-                      </button>
-                    )}
                   </div>
                 );
               })}

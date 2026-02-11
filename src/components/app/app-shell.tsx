@@ -123,26 +123,6 @@ export function AppShell({ children }: AppShellProps) {
               </p>
             </div>
 
-            {/* iPhone Mockup */}
-            <div className="mt-12 relative mx-auto max-w-[200px]">
-              <div className="relative bg-black rounded-[2rem] p-2 shadow-xl">
-                <div className="bg-gradient-to-b from-violet-200 to-violet-300 rounded-[1.5rem] overflow-hidden aspect-[9/16]">
-                  <div className="h-full p-4 flex flex-col">
-                    {/* Mockup Content */}
-                    <div className="flex-1 flex items-center justify-center">
-                      <div className="text-center">
-                        <div className="w-12 h-12 bg-white/30 rounded-full mx-auto mb-3 flex items-center justify-center">
-                          <Music className="w-6 h-6 text-white" />
-                        </div>
-                        <p className="text-sm font-medium text-white/90">연습 시작</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                {/* Dynamic Island */}
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 w-20 h-5 bg-black rounded-full"></div>
-              </div>
-            </div>
           </div>
 
           {/* Bottom Section - Login Buttons */}

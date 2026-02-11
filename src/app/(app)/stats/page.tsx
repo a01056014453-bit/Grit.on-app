@@ -527,17 +527,17 @@ export default function StatsPage() {
 
               <div className="grid grid-cols-3 gap-3 mb-4">
                 <div className="text-center p-3 bg-gray-50 rounded-xl">
-                  <div className="text-2xl font-bold text-black">
+                  <div className="text-base font-bold text-black">
                     {formatTimeDisplay(monthlyData.totalMinutes)}
                   </div>
                   <div className="text-xs text-gray-500 mt-1">총 연습 시간</div>
                 </div>
                 <div className="text-center p-3 bg-gray-50 rounded-xl">
-                  <div className="text-2xl font-bold text-black">{monthlyData.totalSessions}</div>
+                  <div className="text-base font-bold text-black">{monthlyData.totalSessions}</div>
                   <div className="text-xs text-gray-500 mt-1">연습 세션</div>
                 </div>
                 <div className="text-center p-3 bg-gray-50 rounded-xl">
-                  <div className="text-2xl font-bold text-black">{monthlyData.avgDailyMinutes}분</div>
+                  <div className="text-base font-bold text-black">{monthlyData.avgDailyMinutes}분</div>
                   <div className="text-xs text-gray-500 mt-1">일평균</div>
                 </div>
               </div>
