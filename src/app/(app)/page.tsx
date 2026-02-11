@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Play, ChevronRight, BookOpen, Users, GraduationCap } from "lucide-react";
-import { StatsCard, QuoteCard, DailyGoal, LiveRankingWidget } from "@/components/app";
+import { StatsCard, QuoteCard, DailyGoal } from "@/components/app";
 import { mockUser, mockStats, getGreeting } from "@/data";
 import { getTodayPracticeTime, getPracticeStats, getAllSessions } from "@/lib/db";
 
@@ -133,11 +133,6 @@ export default function HomePage() {
           target={dailyGoal}
           onTargetChange={setDailyGoal}
         />
-      </div>
-
-      {/* Live Ranking Widget */}
-      <div className="mb-6">
-        <LiveRankingWidget />
       </div>
 
       {/* Stats Grid */}

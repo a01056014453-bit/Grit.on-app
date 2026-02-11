@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Play, Users, GraduationCap, User, Zap } from "lucide-react";
+import { Home, Play, User, Zap, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -23,9 +23,9 @@ const navItems = [
     label: "AI분석",
   },
   {
-    href: "/rooms",
-    icon: GraduationCap,
-    label: "입시룸",
+    href: "/ranking",
+    icon: Trophy,
+    label: "랭킹",
   },
   {
     href: "/profile",

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import type { DrillCard } from "@/types";
 import { useAudioRecorder } from "@/hooks";
 import { savePracticeSession, getAllSessions, type PracticeSession } from "@/lib/db";
 import { completePracticeTodo } from "@/lib/practice-todo-store";
@@ -15,7 +16,7 @@ import {
   SongSelectionModal,
   AddSongModal,
   PracticeAnalysisModal,
-  PracticeTodoList,
+  TodayDrillList,
 } from "@/components/practice";
 import { AlertCircle, MonitorOff } from "lucide-react";
 import { type MetronomeState } from "@/components/practice/metronome-control";
@@ -59,6 +60,8 @@ interface DailyCompletion {
 
 export default function PracticePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [activeDrill, setActiveDrill] = useState<DrillCard | null>(null);
   const [selectedSong, setSelectedSong] = useState<Song>(initialSongs[0]);
   const [isSongModalOpen, setIsSongModalOpen] = useState(false);
   const [isAnalysisModalOpen, setIsAnalysisModalOpen] = useState(false);
@@ -278,6 +281,51 @@ export default function PracticePage() {
       }
     }
   }, [loadRecentSessions]);
+
+  // URL 파라미터로 전달된 drill 로드
+  useEffect(() => {
+    const drillId = searchParams.get("drill");
+    if (drillId) {
+      // localStorage에서 활성 드릴 정보 가져오기
+      const savedDrill = localStorage.getItem("grit-on-active-drill");
+      if (savedDrill) {
+        const drill: DrillCard = JSON.parse(savedDrill);
+        setActiveDrill(drill);
+
+        // 곡 설정
+        const matchedSong = songs.find(s => s.title.includes(drill.song) || drill.song.includes(s.title));
+        if (matchedSong) {
+          setSelectedSong(matchedSong);
+        } else {
+          // 새 곡으로 설정
+          const newSongData: Song = {
+            id: `drill-song-${Date.now()}`,
+            title: drill.song,
+            duration: "5 min",
+            lastPracticed: "New",
+          };
+          setSelectedSong(newSongData);
+        }
+
+        // 마디 범위 파싱 (예: "23-26마디" -> { start: 23, end: 26 })
+        const measureMatch = drill.measures.match(/(\d+)-(\d+)/);
+        if (measureMatch) {
+          setMeasureRange({
+            start: parseInt(measureMatch[1]),
+            end: parseInt(measureMatch[2]),
+          });
+        }
+
+        // 메트로놈 템포 설정
+        if (drill.tempo > 0) {
+          setMetronomeState(prev => ({ ...prev, tempo: drill.tempo }));
+        }
+
+        // 사용 후 localStorage에서 제거
+        localStorage.removeItem("grit-on-active-drill");
+      }
+    }
+  }, [searchParams, songs]);
 
   useEffect(() => {
     if (hasPermission === null) {
@@ -886,12 +934,16 @@ export default function PracticePage() {
   return (
     <div className="px-4 py-6 max-w-lg mx-auto bg-white min-h-screen">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-xl font-bold text-black">연습 세션</h1>
+      <div className="mb-6">
+        <h1 className="text-xl font-bold text-black">
+          {activeDrill ? "연습 준비 완료" : "연습 세션"}
+        </h1>
         <p className="text-sm text-gray-500 mt-0.5">
           {hasPermission === false
             ? "마이크 권한이 필요합니다"
-            : "녹음 버튼을 눌러 연습을 시작하세요"}
+            : activeDrill
+            ? "시작 버튼을 눌러 녹음과 AI 분석을 시작하세요"
+            : "연습할 항목을 선택하거나 바로 시작하세요"}
         </p>
         {error && <p className="text-sm text-red-500 mt-1">{error}</p>}
       </div>
@@ -925,12 +977,41 @@ export default function PracticePage() {
         </div>
       )}
 
-      {/* Today's To-do List */}
-      <PracticeTodoList
-        isRecording={isRecording}
-        onTodoSelect={handleTodoSelect}
-        selectedTodoId={selectedTodo?.id}
-      />
+      {/* Active Drill Card - To-Do에서 선택한 연습 항목 */}
+      {activeDrill && !isRecording && (
+        <div className="bg-gradient-to-r from-violet-50 to-primary/5 border border-violet-200 rounded-2xl p-4 mb-4 animate-in slide-in-from-top duration-300">
+          <div className="flex items-start gap-3">
+            <div className="w-12 h-12 bg-gradient-to-br from-violet-600 to-primary rounded-xl flex items-center justify-center shrink-0">
+              <Music2 className="w-6 h-6 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-gray-900 truncate">{activeDrill.song}</p>
+              <p className="text-sm text-gray-600 mt-0.5">
+                {activeDrill.measures} · {activeDrill.title}
+              </p>
+              {activeDrill.tempo > 0 && (
+                <p className="text-xs text-violet-600 mt-1">
+                  메트로놈 템포: ♩= {activeDrill.tempo}
+                </p>
+              )}
+            </div>
+            <button
+              onClick={() => setActiveDrill(null)}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <p className="text-xs text-gray-500 mt-3 mb-3">
+            아래 시작 버튼을 눌러 연습을 시작하세요
+          </p>
+        </div>
+      )}
+
+      {/* Today's Drill List - 활성 드릴이 없을 때만 표시 */}
+      {!activeDrill && !isRecording && (
+        <TodayDrillList showPlayButton={true} />
+      )}
 
       {/* Timer Display with Controls & Metronome */}
       <PracticeTimer

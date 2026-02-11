@@ -8,3 +8,4 @@ export * from "./modals";
 export * from "./metronome-control";
 export * from "./practice-analysis-modal";
 export * from "./practice-todo-list";
+export * from "./today-drill-list";
