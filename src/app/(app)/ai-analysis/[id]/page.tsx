@@ -1,7 +1,9 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { ArrowLeft, Music, User, Clock, BookOpen, Hash, Lightbulb, FileText, ExternalLink } from "lucide-react";
+import { saveAnalyzedSong } from "@/lib/song-analysis-store";
 
 // 곡별 분석 데이터베이스
 const analysisDatabase: Record<string, any> = {
@@ -200,6 +202,73 @@ const analysisDatabase: Record<string, any> = {
       ],
     },
   },
+
+  "4": {
+    id: "4",
+    title: "La Campanella",
+    opus: "Grandes études de Paganini, S.141 No.3",
+    composer: "Franz Liszt",
+    composerLifespan: "1811-1886",
+    year: 1851,
+    dedication: "Clara Schumann",
+    premiere: "1851년 개정판 출판",
+    duration: "약 5분",
+    key: "G♯ minor",
+    period: "Romantic",
+    composerBio: `헝가리 출신의 작곡가이자 피아니스트로, 19세기 최고의 비르투오조 피아니스트로 평가받는다.
+리스트는 피아노 기교의 한계를 확장시켰으며, 교향시라는 새로운 장르를 개척했다.
+바이마르에서 활동하며 바그너, 브람스 등 후대 작곡가들에게 큰 영향을 미쳤다.`,
+    background: `파가니니의 바이올린 협주곡 2번 3악장 '라 캄파넬라'를 피아노를 위해 편곡한 작품이다.
+1838년 초판(S.140)을 거쳐 1851년 대폭 개정되어 현재의 형태(S.141)가 되었다.
+파가니니의 초인적 바이올린 기교를 피아노로 재현하며, 종소리를 모방하는 고음역의 반복음이 특징이다.`,
+    historicalContext: `19세기 비르투오조 시대의 대표적 작품이다.
+파가니니와 리스트로 대표되는 기교주의 음악의 절정을 보여준다.
+당시 파리 살롱에서 리스트의 연주는 열광적인 '리스트마니아'를 일으켰다.`,
+    formAnalysis: {
+      overview: "변주 형식 기반의 자유로운 구성",
+      sections: [
+        { name: "도입부", measures: "1-14", description: "G♯ minor, 고음역의 종소리 모티프 제시" },
+        { name: "주제", measures: "15-30", description: "파가니니 원곡의 주제, 높은 음역의 반복음" },
+        { name: "변주 1", measures: "31-50", description: "왼손 도약을 동반한 기교적 변주" },
+        { name: "변주 2", measures: "51-80", description: "빠른 아르페지오와 옥타브" },
+        { name: "코다", measures: "81-끝", description: "기교적 절정과 화려한 종결" },
+      ],
+    },
+    themes: [
+      { name: "종소리 모티프", description: "고음역의 반복되는 단음. D♯ 음이 종소리처럼 울린다.", measures: "1-14" },
+      { name: "파가니니 주제", description: "원곡의 우아하고 춤추는 듯한 선율.", measures: "15-30" },
+    ],
+    harmonyAnalysis: {
+      overview: "G♯ minor를 중심으로 E major와의 대비",
+      keyProgressions: [
+        { section: "도입부", keys: "G♯ minor", roman: "i" },
+        { section: "주제", keys: "G♯ minor", roman: "i" },
+        { section: "변주", keys: "E major - G♯ minor", roman: "VI - i" },
+        { section: "코다", keys: "G♯ minor", roman: "i" },
+      ],
+      notableProgressions: [
+        { name: "주제 화성", progression: "i - V7 - i", description: "단순하지만 효과적인 진행" },
+        { name: "변주부 전조", progression: "i - VI - iv - V - i", description: "관계 장조로의 일시적 이동" },
+      ],
+    },
+    practicePoints: [
+      { category: "템포", points: ["Allegretto: ♩= 약 160-176", "무리한 속도보다 정확성이 중요", "점진적 템포 향상 권장"] },
+      { category: "기술", points: ["고음역 반복음: 손목의 유연한 회전 사용", "넓은 도약: 시선을 목표 건반에 미리 고정", "옥타브 트레몰로: 팔 전체의 이완"] },
+      { category: "페달", points: ["반복음 구간: 페달 최소화하여 명료함 유지", "멜로디 구간: 레가토를 위한 적절한 페달링"] },
+    ],
+    references: [
+      { type: "도서", title: "The Virtuoso Liszt", author: "Dana Gooley", source: "Cambridge University Press, 2004", isbn: "" },
+    ],
+    imslp: {
+      title: "Grandes études de Paganini, S.141",
+      composer: "Franz Liszt",
+      url: "https://imslp.org/wiki/Grandes_%C3%A9tudes_de_Paganini,_S.141_(Liszt,_Franz)",
+      editions: [
+        { name: "Breitkopf & Härtel", editor: "Liszt Stiftung" },
+        { name: "Editio Musica Budapest", editor: "Sulyok/Mező" },
+      ],
+    },
+  },
 };
 
 export default function AnalysisDetailPage() {
@@ -208,6 +277,18 @@ export default function AnalysisDetailPage() {
   const id = params.id as string;
 
   const analysis = analysisDatabase[id];
+
+  // 분석 기록 저장 (이미 분석된 곡이면 최근 조회로 업데이트)
+  useEffect(() => {
+    if (analysis) {
+      saveAnalyzedSong({
+        id: analysis.id,
+        title: analysis.title,
+        opus: analysis.opus,
+        composer: analysis.composer,
+      });
+    }
+  }, [analysis]);
 
   if (!analysis) {
     return (

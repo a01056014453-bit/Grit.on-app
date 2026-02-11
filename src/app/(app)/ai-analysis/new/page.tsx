@@ -236,6 +236,11 @@ const availableAnalysis = [
     composer: "C. Debussy",
     keywords: ["clair de lune", "bergamasque", "달빛", "클레르 드 륀"],
   },
+  {
+    id: "4",
+    composer: "F. Liszt",
+    keywords: ["campanella", "la campanella", "s.141", "etude", "종"],
+  },
 ];
 
 // 분석 ID 찾기
@@ -387,8 +392,8 @@ export default function NewAnalysisPage() {
     // 분석 ID 찾기
     const analysisId = findAnalysisId(composer, title);
 
-    // 로딩 효과
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    // 짧은 로딩 효과 (500ms)
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
     if (analysisId) {
       // 분석 데이터가 있으면 해당 페이지로 이동
@@ -396,7 +401,7 @@ export default function NewAnalysisPage() {
     } else {
       // 분석 데이터가 없으면 알림
       setIsAnalyzing(false);
-      alert(`"${composer} - ${title}" 곡의 분석 데이터가 아직 준비되지 않았습니다.\n\n현재 분석 가능한 곡:\n• F. Chopin - Ballade No.1 Op.23\n• L. v. Beethoven - Piano Sonata No.8 Op.13\n• C. Debussy - Clair de Lune`);
+      alert(`"${composer} - ${title}" 곡의 분석 데이터가 아직 준비되지 않았습니다.\n\n현재 분석 가능한 곡:\n• F. Chopin - Ballade No.1 Op.23\n• L. v. Beethoven - Piano Sonata No.8 Op.13\n• C. Debussy - Clair de Lune\n• F. Liszt - Etude S.141 No.3`);
     }
   };
 

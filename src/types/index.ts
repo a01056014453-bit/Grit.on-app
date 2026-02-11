@@ -3,3 +3,6 @@ export * from "./recording";
 export * from "./practice";
 export * from "./plan";
 export * from "./feedback";
+export * from "./song-analysis";
+export * from "./room";
+export * from "./ranking";

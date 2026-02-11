@@ -1,27 +1,86 @@
+"use client";
+
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { Target } from "lucide-react";
+import { Target, Check, BarChart3 } from "lucide-react";
 import { ProgressRing } from "./progress-ring";
 
 interface DailyGoalProps {
   completed: number;
   target: number;
+  onTargetChange?: (newTarget: number) => void;
 }
 
-export function DailyGoal({ completed, target }: DailyGoalProps) {
+const GOAL_OPTIONS = [30, 45, 60, 90, 120];
+
+export function DailyGoal({ completed, target, onTargetChange }: DailyGoalProps) {
   const progress = Math.min((completed / target) * 100, 100);
   const remaining = Math.max(target - completed, 0);
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // 외부 클릭 시 드롭다운 닫기
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [isOpen]);
+
+  const handleSelectGoal = (minutes: number) => {
+    localStorage.setItem('grit-on-daily-goal', minutes.toString());
+    onTargetChange?.(minutes);
+    setIsOpen(false);
+  };
 
   return (
-    <Link
-      href="/goals"
-      className="block bg-white rounded-2xl p-6 border border-gray-100 hover:border-gray-200 transition-colors">
+    <div className="block bg-white rounded-2xl p-6 border border-gray-100">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h4 className="font-bold text-black text-lg">오늘의 목표</h4>
           <p className="text-xs text-gray-500 mt-1">매일 조금씩 성장하는 습관</p>
         </div>
-        <div className="p-2 bg-gray-100 rounded-full">
-          <Target className="w-5 h-5 text-gray-600" />
+        <div className="flex items-center gap-2">
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              className="p-2 bg-gray-100 rounded-full hover:bg-violet-100 transition-colors"
+            >
+              <Target className="w-5 h-5 text-gray-600 hover:text-violet-600" />
+            </button>
+
+            {isOpen && (
+              <div className="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50 min-w-[140px]">
+                <p className="text-xs text-gray-500 px-4 py-1 border-b border-gray-100 mb-1">
+                  목표 시간 설정
+                </p>
+                {GOAL_OPTIONS.map((minutes) => (
+                  <button
+                    key={minutes}
+                    onClick={() => handleSelectGoal(minutes)}
+                    className={`w-full px-4 py-2 text-left text-sm flex items-center justify-between hover:bg-gray-50 transition-colors ${
+                      target === minutes ? "text-violet-600 font-semibold" : "text-gray-700"
+                    }`}
+                  >
+                    <span>{minutes}분</span>
+                    {target === minutes && <Check className="w-4 h-4" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <Link
+            href="/stats"
+            className="p-2 bg-gray-100 rounded-full hover:bg-violet-100 transition-colors"
+          >
+            <BarChart3 className="w-5 h-5 text-gray-600 hover:text-violet-600" />
+          </Link>
         </div>
       </div>
 
@@ -65,6 +124,6 @@ export function DailyGoal({ completed, target }: DailyGoalProps) {
           </div>
         </div>
       </div>
-    </Link>
+    </div>
   );
 }

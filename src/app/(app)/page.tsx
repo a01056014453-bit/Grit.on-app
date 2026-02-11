@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Play, Zap, ChevronRight, BookOpen, Timer } from "lucide-react";
-import { StatsCard, QuoteCard, DailyGoal } from "@/components/app";
+import { Play, ChevronRight, BookOpen, Users, GraduationCap } from "lucide-react";
+import { StatsCard, QuoteCard, DailyGoal, LiveRankingWidget } from "@/components/app";
 import { mockUser, mockStats, getGreeting } from "@/data";
 import { getTodayPracticeTime, getPracticeStats, getAllSessions } from "@/lib/db";
 
@@ -131,7 +131,13 @@ export default function HomePage() {
         <DailyGoal
           completed={isLoading ? 0 : todayMinutes}
           target={dailyGoal}
+          onTargetChange={setDailyGoal}
         />
+      </div>
+
+      {/* Live Ranking Widget */}
+      <div className="mb-6">
+        <LiveRankingWidget />
       </div>
 
       {/* Stats Grid */}
@@ -169,21 +175,6 @@ export default function HomePage() {
 
       {/* Feature Cards */}
       <div className="space-y-3 mb-8">
-        {/* AI Song Analysis Card */}
-        <Link
-          href="/analysis"
-          className="flex items-center gap-4 w-full bg-white border border-gray-200 rounded-xl p-4 hover:bg-gray-50 transition-colors"
-        >
-          <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
-            <Zap className="w-5 h-5 text-gray-700" />
-          </div>
-          <div className="flex-1">
-            <p className="font-semibold text-black text-sm">AI 곡 분석하기</p>
-            <p className="text-xs text-gray-500">작품 정보와 연주 가이드 확인하기</p>
-          </div>
-          <ChevronRight className="w-5 h-5 text-gray-400" />
-        </Link>
-
         {/* Music Terms Search Card */}
         <Link
           href="/music-terms"
@@ -199,17 +190,32 @@ export default function HomePage() {
           <ChevronRight className="w-5 h-5 text-gray-400" />
         </Link>
 
-        {/* Metronome Card */}
+        {/* Teachers Card */}
         <Link
-          href="/metronome"
+          href="/teachers"
           className="flex items-center gap-4 w-full bg-white border border-gray-200 rounded-xl p-4 hover:bg-gray-50 transition-colors"
         >
           <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
-            <Timer className="w-5 h-5 text-gray-700" />
+            <Users className="w-5 h-5 text-gray-700" />
           </div>
           <div className="flex-1">
-            <p className="font-semibold text-black text-sm">메트로놈</p>
-            <p className="text-xs text-gray-500">정확한 템포로 연습하기</p>
+            <p className="font-semibold text-black text-sm">원포인트 레슨</p>
+            <p className="text-xs text-gray-500">최고 전문가의 시선으로 막힌 구간의 해법을 제시합니다</p>
+          </div>
+          <ChevronRight className="w-5 h-5 text-gray-400" />
+        </Link>
+
+        {/* Exam Room Card */}
+        <Link
+          href="/rooms"
+          className="flex items-center gap-4 w-full bg-white border border-gray-200 rounded-xl p-4 hover:bg-gray-50 transition-colors"
+        >
+          <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
+            <GraduationCap className="w-5 h-5 text-gray-700" />
+          </div>
+          <div className="flex-1">
+            <p className="font-semibold text-black text-sm">입시룸</p>
+            <p className="text-xs text-gray-500">영상을 올리고 다른 학생들의 연습을 참고하세요</p>
           </div>
           <ChevronRight className="w-5 h-5 text-gray-400" />
         </Link>

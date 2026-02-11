@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ArrowLeft, Search, Sparkles, Clock, Music, ChevronRight, Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { mockSongs, mockSongAIInfo, composerList, getAnalyzedSongs, type AnalyzedSong } from "@/data";
+import { mockSongs, mockSongAIInfo, composerList, pieceList, getAnalyzedSongs, type AnalyzedSong } from "@/data";
 
 export default function AnalysisPage() {
   const router = useRouter();
@@ -49,6 +49,26 @@ export default function AnalysisPage() {
         c.label.toLowerCase().includes(newSong.composer.toLowerCase()) ||
         c.key.includes(newSong.composer.toLowerCase())
       )
+    : [];
+
+  // 곡 제목 자동완성 (작곡가가 선택된 경우 해당 작곡가의 곡만, 아니면 전체 검색)
+  const selectedComposerKey = composerList.find(
+    (c) => c.label.toLowerCase() === newSong.composer.toLowerCase()
+  )?.key;
+
+  const filteredPieces = newSong.title.length >= 2
+    ? pieceList
+        .filter((p) => {
+          const matchesTitle =
+            p.title.toLowerCase().includes(newSong.title.toLowerCase()) ||
+            p.searchKey.includes(newSong.title.toLowerCase().replace(/[^a-z0-9가-힣]/g, ""));
+          // 작곡가가 선택되어 있으면 해당 작곡가의 곡만 필터링
+          if (selectedComposerKey) {
+            return matchesTitle && p.composer === selectedComposerKey;
+          }
+          return matchesTitle;
+        })
+        .slice(0, 8) // 최대 8개까지만 표시
     : [];
 
   return (
@@ -271,11 +291,28 @@ export default function AnalysisPage() {
                 </label>
                 <input
                   type="text"
-                  placeholder="예: Ballade Op.23 No.1"
+                  placeholder="2글자 이상 입력"
                   value={newSong.title}
                   onChange={(e) => setNewSong({ ...newSong, title: e.target.value })}
                   className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 />
+                {filteredPieces.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2 max-h-32 overflow-y-auto">
+                    {filteredPieces.map((p, idx) => (
+                      <button
+                        key={`${p.composer}-${p.title}-${idx}`}
+                        onClick={() => setNewSong({ ...newSong, title: p.title })}
+                        className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                          newSong.title === p.title
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-secondary text-foreground border-border hover:bg-secondary/80"
+                        }`}
+                      >
+                        {p.title.length > 30 ? p.title.substring(0, 30) + "..." : p.title}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 

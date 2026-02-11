@@ -5,3 +5,6 @@ export * from "./volume-meter";
 export * from "./practice-controls";
 export * from "./recent-recordings-list";
 export * from "./modals";
+export * from "./metronome-control";
+export * from "./practice-analysis-modal";
+export * from "./practice-todo-list";

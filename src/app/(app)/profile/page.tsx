@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   User,
   Music,
@@ -10,29 +11,44 @@ import {
   LogOut,
   ChevronRight,
   Crown,
-  BarChart2,
-  CheckCircle2,
-  CalendarDays,
-  Timer,
   Check,
   Sparkles,
+  Clock,
+  Flame,
+  Trophy,
+  Star,
+  Zap,
+  Award,
+  BookOpen,
 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
+import { getAllSessions, getPracticeStats } from "@/lib/db";
 
 const mockUser = {
-  name: "김지민",
-  email: "jimin.kim@gmail.com",
+  nickname: "피아노하는민지",
   instrument: "피아노",
-  level: "중급",
+  grade: "고2",
+  type: "전공", // "전공" | "취미"
   dailyGoal: 60,
   plan: "free",
-  joinDate: "2024.03.15",
-  totalPracticeHours: 127.5,
-  totalAnalysis: 47,
-  streakDays: 23,
-  longestStreak: 31,
-  averageScore: 82,
 };
+
+interface AnalysisItem {
+  id: string;
+  composer: string;
+  title: string;
+  difficulty: string;
+  updatedAt: string;
+}
+
+interface Badge {
+  id: string;
+  icon: React.ElementType;
+  label: string;
+  description: string;
+  earned: boolean;
+  color: string;
+}
 
 const goalOptions = [15, 30, 45, 60, 90, 120];
 const languageOptions = [
@@ -51,6 +67,179 @@ export default function ProfilePage() {
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+
+  // 데이터 상태
+  const [analyses, setAnalyses] = useState<AnalysisItem[]>([]);
+  const [totalHours, setTotalHours] = useState(0);
+  const [weekSessions, setWeekSessions] = useState(0);
+  const [maxStreak, setMaxStreak] = useState(0);
+  const [currentStreak, setCurrentStreak] = useState(0);
+  const [badges, setBadges] = useState<Badge[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // 데이터 로드
+  useEffect(() => {
+    async function loadData() {
+      try {
+        // 분석 목록 가져오기
+        const analysesRes = await fetch("/api/analyses");
+        const analysesData = await analysesRes.json();
+        if (analysesData.success) {
+          setAnalyses(analysesData.data);
+        }
+
+        // 연습 통계 가져오기
+        const stats = await getPracticeStats();
+        setTotalHours(Math.round(stats.totalPracticeTime / 3600 * 10) / 10);
+
+        // 세션 데이터로 추가 통계 계산
+        const allSessions = await getAllSessions();
+
+        // 이번 주 세션 수
+        const now = new Date();
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - now.getDay());
+        weekStart.setHours(0, 0, 0, 0);
+        const thisWeekSessions = allSessions.filter(s => {
+          const sessionDate = new Date(s.startTime);
+          return sessionDate >= weekStart;
+        });
+        setWeekSessions(thisWeekSessions.length);
+
+        // 연속 연습 계산 (현재 & 최대)
+        const { current, max } = calculateStreaks(allSessions);
+        setCurrentStreak(current);
+        setMaxStreak(max);
+
+        // 배지 계산
+        const earnedBadges = calculateBadges(allSessions, stats, analysesData.data?.length || 0);
+        setBadges(earnedBadges);
+      } catch (error) {
+        console.error("Failed to load profile data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadData();
+  }, []);
+
+  // 연속 일수 계산 함수
+  function calculateStreaks(sessions: { startTime: Date }[]): { current: number; max: number } {
+    if (sessions.length === 0) return { current: 0, max: 0 };
+
+    const dateSet = new Set<string>();
+    sessions.forEach(s => {
+      const date = new Date(s.startTime);
+      date.setHours(0, 0, 0, 0);
+      dateSet.add(date.toISOString());
+    });
+
+    const dates = Array.from(dateSet).map(d => new Date(d)).sort((a, b) => b.getTime() - a.getTime());
+    if (dates.length === 0) return { current: 0, max: 0 };
+
+    // 현재 연속 계산
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    let current = 0;
+    let checkDate = new Date(today);
+
+    if (!dateSet.has(today.toISOString())) {
+      checkDate.setDate(checkDate.getDate() - 1);
+      if (!dateSet.has(checkDate.toISOString())) {
+        current = 0;
+      }
+    }
+
+    if (current === 0 && dateSet.has(checkDate.toISOString())) {
+      while (dateSet.has(checkDate.toISOString())) {
+        current++;
+        checkDate.setDate(checkDate.getDate() - 1);
+      }
+    }
+
+    // 최대 연속 계산
+    let max = 0;
+    let tempStreak = 1;
+    const sortedDates = Array.from(dateSet).map(d => new Date(d)).sort((a, b) => a.getTime() - b.getTime());
+
+    for (let i = 1; i < sortedDates.length; i++) {
+      const diff = (sortedDates[i].getTime() - sortedDates[i - 1].getTime()) / (1000 * 60 * 60 * 24);
+      if (diff === 1) {
+        tempStreak++;
+      } else {
+        max = Math.max(max, tempStreak);
+        tempStreak = 1;
+      }
+    }
+    max = Math.max(max, tempStreak);
+
+    return { current, max };
+  }
+
+  // 배지 계산 함수
+  function calculateBadges(
+    sessions: { startTime: Date; practiceTime: number }[],
+    stats: { totalPracticeTime: number },
+    analysisCount: number
+  ): Badge[] {
+    const totalHours = stats.totalPracticeTime / 3600;
+    const { max } = calculateStreaks(sessions);
+
+    // 3시간 이상 연습한 세션이 있는지
+    const hasLongSession = sessions.some(s => s.practiceTime >= 3 * 60 * 60);
+
+    return [
+      {
+        id: "first-analysis",
+        icon: BookOpen,
+        label: "첫 분석",
+        description: "첫 번째 곡 분석 완료",
+        earned: analysisCount >= 1,
+        color: "blue",
+      },
+      {
+        id: "week-streak",
+        icon: Flame,
+        label: "7일 연속",
+        description: "7일 연속 연습 달성",
+        earned: max >= 7,
+        color: "orange",
+      },
+      {
+        id: "focus-3h",
+        icon: Zap,
+        label: "3시간 집중",
+        description: "한 세션에서 3시간 연습",
+        earned: hasLongSession,
+        color: "yellow",
+      },
+      {
+        id: "10-analyses",
+        icon: Star,
+        label: "분석 마스터",
+        description: "10개 곡 분석 완료",
+        earned: analysisCount >= 10,
+        color: "purple",
+      },
+      {
+        id: "100-hours",
+        icon: Trophy,
+        label: "100시간",
+        description: "누적 100시간 연습",
+        earned: totalHours >= 100,
+        color: "green",
+      },
+      {
+        id: "30-streak",
+        icon: Award,
+        label: "30일 연속",
+        description: "30일 연속 연습 달성",
+        earned: max >= 30,
+        color: "red",
+      },
+    ];
+  }
 
   const handleLogout = () => {
     if (confirm("정말 로그아웃 하시겠습니까?")) {
@@ -89,15 +278,24 @@ export default function ProfilePage() {
             <User className="w-8 h-8 text-primary" />
           </div>
           <div className="flex-1">
-            <h2 className="text-lg font-bold text-gray-900">{mockUser.name}</h2>
-            <p className="text-sm text-gray-500">{mockUser.email}</p>
-            <div className="flex items-center gap-2 mt-1">
-              <div className="flex items-center gap-1">
-                <Music className="w-3 h-3 text-primary" />
-                <span className="text-xs text-primary">{mockUser.instrument}</span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-xl font-bold text-gray-900">{mockUser.nickname}</h2>
+              <div className="flex items-center gap-1.5">
+                <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
+                  {mockUser.grade}
+                </span>
+                <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                  mockUser.type === "전공"
+                    ? "bg-violet-100 text-violet-600"
+                    : "bg-green-100 text-green-600"
+                }`}>
+                  {mockUser.type}
+                </span>
               </div>
-              <span className="text-xs text-gray-300">·</span>
-              <span className="text-xs text-gray-500">{mockUser.level}</span>
+            </div>
+            <div className="flex items-center gap-1.5 mt-2">
+              <Music className="w-3.5 h-3.5 text-primary" />
+              <span className="text-sm text-gray-600">{mockUser.instrument}</span>
             </div>
           </div>
         </div>
@@ -153,46 +351,105 @@ export default function ProfilePage() {
         ))}
       </div>
 
-      {/* Stats */}
-      <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm mb-8">
-        <h3 className="text-sm font-semibold text-gray-900 mb-4">나의 연습 통계</h3>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-between h-24">
-            <Timer className="w-5 h-5 text-blue-500 mb-2" />
-            <div>
-              <div className="text-xl font-bold text-gray-900">
-                {mockUser.totalPracticeHours}
-                <span className="text-xs font-normal text-gray-500 ml-1">시간</span>
-              </div>
-              <div className="text-xs text-gray-500">총 연습 시간</div>
-            </div>
+      {/* My Analysis List */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden mb-6">
+        <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-gray-900">나의 분석 리스트</h3>
+          <span className="text-xs text-gray-500">{analyses.length}곡</span>
+        </div>
+        {isLoading ? (
+          <div className="p-4 text-center text-sm text-gray-400">로딩 중...</div>
+        ) : analyses.length === 0 ? (
+          <div className="p-6 text-center">
+            <BookOpen className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+            <p className="text-sm text-gray-500">아직 분석한 곡이 없습니다</p>
+            <Link href="/songs" className="text-xs text-primary mt-1 inline-block">
+              곡 분석하러 가기 →
+            </Link>
           </div>
-          <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-between h-24">
-            <CheckCircle2 className="w-5 h-5 text-green-500 mb-2" />
-            <div>
-              <div className="text-xl font-bold text-gray-900">
-                {mockUser.totalAnalysis}
-                <span className="text-xs font-normal text-gray-500 ml-1">개</span>
-              </div>
-              <div className="text-xs text-gray-500">분석 완료</div>
-            </div>
+        ) : (
+          <div className="divide-y divide-gray-50">
+            {analyses.slice(0, 5).map((item) => (
+              <Link
+                key={item.id}
+                href={`/songs/${item.id}`}
+                className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">{item.title}</p>
+                  <p className="text-xs text-gray-500">{item.composer}</p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
+              </Link>
+            ))}
+            {analyses.length > 5 && (
+              <Link
+                href="/songs"
+                className="block px-4 py-3 text-center text-sm text-primary hover:bg-gray-50 transition-colors"
+              >
+                전체 보기 ({analyses.length}곡)
+              </Link>
+            )}
           </div>
-          <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-between h-24">
-            <BarChart2 className="w-5 h-5 text-orange-500 mb-2" />
-            <div>
-              <div className="text-xl font-bold text-gray-900">
-                {mockUser.streakDays}
-                <span className="text-xs font-normal text-gray-500 ml-1">일</span>
-              </div>
-              <div className="text-xs text-gray-500">연속 연습</div>
-            </div>
+        )}
+      </div>
+
+      {/* Practice Insights */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden mb-6">
+        <h3 className="px-4 py-3 text-sm font-semibold text-gray-900 border-b border-gray-100 bg-gray-50/50">
+          연습 인사이트
+        </h3>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-3 divide-x divide-gray-100 border-b border-gray-100">
+          <div className="p-4 text-center">
+            <Clock className="w-5 h-5 text-blue-500 mx-auto mb-1" />
+            <p className="text-lg font-bold text-gray-900">{isLoading ? "-" : totalHours}</p>
+            <p className="text-xs text-gray-500">총 시간</p>
           </div>
-          <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-between h-24">
-            <CalendarDays className="w-5 h-5 text-purple-500 mb-2" />
-            <div>
-              <div className="text-sm font-bold text-gray-900 mt-1">{mockUser.joinDate}</div>
-              <div className="text-xs text-gray-500 mt-1">가입일</div>
-            </div>
+          <div className="p-4 text-center">
+            <Flame className="w-5 h-5 text-orange-500 mx-auto mb-1" />
+            <p className="text-lg font-bold text-gray-900">{isLoading ? "-" : weekSessions}</p>
+            <p className="text-xs text-gray-500">이번 주</p>
+          </div>
+          <div className="p-4 text-center">
+            <Trophy className="w-5 h-5 text-yellow-500 mx-auto mb-1" />
+            <p className="text-lg font-bold text-gray-900">{isLoading ? "-" : maxStreak}</p>
+            <p className="text-xs text-gray-500">최대 연속</p>
+          </div>
+        </div>
+
+        {/* Badges */}
+        <div className="p-4">
+          <p className="text-xs font-medium text-gray-500 mb-3">활동 배지</p>
+          <div className="grid grid-cols-3 gap-3">
+            {badges.map((badge) => {
+              const colorClasses: Record<string, string> = {
+                blue: badge.earned ? "bg-blue-100 text-blue-600" : "bg-gray-100 text-gray-300",
+                orange: badge.earned ? "bg-orange-100 text-orange-600" : "bg-gray-100 text-gray-300",
+                yellow: badge.earned ? "bg-yellow-100 text-yellow-600" : "bg-gray-100 text-gray-300",
+                purple: badge.earned ? "bg-purple-100 text-purple-600" : "bg-gray-100 text-gray-300",
+                green: badge.earned ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-300",
+                red: badge.earned ? "bg-red-100 text-red-600" : "bg-gray-100 text-gray-300",
+              };
+
+              return (
+                <div
+                  key={badge.id}
+                  className={`flex flex-col items-center p-3 rounded-xl transition-all ${
+                    badge.earned ? "opacity-100" : "opacity-50"
+                  }`}
+                  title={badge.description}
+                >
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-1.5 ${colorClasses[badge.color]}`}>
+                    <badge.icon className="w-5 h-5" />
+                  </div>
+                  <span className={`text-xs font-medium text-center ${badge.earned ? "text-gray-700" : "text-gray-400"}`}>
+                    {badge.label}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

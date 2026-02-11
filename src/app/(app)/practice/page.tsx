@@ -4,21 +4,22 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAudioRecorder } from "@/hooks";
 import { savePracticeSession, getAllSessions, type PracticeSession } from "@/lib/db";
-import { mockSongs as initialSongs, getRandomTip, mockDrillCards, hasAIAnalysis, groupDrillsBySong, composerList } from "@/data";
-import type { PracticeType, Song } from "@/types";
+import { completePracticeTodo } from "@/lib/practice-todo-store";
+import { mockSongs as initialSongs, mockDrillCards, hasAIAnalysis, groupDrillsBySong, composerList } from "@/data";
+import type { PracticeType, Song, PracticeTodo } from "@/types";
 import Link from "next/link";
 import { Music2, ChevronRight, Plus, Check, X, Clock, RotateCcw, Repeat, ArrowRight, Trash2 } from "lucide-react";
 import {
-  PieceSelector,
   PracticeTimer,
-  PracticeControls,
   RecentRecordingsList,
   SongSelectionModal,
   AddSongModal,
-  PracticeCompleteModal,
-  AIAnalysisConsentModal,
+  PracticeAnalysisModal,
+  PracticeTodoList,
 } from "@/components/practice";
 import { AlertCircle, MonitorOff } from "lucide-react";
+import { type MetronomeState } from "@/components/practice/metronome-control";
+import type { AnalysisResult } from "@/app/api/analyze-practice/route";
 
 interface CompletedSession {
   totalTime: number;
@@ -58,11 +59,11 @@ interface DailyCompletion {
 
 export default function PracticePage() {
   const router = useRouter();
-  const [tip, setTip] = useState("");
   const [selectedSong, setSelectedSong] = useState<Song>(initialSongs[0]);
   const [isSongModalOpen, setIsSongModalOpen] = useState(false);
-  const [isCompleteModalOpen, setIsCompleteModalOpen] = useState(false);
-  const [isAIAnalysisModalOpen, setIsAIAnalysisModalOpen] = useState(false);
+  const [isAnalysisModalOpen, setIsAnalysisModalOpen] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [isAddSongModalOpen, setIsAddSongModalOpen] = useState(false);
   const [practiceType, setPracticeType] = useState<PracticeType>("runthrough");
   const [songs, setSongs] = useState<Song[]>(initialSongs);
@@ -75,6 +76,9 @@ export default function PracticePage() {
   const [autoPausedMessage, setAutoPausedMessage] = useState<string | null>(null);
   const [wakeLockSupported, setWakeLockSupported] = useState(false);
   const [recentSessions, setRecentSessions] = useState<PracticeSession[]>([]);
+  const [measureRange, setMeasureRange] = useState<{ start: number; end: number } | null>(null);
+  const [dailyGoal] = useState(60); // 일일 목표 (분)
+  const [selectedTodo, setSelectedTodo] = useState<PracticeTodo | null>(null);
   const [completedDrills, setCompletedDrills] = useState<Set<string>>(new Set());
   const [isAddDrillModalOpen, setIsAddDrillModalOpen] = useState(false);
   const [customDrills, setCustomDrills] = useState<Array<{
@@ -119,6 +123,25 @@ export default function PracticePage() {
   });
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  // 실시간 분류 시간 추적
+  const classificationTimeRef = useRef({
+    instrument: 0,
+    voice: 0,
+    silence: 0,
+    noise: 0,
+    lastLabel: null as string | null,
+    lastUpdateTime: 0,
+  });
+
+  // Metronome state
+  const [metronomeState, setMetronomeState] = useState<MetronomeState>({
+    isPlaying: false,
+    tempo: 120,
+    timeSignature: "4/4",
+    subdivision: "1",
+  });
+  const metronomeIsPlaying = metronomeState.isPlaying;
+
   const groupedDrills = groupDrillsBySong(mockDrillCards);
   const dayNames = ["일", "월", "화", "수", "목", "금", "토"];
   const today = new Date();
@@ -126,7 +149,7 @@ export default function PracticePage() {
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const wasRecordingBeforeHiddenRef = useRef(false);
 
-  // Audio recorder hook
+  // Audio recorder hook with metronome-aware detection
   const {
     isRecording,
     isPaused,
@@ -141,6 +164,8 @@ export default function PracticePage() {
     audioBlob,
     noiseFloor,
     isCalibrating,
+    audioLabel,
+    classificationConfidence,
     requestPermission,
     startRecording,
     pauseRecording,
@@ -151,7 +176,34 @@ export default function PracticePage() {
     decibelThreshold: 40,
     minSoundDuration: 100,
     calibrationDuration: 800,
+    metronomeActive: metronomeIsPlaying,
   });
+
+  // 실시간 분류 데이터 추적
+  useEffect(() => {
+    if (!isRecording || isPaused) return;
+
+    const now = Date.now();
+    const ref = classificationTimeRef.current;
+
+    // 이전 레이블의 시간 누적
+    if (ref.lastLabel && ref.lastUpdateTime > 0) {
+      const elapsed = (now - ref.lastUpdateTime) / 1000; // seconds
+      if (ref.lastLabel === "PIANO_PLAYING") {
+        ref.instrument += elapsed;
+      } else if (ref.lastLabel === "VOICE") {
+        ref.voice += elapsed;
+      } else if (ref.lastLabel === "SILENCE") {
+        ref.silence += elapsed;
+      } else if (ref.lastLabel === "NOISE" || ref.lastLabel === "METRONOME_ONLY") {
+        ref.noise += elapsed;
+      }
+    }
+
+    // 현재 레이블 저장
+    ref.lastLabel = audioLabel;
+    ref.lastUpdateTime = now;
+  }, [isRecording, isPaused, audioLabel]);
 
   const loadRecentSessions = useCallback(async () => {
     try {
@@ -180,7 +232,6 @@ export default function PracticePage() {
   };
 
   useEffect(() => {
-    setTip(getRandomTip());
     // Check if Wake Lock API is supported
     setWakeLockSupported("wakeLock" in navigator);
     // Load recent sessions
@@ -312,6 +363,15 @@ export default function PracticePage() {
   }, [isRecording, isPaused, requestWakeLock, releaseWakeLock]);
 
   const handleStartRecording = useCallback(async () => {
+    // 분류 데이터 리셋
+    classificationTimeRef.current = {
+      instrument: 0,
+      voice: 0,
+      silence: 0,
+      noise: 0,
+      lastLabel: null,
+      lastUpdateTime: 0,
+    };
     setSessionStartTime(new Date());
     setAutoPausedMessage(null);
     await startRecording();
@@ -323,57 +383,174 @@ export default function PracticePage() {
     resumeRecording();
   }, [resumeRecording]);
 
+  // Handle metronome state change
+  const handleMetronomeStateChange = useCallback((newState: MetronomeState) => {
+    setMetronomeState(newState);
+  }, []);
+
   const handleStopRecording = useCallback(async () => {
     stopRecording();
     releaseWakeLock();
+    setAutoPausedMessage(null);
 
-    if (sessionStartTime) {
+    // 마지막 분류 시간 누적
+    const ref = classificationTimeRef.current;
+    const now = Date.now();
+    if (ref.lastLabel && ref.lastUpdateTime > 0) {
+      const elapsed = (now - ref.lastUpdateTime) / 1000;
+      if (ref.lastLabel === "PIANO_PLAYING") {
+        ref.instrument += elapsed;
+      } else if (ref.lastLabel === "VOICE") {
+        ref.voice += elapsed;
+      } else if (ref.lastLabel === "SILENCE") {
+        ref.silence += elapsed;
+      } else if (ref.lastLabel === "NOISE" || ref.lastLabel === "METRONOME_ONLY") {
+        ref.noise += elapsed;
+      }
+    }
+
+    // 실시간 분류 데이터로 분석 결과 생성
+    const classificationData = {
+      instrument: Math.round(ref.instrument),
+      voice: Math.round(ref.voice),
+      silence: Math.round(ref.silence),
+      noise: Math.round(ref.noise),
+    };
+    const totalClassified = classificationData.instrument + classificationData.voice + classificationData.silence + classificationData.noise;
+    const actualTotalTime = totalTime > 0 ? totalTime : totalClassified;
+
+    // 퍼센트 계산
+    const instrumentPercent = actualTotalTime > 0 ? Math.round((classificationData.instrument / actualTotalTime) * 100) : 0;
+    const voicePercent = actualTotalTime > 0 ? Math.round((classificationData.voice / actualTotalTime) * 100) : 0;
+    const silencePercent = actualTotalTime > 0 ? Math.round((classificationData.silence / actualTotalTime) * 100) : 0;
+    const noisePercent = actualTotalTime > 0 ? Math.round((classificationData.noise / actualTotalTime) * 100) : 0;
+
+    // 순수 연습 시간 = 악기 연주 시간
+    const netPracticeTime = classificationData.instrument;
+    const restTime = actualTotalTime - netPracticeTime;
+
+    // 세션 정보 저장
+    const sessionEnd = new Date();
+    setCompletedSession({
+      totalTime: actualTotalTime,
+      practiceTime: netPracticeTime,
+      practiceType,
+      startTime: sessionStartTime || undefined,
+      endTime: sessionEnd,
+    });
+
+    if (audioBlob) {
+      const audioUrl = URL.createObjectURL(audioBlob);
+      setRecordedAudio({ url: audioUrl, duration: actualTotalTime });
+    }
+
+    // 분석 모달 열기
+    setIsAnalysisModalOpen(true);
+    setIsAnalyzing(true);
+
+    // 약간의 딜레이 후 결과 표시 (분석 중 UI 보여주기 위해)
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // 실시간 분류 데이터로 결과 설정
+    const analysisData: AnalysisResult = {
+      totalDuration: actualTotalTime,
+      netPracticeTime,
+      restTime,
+      segments: [], // 세그먼트는 실시간 추적하지 않음
+      summary: {
+        instrumentPercent,
+        voicePercent,
+        silencePercent,
+        noisePercent,
+      },
+    };
+
+    setAnalysisResult(analysisData);
+    setCompletedSession(prev => prev ? {
+      ...prev,
+      practiceTime: netPracticeTime,
+    } : null);
+
+    // 분류 데이터 리셋
+    classificationTimeRef.current = {
+      instrument: 0,
+      voice: 0,
+      silence: 0,
+      noise: 0,
+      lastLabel: null,
+      lastUpdateTime: 0,
+    };
+
+    setIsAnalyzing(false);
+  }, [
+    stopRecording,
+    releaseWakeLock,
+    sessionStartTime,
+    totalTime,
+    audioBlob,
+    practiceType,
+  ]);
+
+  // 분석 결과 저장
+  const handleSaveAnalysis = useCallback(async () => {
+    if (sessionStartTime && completedSession && analysisResult) {
+      // To-do 메모 생성 (마디 범위 + 노트)
+      const todoNote = selectedTodo
+        ? selectedTodo.measureStart > 0 && selectedTodo.measureEnd > 0
+          ? `${selectedTodo.measureStart}-${selectedTodo.measureEnd}마디${selectedTodo.note ? ` · ${selectedTodo.note}` : ""}`
+          : selectedTodo.note || undefined
+        : undefined;
+
       const session = {
         pieceId: selectedSong.id,
         pieceName: selectedSong.title,
         startTime: sessionStartTime,
-        endTime: new Date(),
-        totalTime,
-        practiceTime,
+        endTime: completedSession.endTime || new Date(),
+        totalTime: analysisResult.totalDuration,
+        practiceTime: analysisResult.netPracticeTime, // 순수 연습 시간만 저장
         audioBlob: audioBlob || undefined,
         synced: false,
-        practiceType,
+        practiceType: completedSession.practiceType,
         label: "연습",
+        measureRange: measureRange, // 집중 타겟 마디
+        todoNote, // To-do 메모
       };
 
       try {
         await savePracticeSession(session);
         await loadRecentSessions();
+
+        // 선택된 To-do가 있으면 완료 처리
+        if (selectedTodo) {
+          completePracticeTodo(selectedTodo.id);
+          setSelectedTodo(null);
+        }
       } catch (err) {
         console.error("Failed to save session:", err);
       }
-
-      if (audioBlob) {
-        const audioUrl = URL.createObjectURL(audioBlob);
-        setRecordedAudio({ url: audioUrl, duration: practiceTime });
-      }
     }
 
-    setCompletedSession({
-      totalTime,
-      practiceTime,
-      practiceType,
-      startTime: sessionStartTime || undefined,
-      endTime: new Date(),
-    });
-    setIsCompleteModalOpen(true);
-    setAutoPausedMessage(null);
-  }, [
-    stopRecording,
-    releaseWakeLock,
-    sessionStartTime,
-    selectedSong,
-    totalTime,
-    practiceTime,
-    audioBlob,
-    practiceType,
-    loadRecentSessions,
-  ]);
+    handleCloseAnalysisModal();
+  }, [sessionStartTime, completedSession, analysisResult, selectedSong, audioBlob, measureRange, loadRecentSessions, selectedTodo]);
+
+  // 분석 모달 닫기 (저장 안함)
+  const handleDiscardAnalysis = useCallback(() => {
+    handleCloseAnalysisModal();
+  }, []);
+
+  // 분석 모달 닫기 공통
+  const handleCloseAnalysisModal = useCallback(() => {
+    setIsAnalysisModalOpen(false);
+    setAnalysisResult(null);
+    setCompletedSession(null);
+    setSessionStartTime(null); // 시작 시간 리셋
+    setSelectedTodo(null); // To-do 선택 해제
+    if (recordedAudio) {
+      URL.revokeObjectURL(recordedAudio.url);
+      setRecordedAudio(null);
+    }
+    reset();
+  }, [recordedAudio, reset]);
 
   const handlePlayRecording = () => {
     if (!recordedAudio) return;
@@ -393,26 +570,32 @@ export default function PracticePage() {
     setIsPlaying(false);
   };
 
-  const handleCloseCompleteModal = () => {
-    setIsCompleteModalOpen(false);
-    setCompletedSession(null);
-    if (recordedAudio) {
-      URL.revokeObjectURL(recordedAudio.url);
-      setRecordedAudio(null);
-    }
-    setIsPlaying(false);
-    reset();
-  };
-
-  const handleViewRecording = () => {
-    setIsCompleteModalOpen(false);
-    router.push("/recordings/1");
-  };
 
   const handleSelectSong = (song: Song) => {
     setSelectedSong(song);
     setIsSongModalOpen(false);
   };
+
+  // To-do 선택 시 곡과 마디 설정
+  const handleTodoSelect = useCallback((todo: PracticeTodo) => {
+    setSelectedTodo(todo);
+    // 해당 곡으로 설정
+    const matchedSong = songs.find(s => s.title.includes(todo.songTitle) || todo.songTitle.includes(s.title));
+    if (matchedSong) {
+      setSelectedSong(matchedSong);
+    } else {
+      // 곡이 없으면 새로 생성
+      const newSong: Song = {
+        id: todo.songId,
+        title: todo.songTitle,
+        duration: "5 min",
+        lastPracticed: "New",
+      };
+      setSelectedSong(newSong);
+    }
+    // 마디 범위 설정
+    setMeasureRange({ start: todo.measureStart, end: todo.measureEnd });
+  }, [songs]);
 
   const handleAddSong = () => {
     if (newSong.composer.trim().length < 2 || newSong.title.trim().length < 2) return;
@@ -672,6 +855,18 @@ export default function PracticePage() {
   };
 
   const weeklyData = getWeeklyData();
+
+  // 오늘 연습한 시간 계산 (분)
+  const todayPracticed = Math.floor(
+    recentSessions
+      .filter((s) => {
+        const sessionDate = new Date(s.startTime);
+        sessionDate.setHours(0, 0, 0, 0);
+        return sessionDate.getTime() === today.getTime();
+      })
+      .reduce((sum, s) => sum + s.practiceTime, 0) / 60
+  );
+
   const mockDrills = groupedDrills.flatMap(g => g.drills);
   const allDrills = [...mockDrills, ...customDrills.map(d => ({
     ...d,
@@ -730,52 +925,29 @@ export default function PracticePage() {
         </div>
       )}
 
-      {/* Piece Selection */}
-      <PieceSelector
-        selectedSong={selectedSong}
+      {/* Today's To-do List */}
+      <PracticeTodoList
         isRecording={isRecording}
-        onClick={() => setIsSongModalOpen(true)}
+        onTodoSelect={handleTodoSelect}
+        selectedTodoId={selectedTodo?.id}
       />
 
-      {/* Timer Display */}
+      {/* Timer Display with Controls & Metronome */}
       <PracticeTimer
-        practiceTime={practiceTime}
+        totalTime={totalTime}
         isRecording={isRecording}
         isPaused={isPaused}
-        tip={tip}
-        recordedAudio={recordedAudio}
-        isPlaying={isPlaying}
-        onPlayRecording={handlePlayRecording}
         startTime={sessionStartTime}
+        hasPermission={hasPermission}
+        onStart={handleStartRecording}
+        onPause={pauseRecording}
+        onResume={handleResumeRecording}
+        onStop={handleStopRecording}
+        onRequestPermission={requestPermission}
+        onMetronomeStateChange={handleMetronomeStateChange}
       />
 
-      {/* Debug: Sound Detection Status */}
-      {isRecording && (
-        <div className="bg-gray-100 rounded-lg p-3 mb-4 text-xs font-mono">
-          <div className="flex justify-between items-center mb-2">
-            <span>현재 음량:</span>
-            <span className={`font-bold ${isPianoDetected ? 'text-green-600' : isSoundDetected ? 'text-amber-600' : 'text-gray-600'}`}>
-              {currentDecibel} dB
-            </span>
-          </div>
-          <div className="flex justify-between items-center mb-2">
-            <span>기준 소음:</span>
-            <span>{noiseFloor} dB</span>
-          </div>
-          <div className="flex justify-between items-center mb-2">
-            <span>상태:</span>
-            <span className={isPianoDetected ? 'text-green-600 font-bold' : isSoundDetected ? 'text-amber-600' : 'text-gray-500'}>
-              {isCalibrating ? '측정 중...' : isPianoDetected ? '🎹 피아노 감지!' : isSoundDetected ? '🗣️ 목소리 (무시)' : '대기 중'}
-            </span>
-          </div>
-          <div className="w-full bg-gray-300 rounded-full h-2 mt-2">
-            <div
-              className={`h-2 rounded-full transition-all ${isPianoDetected ? 'bg-green-500' : isSoundDetected ? 'bg-amber-500' : 'bg-blue-500'}`}
-              style={{ width: `${Math.min(100, (currentDecibel / 100) * 100)}%` }}
-            />
-          </div>
-        </div>
-      )}
+
 
       {/* Hidden Audio Element */}
       {recordedAudio && (
@@ -786,21 +958,8 @@ export default function PracticePage() {
         />
       )}
 
-      {/* Controls */}
-      <PracticeControls
-        isRecording={isRecording}
-        isPaused={isPaused}
-        hasPermission={hasPermission}
-        onStart={handleStartRecording}
-        onPause={pauseRecording}
-        onResume={handleResumeRecording}
-        onStop={handleStopRecording}
-        onRequestPermission={requestPermission}
-      />
-
       {/* Practice Plan & Calendar Combined */}
-      {!isRecording && (
-        <div className="mt-8 space-y-4">
+      <div className="mt-8 space-y-4">
           {/* Weekly Overview - Compact */}
           <div className="bg-white rounded-2xl p-4 border border-gray-200">
             <div className="flex items-center justify-between mb-3">
@@ -818,7 +977,7 @@ export default function PracticePage() {
                     {day.date.getDate()}
                   </p>
                   <div
-                    className={`w-9 h-9 mx-auto rounded-full flex items-center justify-center text-xs font-semibold ${
+                    className={`w-10 h-10 mx-auto rounded-full flex flex-col items-center justify-center ${
                       day.isToday
                         ? "bg-black text-white"
                         : day.minutes > 0
@@ -826,7 +985,14 @@ export default function PracticePage() {
                         : "bg-gray-100 text-gray-400"
                     }`}
                   >
-                    {day.minutes > 0 ? `${day.minutes}` : "-"}
+                    {day.minutes > 0 ? (
+                      <>
+                        <span className="text-xs font-semibold leading-none">{day.minutes}</span>
+                        <span className="text-[8px] opacity-70">분</span>
+                      </>
+                    ) : (
+                      <span className="text-xs">-</span>
+                    )}
                   </div>
                 </div>
               ))}
@@ -932,128 +1098,9 @@ export default function PracticePage() {
             </div>
           )}
 
-          {/* Today's Plan with Progress */}
-          <div className="bg-white rounded-2xl p-4 border border-gray-200">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-black">오늘의 연습</span>
-                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                  {completedDrills.size}/{allDrills.length}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                {routines.length === 0 && (
-                  <button
-                    onClick={() => setIsRoutineModalOpen(true)}
-                    className="w-7 h-7 bg-violet-100 rounded-full flex items-center justify-center hover:bg-violet-200 transition-colors"
-                    title="루틴 만들기"
-                  >
-                    <Repeat className="w-4 h-4 text-violet-600" />
-                  </button>
-                )}
-                <button
-                  onClick={() => setIsAddDrillModalOpen(true)}
-                  className="w-7 h-7 bg-black rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors"
-                >
-                  <Plus className="w-4 h-4 text-white" />
-                </button>
-              </div>
-            </div>
-
-            {/* Progress Bar */}
-            <div className="h-1.5 bg-gray-100 rounded-full mb-4 overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-black to-violet-500 rounded-full transition-all"
-                style={{ width: `${planProgress}%` }}
-              />
-            </div>
-
-            {/* Drill List - Grouped by Song */}
-            {allDrills.length > 0 ? (
-              <div className="space-y-3">
-                {(() => {
-                  // Group drills by song name
-                  const groupedBySong: Record<string, typeof allDrills> = {};
-                  allDrills.forEach((drill) => {
-                    if (!groupedBySong[drill.song]) {
-                      groupedBySong[drill.song] = [];
-                    }
-                    groupedBySong[drill.song].push(drill);
-                  });
-
-                  return Object.entries(groupedBySong).map(([songName, drills]) => (
-                    <div key={songName} className="border border-gray-200 rounded-xl overflow-hidden">
-                      {/* Song Header */}
-                      <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
-                        <p className="text-sm font-semibold text-black">{songName}</p>
-                      </div>
-                      {/* Drills under this song */}
-                      <div className="divide-y divide-gray-100">
-                        {drills.map((drill) => {
-                          const isCompleted = completedDrills.has(drill.id);
-                          const isCustom = drill.id.startsWith("custom-");
-                          const displayInfo = isCustom
-                            ? ((drill as typeof customDrills[0]).mode === "recurrence"
-                                ? `${drill.recurrence}회`
-                                : `${drill.duration}분`)
-                            : `템포 ${drill.tempo} ${drill.recurrence}회`;
-
-                          return (
-                            <div
-                              key={drill.id}
-                              className={`px-4 py-2.5 flex items-center gap-3 ${
-                                isCompleted ? "bg-gray-50" : "bg-white"
-                              }`}
-                            >
-                              <button
-                                onClick={() => handleToggleDrill(drill.id)}
-                                className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                                  isCompleted
-                                    ? "bg-green-500 border-green-500"
-                                    : "border-gray-300 hover:border-gray-400"
-                                }`}
-                              >
-                                {isCompleted && <Check className="w-2.5 h-2.5 text-white" />}
-                              </button>
-                              <p className={`flex-1 text-xs ${isCompleted ? "text-gray-400 line-through" : "text-gray-600"}`}>
-                                {drill.measures} · {drill.title} {displayInfo}
-                              </p>
-                              {isCustom && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteDrill(drill.id);
-                                  }}
-                                  className="w-5 h-5 rounded-full flex items-center justify-center hover:bg-red-100 group"
-                                >
-                                  <X className="w-3 h-3 text-gray-400 group-hover:text-red-500" />
-                                </button>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ));
-                })()}
-              </div>
-            ) : (
-              <div className="text-center py-6">
-                <p className="text-sm text-gray-500 mb-2">연습 플랜이 없습니다</p>
-                <Link
-                  href="/analysis"
-                  className="inline-block px-4 py-2 bg-black text-white text-sm font-medium rounded-lg"
-                >
-                  AI 분석하기
-                </Link>
-              </div>
-            )}
-          </div>
-
           {/* Recent Sessions */}
-          <RecentRecordingsList sessions={recentSessions} />
+          <RecentRecordingsList sessions={recentSessions} onSessionDeleted={loadRecentSessions} />
         </div>
-      )}
 
       {/* Modals */}
       <SongSelectionModal
@@ -1075,28 +1122,22 @@ export default function PracticePage() {
         onAddSong={handleAddSong}
       />
 
-      <PracticeCompleteModal
-        isOpen={isCompleteModalOpen}
-        onClose={handleCloseCompleteModal}
-        selectedSong={selectedSong}
-        completedSession={completedSession}
-        onViewRecording={handleViewRecording}
-      />
-
-      <AIAnalysisConsentModal
-        isOpen={isAIAnalysisModalOpen}
-        onClose={() => {
-          setIsAIAnalysisModalOpen(false);
-          setIsCompleteModalOpen(true);
-        }}
-        onStartAnalysis={() => {
-          setIsAIAnalysisModalOpen(false);
-          router.push("/analysis");
-        }}
-        onSkip={() => {
-          setIsAIAnalysisModalOpen(false);
-          setIsCompleteModalOpen(true);
-        }}
+      {/* Practice Analysis Modal */}
+      <PracticeAnalysisModal
+        isOpen={isAnalysisModalOpen}
+        isAnalyzing={isAnalyzing}
+        analysisResult={analysisResult}
+        audioUrl={recordedAudio?.url}
+        dailyGoal={dailyGoal}
+        songName={selectedSong.title}
+        todoNote={selectedTodo
+          ? selectedTodo.measureStart > 0 && selectedTodo.measureEnd > 0
+            ? `${selectedTodo.measureStart}-${selectedTodo.measureEnd}마디${selectedTodo.note ? ` · ${selectedTodo.note}` : ""}`
+            : selectedTodo.note || undefined
+          : undefined}
+        onClose={handleCloseAnalysisModal}
+        onSave={handleSaveAnalysis}
+        onDiscard={handleDiscardAnalysis}
       />
 
       {/* Add Drill Modal */}

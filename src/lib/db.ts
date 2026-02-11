@@ -13,6 +13,8 @@ export interface PracticeSession {
   synced: boolean;
   practiceType?: "partial" | "routine" | "runthrough";
   label?: string;
+  measureRange?: { start: number; end: number } | null; // 집중 타겟 마디
+  todoNote?: string; // 연습 To-do의 메모
 }
 
 const DB_NAME = "griton_db";
@@ -198,6 +200,25 @@ export async function deleteSession(id: number): Promise<void> {
 
     request.onerror = () => {
       reject(new Error("Failed to delete session"));
+    };
+  });
+}
+
+// Clear all sessions
+export async function clearAllSessions(): Promise<void> {
+  const db = await initDB();
+
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([SESSIONS_STORE], "readwrite");
+    const store = transaction.objectStore(SESSIONS_STORE);
+    const request = store.clear();
+
+    request.onsuccess = () => {
+      resolve();
+    };
+
+    request.onerror = () => {
+      reject(new Error("Failed to clear sessions"));
     };
   });
 }
