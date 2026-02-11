@@ -607,33 +607,33 @@ export default function GoalsPage() {
       </div>
 
       {/* Monthly Calendar */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-4">
+      <div className="bg-white rounded-xl border border-gray-200 p-3">
         {/* Calendar Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <span className="font-bold text-black text-lg">{monthYear}</span>
-            <div className="flex items-center gap-1 text-sm">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-black text-sm">{monthYear}</span>
+            <div className="flex items-center gap-1 text-xs">
               <span className="text-amber-500">✓</span>
               <span className="text-black font-medium">{practiceDaysCount}</span>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <button
               onClick={goToPrevMonth}
-              className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100"
+              className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-gray-100"
             >
-              <ChevronLeft className="w-5 h-5 text-gray-600" />
+              <ChevronLeft className="w-4 h-4 text-gray-600" />
             </button>
             <button
               onClick={goToNextMonth}
-              className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100"
+              className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-gray-100"
             >
-              <ChevronRight className="w-5 h-5 text-gray-600" />
+              <ChevronRight className="w-4 h-4 text-gray-600" />
             </button>
             {(calendarMonth.getMonth() !== today.getMonth() || calendarMonth.getFullYear() !== today.getFullYear()) && (
               <button
                 onClick={goToToday}
-                className="px-3 py-1.5 bg-black text-white text-xs font-medium rounded-full hover:bg-gray-800"
+                className="px-2 py-1 bg-black text-white text-[10px] font-medium rounded-full hover:bg-gray-800"
               >
                 오늘
               </button>
@@ -642,11 +642,11 @@ export default function GoalsPage() {
         </div>
 
         {/* Day Names */}
-        <div className="grid grid-cols-7 gap-2 mb-2">
+        <div className="grid grid-cols-7 gap-1 mb-1">
           {dayNames.map((name, idx) => (
             <div
               key={name}
-              className={`text-center text-xs font-medium ${
+              className={`text-center text-[10px] font-medium ${
                 idx === 0 ? "text-red-500" : idx === 6 ? "text-blue-500" : "text-gray-500"
               }`}
             >
@@ -656,7 +656,7 @@ export default function GoalsPage() {
         </div>
 
         {/* Calendar Grid */}
-        <div className="grid grid-cols-7 gap-2">
+        <div className="grid grid-cols-7 gap-1">
           {calendarData.map((cell, idx) => {
             const isPastOrToday = cell.date && cell.date.getTime() <= today.getTime();
             const isSelected = selectedDate && cell.date && selectedDate.getTime() === cell.date.getTime();
@@ -673,7 +673,7 @@ export default function GoalsPage() {
                   <>
                     {/* Clover Shape Cell */}
                     <div
-                      className={`w-10 h-10 rounded-[12px] flex items-center justify-center transition-all ${
+                      className={`w-8 h-8 rounded-[10px] flex items-center justify-center transition-all ${
                         cell.sessionCount > 0
                           ? "bg-amber-200 hover:scale-105 cursor-pointer"
                           : isPastOrToday
@@ -683,19 +683,19 @@ export default function GoalsPage() {
                     >
                       {cell.sessionCount > 0 ? (
                         cell.sessionCount === 1 ? (
-                          <Check className="w-5 h-5 text-white" strokeWidth={3} />
+                          <Check className="w-4 h-4 text-white" strokeWidth={3} />
                         ) : (
-                          <span className="text-gray-800 font-bold text-sm">{cell.sessionCount}</span>
+                          <span className="text-gray-800 font-bold text-xs">{cell.sessionCount}</span>
                         )
                       ) : null}
                     </div>
                     {/* Date Number - 선택된 날짜는 검은 원형 배경 */}
                     <span
-                      className={`text-xs mt-1 font-medium transition-all ${
+                      className={`text-[10px] mt-0.5 font-medium transition-all ${
                         isSelected
-                          ? "bg-black text-white rounded-full w-6 h-6 flex items-center justify-center"
+                          ? "bg-black text-white rounded-full w-5 h-5 flex items-center justify-center"
                           : cell.isToday
-                          ? "bg-violet-500 text-white rounded-full w-6 h-6 flex items-center justify-center"
+                          ? "bg-violet-500 text-white rounded-full w-5 h-5 flex items-center justify-center"
                           : cell.dayOfWeek === 0
                           ? "text-red-500"
                           : cell.dayOfWeek === 6
@@ -707,7 +707,7 @@ export default function GoalsPage() {
                     </span>
                   </>
                 ) : (
-                  <div className="w-10 h-10" />
+                  <div className="w-8 h-8" />
                 )}
               </button>
             );
@@ -891,7 +891,7 @@ export default function GoalsPage() {
             <div className="flex items-center justify-center gap-6">
               <button
                 onClick={togglePlay}
-                className="w-16 h-16 rounded-full bg-black flex items-center justify-center hover:bg-gray-800 transition-colors"
+                className="w-16 h-16 rounded-full bg-gradient-to-r from-violet-600 to-black flex items-center justify-center hover:opacity-90 transition-opacity"
               >
                 {isPlaying ? (
                   <Pause className="w-7 h-7 text-white" />
@@ -929,7 +929,7 @@ export default function GoalsPage() {
       {/* Start Practice Button */}
       <button
         onClick={() => router.push("/practice")}
-        className="fixed bottom-24 left-4 right-4 max-w-lg mx-auto py-4 bg-black text-white rounded-2xl font-semibold flex items-center justify-center gap-2"
+        className="fixed bottom-24 left-4 right-4 max-w-lg mx-auto py-4 bg-gradient-to-r from-violet-600 to-black text-white rounded-2xl font-semibold flex items-center justify-center gap-2 shadow-lg shadow-violet-600/30"
       >
         <Play className="w-5 h-5 fill-white" />
         연습 시작하기

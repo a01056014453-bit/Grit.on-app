@@ -104,21 +104,19 @@ export function QuoteCard() {
   const quote = quotes[hoursSinceEpoch % quotes.length];
 
   return (
-    <div className="bg-gray-50 rounded-2xl p-6">
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold tracking-wider uppercase text-gray-400">
-            오늘의 명언
-          </span>
-        </div>
+    <div className="bg-gray-50 rounded-xl p-4">
+      <div className="flex flex-col gap-2">
+        <span className="text-[10px] font-semibold tracking-wider uppercase text-gray-400">
+          오늘의 명언
+        </span>
 
         <blockquote>
-          <p className="text-lg font-serif text-black leading-relaxed break-keep text-pretty">
+          <p className="text-sm font-serif text-black leading-relaxed break-keep text-pretty">
             &quot;{quote.text}&quot;
           </p>
-          <footer className="mt-3 flex items-center gap-2">
-            <div className="h-px w-8 bg-gray-300" />
-            <cite className="text-xs font-medium text-gray-500 not-italic">
+          <footer className="mt-2 flex items-center gap-2">
+            <div className="h-px w-6 bg-gray-300" />
+            <cite className="text-[10px] font-medium text-gray-500 not-italic">
               {quote.author}
             </cite>
           </footer>

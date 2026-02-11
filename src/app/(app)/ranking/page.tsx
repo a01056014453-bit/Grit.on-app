@@ -131,6 +131,50 @@ function RankingRow({ user, elapsedSeconds, isCurrentUser }: RankingRowProps) {
   );
 }
 
+// 4위 이하 간단한 리스트 Row
+function SimpleRankingRow({ user, elapsedSeconds }: { user: RankingUser; elapsedSeconds: number }) {
+  const displayTime = user.isPracticing
+    ? user.netPracticeTime + elapsedSeconds
+    : user.netPracticeTime;
+
+  return (
+    <div className="flex items-center gap-3 py-3 border-b border-gray-100 last:border-b-0">
+      {/* Rank */}
+      <span className="w-6 text-sm font-bold text-gray-400 text-center">{user.rank}</span>
+
+      {/* Instrument Emoji */}
+      <span className="text-lg">{INSTRUMENT_EMOJIS[user.instrument]}</span>
+
+      {/* User Info */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-gray-900 text-sm truncate">
+            {user.nickname}
+          </span>
+          {user.isPracticing && (
+            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse shrink-0" />
+          )}
+        </div>
+        {user.isPracticing && user.currentSong && (
+          <p className="text-xs text-gray-500 truncate mt-0.5">
+            {user.currentSong}
+          </p>
+        )}
+      </div>
+
+      {/* Practice Time */}
+      <span
+        className={cn(
+          "font-mono text-sm font-semibold",
+          user.isPracticing ? "text-primary" : "text-gray-600"
+        )}
+      >
+        {formatTime(displayTime)}
+      </span>
+    </div>
+  );
+}
+
 export default function RankingPage() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [rankers, setRankers] = useState<RankingUser[]>(mockRankingUsers);
@@ -276,14 +320,14 @@ export default function RankingPage() {
         />
       </div>
 
-      {/* Full Ranking List */}
+      {/* Full Ranking List - 4위부터 */}
       <div>
         <p className="text-sm font-semibold text-gray-700 mb-2">
           전체 순위 ({rankers.length}명)
         </p>
-        <div className="space-y-2">
-          {rankers.map((user) => (
-            <RankingRow
+        <div className="bg-white rounded-xl border border-gray-100 px-3">
+          {rankers.slice(3).map((user) => (
+            <SimpleRankingRow
               key={user.id}
               user={user}
               elapsedSeconds={elapsedSeconds}
@@ -296,7 +340,7 @@ export default function RankingPage() {
       <div className="fixed bottom-20 left-0 right-0 px-4 max-w-lg mx-auto">
         <Link
           href="/practice"
-          className="flex items-center justify-center gap-2 w-full py-4 rounded-2xl bg-gradient-to-r from-violet-600 to-primary text-white font-bold shadow-lg shadow-primary/30 transition-transform active:scale-[0.98]"
+          className="flex items-center justify-center gap-2 w-full py-4 rounded-2xl bg-gradient-to-r from-violet-600 to-black text-white font-bold shadow-lg shadow-violet-600/30 transition-transform active:scale-[0.98]"
         >
           <Play className="w-5 h-5 fill-white" />
           연습 시작하고 순위 올리기

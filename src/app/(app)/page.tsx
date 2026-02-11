@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Play, ChevronRight, BookOpen, Users, GraduationCap } from "lucide-react";
-import { StatsCard, QuoteCard, DailyGoal } from "@/components/app";
+import { StatsCard, DailyGoal } from "@/components/app";
 import { mockUser, mockStats, getGreeting } from "@/data";
 import { getTodayPracticeTime, getPracticeStats, getAllSessions } from "@/lib/db";
 
@@ -154,15 +154,10 @@ export default function HomePage() {
         />
       </div>
 
-      {/* Quote Card */}
-      <div className="mb-6">
-        <QuoteCard />
-      </div>
-
       {/* Start Practice Button */}
       <Link
         href="/practice"
-        className="flex items-center justify-center gap-3 w-full bg-black text-white rounded-2xl py-4 text-lg font-semibold transition-transform active:scale-[0.98] mb-4"
+        className="flex items-center justify-center gap-3 w-full bg-gradient-to-r from-violet-600 to-black text-white rounded-2xl py-4 text-lg font-semibold transition-transform active:scale-[0.98] mb-4"
       >
         <Play className="w-6 h-6 fill-white" />
         <span>연습 시작하기</span>

@@ -15,7 +15,8 @@ export const mockRankingUsers: RankingUser[] = [
     instrument: "piano",
     netPracticeTime: 7 * 3600 + 42 * 60 + 15, // 7:42:15
     isPracticing: true,
-    practiceStartedAt: getRandomPracticeStart(127), // 2시간 7분 전 시작
+    practiceStartedAt: getRandomPracticeStart(127),
+    currentSong: "F. Chopin Ballade Op.23 No.1",
     gritScore: 92,
     rank: 1,
   },
@@ -25,7 +26,8 @@ export const mockRankingUsers: RankingUser[] = [
     instrument: "piano",
     netPracticeTime: 6 * 3600 + 58 * 60 + 32, // 6:58:32
     isPracticing: true,
-    practiceStartedAt: getRandomPracticeStart(45), // 45분 전 시작
+    practiceStartedAt: getRandomPracticeStart(45),
+    currentSong: "F. Chopin Nocturne Op.9 No.2",
     gritScore: 85,
     rank: 2,
   },
@@ -44,7 +46,8 @@ export const mockRankingUsers: RankingUser[] = [
     instrument: "cello",
     netPracticeTime: 4 * 3600 + 45 * 60 + 12, // 4:45:12
     isPracticing: true,
-    practiceStartedAt: getRandomPracticeStart(88), // 1시간 28분 전 시작
+    practiceStartedAt: getRandomPracticeStart(88),
+    currentSong: "J.S. Bach Cello Suite No.1",
     gritScore: 72,
     rank: 4,
   },
@@ -63,7 +66,8 @@ export const mockRankingUsers: RankingUser[] = [
     instrument: "guitar",
     netPracticeTime: 3 * 3600 + 56 * 60 + 21, // 3:56:21
     isPracticing: true,
-    practiceStartedAt: getRandomPracticeStart(32), // 32분 전 시작
+    practiceStartedAt: getRandomPracticeStart(32),
+    currentSong: "F. Tárrega Recuerdos de la Alhambra",
     gritScore: 58,
     rank: 6,
   },
@@ -82,7 +86,8 @@ export const mockRankingUsers: RankingUser[] = [
     instrument: "piano",
     netPracticeTime: 3 * 3600 + 15 * 60 + 8, // 3:15:08
     isPracticing: true,
-    practiceStartedAt: getRandomPracticeStart(67), // 1시간 7분 전 시작
+    practiceStartedAt: getRandomPracticeStart(67),
+    currentSong: "F. Liszt La Campanella",
     gritScore: 48,
     rank: 8,
   },
@@ -101,7 +106,8 @@ export const mockRankingUsers: RankingUser[] = [
     instrument: "piano",
     netPracticeTime: 2 * 3600 + 18 * 60 + 55, // 2:18:55
     isPracticing: true,
-    practiceStartedAt: getRandomPracticeStart(15), // 15분 전 시작
+    practiceStartedAt: getRandomPracticeStart(15),
+    currentSong: "C. Debussy Clair de Lune",
     gritScore: 35,
     rank: 10,
   },

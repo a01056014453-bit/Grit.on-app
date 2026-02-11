@@ -13,11 +13,26 @@ interface DailyGoalProps {
 
 const GOAL_OPTIONS = [30, 45, 60, 90, 120];
 
+const quotes = [
+  { text: "음악가에게 휴식은 없다. 쉬는 날도 연습하는 날이다.", author: "Pablo Casals" },
+  { text: "연습은 거짓말을 하지 않는다.", author: "Vladimir Horowitz" },
+  { text: "음악은 영혼의 언어이다.", author: "Kahlil Gibran" },
+  { text: "천천히, 그러나 확실하게. 그것이 연습의 비밀이다.", author: "Franz Liszt" },
+  { text: "매일 조금씩, 그것이 위대함으로 가는 길이다.", author: "Robert Schumann" },
+  { text: "느리게 연습하면, 빠르게 배운다.", author: "Yo-Yo Ma" },
+  { text: "단순함은 궁극의 정교함이다.", author: "F. Chopin" },
+];
+
 export function DailyGoal({ completed, target, onTargetChange }: DailyGoalProps) {
   const progress = Math.min((completed / target) * 100, 100);
   const remaining = Math.max(target - completed, 0);
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // 1시간마다 명언이 바뀌도록 계산
+  const now = new Date();
+  const hoursSinceEpoch = Math.floor(now.getTime() / (1000 * 60 * 60));
+  const quote = quotes[hoursSinceEpoch % quotes.length];
 
   // 외부 클릭 시 드롭다운 닫기
   useEffect(() => {
@@ -123,6 +138,13 @@ export function DailyGoal({ completed, target, onTargetChange }: DailyGoalProps)
             )}
           </div>
         </div>
+      </div>
+
+      {/* 오늘의 명언 */}
+      <div className="mt-4 pt-4 border-t border-gray-100">
+        <p className="text-xs text-gray-400 mb-1">오늘의 명언</p>
+        <p className="text-sm text-gray-600 italic">&quot;{quote.text}&quot;</p>
+        <p className="text-xs text-gray-400 mt-1">— {quote.author}</p>
       </div>
     </div>
   );

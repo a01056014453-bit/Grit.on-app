@@ -38,6 +38,7 @@ export interface RankingUser {
   netPracticeTime: number; // 초 단위
   isPracticing: boolean; // 현재 연습 중인지
   practiceStartedAt?: string; // 연습 시작 시간 (ISO string)
+  currentSong?: string; // 현재 연습 중인 곡
   gritScore: number; // 0-100
   rank: number;
 }
