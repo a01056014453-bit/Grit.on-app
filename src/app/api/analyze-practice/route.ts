@@ -3,17 +3,22 @@ import { NextRequest, NextResponse } from "next/server";
 /**
  * 연습 세션 오디오 분석 API
  *
- * 사후 분석 방식으로 전체 녹음에서:
+ * YAMNet 기반 사후 분석 방식으로 전체 녹음에서:
  * 1. 악기 소리 구간 감지
  * 2. 비활성 구간 (잡담, 환경 소음, 무음) 분리
  * 3. 순수 연습 시간 계산
+ * 4. 메트로놈 ON 상태시 메트로놈 소리 별도 처리
  */
+
+// Python 분석 서버 URL
+const ANALYSIS_SERVER_URL = process.env.ANALYSIS_SERVER_URL || "http://localhost:5001";
 
 export interface PracticeSegment {
   startTime: number;  // seconds
   endTime: number;    // seconds
-  type: "instrument" | "voice" | "silence" | "noise";
+  type: "instrument" | "voice" | "silence" | "noise" | "metronome";
   confidence: number; // 0-1
+  className?: string; // YAMNet 분류 클래스명
 }
 
 export interface AnalysisResult {
@@ -26,122 +31,84 @@ export interface AnalysisResult {
     voicePercent: number;
     silencePercent: number;
     noisePercent: number;
+    metronomePercent?: number;
   };
 }
 
-// 오디오 분석 함수 (현재는 시뮬레이션, 추후 실제 AI 분석으로 교체)
-async function analyzeAudio(
+// Python 서버 응답 타입
+interface YAMNetResponse {
+  instrument_time: number;
+  voice_time: number;
+  silence_time: number;
+  noise_time: number;
+  metronome_time: number;
+  total_time: number;
+  instrument_percent: number;
+  voice_percent: number;
+  silence_percent: number;
+  noise_percent: number;
+  metronome_percent: number;
+  net_practice_time: number;
+  segments: Array<{
+    time: number;
+    class: string;
+    confidence: number;
+    category: string;
+  }>;
+}
+
+// YAMNet 분석 서버 호출
+async function analyzeWithYAMNet(
   audioBlob: Blob,
-  totalDuration: number
+  metronomeOn: boolean
 ): Promise<AnalysisResult> {
-  // TODO: 실제 구현 시 OpenAI Whisper API 또는 전용 오디오 ML 모델 사용
-  // 현재는 시뮬레이션으로 현실적인 결과 생성
+  const formData = new FormData();
+  formData.append("audio", audioBlob, "recording.webm");
+  formData.append("metronome", metronomeOn.toString());
 
-  const segments: PracticeSegment[] = [];
-  let currentTime = 0;
-  let instrumentTime = 0;
-  let voiceTime = 0;
-  let silenceTime = 0;
-  let noiseTime = 0;
+  const response = await fetch(`${ANALYSIS_SERVER_URL}/analyze`, {
+    method: "POST",
+    body: formData,
+  });
 
-  // 현실적인 연습 패턴 시뮬레이션
-  // 평균적으로 전체 시간의 60-80%가 실제 연습
-  const practiceRatio = 0.6 + Math.random() * 0.2;
-
-  while (currentTime < totalDuration) {
-    // 연습 구간 (30초-5분)
-    const practiceLength = Math.min(
-      30 + Math.random() * 270,
-      totalDuration - currentTime
-    );
-
-    if (practiceLength > 5) {
-      segments.push({
-        startTime: currentTime,
-        endTime: currentTime + practiceLength,
-        type: "instrument",
-        confidence: 0.85 + Math.random() * 0.15,
-      });
-      instrumentTime += practiceLength;
-      currentTime += practiceLength;
-    }
-
-    if (currentTime >= totalDuration) break;
-
-    // 랜덤하게 휴식/대화/무음 구간 추가
-    const breakType = Math.random();
-    let breakLength = Math.min(
-      10 + Math.random() * 60,
-      totalDuration - currentTime
-    );
-
-    if (breakLength > 3) {
-      if (breakType < 0.3) {
-        // 무음 (휴식)
-        segments.push({
-          startTime: currentTime,
-          endTime: currentTime + breakLength,
-          type: "silence",
-          confidence: 0.95,
-        });
-        silenceTime += breakLength;
-      } else if (breakType < 0.5) {
-        // 대화
-        segments.push({
-          startTime: currentTime,
-          endTime: currentTime + breakLength,
-          type: "voice",
-          confidence: 0.8 + Math.random() * 0.15,
-        });
-        voiceTime += breakLength;
-      } else {
-        // 환경 소음
-        segments.push({
-          startTime: currentTime,
-          endTime: currentTime + breakLength,
-          type: "noise",
-          confidence: 0.7 + Math.random() * 0.2,
-        });
-        noiseTime += breakLength;
-      }
-      currentTime += breakLength;
-    } else {
-      currentTime += breakLength;
-    }
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "분석 서버 오류");
   }
 
-  // 결과 조정 (practiceRatio에 맞게)
-  const actualInstrumentTime = Math.round(totalDuration * practiceRatio);
-  const scaleFactor = actualInstrumentTime / (instrumentTime || 1);
+  const data: YAMNetResponse = await response.json();
 
-  // 세그먼트 시간 조정
-  const adjustedSegments = segments.map(seg => ({
-    ...seg,
-    startTime: Math.round(seg.startTime),
-    endTime: Math.round(seg.endTime),
+  // 세그먼트 변환 (0.48초 단위 -> PracticeSegment)
+  const segments: PracticeSegment[] = data.segments.map((seg, index) => ({
+    startTime: seg.time,
+    endTime: seg.time + 0.48,
+    type: seg.category as PracticeSegment["type"],
+    confidence: seg.confidence,
+    className: seg.class,
   }));
 
-  const restTime = totalDuration - actualInstrumentTime;
-
   return {
-    totalDuration: Math.round(totalDuration),
-    netPracticeTime: actualInstrumentTime,
-    restTime,
-    segments: adjustedSegments,
+    totalDuration: data.total_time,
+    netPracticeTime: data.net_practice_time,
+    restTime: data.total_time - data.net_practice_time,
+    segments,
     summary: {
-      instrumentPercent: Math.round((actualInstrumentTime / totalDuration) * 100),
-      voicePercent: Math.round((voiceTime / totalDuration) * 100 * (1 - practiceRatio)),
-      silencePercent: Math.round((silenceTime / totalDuration) * 100 * (1 - practiceRatio)),
-      noisePercent: Math.round((noiseTime / totalDuration) * 100 * (1 - practiceRatio)),
+      instrumentPercent: data.instrument_percent,
+      voicePercent: data.voice_percent,
+      silencePercent: data.silence_percent,
+      noisePercent: data.noise_percent,
+      metronomePercent: data.metronome_percent,
     },
   };
 }
+
 
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const audioFile = formData.get("audio") as Blob | null;
     const totalDuration = parseFloat(formData.get("totalDuration") as string) || 0;
+    const metronomeOn = formData.get("metronome") === "true";
 
     if (!audioFile || totalDuration <= 0) {
       return NextResponse.json(
@@ -150,16 +117,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 분석 시간 시뮬레이션 (실제 분석은 더 오래 걸릴 수 있음)
-    const analysisDelay = Math.min(2000, totalDuration * 10); // 최대 2초
-    await new Promise(resolve => setTimeout(resolve, analysisDelay));
-
-    const result = await analyzeAudio(audioFile, totalDuration);
-
-    return NextResponse.json({
-      success: true,
-      data: result,
-    });
+    try {
+      // YAMNet 분석 서버로 요청
+      const result = await analyzeWithYAMNet(audioFile, metronomeOn);
+      console.log("YAMNet 분석 완료:", result.summary);
+      return NextResponse.json({
+        success: true,
+        data: result,
+      });
+    } catch (yamnetError) {
+      // Python 서버 연결 실패 - 프론트엔드에서 실시간 분류 데이터 사용하도록 에러 반환
+      console.warn("YAMNet 서버 연결 실패:", yamnetError);
+      return NextResponse.json(
+        { success: false, error: "분석 서버에 연결할 수 없습니다. 실시간 분류 데이터를 사용합니다.", useRealtime: true },
+        { status: 503 }
+      );
+    }
   } catch (error) {
     console.error("Practice analysis error:", error);
     return NextResponse.json(

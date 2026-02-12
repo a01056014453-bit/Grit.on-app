@@ -374,7 +374,7 @@ export default function StatsPage() {
                   <Target className="w-5 h-5 text-violet-500" />
                   주간 목표 달성
                 </h3>
-                <span className="text-2xl font-bold text-violet-600">{weeklyData.goalProgress}%</span>
+                <span className="font-number text-2xl font-bold text-violet-600">{weeklyData.goalProgress}%</span>
               </div>
 
               {/* Progress Bar */}
@@ -399,7 +399,7 @@ export default function StatsPage() {
                 </div>
                 <div className="flex-1">
                   <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-bold text-black">{weeklyData.streak}</span>
+                    <span className="font-number text-3xl font-extrabold text-black">{weeklyData.streak}</span>
                     <span className="text-gray-500">일 연속 연습 중</span>
                   </div>
                   <p className="text-sm text-gray-500 mt-1">
@@ -527,17 +527,17 @@ export default function StatsPage() {
 
               <div className="grid grid-cols-3 gap-3 mb-4">
                 <div className="text-center p-3 bg-gray-50 rounded-xl">
-                  <div className="text-base font-bold text-black">
+                  <div className="font-number text-base font-bold text-black">
                     {formatTimeDisplay(monthlyData.totalMinutes)}
                   </div>
                   <div className="text-xs text-gray-500 mt-1">총 연습 시간</div>
                 </div>
                 <div className="text-center p-3 bg-gray-50 rounded-xl">
-                  <div className="text-base font-bold text-black">{monthlyData.totalSessions}</div>
+                  <div className="font-number text-base font-bold text-black">{monthlyData.totalSessions}</div>
                   <div className="text-xs text-gray-500 mt-1">연습 세션</div>
                 </div>
                 <div className="text-center p-3 bg-gray-50 rounded-xl">
-                  <div className="text-base font-bold text-black">{monthlyData.avgDailyMinutes}분</div>
+                  <div className="font-number text-base font-bold text-black">{monthlyData.avgDailyMinutes}분</div>
                   <div className="text-xs text-gray-500 mt-1">일평균</div>
                 </div>
               </div>

@@ -34,6 +34,8 @@ export interface AudioRecorderState {
   // New: Audio classification label
   audioLabel: AudioLabel | null;
   classificationConfidence: number;
+  // Frequency band levels for waveform visualization (0-100)
+  frequencyBands: number[];
 }
 
 interface UseAudioRecorderOptions {
@@ -71,6 +73,7 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
     isCalibrating: false,
     audioLabel: null,
     classificationConfidence: 0,
+    frequencyBands: Array(20).fill(0),
   });
 
   // Store metronome options in refs to avoid closure issues
@@ -284,29 +287,43 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
       : 0;
 
     // Classify based on features
+    // Use calibrated noise floor for silence detection (decibel-based, not raw energy)
+    const noiseFloorDb = noiseFloorDecibelRef.current;
+    const silenceMargin = 3; // dB above noise floor still counts as silence
+    const soundMargin = 8;   // dB above noise floor needed for confident classification
+
     let label: AudioLabel = "SILENCE";
     let confidence = 0.5;
 
-    if (totalEnergy < 80) {
+    if (!isCalibrationCompleteRef.current || decibel <= noiseFloorDb + silenceMargin) {
+      // Below or near noise floor → silence
       label = "SILENCE";
       confidence = 0.95;
-    } else if (metronomeActiveRef.current && isNearBeat && totalEnergy < 150) {
+    } else if (metronomeActiveRef.current && isNearBeat && decibel < noiseFloorDb + soundMargin) {
       label = "METRONOME_ONLY";
       confidence = 0.85;
+    } else if (decibel < noiseFloorDb + soundMargin) {
+      // Slightly above noise floor but not enough for confident classification
+      label = "NOISE";
+      confidence = 0.6;
     } else {
+      // Clearly above noise floor → classify based on spectral features
       // Voice detection:
       // - Concentrated energy in voice range (300-2500 Hz)
       // - Low energy in high frequencies (>4000 Hz)
       // - Spectral centroid typically 500-2000 Hz
-      const isVoiceLike = voiceRatio > 0.55 && pianoHighRatio < 0.20 && spectralCentroid < 2500;
+      const isVoiceLike = voiceRatio > 0.55 && pianoHighRatio < 0.15 && spectralCentroid < 2200;
 
       // Piano detection:
       // - Significant high frequency content
       // - Broader spectral spread (higher centroid)
-      // - Often has both sub-bass (low notes) and brightness (attack/harmonics)
-      const isPianoLike = (pianoHighRatio > 0.18 && spectralCentroid > 1500) ||
-                          (hasSubBass && hasBrightness) ||
-                          (spectralCentroid > 2500 && totalEnergy > 150);
+      // - Requires substantial energy above noise floor
+      const isLoud = decibel > noiseFloorDb + 15;
+      const isPianoLike = isLoud && (
+        (pianoHighRatio > 0.22 && spectralCentroid > 1800) ||
+        (hasSubBass && hasBrightness && totalEnergy > 500) ||
+        (spectralCentroid > 3000 && totalEnergy > 300)
+      );
 
       if (isVoiceLike && !isPianoLike) {
         label = "VOICE";
@@ -316,8 +333,7 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
         confidence = 0.85;
       } else if (isPianoLike && isVoiceLike) {
         // Ambiguous - use spectral centroid as tiebreaker
-        // Higher centroid = more likely piano
-        if (spectralCentroid > 2000 || pianoHighRatio > 0.25) {
+        if (spectralCentroid > 2200 || pianoHighRatio > 0.28) {
           label = "PIANO_PLAYING";
           confidence = 0.65;
         } else {
@@ -370,6 +386,21 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
     const isSoundDetected = decibel > noiseFloorDecibelRef.current;
     const isPianoPlaying = isActuallyPlayingRef.current;
 
+    // Calculate frequency bands for waveform visualization (20 bands)
+    const bands: number[] = [];
+    const bandCount = 20;
+    const usableBins = Math.min(binCount, Math.floor(8000 / binWidth));
+    const binsPerBand = Math.max(1, Math.floor(usableBins / bandCount));
+    for (let b = 0; b < bandCount; b++) {
+      let sum = 0;
+      const start = b * binsPerBand;
+      for (let j = start; j < start + binsPerBand && j < binCount; j++) {
+        sum += frequencyData[j];
+      }
+      const avg = sum / binsPerBand;
+      bands.push(Math.min(100, (avg / 255) * 150));
+    }
+
     setState((prev) => ({
       ...prev,
       currentVolume: peakVolume,
@@ -378,6 +409,7 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
       isPianoDetected: isPianoPlaying,
       audioLabel: label,
       classificationConfidence: confidence,
+      frequencyBands: bands,
     }));
 
     animationFrameRef.current = requestAnimationFrame(analyzeAudio);

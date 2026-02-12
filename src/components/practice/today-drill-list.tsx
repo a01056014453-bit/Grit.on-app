@@ -11,9 +11,10 @@ interface TodayDrillListProps {
   selectedDrillId?: string | null;
   showPlayButton?: boolean;
   date?: Date; // 특정 날짜의 드릴 완료 기록 표시
+  completedOnly?: boolean; // 완료된 드릴만 표시
 }
 
-export function TodayDrillList({ onDrillSelect, selectedDrillId, showPlayButton = true, date }: TodayDrillListProps) {
+export function TodayDrillList({ onDrillSelect, selectedDrillId, showPlayButton = true, date, completedOnly = false }: TodayDrillListProps) {
   const router = useRouter();
   const [completedDrills, setCompletedDrills] = useState<Set<string>>(new Set());
   const [customDrills, setCustomDrills] = useState<DrillCard[]>([]);
@@ -92,22 +93,23 @@ export function TodayDrillList({ onDrillSelect, selectedDrillId, showPlayButton 
   const totalCount = allDrills.length;
   const completedCount = allDrills.filter(d => completedDrills.has(d.id)).length;
 
-  // 과거 날짜에 완료 기록이 없으면 표시하지 않음
-  if (!isToday && completedCount === 0) return null;
+  // completedOnly 모드이거나 과거 날짜에 완료 기록이 없으면 표시하지 않음
+  if (completedOnly && completedCount === 0) return null;
+  if (!completedOnly && !isToday && completedCount === 0) return null;
 
   return (
     <div>
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className="font-semibold text-sm text-violet-700 bg-violet-100 px-4 py-1.5 rounded-full">
-            {isToday ? "오늘의 연습" : "연습 드릴"}
+          <span className="font-bold text-sm text-violet-700 bg-violet-100 px-3.5 py-1 rounded-full">
+            {completedOnly ? "완료한 드릴" : isToday ? "오늘의 연습" : "연습 드릴"}
           </span>
           <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
             {completedCount}/{totalCount}
           </span>
         </div>
-        {isToday && (
+        {isToday && !completedOnly && (
           <div className="flex items-center gap-2">
             <button
               className="w-7 h-7 bg-violet-100 rounded-full flex items-center justify-center hover:bg-violet-200 transition-colors"
@@ -127,8 +129,8 @@ export function TodayDrillList({ onDrillSelect, selectedDrillId, showPlayButton 
       {/* 곡별 그룹 리스트 */}
       <div className="space-y-3">
         {groupedDrills.map((group) => {
-          // 과거 날짜: 완료된 드릴이 있는 곡만 표시
-          const visibleDrills = !isToday
+          // completedOnly 또는 과거 날짜: 완료된 드릴만 표시
+          const visibleDrills = (completedOnly || !isToday)
             ? group.drills.filter(d => completedDrills.has(d.id))
             : group.drills;
           if (visibleDrills.length === 0) return null;

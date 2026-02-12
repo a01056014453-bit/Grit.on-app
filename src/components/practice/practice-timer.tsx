@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+
 import { Clock, Play, Pause, Square, Calendar, Mic } from "lucide-react";
 import { type MetronomeState } from "./metronome-control";
 import dynamic from "next/dynamic";
@@ -17,6 +17,10 @@ interface PracticeTimerProps {
   isPaused: boolean;
   startTime?: Date | null;
   hasPermission?: boolean | null;
+  /** 실시간 마이크 볼륨 (0-1) */
+  currentVolume?: number;
+  /** 실시간 주파수 밴드 데이터 (0-100, 20개) */
+  frequencyBands?: number[];
   onStart?: () => void;
   onPause?: () => void;
   onResume?: () => void;
@@ -32,6 +36,8 @@ export function PracticeTimer({
   isPaused,
   startTime,
   hasPermission,
+  currentVolume = 0,
+  frequencyBands,
   onStart,
   onPause,
   onResume,
@@ -40,27 +46,10 @@ export function PracticeTimer({
   onMetronomeStateChange,
   metronomeDisabled = false,
 }: PracticeTimerProps) {
-  const [waveformHeights, setWaveformHeights] = useState<number[]>(
-    Array(20).fill(15)
-  );
-
-  // Waveform animation
-  useEffect(() => {
-    if (!isRecording || isPaused) {
-      setWaveformHeights(Array(20).fill(15));
-      return;
-    }
-
-    const interval = setInterval(() => {
-      setWaveformHeights(
-        Array(20)
-          .fill(0)
-          .map(() => 15 + Math.random() * 55)
-      );
-    }, 100);
-
-    return () => clearInterval(interval);
-  }, [isRecording, isPaused]);
+  // 주파수 밴드 기반 파형 높이 계산
+  const waveformHeights = (!isRecording || isPaused || !frequencyBands)
+    ? Array(20).fill(10)
+    : frequencyBands.map((band) => Math.max(10, band * 0.8));
 
   const formatDateTime = (date: Date) => {
     return date.toLocaleTimeString("ko-KR", {
@@ -98,7 +87,7 @@ export function PracticeTimer({
 
           {/* Large Timer Display */}
           <div className="text-center mb-2">
-            <div className="font-mono text-7xl font-bold tracking-tight">
+            <div className="font-number text-7xl font-extrabold tracking-tight">
               <span className="text-gray-900">{time.minutes}</span>
               <span className="text-gray-400 mx-1">:</span>
               <span className="text-gray-900">{time.seconds}</span>

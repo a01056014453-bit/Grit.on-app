@@ -4,7 +4,8 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { Play, ChevronRight, ChevronLeft, Search, Users, GraduationCap, Music, Clock, Calendar, Mic, Check } from "lucide-react";
 import { StatsCard, DailyGoal } from "@/components/app";
-import { mockUser, mockStats, getGreeting } from "@/data";
+import { TodayDrillList } from "@/components/practice";
+import { mockUser, mockStats, getGreeting, mockDrillCards } from "@/data";
 import { getTodayPracticeTime, getPracticeStats, getAllSessions, PracticeSession } from "@/lib/db";
 import { formatTime } from "@/lib/format";
 
@@ -218,6 +219,8 @@ export default function HomePage() {
 
   const dayNames = ["일", "월", "화", "수", "목", "금", "토"];
   const weekdayNames = ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"];
+  const calIsSelectedToday = selectedDate.getFullYear() === today.getFullYear() && selectedDate.getMonth() === today.getMonth() && selectedDate.getDate() === today.getDate();
+  const totalDrillCount = mockDrillCards.length;
 
   return (
     <div className="px-4 py-6 max-w-lg mx-auto bg-white min-h-screen">
@@ -312,12 +315,10 @@ export default function HomePage() {
 
       {/* Practice Records - Calendar + List */}
       <div className="mb-8">
-        <div className="mb-3">
-          <h2 className="text-lg font-bold text-gray-900">연습 기록</h2>
-        </div>
+        <span className="inline-block font-bold text-sm text-violet-700 bg-violet-100 px-3.5 py-1 rounded-full mb-3">연습 기록</span>
 
         {/* Calendar */}
-        <div className="bg-white rounded-2xl border border-gray-100 p-4 mb-4">
+        <div className="bg-white rounded-2xl border border-gray-100 p-4">
           {/* Calendar Header */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
@@ -325,7 +326,7 @@ export default function HomePage() {
                 {calendarYear}년 {calendarMonth + 1}월
               </span>
               {practiceDaysInMonth > 0 && (
-                <span className="flex items-center gap-1 text-sm text-amber-600 font-medium">
+                <span className="flex items-center gap-1 text-sm text-violet-600 font-medium">
                   <Check className="w-3.5 h-3.5" />
                   {practiceDaysInMonth}
                 </span>
@@ -389,7 +390,7 @@ export default function HomePage() {
                       isToday
                         ? "bg-black text-white"
                         : count > 0
-                        ? "bg-amber-100 text-amber-700"
+                        ? "bg-violet-600 text-white"
                         : "bg-gray-50"
                     } ${isSelected && !isToday ? "ring-2 ring-violet-400" : ""}`}
                   >
@@ -404,77 +405,62 @@ export default function HomePage() {
               );
             })}
           </div>
-        </div>
 
-        {/* Selected Date Header */}
-        <div className="mb-3 border-t border-gray-100 pt-4">
-          <h3 className="text-base font-bold text-gray-900">
-            {selectedDate.getMonth() + 1}월 {selectedDate.getDate()}일 {weekdayNames[selectedDate.getDay()]}
-          </h3>
-          {selectedDateSessions.length > 0 ? (
-            <p className="text-sm text-gray-500 mt-0.5">
-              {selectedDateSessions.length}개 세션
-            </p>
-          ) : (
-            <p className="text-sm text-gray-400 mt-0.5">연습 기록이 없습니다</p>
-          )}
-        </div>
+          {/* 선택된 날짜 상세 - 캘린더 안에 포함 */}
+          <div className="mt-8 pt-5 border-t border-gray-100">
+            <h4 className="text-base font-bold text-gray-900">{selectedDate.getMonth() + 1}월 {selectedDate.getDate()}일 {weekdayNames[selectedDate.getDay()]}</h4>
+            {calIsSelectedToday ? (
+              <p className="text-sm text-gray-500 mt-0.5">{totalDrillCount}개 드릴 · {selectedDateSessions.length}개 세션</p>
+            ) : selectedDateSessions.length > 0 ? (
+              <p className="text-sm text-gray-500 mt-0.5">{selectedDateSessions.length}개 세션</p>
+            ) : (
+              <p className="text-sm text-gray-400 mt-0.5">연습 기록이 없습니다</p>
+            )}
 
-        {/* Selected Date Sessions */}
-        {isLoading ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-gray-100 rounded-xl h-20 animate-pulse" />
-            ))}
-          </div>
-        ) : selectedDateSessions.length === 0 ? (
-          <div className="text-center py-8 bg-gray-50 rounded-2xl border border-gray-100">
-            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-              <Mic className="w-6 h-6 text-gray-400" />
+            {/* 드릴 완료 기록 */}
+            <div className="mt-3">
+              <TodayDrillList showPlayButton={false} date={selectedDate} completedOnly />
             </div>
-            <p className="text-sm text-gray-500 mb-1">이 날은 연습 기록이 없습니다</p>
-            <p className="text-xs text-gray-400">연습을 시작하면 여기에 표시됩니다</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {selectedDateSessions.map((session) => {
-              const d = new Date(session.startTime);
-              const timeStr = `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
 
-              return (
-                <Link
-                  key={session.id}
-                  href={`/recordings/${session.id}`}
-                  className="flex items-center gap-3 bg-white rounded-xl p-3.5 border border-gray-100 hover:border-violet-200 transition-all active:scale-[0.99]"
-                >
-                  <div className="w-10 h-10 bg-violet-50 rounded-lg flex items-center justify-center shrink-0">
-                    <Music className="w-5 h-5 text-violet-600" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-semibold text-gray-900 truncate">
-                      {session.pieceName}
-                    </h3>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="flex items-center gap-1 text-xs text-gray-500">
-                        <Clock className="w-3 h-3" />
-                        {formatTime(session.practiceTime)}
-                      </span>
-                      {session.audioBlob && (
-                        <span className="text-xs text-green-600 font-medium">
-                          녹음
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 text-xs text-gray-400 shrink-0">
-                    <Calendar className="w-3 h-3" />
-                    {timeStr}
-                  </div>
-                </Link>
-              );
-            })}
+            {/* 연습 세션 */}
+            {selectedDateSessions.length > 0 && (
+              <p className="text-xs text-gray-500 font-medium mt-3 mb-2">연습 세션</p>
+            )}
+            {selectedDateSessions.length === 0 && !calIsSelectedToday ? (
+              <div className="text-center py-6 bg-gray-50 rounded-xl mt-3">
+                <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <Mic className="w-5 h-5 text-gray-400" />
+                </div>
+                <p className="text-sm text-gray-500">이 날은 연습 기록이 없습니다</p>
+              </div>
+            ) : (
+              <div className="space-y-2 mt-2">
+                {selectedDateSessions.map((session) => {
+                  const d = new Date(session.startTime);
+                  const h = d.getHours();
+                  const ampm = h < 12 ? "오전" : "오후";
+                  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+                  const timeStr = `${ampm} ${h12.toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
+                  return (
+                    <Link key={session.id} href={`/recordings/${session.id}`} className="flex items-center gap-3 bg-gray-50 rounded-xl p-3 hover:bg-gray-100 transition-all active:scale-[0.99]">
+                      <div className="w-9 h-9 bg-violet-100 rounded-lg flex items-center justify-center shrink-0">
+                        <Music className="w-4 h-4 text-violet-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-semibold text-gray-900 truncate">{session.pieceName}</h4>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="flex items-center gap-1 text-xs text-gray-500"><Clock className="w-3 h-3" />{formatTime(session.practiceTime)}</span>
+                          {session.audioBlob && <span className="text-xs text-green-600 font-medium">녹음</span>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 text-xs text-gray-400 shrink-0"><Calendar className="w-3 h-3" />{timeStr}</div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
     </div>

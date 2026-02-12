@@ -1,8 +1,88 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Loader2, Music, Target, Play, Pause, SkipForward, Lightbulb, TrendingUp, Volume2 } from "lucide-react";
+import { Loader2, Music, Target, Play, Pause, SkipForward, Lightbulb, TrendingUp, Volume2, PieChart } from "lucide-react";
 import type { AnalysisResult, PracticeSegment } from "@/app/api/analyze-practice/route";
+
+// SVG 파이 차트 컴포넌트
+function PieChartVisual({ summary }: { summary: AnalysisResult["summary"] }) {
+  const data = [
+    { label: "연주", value: summary.instrumentPercent, color: "#8b5cf6" }, // violet-500
+    { label: "대화", value: summary.voicePercent, color: "#60a5fa" }, // blue-400
+    { label: "무음", value: summary.silencePercent, color: "#d1d5db" }, // gray-300
+    { label: "잡음", value: summary.noisePercent, color: "#fbbf24" }, // yellow-400
+  ];
+
+  // 메트로놈 퍼센트가 있으면 추가
+  if (summary.metronomePercent && summary.metronomePercent > 0) {
+    data.push({ label: "메트로놈", value: summary.metronomePercent, color: "#f472b6" }); // pink-400
+  }
+
+  // 0보다 큰 값만 필터링
+  const filteredData = data.filter(d => d.value > 0);
+  const total = filteredData.reduce((sum, d) => sum + d.value, 0);
+
+  // 차트 계산
+  let currentAngle = -90; // 12시 방향부터 시작
+  const radius = 40;
+  const centerX = 50;
+  const centerY = 50;
+
+  const paths = filteredData.map((item, index) => {
+    const angle = (item.value / total) * 360;
+    const startAngle = currentAngle;
+    const endAngle = currentAngle + angle;
+    currentAngle = endAngle;
+
+    const startRad = (startAngle * Math.PI) / 180;
+    const endRad = (endAngle * Math.PI) / 180;
+
+    const x1 = centerX + radius * Math.cos(startRad);
+    const y1 = centerY + radius * Math.sin(startRad);
+    const x2 = centerX + radius * Math.cos(endRad);
+    const y2 = centerY + radius * Math.sin(endRad);
+
+    const largeArcFlag = angle > 180 ? 1 : 0;
+
+    const pathD = `M ${centerX} ${centerY} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2} Z`;
+
+    return (
+      <path
+        key={index}
+        d={pathD}
+        fill={item.color}
+        className="transition-all duration-300"
+      />
+    );
+  });
+
+  return (
+    <div className="flex items-center justify-center gap-6">
+      <svg viewBox="0 0 100 100" className="w-28 h-28">
+        {paths.length > 0 ? paths : (
+          <circle cx="50" cy="50" r="40" fill="#e5e7eb" />
+        )}
+        {/* 중앙 원 (도넛 형태) */}
+        <circle cx="50" cy="50" r="20" fill="white" />
+        <text x="50" y="48" textAnchor="middle" className="text-[8px] font-bold fill-gray-900">
+          {summary.instrumentPercent}%
+        </text>
+        <text x="50" y="58" textAnchor="middle" className="text-[5px] fill-gray-500">
+          연주
+        </text>
+      </svg>
+      <div className="space-y-1.5">
+        {data.filter(d => d.value > 0).map((item, idx) => (
+          <div key={idx} className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
+            <span className="text-xs text-gray-600">{item.label}</span>
+            <span className="text-xs font-semibold text-gray-900 ml-auto">{item.value}%</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 interface PracticeAnalysisModalProps {
   isOpen: boolean;
@@ -202,6 +282,7 @@ export function PracticeAnalysisModal({
       case "voice": return "bg-blue-400";
       case "silence": return "bg-gray-300";
       case "noise": return "bg-yellow-400";
+      case "metronome": return "bg-pink-400";
       default: return "bg-gray-200";
     }
   };
@@ -257,6 +338,15 @@ export function PracticeAnalysisModal({
               오늘의 목표 {Math.round(goalProgress)}% 달성 ({Math.floor(netPracticeTime / 60)}/{dailyGoal}분)
               {goalProgress >= 100 && " 🎉"}
             </p>
+          </div>
+
+          {/* AI 분석 차트 */}
+          <div className="bg-gray-50 rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <PieChart className="w-4 h-4 text-violet-500" />
+              <span className="text-sm font-medium text-gray-700">AI 분석 결과</span>
+            </div>
+            <PieChartVisual summary={summary} />
           </div>
 
           {/* 타임라인 시각화 */}
@@ -317,7 +407,7 @@ export function PracticeAnalysisModal({
             </div>
 
             {/* 범례 */}
-            <div className="flex justify-center gap-3 text-[10px]">
+            <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 text-[10px]">
               <div className="flex items-center gap-1">
                 <div className="w-2 h-2 rounded-full bg-violet-500" />
                 <span className="text-gray-600">연주 {summary.instrumentPercent}%</span>
@@ -330,6 +420,12 @@ export function PracticeAnalysisModal({
                 <div className="w-2 h-2 rounded-full bg-gray-300" />
                 <span className="text-gray-600">무음 {summary.silencePercent}%</span>
               </div>
+              {summary.metronomePercent && summary.metronomePercent > 0 && (
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 rounded-full bg-pink-400" />
+                  <span className="text-gray-600">메트로놈 {summary.metronomePercent}%</span>
+                </div>
+              )}
             </div>
           </div>
 

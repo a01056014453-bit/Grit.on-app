@@ -169,6 +169,7 @@ export default function PracticePage() {
     isCalibrating,
     audioLabel,
     classificationConfidence,
+    frequencyBands,
     requestPermission,
     startRecording,
     pauseRecording,
@@ -457,31 +458,13 @@ export default function PracticePage() {
       }
     }
 
-    // 실시간 분류 데이터로 분석 결과 생성
-    const classificationData = {
-      instrument: Math.round(ref.instrument),
-      voice: Math.round(ref.voice),
-      silence: Math.round(ref.silence),
-      noise: Math.round(ref.noise),
-    };
-    const totalClassified = classificationData.instrument + classificationData.voice + classificationData.silence + classificationData.noise;
-    const actualTotalTime = totalTime > 0 ? totalTime : totalClassified;
-
-    // 퍼센트 계산
-    const instrumentPercent = actualTotalTime > 0 ? Math.round((classificationData.instrument / actualTotalTime) * 100) : 0;
-    const voicePercent = actualTotalTime > 0 ? Math.round((classificationData.voice / actualTotalTime) * 100) : 0;
-    const silencePercent = actualTotalTime > 0 ? Math.round((classificationData.silence / actualTotalTime) * 100) : 0;
-    const noisePercent = actualTotalTime > 0 ? Math.round((classificationData.noise / actualTotalTime) * 100) : 0;
-
-    // 순수 연습 시간 = 악기 연주 시간
-    const netPracticeTime = classificationData.instrument;
-    const restTime = actualTotalTime - netPracticeTime;
-
     // 세션 정보 저장
     const sessionEnd = new Date();
+    const actualTotalTime = totalTime > 0 ? totalTime : 0;
+
     setCompletedSession({
       totalTime: actualTotalTime,
-      practiceTime: netPracticeTime,
+      practiceTime: 0, // 분석 후 업데이트
       practiceType,
       startTime: sessionStartTime || undefined,
       endTime: sessionEnd,
@@ -496,27 +479,75 @@ export default function PracticePage() {
     setIsAnalysisModalOpen(true);
     setIsAnalyzing(true);
 
-    // 약간의 딜레이 후 결과 표시 (분석 중 UI 보여주기 위해)
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    let analysisData: AnalysisResult;
 
-    // 실시간 분류 데이터로 결과 설정
-    const analysisData: AnalysisResult = {
-      totalDuration: actualTotalTime,
-      netPracticeTime,
-      restTime,
-      segments: [], // 세그먼트는 실시간 추적하지 않음
-      summary: {
-        instrumentPercent,
-        voicePercent,
-        silencePercent,
-        noisePercent,
-      },
-    };
+    try {
+      // YAMNet 서버로 분석 요청 (audioBlob이 있을 때)
+      if (audioBlob && audioBlob.size > 0) {
+        const formData = new FormData();
+        formData.append("audio", audioBlob, "recording.webm");
+        formData.append("totalDuration", actualTotalTime.toString());
+        formData.append("metronome", metronomeIsPlaying.toString());
+
+        const response = await fetch("/api/analyze-practice", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data) {
+            analysisData = result.data;
+            console.log("YAMNet 분석 완료:", analysisData.summary);
+          } else {
+            throw new Error("분석 실패");
+          }
+        } else {
+          throw new Error("API 요청 실패");
+        }
+      } else {
+        // audioBlob이 없으면 실시간 분류 데이터 사용
+        throw new Error("No audio blob");
+      }
+    } catch (error) {
+      console.warn("API 분석 실패, 실시간 데이터 사용:", error);
+
+      // 실시간 분류 데이터로 폴백
+      const classificationData = {
+        instrument: Math.round(ref.instrument),
+        voice: Math.round(ref.voice),
+        silence: Math.round(ref.silence),
+        noise: Math.round(ref.noise),
+      };
+      const totalClassified = classificationData.instrument + classificationData.voice + classificationData.silence + classificationData.noise;
+      const fallbackTotalTime = actualTotalTime > 0 ? actualTotalTime : totalClassified;
+
+      const instrumentPercent = fallbackTotalTime > 0 ? Math.round((classificationData.instrument / fallbackTotalTime) * 100) : 0;
+      const voicePercent = fallbackTotalTime > 0 ? Math.round((classificationData.voice / fallbackTotalTime) * 100) : 0;
+      const silencePercent = fallbackTotalTime > 0 ? Math.round((classificationData.silence / fallbackTotalTime) * 100) : 0;
+      const noisePercent = fallbackTotalTime > 0 ? Math.round((classificationData.noise / fallbackTotalTime) * 100) : 0;
+
+      const netPracticeTime = classificationData.instrument;
+      const restTime = fallbackTotalTime - netPracticeTime;
+
+      analysisData = {
+        totalDuration: fallbackTotalTime,
+        netPracticeTime,
+        restTime,
+        segments: [],
+        summary: {
+          instrumentPercent,
+          voicePercent,
+          silencePercent,
+          noisePercent,
+        },
+      };
+    }
 
     setAnalysisResult(analysisData);
     setCompletedSession(prev => prev ? {
       ...prev,
-      practiceTime: netPracticeTime,
+      practiceTime: analysisData.netPracticeTime,
     } : null);
 
     // 분류 데이터 리셋
@@ -537,6 +568,7 @@ export default function PracticePage() {
     totalTime,
     audioBlob,
     practiceType,
+    metronomeIsPlaying,
   ]);
 
   // 분석 결과 저장
@@ -547,11 +579,13 @@ export default function PracticePage() {
         ? selectedTodo.measureStart > 0 && selectedTodo.measureEnd > 0
           ? `${selectedTodo.measureStart}-${selectedTodo.measureEnd}마디${selectedTodo.note ? ` · ${selectedTodo.note}` : ""}`
           : selectedTodo.note || undefined
-        : undefined;
+        : activeDrill
+          ? `${activeDrill.measures} · ${activeDrill.title}`
+          : undefined;
 
       const session = {
         pieceId: selectedSong.id,
-        pieceName: selectedSong.title,
+        pieceName: activeDrill ? activeDrill.song : selectedSong.title,
         startTime: sessionStartTime,
         endTime: completedSession.endTime || new Date(),
         totalTime: analysisResult.totalDuration,
@@ -573,13 +607,29 @@ export default function PracticePage() {
           completePracticeTodo(selectedTodo.id);
           setSelectedTodo(null);
         }
+
+        // 활성 드릴이 있으면 자동 완료 처리
+        if (activeDrill) {
+          const todayStr = getTodayStr();
+          const savedCompleted = localStorage.getItem(`grit-on-completed-${todayStr}`);
+          const completedIds = savedCompleted
+            ? new Set(JSON.parse(savedCompleted).completedDrillIds || [])
+            : new Set<string>();
+          completedIds.add(activeDrill.id);
+          localStorage.setItem(`grit-on-completed-${todayStr}`, JSON.stringify({
+            date: todayStr,
+            completedDrillIds: Array.from(completedIds),
+          }));
+          setCompletedDrills(completedIds as Set<string>);
+          setActiveDrill(null);
+        }
       } catch (err) {
         console.error("Failed to save session:", err);
       }
     }
 
     handleCloseAnalysisModal();
-  }, [sessionStartTime, completedSession, analysisResult, selectedSong, audioBlob, measureRange, loadRecentSessions, selectedTodo]);
+  }, [sessionStartTime, completedSession, analysisResult, selectedSong, audioBlob, measureRange, loadRecentSessions, selectedTodo, activeDrill]);
 
   // 분석 모달 닫기 (저장 안함)
   const handleDiscardAnalysis = useCallback(() => {
@@ -982,18 +1032,26 @@ export default function PracticePage() {
   return (
     <div className="px-4 py-6 max-w-lg mx-auto bg-white min-h-screen">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-black">
-          {activeDrill ? "연습 준비 완료" : "연습 세션"}
-        </h1>
-        <p className="text-sm text-gray-500 mt-0.5">
-          {hasPermission === false
-            ? "마이크 권한이 필요합니다"
-            : activeDrill
-            ? "시작 버튼을 눌러 녹음과 AI 분석을 시작하세요"
-            : "연습할 항목을 선택하거나 바로 시작하세요"}
-        </p>
-        {error && <p className="text-sm text-red-500 mt-1">{error}</p>}
+      <div className="flex items-start gap-3 mb-6">
+        <button
+          onClick={() => router.push("/")}
+          className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center shrink-0 hover:bg-gray-200 transition-colors"
+        >
+          <ChevronLeft className="w-5 h-5 text-gray-600" />
+        </button>
+        <div className="flex-1">
+          <h1 className="text-xl font-bold text-black">
+            {activeDrill ? "연습 준비 완료" : "연습 세션"}
+          </h1>
+          <p className="text-sm text-gray-500 mt-0.5">
+            {hasPermission === false
+              ? "마이크 권한이 필요합니다"
+              : activeDrill
+              ? "시작 버튼을 눌러 녹음과 AI 분석을 시작하세요"
+              : "연습할 항목을 선택하거나 바로 시작하세요"}
+          </p>
+          {error && <p className="text-sm text-red-500 mt-1">{error}</p>}
+        </div>
       </div>
 
       {/* Auto-pause notification */}
@@ -1056,6 +1114,9 @@ export default function PracticePage() {
         </div>
       )}
 
+      {/* Today's Drill List - 항상 표시 */}
+      <TodayDrillList showPlayButton={!isRecording} />
+
       {/* Timer Display with Controls & Metronome */}
       <PracticeTimer
         totalTime={totalTime}
@@ -1063,6 +1124,8 @@ export default function PracticePage() {
         isPaused={isPaused}
         startTime={sessionStartTime}
         hasPermission={hasPermission}
+        currentVolume={currentVolume}
+        frequencyBands={frequencyBands}
         onStart={handleStartRecording}
         onPause={pauseRecording}
         onResume={handleResumeRecording}
@@ -1086,13 +1149,13 @@ export default function PracticePage() {
       <div className="mt-8 space-y-4">
           {/* 연습 기록 - Calendar */}
           <div>
-            <h3 className="text-lg font-bold text-gray-900 mb-3">연습 기록</h3>
-            <div className="bg-white rounded-2xl border border-gray-100 p-4 mb-4">
+            <span className="inline-block font-bold text-sm text-violet-700 bg-violet-100 px-3.5 py-1 rounded-full mb-3">연습 기록</span>
+            <div className="bg-white rounded-2xl border border-gray-100 p-4">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-gray-900">{calYear}년 {calMonth + 1}월</span>
                   {calPracticeDays > 0 && (
-                    <span className="flex items-center gap-1 text-sm text-amber-600 font-medium">
+                    <span className="flex items-center gap-1 text-sm text-violet-600 font-medium">
                       <Check className="w-3.5 h-3.5" />{calPracticeDays}
                     </span>
                   )}
@@ -1120,7 +1183,7 @@ export default function PracticePage() {
                   const dow = (calFirstDay + i) % 7;
                   return (
                     <button key={day} onClick={() => setCalSelectedDate(new Date(calYear, calMonth, day))} className="flex flex-col items-center py-0.5">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-colors ${isToday ? "bg-black text-white" : count > 0 ? "bg-amber-100 text-amber-700" : "bg-gray-50"} ${isSelected && !isToday ? "ring-2 ring-violet-400" : ""}`}>
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-colors ${isToday ? "bg-black text-white" : count > 0 ? "bg-violet-600 text-white" : "bg-gray-50"} ${isSelected && !isToday ? "ring-2 ring-violet-400" : ""}`}>
                         {count > 0 ? count : ""}
                       </div>
                       <span className={`text-[10px] mt-0.5 ${dow === 0 ? "text-red-400" : dow === 6 ? "text-blue-400" : "text-gray-500"}`}>{day}</span>
@@ -1128,57 +1191,58 @@ export default function PracticePage() {
                   );
                 })}
               </div>
-            </div>
-            <div className="mb-3 mt-4">
-              <h4 className="text-base font-bold text-gray-900">{calSelectedDate.getMonth() + 1}월 {calSelectedDate.getDate()}일 {calWeekdayNames[calSelectedDate.getDay()]}</h4>
-              {calIsSelectedToday ? (
-                <p className="text-sm text-gray-500 mt-0.5">{totalDrillCount}개 드릴 · {calSelectedSessions.length}개 세션</p>
-              ) : calSelectedSessions.length > 0 ? (
-                <p className="text-sm text-gray-500 mt-0.5">{calSelectedSessions.length}개 세션</p>
-              ) : (
-                <p className="text-sm text-gray-400 mt-0.5"></p>
-              )}
-            </div>
 
-            {/* 드릴 리스트 - 모든 날짜 */}
-            <div className="mb-4">
-              <TodayDrillList showPlayButton={true} date={calSelectedDate} />
-            </div>
+              {/* 선택된 날짜 상세 - 캘린더 안에 포함 */}
+              <div className="mt-8 pt-5 border-t border-gray-100">
+                <h4 className="text-base font-bold text-gray-900">{calSelectedDate.getMonth() + 1}월 {calSelectedDate.getDate()}일 {calWeekdayNames[calSelectedDate.getDay()]}</h4>
+                {calIsSelectedToday ? (
+                  <p className="text-sm text-gray-500 mt-0.5">{totalDrillCount}개 드릴 · {calSelectedSessions.length}개 세션</p>
+                ) : calSelectedSessions.length > 0 ? (
+                  <p className="text-sm text-gray-500 mt-0.5">{calSelectedSessions.length}개 세션</p>
+                ) : (
+                  <p className="text-sm text-gray-400 mt-0.5">연습 기록이 없습니다</p>
+                )}
 
-            {/* 연습 세션 */}
-            {calSelectedSessions.length > 0 && (
-              <p className="text-xs text-gray-500 font-medium mb-2">연습 세션</p>
-            )}
-            {calSelectedSessions.length === 0 && !calIsSelectedToday ? (
-              <div className="text-center py-8 bg-gray-50 rounded-2xl border border-gray-100">
-                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3"><Mic className="w-6 h-6 text-gray-400" /></div>
-                <p className="text-sm text-gray-500 mb-1">이 날은 연습 기록이 없습니다</p>
-                <p className="text-xs text-gray-400">연습을 시작하면 여기에 표시됩니다</p>
+                {/* 드릴 완료 기록 */}
+                <div className="mt-3">
+                  <TodayDrillList showPlayButton={false} date={calSelectedDate} completedOnly />
+                </div>
+
+                {/* 연습 세션 */}
+                {calSelectedSessions.length > 0 && (
+                  <p className="text-xs text-gray-500 font-medium mt-3 mb-2">연습 세션</p>
+                )}
+                {calSelectedSessions.length === 0 && !calIsSelectedToday ? (
+                  <div className="text-center py-6 bg-gray-50 rounded-xl mt-3">
+                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-2"><Mic className="w-5 h-5 text-gray-400" /></div>
+                    <p className="text-sm text-gray-500">이 날은 연습 기록이 없습니다</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2 mt-2">
+                    {calSelectedSessions.map((session) => {
+                      const d = new Date(session.startTime);
+                      const h = d.getHours();
+                      const ampm = h < 12 ? "오전" : "오후";
+                      const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+                      const timeStr = `${ampm} ${h12.toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
+                      return (
+                        <Link key={session.id} href={`/recordings/${session.id}`} className="flex items-center gap-3 bg-gray-50 rounded-xl p-3 hover:bg-gray-100 transition-all active:scale-[0.99]">
+                          <div className="w-9 h-9 bg-violet-100 rounded-lg flex items-center justify-center shrink-0"><Music2 className="w-4 h-4 text-violet-600" /></div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm font-semibold text-gray-900 truncate">{session.pieceName}</h4>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="flex items-center gap-1 text-xs text-gray-500"><Clock className="w-3 h-3" />{formatTime(session.practiceTime)}</span>
+                              {session.audioBlob && <span className="text-xs text-green-600 font-medium">녹음</span>}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1 text-xs text-gray-400 shrink-0"><Calendar className="w-3 h-3" />{timeStr}</div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-            ) : (
-              <div className="space-y-2">
-                {calSelectedSessions.map((session) => {
-                  const d = new Date(session.startTime);
-                  const h = d.getHours();
-                  const ampm = h < 12 ? "오전" : "오후";
-                  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-                  const timeStr = `${ampm} ${h12.toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
-                  return (
-                    <Link key={session.id} href={`/recordings/${session.id}`} className="flex items-center gap-3 bg-white rounded-xl p-3.5 border border-gray-100 hover:border-violet-200 transition-all active:scale-[0.99]">
-                      <div className="w-10 h-10 bg-violet-50 rounded-lg flex items-center justify-center shrink-0"><Music2 className="w-5 h-5 text-violet-600" /></div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-sm font-semibold text-gray-900 truncate">{session.pieceName}</h4>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="flex items-center gap-1 text-xs text-gray-500"><Clock className="w-3 h-3" />{formatTime(session.practiceTime)}</span>
-                          {session.audioBlob && <span className="text-xs text-green-600 font-medium">녹음</span>}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1 text-xs text-gray-400 shrink-0"><Calendar className="w-3 h-3" />{timeStr}</div>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
+            </div>
           </div>
 
           {/* Carry-over Drills from Yesterday */}
