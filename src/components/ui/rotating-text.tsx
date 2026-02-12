@@ -17,9 +17,9 @@ function cn(...classes: (string | undefined | false)[]) {
 interface RotatingTextProps {
   texts: string[];
   transition?: Record<string, unknown>;
-  initial?: Record<string, unknown>;
-  animate?: Record<string, unknown>;
-  exit?: Record<string, unknown>;
+  initial?: Record<string, string | number>;
+  animate?: Record<string, string | number>;
+  exit?: Record<string, string | number>;
   animatePresenceMode?: "wait" | "sync" | "popLayout";
   animatePresenceInitial?: boolean;
   rotationInterval?: number;

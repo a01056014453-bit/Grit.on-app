@@ -9,7 +9,7 @@ export interface WeeklyData {
 }
 
 /** 드릴 카드 유형 */
-export type DrillType = "rhythm" | "sync" | "pedal" | "dynamics";
+export type DrillType = "rhythm" | "sync" | "pedal" | "dynamics" | "tempo" | "technique" | "phrasing" | "fingering" | "custom";
 
 /** 드릴 카드 */
 export interface DrillCard {
