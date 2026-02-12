@@ -7,6 +7,9 @@
 /* Montserrat Font (for numbers/timer) */
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&display=swap');
 
+/* Roboto Flex Variable Font (for VariableProximity effect) */
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,100..1000&display=swap');
+
 /* 온글잎 위씨리스트 Font (for Daily Inspiration quotes) */
 @font-face {
   font-family: 'OngleipWFontList';

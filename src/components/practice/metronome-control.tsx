@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Play, Square, Minus, Plus, ChevronDown, ChevronUp } from "lucide-react";
+import { VariableProximity } from "@/components/ui/variable-proximity";
 
 // Triplet icon SVG component - 셋잇단음표
 const TripletIcon = ({ className = "" }: { className?: string }) => (
@@ -306,6 +307,7 @@ export function MetronomeControl({
   const [currentBeat, setCurrentBeat] = useState(-1);
   const [isExpanded, setIsExpanded] = useState(false);
   const [showSubdivDropdown, setShowSubdivDropdown] = useState(false);
+  const [showTempoPresets, setShowTempoPresets] = useState(false);
 
   // 악센트 설정 (각 비트별로 악센트 on/off)
   const [accents, setAccents] = useState<boolean[]>([true, false, false, false]);
@@ -619,35 +621,38 @@ export function MetronomeControl({
 
   const tempoMarking = getTempoMarking(bpm);
 
+  // Container ref for VariableProximity
+  const bpmContainerRef = useRef<HTMLDivElement>(null);
+
   // Collapsed view
   if (!isExpanded) {
     return (
       <div className="overflow-hidden">
-        <div className="px-4 py-3 flex items-center justify-between">
+        <div className="px-3 py-2 flex items-center justify-between">
           <button
             onClick={() => setIsExpanded(true)}
-            className="flex items-center gap-3 hover:opacity-70 transition-opacity"
+            className="flex items-center gap-2.5 hover:opacity-70 transition-opacity"
             disabled={disabled}
           >
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
               isPlaying ? "bg-black" : "bg-gray-100"
             }`}>
-              <span className={`text-lg ${isPlaying ? "text-white" : "text-gray-400"}`}>♩</span>
+              <span className={`text-sm ${isPlaying ? "text-white" : "text-gray-400"}`}>♩</span>
             </div>
             <div className="text-left">
-              <span className="font-semibold text-black">메트로놈</span>
-              <p className={`text-xs ${isPlaying ? "text-black" : "text-gray-400"}`}>
+              <span className="font-semibold text-sm text-black">메트로놈</span>
+              <p className={`text-[11px] ${isPlaying ? "text-black" : "text-gray-400"}`}>
                 {isPlaying ? `${bpm} BPM · ${timeSig.name}` : "OFF"}
               </p>
             </div>
           </button>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             {/* ON/OFF Toggle Button */}
             <button
               onClick={toggleMetronome}
               disabled={disabled}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
                 isPlaying
                   ? "bg-black text-white"
                   : "bg-gray-100 text-gray-500 hover:bg-gray-200"
@@ -657,10 +662,10 @@ export function MetronomeControl({
             </button>
             <button
               onClick={() => setIsExpanded(true)}
-              className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+              className="p-0.5 hover:bg-gray-100 rounded-full transition-colors"
               disabled={disabled}
             >
-              <ChevronDown className="w-5 h-5 text-gray-400" />
+              <ChevronDown className="w-4 h-4 text-gray-400" />
             </button>
           </div>
         </div>
@@ -681,7 +686,7 @@ export function MetronomeControl({
       </button>
 
       {/* Beat Visualization - 터치하여 악센트 설정 */}
-      <div className="bg-gray-900 px-3 py-3 mx-4 rounded-xl">
+      <div className="px-3 py-3 mx-4">
         {timeSig.beats > 6 ? (
           // Two rows for beats > 6
           // 9/8: 6 + 3, 12/8: 6 + 6
@@ -699,18 +704,18 @@ export function MetronomeControl({
                       <button
                         key={i}
                         onClick={() => toggleAccent(i)}
-                        className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-50 ${
+                        className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-50 ${
                           isActive
                             ? "bg-white scale-110"
                             : hasAccent
                             ? "bg-violet-500"
                             : isSoundBeat
-                            ? "bg-gray-600"
-                            : "bg-gray-700"
+                            ? "bg-gray-300"
+                            : "bg-gray-200"
                         }`}
                       >
                         {hasAccent && (
-                          <span className={`font-bold text-xs ${isActive ? "text-black" : "text-white"}`}>
+                          <span className={`font-bold text-xs ${isActive ? "text-black" : isPlaying ? "text-white" : "text-white"}`}>
                             ^
                           </span>
                         )}
@@ -728,18 +733,18 @@ export function MetronomeControl({
                       <button
                         key={beatIndex}
                         onClick={() => toggleAccent(beatIndex)}
-                        className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-50 ${
+                        className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-50 ${
                           isActive
                             ? "bg-white scale-110"
                             : hasAccent
                             ? "bg-violet-500"
                             : isSoundBeat
-                            ? "bg-gray-600"
-                            : "bg-gray-700"
+                            ? "bg-gray-300"
+                            : "bg-gray-200"
                         }`}
                       >
                         {hasAccent && (
-                          <span className={`font-bold text-xs ${isActive ? "text-black" : "text-white"}`}>
+                          <span className={`font-bold text-xs ${isActive ? "text-black" : isPlaying ? "text-white" : "text-white"}`}>
                             ^
                           </span>
                         )}
@@ -761,7 +766,7 @@ export function MetronomeControl({
                 <button
                   key={i}
                   onClick={() => toggleAccent(i)}
-                  className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-50 ${
+                  className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-50 ${
                     isActive
                       ? "bg-white scale-110"
                       : hasAccent
@@ -781,25 +786,25 @@ export function MetronomeControl({
             })}
           </div>
         )}
-        <p className="text-[10px] text-gray-500 text-center mt-2">
+        <p className="text-[10px] text-gray-400 text-center mt-2">
           터치하여 악센트 설정
         </p>
       </div>
 
       {/* BPM Control */}
-      <div className="p-4 border-b border-gray-100">
-        <div className="flex items-center justify-center gap-4 mb-3">
+      <div ref={bpmContainerRef} className="px-4 py-3 border-b border-gray-100">
+        <div className="flex items-center justify-center gap-3 mb-2">
           <button
             onClick={() => setBpm(b => Math.max(20, b - 1))}
             disabled={disabled || bpm <= 20}
-            className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 disabled:opacity-30 transition-colors"
+            className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 disabled:opacity-30 transition-colors"
           >
-            <Minus className="w-6 h-6 text-gray-600" />
+            <Minus className="w-4 h-4 text-gray-600" />
           </button>
 
-          {/* BPM Display - Swipeable */}
+          {/* BPM Display - Swipeable with VariableProximity */}
           <div
-            className={`text-center min-w-[120px] select-none touch-none ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+            className={`text-center min-w-[110px] select-none touch-none ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleDragEnd}
@@ -809,48 +814,70 @@ export function MetronomeControl({
             onMouseLeave={handleMouseLeave}
           >
             <div className="flex items-baseline justify-center gap-1">
-              <span className={`text-5xl font-light tabular-nums transition-colors ${isDragging ? 'text-violet-600' : 'text-black'}`}>
-                {bpm}
-              </span>
-              <span className="text-sm text-gray-400">BPM</span>
+              <VariableProximity
+                label={String(bpm)}
+                fromFontVariationSettings="'wght' 300"
+                toFontVariationSettings="'wght' 900"
+                containerRef={bpmContainerRef}
+                radius={100}
+                falloff="gaussian"
+                className={`text-4xl tabular-nums transition-colors ${isDragging ? 'text-violet-600' : 'text-black'}`}
+              />
+              <span className="text-xs text-gray-400 ml-1">BPM</span>
             </div>
           </div>
 
           <button
             onClick={() => setBpm(b => Math.min(300, b + 1))}
             disabled={disabled || bpm >= 300}
-            className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 disabled:opacity-30 transition-colors"
+            className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 disabled:opacity-30 transition-colors"
           >
-            <Plus className="w-6 h-6 text-gray-600" />
+            <Plus className="w-4 h-4 text-gray-600" />
           </button>
         </div>
 
-        <p className="text-center text-sm text-gray-500 italic mb-1">{tempoMarking}</p>
-        <p className="text-center text-[10px] text-gray-400 mb-3">← 스와이프하여 BPM 조절 →</p>
+        <button
+          onClick={() => setShowTempoPresets(prev => !prev)}
+          className="w-full text-center mb-1 hover:opacity-70 transition-opacity"
+        >
+          <VariableProximity
+            label={tempoMarking}
+            fromFontVariationSettings="'wght' 300"
+            toFontVariationSettings="'wght' 800"
+            containerRef={bpmContainerRef}
+            radius={80}
+            falloff="linear"
+            className="text-sm text-gray-500 italic"
+          />
+          <ChevronDown className={`w-3 h-3 text-gray-400 inline-block ml-1 transition-transform ${showTempoPresets ? "rotate-180" : ""}`} />
+        </button>
+        <p className="text-center text-[10px] text-gray-400 mb-2">← 스와이프하여 BPM 조절 →</p>
 
-        {/* Tempo Presets */}
-        <div className="flex flex-wrap justify-center gap-1.5 mb-4">
-          {TEMPO_PRESETS.map((preset) => {
-            const isActive = tempoMarking === preset.name;
-            return (
-              <button
-                key={preset.name}
-                onClick={() => setBpm(preset.bpm)}
-                disabled={disabled}
-                className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-                  isActive
-                    ? "bg-black text-white"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                } disabled:opacity-50`}
-              >
-                {preset.name}
-              </button>
-            );
-          })}
-        </div>
+        {/* Tempo Presets - Toggle */}
+        {showTempoPresets && (
+          <div className="flex flex-wrap justify-center gap-1.5 mb-4">
+            {TEMPO_PRESETS.map((preset) => {
+              const isActive = tempoMarking === preset.name;
+              return (
+                <button
+                  key={preset.name}
+                  onClick={() => setBpm(preset.bpm)}
+                  disabled={disabled}
+                  className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                    isActive
+                      ? "bg-black text-white"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  } disabled:opacity-50`}
+                >
+                  {preset.name}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {/* Play/Stop with Subdivision */}
-        <div className="flex items-center justify-center gap-4">
+        <div className="flex items-center justify-center gap-5">
           {/* Time Signature */}
           <div className="text-center">
             <select
@@ -859,13 +886,12 @@ export function MetronomeControl({
                 const found = TIME_SIGNATURES.find(s => s.name === e.target.value);
                 if (found) {
                   setTimeSig(found);
-                  // Reset subdivision to first one when time signature changes
                   const newSubdivs = getSubdivisionsForTimeSig(found.name);
                   setSubdiv(newSubdivs[0]);
                 }
               }}
               disabled={disabled}
-              className="text-xl font-light text-black bg-transparent border-none focus:outline-none cursor-pointer"
+              className="text-base font-light text-black bg-transparent border-none focus:outline-none cursor-pointer"
             >
               {TIME_SIGNATURES.map((ts) => (
                 <option key={ts.name} value={ts.name}>{ts.name}</option>
@@ -877,16 +903,16 @@ export function MetronomeControl({
           <button
             onClick={toggleMetronome}
             disabled={disabled}
-            className={`w-20 h-20 rounded-full flex items-center justify-center transition-all ${
+            className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${
               isPlaying
                 ? "bg-gray-200 hover:bg-gray-300"
-                : "bg-black hover:bg-gray-800"
+                : "bg-gradient-to-br from-violet-500 to-violet-700 hover:from-violet-600 hover:to-violet-800"
             } disabled:opacity-50`}
           >
             {isPlaying ? (
-              <Square className="w-7 h-7 text-black" fill="currentColor" />
+              <Square className="w-5 h-5 text-black" fill="currentColor" />
             ) : (
-              <Play className="w-8 h-8 text-white ml-1" fill="currentColor" />
+              <Play className="w-5 h-5 text-white ml-0.5" fill="currentColor" />
             )}
           </button>
 
@@ -895,7 +921,7 @@ export function MetronomeControl({
             <button
               onClick={() => setShowSubdivDropdown(!showSubdivDropdown)}
               disabled={disabled}
-              className="w-14 h-14 rounded-xl bg-gray-100 flex flex-col items-center justify-center hover:bg-gray-200 transition-colors disabled:opacity-50"
+              className="w-11 h-11 rounded-xl bg-gray-100 flex flex-col items-center justify-center hover:bg-gray-200 transition-colors disabled:opacity-50"
             >
               {subdiv.icon === "triplet" ? (
                 <TripletIcon className="w-7 h-6 text-gray-700" />

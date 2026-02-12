@@ -59,7 +59,7 @@ export function AppShell({ children }: AppShellProps) {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gray-50">
       {/* Splash Screen - Premium Aurora */}
       <AnimatePresence>
         {appState === "splash" && (

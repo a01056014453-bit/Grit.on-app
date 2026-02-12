@@ -6,7 +6,8 @@ import { Play, ChevronRight, ChevronLeft, Search, Users, GraduationCap, Music, C
 import { StatsCard, DailyGoal } from "@/components/app";
 import { TodayDrillList } from "@/components/practice";
 import { mockUser, mockStats, getGreeting, mockDrillCards } from "@/data";
-import { getTodayPracticeTime, getPracticeStats, getAllSessions, PracticeSession } from "@/lib/db";
+import { getTodayPracticeTime, getPracticeStats, type PracticeSession } from "@/lib/db";
+import { usePracticeSessions } from "@/hooks/usePracticeSessions";
 import { formatTime } from "@/lib/format";
 
 export default function HomePage() {
@@ -62,65 +63,42 @@ export default function HomePage() {
     return mockUser.name;
   });
 
-  // 실제 연습 데이터 상태
+  // 공유 훅으로 세션 데이터 로드 (연습 페이지와 동일 데이터 소스)
+  const { sessions: allSessions, sessionsByDate, isLoading: sessionsLoading, reload: reloadSessions } = usePracticeSessions();
+
   const [todayMinutes, setTodayMinutes] = useState(0);
   const [dailyGoal, setDailyGoal] = useState(60);
   const [totalHours, setTotalHours] = useState(0);
   const [weekSessions, setWeekSessions] = useState(0);
   const [streakDays, setStreakDays] = useState(0);
-  const [recentSessions, setRecentSessions] = useState<PracticeSession[]>([]);
-  const [allSessionsState, setAllSessionsState] = useState<PracticeSession[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth());
   const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
 
+  // 세션 데이터에서 통계 계산
   useEffect(() => {
-    async function loadPracticeData() {
-      try {
-        // 오늘의 연습 시간 가져오기
-        const todayData = await getTodayPracticeTime();
-        const todayPracticeMinutes = Math.round(todayData.practiceTime / 60);
-        setTodayMinutes(todayPracticeMinutes);
+    if (sessionsLoading) return;
 
-        // 총 연습 시간 가져오기
+    async function loadStats() {
+      try {
+        const todayData = await getTodayPracticeTime();
+        setTodayMinutes(Math.round(todayData.practiceTime / 60));
+
         const stats = await getPracticeStats();
         setTotalHours(Math.round(stats.totalPracticeTime / 3600));
 
-        // 이번 주 세션 수 계산
-        const allSessions = await getAllSessions();
         const now = new Date();
         const weekStart = new Date(now);
         weekStart.setDate(now.getDate() - now.getDay());
         weekStart.setHours(0, 0, 0, 0);
+        setWeekSessions(allSessions.filter(s => new Date(s.startTime) >= weekStart).length);
+        setStreakDays(calculateStreak(allSessions));
 
-        const thisWeekSessions = allSessions.filter(s => {
-          const sessionDate = new Date(s.startTime);
-          return sessionDate >= weekStart;
-        });
-        setWeekSessions(thisWeekSessions.length);
-
-        // 연속 일수 계산
-        const streak = calculateStreak(allSessions);
-        setStreakDays(streak);
-
-        // 전체 세션 저장 (달력용)
-        setAllSessionsState(allSessions);
-
-        // 최근 연습 기록 (최신 5개)
-        const sorted = [...allSessions].sort(
-          (a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
-        );
-        setRecentSessions(sorted.slice(0, 5));
-
-        // localStorage에서 일일 목표 가져오기
         const savedGoal = localStorage.getItem('grit-on-daily-goal');
-        if (savedGoal) {
-          setDailyGoal(parseInt(savedGoal, 10));
-        }
+        if (savedGoal) setDailyGoal(parseInt(savedGoal, 10));
       } catch (error) {
         console.error('Failed to load practice data:', error);
-        // 에러 시 mock 데이터 사용
         setTodayMinutes(mockStats.todayMinutes);
         setTotalHours(mockStats.totalHours);
         setWeekSessions(mockStats.weekSessions);
@@ -129,62 +107,35 @@ export default function HomePage() {
         setIsLoading(false);
       }
     }
-
-    loadPracticeData();
-  }, []);
+    loadStats();
+  }, [allSessions, sessionsLoading]);
 
   // 연속 일수 계산 함수
   function calculateStreak(sessions: { startTime: Date }[]): number {
     if (sessions.length === 0) return 0;
-
-    // 날짜별로 세션 그룹화
     const dateSet = new Set<string>();
     sessions.forEach(s => {
       const date = new Date(s.startTime);
       date.setHours(0, 0, 0, 0);
       dateSet.add(date.toISOString());
     });
-
-    const dates = Array.from(dateSet).sort().reverse();
-    if (dates.length === 0) return 0;
+    if (dateSet.size === 0) return 0;
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const todayStr = today.toISOString();
-
-    // 오늘 또는 어제부터 시작
     let streak = 0;
     let checkDate = new Date(today);
 
-    // 오늘 연습했는지 확인
-    if (!dateSet.has(todayStr)) {
-      // 어제 연습했는지 확인
+    if (!dateSet.has(checkDate.toISOString())) {
       checkDate.setDate(checkDate.getDate() - 1);
-      if (!dateSet.has(checkDate.toISOString())) {
-        return 0;
-      }
+      if (!dateSet.has(checkDate.toISOString())) return 0;
     }
-
-    // 연속 일수 계산
     while (dateSet.has(checkDate.toISOString())) {
       streak++;
       checkDate.setDate(checkDate.getDate() - 1);
     }
-
     return streak;
   }
-
-  // Calendar data computations
-  const sessionsByDate = useMemo(() => {
-    const map: Record<string, PracticeSession[]> = {};
-    allSessionsState.forEach(s => {
-      const d = new Date(s.startTime);
-      const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-      if (!map[key]) map[key] = [];
-      map[key].push(s);
-    });
-    return map;
-  }, [allSessionsState]);
 
   const selectedDateSessions = useMemo(() => {
     const key = `${selectedDate.getFullYear()}-${selectedDate.getMonth()}-${selectedDate.getDate()}`;
@@ -195,14 +146,14 @@ export default function HomePage() {
 
   const practiceDaysInMonth = useMemo(() => {
     const days = new Set<number>();
-    allSessionsState.forEach(s => {
+    allSessions.forEach(s => {
       const d = new Date(s.startTime);
       if (d.getFullYear() === calendarYear && d.getMonth() === calendarMonth) {
         days.add(d.getDate());
       }
     });
     return days.size;
-  }, [allSessionsState, calendarMonth, calendarYear]);
+  }, [allSessions, calendarMonth, calendarYear]);
 
   const daysInMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate();
   const firstDayOfMonth = new Date(calendarYear, calendarMonth, 1).getDay();
@@ -223,13 +174,20 @@ export default function HomePage() {
   const totalDrillCount = mockDrillCards.length;
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto bg-white min-h-screen">
+    <div className="px-4 py-6 max-w-lg mx-auto bg-gray-50 min-h-screen">
       {/* Header */}
       <div className="flex items-center justify-between mb-8 pt-2">
         <div>
           <h1 className="text-2xl font-bold text-black leading-tight">
-            {greeting},<br />
-            {userName}님
+            {greeting} {(() => {
+              const h = new Date().getHours();
+              if (h < 7) return "🌙";
+              if (h < 12) return "☀️";
+              if (h < 18) return "🌤️";
+              return "🌙";
+            })()}
+            <br />
+            <span className="bg-gradient-to-r from-violet-700 to-violet-400 bg-clip-text text-transparent">{userName}</span>님
           </h1>
           <p className="text-sm text-gray-500 mt-1">
             {dailyMessage}
@@ -281,9 +239,9 @@ export default function HomePage() {
       <div className="grid grid-cols-3 gap-3 mb-8">
         <Link
           href="/music-terms"
-          className="flex flex-col items-center bg-gray-50 border border-gray-100 rounded-2xl p-3 pt-4 hover:bg-gray-100 transition-colors"
+          className="flex flex-col items-center bg-white rounded-2xl p-3 pt-4 hover:bg-gray-50 transition-all shadow-sm hover:shadow-md"
         >
-          <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center mb-2 shrink-0">
+          <div className="w-11 h-11 rounded-full bg-gray-50 flex items-center justify-center mb-2 shrink-0">
             <Search className="w-5 h-5 text-violet-600" />
           </div>
           <p className="font-semibold text-black text-xs text-center">음악용어 검색</p>
@@ -292,9 +250,9 @@ export default function HomePage() {
 
         <Link
           href="/teachers"
-          className="flex flex-col items-center bg-gray-50 border border-gray-100 rounded-2xl p-3 pt-4 hover:bg-gray-100 transition-colors"
+          className="flex flex-col items-center bg-white rounded-2xl p-3 pt-4 hover:bg-gray-50 transition-all shadow-sm hover:shadow-md"
         >
-          <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center mb-2 shrink-0">
+          <div className="w-11 h-11 rounded-full bg-gray-50 flex items-center justify-center mb-2 shrink-0">
             <Users className="w-5 h-5 text-violet-600" />
           </div>
           <p className="font-semibold text-black text-xs text-center">원포인트 레슨</p>
@@ -303,9 +261,9 @@ export default function HomePage() {
 
         <Link
           href="/rooms"
-          className="flex flex-col items-center bg-gray-50 border border-gray-100 rounded-2xl p-3 pt-4 hover:bg-gray-100 transition-colors"
+          className="flex flex-col items-center bg-white rounded-2xl p-3 pt-4 hover:bg-gray-50 transition-all shadow-sm hover:shadow-md"
         >
-          <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center mb-2 shrink-0">
+          <div className="w-11 h-11 rounded-full bg-gray-50 flex items-center justify-center mb-2 shrink-0">
             <GraduationCap className="w-5 h-5 text-violet-600" />
           </div>
           <p className="font-semibold text-black text-xs text-center">입시룸</p>
@@ -419,7 +377,7 @@ export default function HomePage() {
 
             {/* 드릴 완료 기록 */}
             <div className="mt-3">
-              <TodayDrillList showPlayButton={false} date={selectedDate} completedOnly />
+              <TodayDrillList showPlayButton={false} date={selectedDate} completedOnly onSessionSaved={reloadSessions} />
             </div>
 
             {/* 연습 세션 */}
@@ -448,6 +406,7 @@ export default function HomePage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <h4 className="text-sm font-semibold text-gray-900 truncate">{session.pieceName}</h4>
+                        {session.todoNote && <p className="text-xs text-gray-500 truncate mt-0.5">{session.todoNote}</p>}
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className="flex items-center gap-1 text-xs text-gray-500"><Clock className="w-3 h-3" />{formatTime(session.practiceTime)}</span>
                           {session.audioBlob && <span className="text-xs text-green-600 font-medium">녹음</span>}

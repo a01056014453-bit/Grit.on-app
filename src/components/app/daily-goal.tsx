@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import { motion, animate } from "framer-motion";
 import { Target, Check, BarChart3 } from "lucide-react";
 import { ProgressRing } from "./progress-ring";
 
@@ -28,6 +29,23 @@ export function DailyGoal({ completed, target, onTargetChange }: DailyGoalProps)
   const remaining = Math.max(target - completed, 0);
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [displayProgress, setDisplayProgress] = useState(0);
+  const [displayCompleted, setDisplayCompleted] = useState(0);
+
+  // Animated count-up for percentage and completed minutes
+  useEffect(() => {
+    const ctrl1 = animate(0, progress, {
+      duration: 1.2,
+      ease: [0.22, 1, 0.36, 1],
+      onUpdate: (v) => setDisplayProgress(Math.round(v)),
+    });
+    const ctrl2 = animate(0, completed, {
+      duration: 1.2,
+      ease: [0.22, 1, 0.36, 1],
+      onUpdate: (v) => setDisplayCompleted(Math.round(v)),
+    });
+    return () => { ctrl1.stop(); ctrl2.stop(); };
+  }, [progress, completed]);
 
   // 1시간마다 명언이 바뀌도록 계산
   const now = new Date();
@@ -58,7 +76,7 @@ export function DailyGoal({ completed, target, onTargetChange }: DailyGoalProps)
     <div className="block bg-white rounded-2xl p-6 border border-gray-100">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h4 className="font-bold text-black text-lg">오늘의 목표</h4>
+          <h4 className="font-bold text-black text-xl">오늘의 목표</h4>
           <p className="text-xs text-gray-500 mt-1">매일 조금씩 성장하는 습관</p>
         </div>
         <div className="flex items-center gap-2">
@@ -109,9 +127,14 @@ export function DailyGoal({ completed, target, onTargetChange }: DailyGoalProps)
           />
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span className="text-xs text-gray-500">달성률</span>
-            <span className="text-xl font-bold bg-gradient-to-r from-black to-violet-500 bg-clip-text text-transparent">
-              {Math.round(progress)}%
-            </span>
+            <motion.span
+              className="text-xl font-bold bg-gradient-to-r from-violet-700 to-violet-400 bg-clip-text text-transparent"
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.2 }}
+            >
+              {displayProgress}%
+            </motion.span>
           </div>
         </div>
 
@@ -119,9 +142,14 @@ export function DailyGoal({ completed, target, onTargetChange }: DailyGoalProps)
           <div className="flex flex-col">
             <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">Current</span>
             <div className="flex items-baseline gap-1">
-              <span className="text-3xl font-bold bg-gradient-to-r from-black to-violet-500 bg-clip-text text-transparent">
-                {completed}
-              </span>
+              <motion.span
+                className="text-3xl font-bold bg-gradient-to-r from-violet-700 to-violet-400 bg-clip-text text-transparent"
+                initial={{ y: 10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.3 }}
+              >
+                {displayCompleted}
+              </motion.span>
               <span className="text-sm font-medium text-gray-500">/ {target}분</span>
             </div>
           </div>

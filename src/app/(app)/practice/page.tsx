@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { DrillCard } from "@/types";
-import { useAudioRecorder } from "@/hooks";
-import { savePracticeSession, getAllSessions, type PracticeSession } from "@/lib/db";
+import { useAudioRecorder, usePracticeSessions } from "@/hooks";
+import { savePracticeSession, type PracticeSession } from "@/lib/db";
 import { completePracticeTodo } from "@/lib/practice-todo-store";
 import { formatTime } from "@/lib/format";
 import { mockSongs as initialSongs, mockDrillCards, hasAIAnalysis, groupDrillsBySong, composerList } from "@/data";
@@ -61,6 +61,8 @@ interface DailyCompletion {
 export default function PracticePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  // 공유 훅으로 세션 데이터 로드 (홈 페이지와 동일 데이터 소스)
+  const { sessions: recentSessions, sessionsByDate: calSessionsByDate, reload: reloadSessions } = usePracticeSessions();
   const [activeDrill, setActiveDrill] = useState<DrillCard | null>(null);
   const [selectedSong, setSelectedSong] = useState<Song>(initialSongs[0]);
   const [isSongModalOpen, setIsSongModalOpen] = useState(false);
@@ -78,7 +80,7 @@ export default function PracticePage() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [autoPausedMessage, setAutoPausedMessage] = useState<string | null>(null);
   const [wakeLockSupported, setWakeLockSupported] = useState(false);
-  const [recentSessions, setRecentSessions] = useState<PracticeSession[]>([]);
+  // recentSessions is now from usePracticeSessions hook
   const [measureRange, setMeasureRange] = useState<{ start: number; end: number } | null>(null);
   const [dailyGoal] = useState(60); // 일일 목표 (분)
   const [selectedTodo, setSelectedTodo] = useState<PracticeTodo | null>(null);
@@ -209,18 +211,8 @@ export default function PracticePage() {
     ref.lastUpdateTime = now;
   }, [isRecording, isPaused, audioLabel]);
 
-  const loadRecentSessions = useCallback(async () => {
-    try {
-      const sessions = await getAllSessions();
-      // Sort by startTime descending (most recent first)
-      const sorted = sessions.sort((a, b) =>
-        new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
-      );
-      setRecentSessions(sorted);
-    } catch (err) {
-      console.error("Failed to load sessions:", err);
-    }
-  }, []);
+  // loadRecentSessions -> reloadSessions from shared hook
+  const loadRecentSessions = reloadSessions;
 
   // Helper: Get today's date string (YYYY-MM-DD)
   const getTodayStr = () => {
@@ -959,16 +951,7 @@ export default function PracticePage() {
   const [calYear, setCalYear] = useState(new Date().getFullYear());
   const [calSelectedDate, setCalSelectedDate] = useState<Date>(new Date());
 
-  const calSessionsByDate = useMemo(() => {
-    const map: Record<string, PracticeSession[]> = {};
-    recentSessions.forEach(s => {
-      const d = new Date(s.startTime);
-      const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-      if (!map[key]) map[key] = [];
-      map[key].push(s);
-    });
-    return map;
-  }, [recentSessions]);
+  // calSessionsByDate is now from usePracticeSessions hook
 
   const calSelectedSessions = useMemo(() => {
     const key = `${calSelectedDate.getFullYear()}-${calSelectedDate.getMonth()}-${calSelectedDate.getDate()}`;
@@ -1030,7 +1013,7 @@ export default function PracticePage() {
   const planProgress = totalPlanMinutes > 0 ? (completedMinutes / totalPlanMinutes) * 100 : 0;
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto bg-white min-h-screen">
+    <div className="px-4 py-6 max-w-lg mx-auto bg-gray-50 min-h-screen">
       {/* Header */}
       <div className="flex items-start gap-3 mb-6">
         <button
@@ -1114,9 +1097,6 @@ export default function PracticePage() {
         </div>
       )}
 
-      {/* Today's Drill List - 항상 표시 */}
-      <TodayDrillList showPlayButton={!isRecording} onAddDrill={() => setIsAddDrillModalOpen(true)} />
-
       {/* Timer Display with Controls & Metronome */}
       <PracticeTimer
         totalTime={totalTime}
@@ -1133,6 +1113,9 @@ export default function PracticePage() {
         onRequestPermission={requestPermission}
         onMetronomeStateChange={handleMetronomeStateChange}
       />
+
+      {/* Today's Drill List - 항상 표시 */}
+      <TodayDrillList key={`drills-${customDrills.length}`} showPlayButton={!isRecording} onAddDrill={() => setIsAddDrillModalOpen(true)} onSessionSaved={reloadSessions} />
 
 
 
@@ -1230,6 +1213,7 @@ export default function PracticePage() {
                           <div className="w-9 h-9 bg-violet-100 rounded-lg flex items-center justify-center shrink-0"><Music2 className="w-4 h-4 text-violet-600" /></div>
                           <div className="flex-1 min-w-0">
                             <h4 className="text-sm font-semibold text-gray-900 truncate">{session.pieceName}</h4>
+                            {session.todoNote && <p className="text-xs text-gray-500 truncate mt-0.5">{session.todoNote}</p>}
                             <div className="flex items-center gap-2 mt-0.5">
                               <span className="flex items-center gap-1 text-xs text-gray-500"><Clock className="w-3 h-3" />{formatTime(session.practiceTime)}</span>
                               {session.audioBlob && <span className="text-xs text-green-600 font-medium">녹음</span>}

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Circle, CheckCircle2, Plus, Repeat, Play } from "lucide-react";
 import { mockDrillCards, groupDrillsBySong, type GroupedDrills } from "@/data";
+import { savePracticeSession, getAllSessions, deleteSession } from "@/lib/db";
 import type { DrillCard } from "@/types";
 
 interface TodayDrillListProps {
@@ -13,9 +14,10 @@ interface TodayDrillListProps {
   date?: Date; // 특정 날짜의 드릴 완료 기록 표시
   completedOnly?: boolean; // 완료된 드릴만 표시
   onAddDrill?: () => void;
+  onSessionSaved?: () => void; // 세션 저장 후 콜백 (캘린더 갱신용)
 }
 
-export function TodayDrillList({ onDrillSelect, selectedDrillId, showPlayButton = true, date, completedOnly = false, onAddDrill }: TodayDrillListProps) {
+export function TodayDrillList({ onDrillSelect, selectedDrillId, showPlayButton = true, date, completedOnly = false, onAddDrill, onSessionSaved }: TodayDrillListProps) {
   const router = useRouter();
   const [completedDrills, setCompletedDrills] = useState<Set<string>>(new Set());
   const [customDrills, setCustomDrills] = useState<DrillCard[]>([]);
@@ -69,8 +71,12 @@ export function TodayDrillList({ onDrillSelect, selectedDrillId, showPlayButton 
   }, [date]);
 
   // 드릴 완료 토글 (오늘만 가능)
-  const handleToggle = (drillId: string) => {
+  const handleToggle = async (drillId: string) => {
     if (!isToday) return;
+
+    const drill = allDrills.find(d => d.id === drillId);
+    const wasCompleted = completedDrills.has(drillId);
+
     setCompletedDrills(prev => {
       const newSet = new Set(prev);
       if (newSet.has(drillId)) {
@@ -85,6 +91,56 @@ export function TodayDrillList({ onDrillSelect, selectedDrillId, showPlayButton 
       }));
       return newSet;
     });
+
+    // 완료 체크 시 연습 세션 자동 저장
+    if (!wasCompleted && drill) {
+      try {
+        const now = new Date();
+        const durationSec = (drill.duration || 3) * 60; // 분 → 초
+        const startTime = new Date(now.getTime() - durationSec * 1000);
+        await savePracticeSession({
+          pieceId: `drill-${drill.id}`,
+          pieceName: drill.song,
+          startTime,
+          endTime: now,
+          totalTime: durationSec,
+          practiceTime: durationSec,
+          synced: false,
+          practiceType: "partial",
+          label: "드릴 완료",
+          todoNote: `${drill.measures} · ${drill.title}`,
+        });
+        onSessionSaved?.();
+      } catch (err) {
+        console.error("Failed to save drill session:", err);
+      }
+    }
+
+    // 완료 해제 시 해당 드릴의 오늘 연습 세션 삭제
+    if (wasCompleted && drill) {
+      try {
+        const allSessions = await getAllSessions();
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const drillPieceId = `drill-${drill.id}`;
+        const matchingSessions = allSessions.filter(s => {
+          if (s.pieceId !== drillPieceId) return false;
+          const sessionDate = new Date(s.startTime);
+          sessionDate.setHours(0, 0, 0, 0);
+          return sessionDate.getTime() === today.getTime();
+        });
+        for (const session of matchingSessions) {
+          if (session.id != null) {
+            await deleteSession(session.id);
+          }
+        }
+        if (matchingSessions.length > 0) {
+          onSessionSaved?.();
+        }
+      } catch (err) {
+        console.error("Failed to delete drill session:", err);
+      }
+    }
   };
 
   // 모든 드릴 합치기
