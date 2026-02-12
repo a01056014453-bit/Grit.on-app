@@ -1115,7 +1115,7 @@ export default function PracticePage() {
       )}
 
       {/* Today's Drill List - 항상 표시 */}
-      <TodayDrillList showPlayButton={!isRecording} />
+      <TodayDrillList showPlayButton={!isRecording} onAddDrill={() => setIsAddDrillModalOpen(true)} />
 
       {/* Timer Display with Controls & Metronome */}
       <PracticeTimer

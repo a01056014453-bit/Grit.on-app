@@ -12,9 +12,10 @@ interface TodayDrillListProps {
   showPlayButton?: boolean;
   date?: Date; // 특정 날짜의 드릴 완료 기록 표시
   completedOnly?: boolean; // 완료된 드릴만 표시
+  onAddDrill?: () => void;
 }
 
-export function TodayDrillList({ onDrillSelect, selectedDrillId, showPlayButton = true, date, completedOnly = false }: TodayDrillListProps) {
+export function TodayDrillList({ onDrillSelect, selectedDrillId, showPlayButton = true, date, completedOnly = false, onAddDrill }: TodayDrillListProps) {
   const router = useRouter();
   const [completedDrills, setCompletedDrills] = useState<Set<string>>(new Set());
   const [customDrills, setCustomDrills] = useState<DrillCard[]>([]);
@@ -118,6 +119,7 @@ export function TodayDrillList({ onDrillSelect, selectedDrillId, showPlayButton 
               <Repeat className="w-4 h-4 text-violet-600" />
             </button>
             <button
+              onClick={onAddDrill}
               className="w-7 h-7 bg-black rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors"
             >
               <Plus className="w-4 h-4 text-white" />

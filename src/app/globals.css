@@ -210,3 +210,86 @@ p, span, li, blockquote {
 .animate-fade-in {
   animation: fade-in 0.2s ease-out forwards;
 }
+
+/* === ReactBits-inspired Animations === */
+
+/* StarBorder animations */
+@keyframes star-move-bottom {
+  0% { transform: translate(0%, 0%); opacity: 1; }
+  100% { transform: translate(-100%, 0%); opacity: 0; }
+}
+
+@keyframes star-move-top {
+  0% { transform: translate(0%, 0%); opacity: 1; }
+  100% { transform: translate(100%, 0%); opacity: 0; }
+}
+
+/* Play button pulse ring */
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+.pulse-ring::before,
+.pulse-ring::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: inherit;
+  opacity: 0;
+  z-index: -1;
+}
+
+.pulse-ring::before {
+  animation: pulse-ring 2s ease-out infinite;
+}
+
+.pulse-ring::after {
+  animation: pulse-ring 2s ease-out infinite 1s;
+}
+
+/* Recording aurora glow on timer card */
+@keyframes aurora-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.recording-glow {
+  position: relative;
+}
+
+.recording-glow::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 1rem;
+  background: linear-gradient(
+    270deg,
+    rgba(139, 92, 246, 0.4),
+    rgba(168, 85, 247, 0.2),
+    rgba(139, 92, 246, 0.4),
+    rgba(124, 58, 237, 0.3)
+  );
+  background-size: 300% 300%;
+  animation: aurora-shift 4s ease infinite;
+  z-index: -1;
+  filter: blur(8px);
+}
+
+/* Waveform bar animation */
+@keyframes wave-idle {
+  0%, 100% { height: 10%; }
+  50% { height: 20%; }
+}
+
+/* Timer digit flip animation */
+@keyframes digit-change {
+  0% { transform: translateY(-4px); opacity: 0.5; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.digit-animate {
+  animation: digit-change 0.2s ease-out;
+}
