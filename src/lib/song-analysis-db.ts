@@ -1,5 +1,6 @@
 import { supabaseServer } from "@/lib/supabase-server";
 import type { SongAnalysis } from "@/types/song-analysis";
+import type { Json } from "@/types/database";
 
 const supabase = supabaseServer;
 
@@ -113,7 +114,7 @@ export async function saveCachedAnalysis(
       const { error } = await supabase
         .from("song_analyses")
         .update({
-          content: analysis as unknown as Record<string, unknown>,
+          content: analysis as unknown as Json,
           key: analysis.meta.key || null,
           opus: analysis.meta.opus || null,
           difficulty_level: analysis.meta.difficulty_level,
@@ -134,7 +135,7 @@ export async function saveCachedAnalysis(
         .insert({
           composer: composer.trim(),
           title: title.trim(),
-          content: analysis as unknown as Record<string, unknown>,
+          content: analysis as unknown as Json,
           key: analysis.meta.key || null,
           opus: analysis.meta.opus || null,
           difficulty_level: analysis.meta.difficulty_level,
@@ -171,7 +172,7 @@ export async function saveCachedAnalysis(
           .insert({
             composer: originalComposer.trim(),
             title: originalTitle.trim(),
-            content: analysis as unknown as Record<string, unknown>,
+            content: analysis as unknown as Json,
             key: analysis.meta.key || null,
             opus: analysis.meta.opus || null,
             difficulty_level: analysis.meta.difficulty_level,
