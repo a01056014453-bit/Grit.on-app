@@ -22,20 +22,30 @@ const DB_VERSION = 1;
 const SESSIONS_STORE = "practice_sessions";
 
 let dbInstance: IDBDatabase | null = null;
+let dbOpening: Promise<IDBDatabase> | null = null;
 
 // Initialize database
 export async function initDB(): Promise<IDBDatabase> {
   if (dbInstance) return dbInstance;
+  if (dbOpening) return dbOpening;
 
-  return new Promise((resolve, reject) => {
+  dbOpening = new Promise<IDBDatabase>((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
     request.onerror = () => {
+      dbOpening = null;
       reject(new Error("Failed to open database"));
     };
 
     request.onsuccess = () => {
       dbInstance = request.result;
+      dbOpening = null;
+
+      // Reset cached instance when browser closes the connection
+      dbInstance.onclose = () => {
+        dbInstance = null;
+      };
+
       resolve(dbInstance);
     };
 
@@ -54,13 +64,29 @@ export async function initDB(): Promise<IDBDatabase> {
       }
     };
   });
+
+  return dbOpening;
+}
+
+// Get a valid DB connection, reconnecting if stale
+async function getDB(): Promise<IDBDatabase> {
+  const db = await getDB();
+  try {
+    // Test if connection is still alive
+    db.transaction([SESSIONS_STORE], "readonly");
+    return db;
+  } catch {
+    // Connection is stale, force reconnect
+    dbInstance = null;
+    return initDB();
+  }
 }
 
 // Save practice session
 export async function savePracticeSession(
   session: Omit<PracticeSession, "id">
 ): Promise<number> {
-  const db = await initDB();
+  const db = await getDB();
 
   return new Promise((resolve, reject) => {
     const transaction = db.transaction([SESSIONS_STORE], "readwrite");
@@ -79,7 +105,7 @@ export async function savePracticeSession(
 
 // Get all practice sessions
 export async function getAllSessions(): Promise<PracticeSession[]> {
-  const db = await initDB();
+  const db = await getDB();
 
   return new Promise((resolve, reject) => {
     const transaction = db.transaction([SESSIONS_STORE], "readonly");
@@ -98,7 +124,7 @@ export async function getAllSessions(): Promise<PracticeSession[]> {
 
 // Get session by ID
 export async function getSession(id: number): Promise<PracticeSession | null> {
-  const db = await initDB();
+  const db = await getDB();
 
   return new Promise((resolve, reject) => {
     const transaction = db.transaction([SESSIONS_STORE], "readonly");
@@ -119,7 +145,7 @@ export async function getSession(id: number): Promise<PracticeSession | null> {
 export async function getSessionsByPiece(
   pieceId: string
 ): Promise<PracticeSession[]> {
-  const db = await initDB();
+  const db = await getDB();
 
   return new Promise((resolve, reject) => {
     const transaction = db.transaction([SESSIONS_STORE], "readonly");
@@ -139,7 +165,7 @@ export async function getSessionsByPiece(
 
 // Get unsynced sessions
 export async function getUnsyncedSessions(): Promise<PracticeSession[]> {
-  const db = await initDB();
+  const db = await getDB();
 
   return new Promise((resolve, reject) => {
     const transaction = db.transaction([SESSIONS_STORE], "readonly");
@@ -159,7 +185,7 @@ export async function getUnsyncedSessions(): Promise<PracticeSession[]> {
 
 // Mark session as synced
 export async function markSessionSynced(id: number): Promise<void> {
-  const db = await initDB();
+  const db = await getDB();
 
   return new Promise((resolve, reject) => {
     const transaction = db.transaction([SESSIONS_STORE], "readwrite");
@@ -187,7 +213,7 @@ export async function markSessionSynced(id: number): Promise<void> {
 
 // Delete session
 export async function deleteSession(id: number): Promise<void> {
-  const db = await initDB();
+  const db = await getDB();
 
   return new Promise((resolve, reject) => {
     const transaction = db.transaction([SESSIONS_STORE], "readwrite");
@@ -206,7 +232,7 @@ export async function deleteSession(id: number): Promise<void> {
 
 // Clear all sessions
 export async function clearAllSessions(): Promise<void> {
-  const db = await initDB();
+  const db = await getDB();
 
   return new Promise((resolve, reject) => {
     const transaction = db.transaction([SESSIONS_STORE], "readwrite");
