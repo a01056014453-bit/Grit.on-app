@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "rm -f public/sw.js public/sw.js.map && next dev",
+    "dev:clean": "rm -rf .next node_modules/.cache && rm -f public/sw.js public/sw.js.map && next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"

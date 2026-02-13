@@ -229,6 +229,37 @@ export const mockTeachers: Teacher[] = [
       teachingExperience: 3,
     },
   },
+  {
+    id: "t8",
+    name: "지민",
+    profileImage: "",
+    title: "서울예고 졸업, 음대 재학 중",
+    specialty: ["쇼팽", "기초 테크닉", "입시 준비"],
+    rating: 4.8,
+    reviewCount: 15,
+    completedCount: 22,
+    responseRate: 96,
+    avgResponseTime: 2,
+    priceCredits: 40,
+    bio: "현직 음대생으로서 최근 입시 경험과 체계적인 기초 훈련법을 공유합니다. 특히 입시 준비생들에게 실질적인 도움을 드리고 있습니다.",
+    verified: true,
+    badges: ["fast"],
+    career: {
+      education: [
+        { school: "서울예술고등학교", degree: "졸업", major: "피아노" },
+        { school: "한국예술종합학교", degree: "재학", major: "피아노", year: 2026 },
+      ],
+      awards: [
+        { competition: "음악저널 콩쿠르", prize: "2위", year: 2023 },
+        { competition: "한국 피아노학회 콩쿠르", prize: "금상", year: 2022 },
+      ],
+      performances: [
+        { title: "한예종 정기 연주회", venue: "한예종 콘서트홀", year: 2025 },
+      ],
+      studentsToUniversity: 3,
+      teachingExperience: 2,
+    },
+  },
 ];
 
 export const getTeachers = () => mockTeachers;

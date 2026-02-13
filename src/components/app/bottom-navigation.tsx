@@ -1,46 +1,46 @@
 "use client";
 
+import { useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Play, User, Zap, Trophy } from "lucide-react";
+import { Home, Play, User, Zap, Trophy, Inbox, Users, LayoutDashboard } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTeacherMode } from "@/hooks/useTeacherMode";
 
-const navItems = [
-  {
-    href: "/",
-    icon: Home,
-    label: "홈",
-    exact: true,
-  },
-  {
-    href: "/practice",
-    icon: Play,
-    label: "연습",
-  },
-  {
-    href: "/analysis",
-    icon: Zap,
-    label: "AI분석",
-  },
-  {
-    href: "/ranking",
-    icon: Trophy,
-    label: "랭킹",
-  },
-  {
-    href: "/profile",
-    icon: User,
-    label: "프로필",
-  },
+interface NavItem {
+  href: string;
+  icon: React.ElementType;
+  label: string;
+  exact?: boolean;
+}
+
+const studentNavItems: NavItem[] = [
+  { href: "/", icon: Home, label: "홈", exact: true },
+  { href: "/practice", icon: Play, label: "연습" },
+  { href: "/analysis", icon: Zap, label: "AI분석" },
+  { href: "/ranking", icon: Trophy, label: "랭킹" },
+  { href: "/profile", icon: User, label: "프로필" },
+];
+
+const teacherNavItems: NavItem[] = [
+  { href: "/", icon: LayoutDashboard, label: "대시보드", exact: true },
+  { href: "/inbox", icon: Inbox, label: "인박스" },
+  { href: "/teacher/students", icon: Users, label: "학생관리" },
+  { href: "/ranking", icon: Trophy, label: "랭킹" },
+  { href: "/profile", icon: User, label: "프로필" },
 ];
 
 export function BottomNavigation() {
   const pathname = usePathname();
+  const { isTeacher, teacherMode } = useTeacherMode();
+
+  const navItems = useMemo(
+    () => (isTeacher && teacherMode ? teacherNavItems : studentNavItems),
+    [isTeacher, teacherMode]
+  );
 
   const isActive = (href: string, exact?: boolean) => {
-    if (exact) {
-      return pathname === href;
-    }
+    if (exact) return pathname === href;
     return pathname.startsWith(href);
   };
 

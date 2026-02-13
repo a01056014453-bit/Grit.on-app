@@ -120,7 +120,7 @@ export function PracticeTimer({
 
           {/* Large Timer Display */}
           <div className="text-center mb-1">
-            <div className="font-number text-5xl font-extrabold tracking-tight">
+            <div className="font-number text-7xl font-semibold tracking-tight">
               <motion.span
                 key={`m-${minutesKey}`}
                 initial={isRecording ? { y: -4, opacity: 0.5 } : false}
@@ -156,7 +156,7 @@ export function PracticeTimer({
           </div>
 
           {/* Status Indicators */}
-          <div className="flex items-center justify-center gap-4 text-sm text-gray-500 mb-4">
+          <div className="flex items-center justify-center gap-4 text-sm text-gray-500 mb-6">
             <div className="flex items-center gap-1.5">
               <Clock className="w-4 h-4" />
               {isRecording ? (
@@ -295,7 +295,7 @@ export function PracticeTimer({
         </div>
 
         {/* Metronome Section */}
-        <div className="mt-1 mb-4 mx-auto max-w-xs bg-white rounded-2xl border border-gray-100">
+        <div className="mt-6 mb-4 mx-auto max-w-xs bg-white rounded-2xl border border-gray-100">
           <MetronomeControl
             onStateChange={onMetronomeStateChange}
             disabled={metronomeDisabled}

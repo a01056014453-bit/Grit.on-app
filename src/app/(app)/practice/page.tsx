@@ -64,7 +64,7 @@ export default function PracticePage() {
   // 공유 훅으로 세션 데이터 로드 (홈 페이지와 동일 데이터 소스)
   const { sessions: recentSessions, sessionsByDate: calSessionsByDate, reload: reloadSessions } = usePracticeSessions();
   const [activeDrill, setActiveDrill] = useState<DrillCard | null>(null);
-  const [selectedSong, setSelectedSong] = useState<Song>(initialSongs[0]);
+  const [selectedSong, setSelectedSong] = useState<Song | null>(null);
   const [isSongModalOpen, setIsSongModalOpen] = useState(false);
   const [isAnalysisModalOpen, setIsAnalysisModalOpen] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -404,6 +404,11 @@ export default function PracticePage() {
   }, [isRecording, isPaused, requestWakeLock, releaseWakeLock]);
 
   const handleStartRecording = useCallback(async () => {
+    // 곡이 선택되지 않았으면 곡 선택 모달 열기
+    if (!selectedSong && !activeDrill) {
+      setIsSongModalOpen(true);
+      return;
+    }
     // 분류 데이터 리셋
     classificationTimeRef.current = {
       instrument: 0,
@@ -416,7 +421,7 @@ export default function PracticePage() {
     setSessionStartTime(new Date());
     setAutoPausedMessage(null);
     await startRecording();
-  }, [startRecording]);
+  }, [startRecording, selectedSong, activeDrill]);
 
   const handleResumeRecording = useCallback(() => {
     setAutoPausedMessage(null);
@@ -576,8 +581,8 @@ export default function PracticePage() {
           : undefined;
 
       const session = {
-        pieceId: selectedSong.id,
-        pieceName: activeDrill ? activeDrill.song : selectedSong.title,
+        pieceId: selectedSong?.id || "unknown",
+        pieceName: activeDrill ? activeDrill.song : (selectedSong?.title || "미지정 곡"),
         startTime: sessionStartTime,
         endTime: completedSession.endTime || new Date(),
         totalTime: analysisResult.totalDuration,
@@ -1179,9 +1184,9 @@ export default function PracticePage() {
               <div className="mt-8 pt-5 border-t border-gray-100">
                 <h4 className="text-base font-bold text-gray-900">{calSelectedDate.getMonth() + 1}월 {calSelectedDate.getDate()}일 {calWeekdayNames[calSelectedDate.getDay()]}</h4>
                 {calIsSelectedToday ? (
-                  <p className="text-sm text-gray-500 mt-0.5">{totalDrillCount}개 드릴 · {calSelectedSessions.length}개 세션</p>
+                  <p className="text-sm text-gray-500 mt-0.5">{totalDrillCount}개 연습 · {calSelectedSessions.length}개 녹음</p>
                 ) : calSelectedSessions.length > 0 ? (
-                  <p className="text-sm text-gray-500 mt-0.5">{calSelectedSessions.length}개 세션</p>
+                  <p className="text-sm text-gray-500 mt-0.5">{calSelectedSessions.length}개 녹음</p>
                 ) : (
                   <p className="text-sm text-gray-400 mt-0.5">연습 기록이 없습니다</p>
                 )}
@@ -1357,7 +1362,7 @@ export default function PracticePage() {
         analysisResult={analysisResult}
         audioUrl={recordedAudio?.url}
         dailyGoal={dailyGoal}
-        songName={selectedSong.title}
+        songName={selectedSong?.title}
         todoNote={selectedTodo
           ? selectedTodo.measureStart > 0 && selectedTodo.measureEnd > 0
             ? `${selectedTodo.measureStart}-${selectedTodo.measureEnd}마디${selectedTodo.note ? ` · ${selectedTodo.note}` : ""}`

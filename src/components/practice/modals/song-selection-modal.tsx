@@ -8,7 +8,7 @@ interface SongSelectionModalProps {
   isOpen: boolean;
   onClose: () => void;
   songs: Song[];
-  selectedSong: Song;
+  selectedSong: Song | null;
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onSelectSong: (song: Song) => void;
@@ -67,7 +67,7 @@ export function SongSelectionModal({
               key={song.id}
               onClick={() => onSelectSong(song)}
               className={`w-full p-4 rounded-xl border transition-all text-left ${
-                selectedSong.id === song.id
+                selectedSong?.id === song.id
                   ? "border-primary bg-primary/5"
                   : "border-border bg-card hover:bg-accent"
               }`}
@@ -75,12 +75,12 @@ export function SongSelectionModal({
               <div className="flex items-center gap-3">
                 <div
                   className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                    selectedSong.id === song.id ? "bg-primary/10" : "bg-secondary"
+                    selectedSong?.id === song.id ? "bg-primary/10" : "bg-secondary"
                   }`}
                 >
                   <Music
                     className={`w-5 h-5 ${
-                      selectedSong.id === song.id
+                      selectedSong?.id === song.id
                         ? "text-primary"
                         : "text-muted-foreground"
                     }`}
@@ -93,7 +93,7 @@ export function SongSelectionModal({
                   </p>
                 </div>
                 <div className="text-right">
-                  {selectedSong.id === song.id ? (
+                  {selectedSong?.id === song.id ? (
                     <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
                       <Check className="w-4 h-4 text-white" />
                     </div>

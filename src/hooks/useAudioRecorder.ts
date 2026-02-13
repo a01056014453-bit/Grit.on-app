@@ -114,6 +114,7 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
   // Time-based hysteresis refs
   const lastPianoDetectedTimeRef = useRef<number>(0);
   const lastSilenceDetectedTimeRef = useRef<number>(0);
+  const debugCounterRef = useRef<number>(0);
   const PIANO_ON_DELAY_MS = 30;
   const PIANO_OFF_DELAY_MS = 1000;
 
@@ -203,8 +204,16 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
 
       if (calibrationSamplesRef.current.length >= 60) {
         const sortedSamples = [...calibrationSamplesRef.current].sort((a, b) => a - b);
-        const percentile90Index = Math.floor(sortedSamples.length * 0.9);
-        noiseFloorDecibelRef.current = sortedSamples[percentile90Index] + 3;
+        // Use median (50th percentile) instead of 90th to avoid inflating noise floor
+        // Phone AGC compresses dynamic range, so we need a tighter baseline
+        const medianIndex = Math.floor(sortedSamples.length * 0.5);
+        noiseFloorDecibelRef.current = sortedSamples[medianIndex] + 2;
+        console.log('[AudioClassifier] Calibration complete:', {
+          median: sortedSamples[medianIndex],
+          p90: sortedSamples[Math.floor(sortedSamples.length * 0.9)],
+          noiseFloor: noiseFloorDecibelRef.current,
+          samples: sortedSamples.slice(0, 5).concat(['...'] as any, sortedSamples.slice(-5)),
+        });
         noiseFloorRef.current = peakVolume;
         isCalibrationCompleteRef.current = true;
 
@@ -289,11 +298,16 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
     // Classify based on features
     // Use calibrated noise floor for silence detection (decibel-based, not raw energy)
     const noiseFloorDb = noiseFloorDecibelRef.current;
-    const silenceMargin = 3; // dB above noise floor still counts as silence
-    const soundMargin = 8;   // dB above noise floor needed for confident classification
+    const silenceMargin = 1; // dB above noise floor still counts as silence
+    const soundMargin = 4;   // dB above noise floor needed for confident classification
 
     let label: AudioLabel = "SILENCE";
     let confidence = 0.5;
+
+    // Debug: log every 30 frames (~1 per second)
+    if (!debugCounterRef.current) debugCounterRef.current = 0;
+    debugCounterRef.current++;
+    const shouldLog = debugCounterRef.current % 30 === 0;
 
     if (!isCalibrationCompleteRef.current || decibel <= noiseFloorDb + silenceMargin) {
       // Below or near noise floor → silence
@@ -303,16 +317,22 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
       label = "METRONOME_ONLY";
       confidence = 0.85;
     } else if (decibel < noiseFloorDb + soundMargin) {
-      // Slightly above noise floor but not enough for confident classification
-      label = "NOISE";
-      confidence = 0.6;
+      // Slightly above noise floor — check if it looks like quiet speech
+      // Quiet speech still has energy concentrated in voice range
+      if (voiceRatio > 0.45 && pianoHighRatio < 0.30 && spectralCentroid < 2500) {
+        label = "VOICE";
+        confidence = 0.65;
+      } else {
+        label = "NOISE";
+        confidence = 0.6;
+      }
     } else {
       // Clearly above noise floor → classify based on spectral features
-      // Voice detection:
-      // - Concentrated energy in voice range (300-2500 Hz)
-      // - Low energy in high frequencies (>4000 Hz)
-      // - Spectral centroid typically 500-2000 Hz
-      const isVoiceLike = voiceRatio > 0.55 && pianoHighRatio < 0.15 && spectralCentroid < 2200;
+      // Voice detection (relaxed):
+      // - Energy concentrated in voice range (300-2500 Hz)
+      // - Limited but not zero high frequency energy (speech has sibilants)
+      // - Spectral centroid typically 300-2500 Hz
+      const isVoiceLike = voiceRatio > 0.45 && pianoHighRatio < 0.30 && spectralCentroid < 2500;
 
       // Piano detection:
       // - Significant high frequency content
@@ -345,6 +365,16 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
         label = "NOISE";
         confidence = 0.6;
       }
+    }
+
+    if (shouldLog) {
+      console.log('[AudioClassifier]', {
+        label, confidence: confidence.toFixed(2),
+        dB: decibel.toFixed(1), noiseFloor: noiseFloorDb.toFixed(1),
+        delta: (decibel - noiseFloorDb).toFixed(1),
+        voiceRatio: voiceRatio.toFixed(2), pianoHighRatio: pianoHighRatio.toFixed(2),
+        centroid: spectralCentroid.toFixed(0), totalEnergy: totalEnergy.toFixed(0),
+      });
     }
 
     // Update piano detection state based on classification

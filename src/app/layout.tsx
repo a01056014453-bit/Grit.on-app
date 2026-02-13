@@ -64,6 +64,8 @@ export const viewport: Viewport = {
   themeColor: "#8B5CF6",
 };
 
+const isDev = process.env.NODE_ENV === "development";
+
 export default function RootLayout({
   children,
 }: {
@@ -71,7 +73,29 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko">
-      <body className={`${montserrat.variable} antialiased`}>{children}</body>
+      <body className={`${montserrat.variable} antialiased`}>
+        {isDev && (
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+                if ('serviceWorker' in navigator) {
+                  navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                    registrations.forEach(function(registration) {
+                      registration.unregister();
+                    });
+                  });
+                  if ('caches' in window) {
+                    caches.keys().then(function(names) {
+                      names.forEach(function(name) { caches.delete(name); });
+                    });
+                  }
+                }
+              `,
+            }}
+          />
+        )}
+        {children}
+      </body>
     </html>
   );
 }

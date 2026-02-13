@@ -25,12 +25,18 @@ import {
   Pencil,
   X,
   Trash2,
+  GraduationCap,
+  Shield,
+  ToggleLeft,
+  ToggleRight,
 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { getAllSessions, getPracticeStats } from "@/lib/db";
+import { useTeacherMode } from "@/hooks/useTeacherMode";
+import { TeacherVerificationStatus } from "@/types";
 
 const defaultUser = {
-  nickname: "피아노하는민지",
+  nickname: "지민",
   instrument: "피아노",
   grade: "고2",
   type: "전공", // "전공" | "취미"
@@ -117,6 +123,9 @@ export default function ProfilePage() {
   const [currentStreak, setCurrentStreak] = useState(0);
   const [badges, setBadges] = useState<Badge[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // 선생님 모드
+  const { isTeacher, teacherMode, verificationStatus, toggleMode, reload: reloadTeacher } = useTeacherMode();
 
   // 초기 프로필 로드
   useEffect(() => {
@@ -482,6 +491,70 @@ export default function ProfilePage() {
         </div>
       </div>
 
+      {/* Teacher Section */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden mb-6">
+        <h3 className="px-4 py-3 text-sm font-semibold text-gray-900 border-b border-gray-100 bg-gray-50/50">
+          선생님
+        </h3>
+        {isTeacher ? (
+          <>
+            <div className="flex items-center justify-between px-4 py-3.5 border-b border-gray-50">
+              <div className="flex items-center gap-3">
+                <Shield className="w-5 h-5 text-green-500" />
+                <div>
+                  <span className="text-sm text-gray-700">인증 상태</span>
+                  <span className="ml-2 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                    인증됨
+                  </span>
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                toggleMode();
+                reloadTeacher();
+              }}
+              className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                {teacherMode ? (
+                  <ToggleRight className="w-5 h-5 text-violet-600" />
+                ) : (
+                  <ToggleLeft className="w-5 h-5 text-gray-400" />
+                )}
+                <span className="text-sm text-gray-700">선생님 모드</span>
+              </div>
+              <div className={`w-11 h-6 rounded-full relative transition-colors ${teacherMode ? "bg-violet-600" : "bg-gray-300"}`}>
+                <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${teacherMode ? "translate-x-5" : "translate-x-0.5"}`} />
+              </div>
+            </button>
+          </>
+        ) : (
+          <Link
+            href="/profile/teacher-register"
+            className="flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <GraduationCap className="w-5 h-5 text-violet-500" />
+              <div>
+                <span className="text-sm text-gray-700">선생님 등록</span>
+                {verificationStatus === "pending" && (
+                  <span className="ml-2 px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-medium rounded-full">
+                    심사중
+                  </span>
+                )}
+                {verificationStatus === "rejected" && (
+                  <span className="ml-2 px-2 py-0.5 bg-red-100 text-red-700 text-xs font-medium rounded-full">
+                    반려됨
+                  </span>
+                )}
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-gray-400" />
+          </Link>
+        )}
+      </div>
+
       {/* Settings List */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden mb-8">
         <h3 className="px-4 py-3 text-sm font-semibold text-gray-900 border-b border-gray-100 bg-gray-50/50">
@@ -523,9 +596,9 @@ export default function ProfilePage() {
           </div>
         ) : (
           <div className="divide-y divide-gray-50">
-            {analyses.slice(0, 5).map((item) => (
+            {analyses.slice(0, 5).map((item, idx) => (
               <Link
-                key={item.id}
+                key={`${item.id}-${idx}`}
                 href={`/songs/${item.id}`}
                 className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
               >

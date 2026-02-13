@@ -7,3 +7,4 @@ export * from "./song-analysis";
 export * from "./room";
 export * from "./ranking";
 export * from "./piece";
+export * from "./teacher-mode";

@@ -265,8 +265,8 @@ export function classifyAudio(
 
   // Classification logic
 
-  // 1. Check for silence
-  if (totalEnergy < 80) {
+  // 1. Check for silence (lowered threshold — speech through phone mic can be quiet)
+  if (totalEnergy < 25) {
     return {
       label: "SILENCE",
       confidence: 0.95,
@@ -275,7 +275,7 @@ export function classifyAudio(
   }
 
   // 2. Check for metronome-only (high flatness, near beat time, low sustained energy)
-  if (metronomeActive && isPeriodic && totalEnergy < 150) {
+  if (metronomeActive && isPeriodic && totalEnergy < 100) {
     return {
       label: "METRONOME_ONLY",
       confidence: 0.85,
@@ -285,20 +285,33 @@ export function classifyAudio(
 
   // 3. Check for voice
   // Voice characteristics:
-  // - Energy concentrated in 100-2000Hz (lowMidRatio > 0.65)
-  // - Weak high frequencies (highFreqRatio < 0.25)
+  // - Energy concentrated in 100-2000Hz
+  // - Weak high frequencies
   // - Moderate harmonic ratio (formants)
-  // - Spectral centroid typically 300-2000Hz
-  const isVoiceLike =
-    lowMidRatio > 0.65 &&
-    highFreqRatio < 0.25 &&
+  // - Spectral centroid typically 200-2500Hz
+  // Primary voice path: strict conditions
+  const isVoiceLikePrimary =
+    lowMidRatio > 0.6 &&
+    highFreqRatio < 0.3 &&
     spectralCentroid < 2500 &&
-    spectralCentroid > 200 &&
-    harmonicRatio > 0.2 &&
-    harmonicRatio < 0.7;
+    spectralCentroid > 150 &&
+    harmonicRatio > 0.15;
 
-  if (isVoiceLike) {
-    const voiceConfidence = Math.min(0.9, 0.5 + lowMidRatio * 0.3 + (0.25 - highFreqRatio));
+  // Secondary voice path: quieter speech (totalEnergy 25-120)
+  // Relaxed conditions for low-energy speech
+  const isVoiceLikeQuiet =
+    totalEnergy < 120 &&
+    totalEnergy >= 25 &&
+    lowMidRatio > 0.55 &&
+    highFreqRatio < 0.35 &&
+    spectralCentroid > 100 &&
+    spectralCentroid < 3000 &&
+    spectralFlatness < 0.85;
+
+  if (isVoiceLikePrimary || isVoiceLikeQuiet) {
+    const voiceConfidence = isVoiceLikePrimary
+      ? Math.min(0.9, 0.5 + lowMidRatio * 0.3 + (0.3 - highFreqRatio))
+      : Math.min(0.8, 0.4 + lowMidRatio * 0.3);
     return {
       label: "VOICE",
       confidence: voiceConfidence,
@@ -325,7 +338,7 @@ export function classifyAudio(
   const spreadRatio = minEnergy / maxEnergy;
   const hasEvenSpread = spreadRatio > 0.15;
 
-  if ((hasPianoCharacteristics || hasEvenSpread) && !isVoiceLike) {
+  if ((hasPianoCharacteristics || hasEvenSpread) && !isVoiceLikePrimary) {
     const pianoConfidence = Math.min(
       0.95,
       0.5 + highFreqRatio * 0.5 + veryHighRatio * 1.0 + harmonicRatio * 0.3
@@ -337,7 +350,16 @@ export function classifyAudio(
     };
   }
 
-  // 5. Default to noise if nothing else matches
+  // 5. Low energy but not silence — likely quiet voice or ambient
+  if (totalEnergy < 60) {
+    return {
+      label: "SILENCE",
+      confidence: 0.7,
+      features,
+    };
+  }
+
+  // 6. Default to noise if nothing else matches
   return {
     label: "NOISE",
     confidence: 0.6,

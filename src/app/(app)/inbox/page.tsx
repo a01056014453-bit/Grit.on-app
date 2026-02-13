@@ -6,15 +6,20 @@ import { Inbox, Clock, CheckCircle, Bell, ChevronRight, AlertCircle } from "luci
 import { RequestStatusChip } from "@/components/feedback/request-status-chip";
 import { getFeedbackRequestsForTeacher, getRemainingTime } from "@/lib/feedback-store";
 import { FeedbackRequestStatus, PROBLEM_TYPE_LABELS } from "@/types";
+import { getTeacherProfile } from "@/lib/teacher-store";
 
 type TabType = "pending" | "active" | "completed";
 
-// Mock: current teacher ID (in real app, this would come from auth)
-const CURRENT_TEACHER_ID = "t1";
+function getCurrentTeacherId(): string {
+  if (typeof window === "undefined") return "t1";
+  const profile = getTeacherProfile();
+  return profile.teacherProfileId || "t1";
+}
 
 export default function InboxPage() {
   const [tab, setTab] = useState<TabType>("pending");
-  const requests = getFeedbackRequestsForTeacher(CURRENT_TEACHER_ID);
+  const teacherId = getCurrentTeacherId();
+  const requests = getFeedbackRequestsForTeacher(teacherId);
 
   const pendingRequests = requests.filter((r) => r.status === "SENT");
   const activeRequests = requests.filter((r) => r.status === "ACCEPTED");

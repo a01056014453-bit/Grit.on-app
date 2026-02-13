@@ -725,9 +725,9 @@ export default function GoalsPage() {
           <div className="mb-4">
             <p className="font-bold text-black text-lg">{formatDateDisplay(selectedDate)}</p>
             <p className="text-sm text-gray-500">
-              {selectedDateDrills.length > 0 && `${selectedDateDrills.length}개 드릴`}
+              {selectedDateDrills.length > 0 && `${selectedDateDrills.length}개 연습`}
               {selectedDateDrills.length > 0 && selectedDateSessions.length > 0 && " · "}
-              {selectedDateSessions.length > 0 && `${selectedDateSessions.length}개 세션`}
+              {selectedDateSessions.length > 0 && `${selectedDateSessions.length}개 녹음`}
               {selectedDateDrills.length === 0 && selectedDateSessions.length === 0 && "기록 없음"}
             </p>
           </div>

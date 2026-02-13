@@ -6,11 +6,22 @@ import { Play, ChevronRight, ChevronLeft, Search, Users, GraduationCap, Music, C
 import { StatsCard, DailyGoal } from "@/components/app";
 import { TodayDrillList } from "@/components/practice";
 import { mockUser, mockStats, getGreeting, mockDrillCards } from "@/data";
-import { getTodayPracticeTime, getPracticeStats, type PracticeSession } from "@/lib/db";
+import { getTodayPracticeTime, getPracticeStats, clearAllSessions, type PracticeSession } from "@/lib/db";
 import { usePracticeSessions } from "@/hooks/usePracticeSessions";
 import { formatTime } from "@/lib/format";
+import { useTeacherMode } from "@/hooks/useTeacherMode";
+import { TeacherDashboard } from "@/components/teacher";
 
 export default function HomePage() {
+  const { isTeacher, teacherMode, teacherProfileId, toggleMode } = useTeacherMode();
+
+  // 선생님 모드일 때 대시보드 렌더링
+  if (isTeacher && teacherMode) {
+    return <TeacherDashboard teacherProfileId={teacherProfileId || "t8"} onToggleMode={toggleMode} />;
+  }
+  // TODO: 목데이터 클리어 (1회 실행 후 제거)
+  useEffect(() => { clearAllSessions(); }, []);
+
   const greeting = getGreeting();
 
   // 하루에 한 번 바뀌는 인사 멘트
@@ -368,9 +379,9 @@ export default function HomePage() {
           <div className="mt-8 pt-5 border-t border-gray-100">
             <h4 className="text-base font-bold text-gray-900">{selectedDate.getMonth() + 1}월 {selectedDate.getDate()}일 {weekdayNames[selectedDate.getDay()]}</h4>
             {calIsSelectedToday ? (
-              <p className="text-sm text-gray-500 mt-0.5">{totalDrillCount}개 드릴 · {selectedDateSessions.length}개 세션</p>
+              <p className="text-sm text-gray-500 mt-0.5">{totalDrillCount}개 연습 · {selectedDateSessions.length}개 녹음</p>
             ) : selectedDateSessions.length > 0 ? (
-              <p className="text-sm text-gray-500 mt-0.5">{selectedDateSessions.length}개 세션</p>
+              <p className="text-sm text-gray-500 mt-0.5">{selectedDateSessions.length}개 녹음</p>
             ) : (
               <p className="text-sm text-gray-400 mt-0.5">연습 기록이 없습니다</p>
             )}
