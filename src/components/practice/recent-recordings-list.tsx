@@ -87,6 +87,8 @@ export function RecentRecordingsList({ sessions, onSessionDeleted }: RecentRecor
     setSelectedSession(session);
     setIsPlaying(false);
     setCurrentTime(0);
+    // Blob 오디오는 duration 메타데이터가 없는 경우가 많으므로 세션 시간을 fallback으로 사용
+    setDuration(session.totalTime || 0);
   };
 
   // Close modal
@@ -150,7 +152,20 @@ export function RecentRecordingsList({ sessions, onSessionDeleted }: RecentRecor
   // Handle loaded metadata
   const handleLoadedMetadata = () => {
     if (audioRef.current) {
-      setDuration(audioRef.current.duration);
+      const d = audioRef.current.duration;
+      if (isFinite(d) && d > 0) {
+        setDuration(d);
+      }
+    }
+  };
+
+  // Handle duration change (Blob URLs often fire this after loadedmetadata with the real duration)
+  const handleDurationChange = () => {
+    if (audioRef.current) {
+      const d = audioRef.current.duration;
+      if (isFinite(d) && d > 0) {
+        setDuration(d);
+      }
     }
   };
 
@@ -261,8 +276,10 @@ export function RecentRecordingsList({ sessions, onSessionDeleted }: RecentRecor
               <audio
                 ref={audioRef}
                 src={audioUrl}
+                preload="metadata"
                 onTimeUpdate={handleTimeUpdate}
                 onLoadedMetadata={handleLoadedMetadata}
+                onDurationChange={handleDurationChange}
                 onEnded={handleAudioEnded}
               />
             )}
@@ -426,7 +443,8 @@ export function RecentRecordingsList({ sessions, onSessionDeleted }: RecentRecor
                     <input
                       type="range"
                       min={0}
-                      max={duration || 100}
+                      max={duration > 0 ? duration : 1}
+                      step={0.01}
                       value={currentTime}
                       onChange={handleSeek}
                       className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black"

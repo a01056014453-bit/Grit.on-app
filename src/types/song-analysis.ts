@@ -71,6 +71,7 @@ export interface AnalyzeSongRequest {
   composer: string;
   title: string;
   forceRefresh?: boolean; // 캐시 무시하고 재분석
+  sheetMusicImages?: string[]; // 악보 이미지 base64 data URL 배열 (선택)
 }
 
 /** API 응답 타입 */

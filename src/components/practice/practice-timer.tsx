@@ -295,7 +295,7 @@ export function PracticeTimer({
         </div>
 
         {/* Metronome Section */}
-        <div className="mt-6 mb-4 mx-auto max-w-xs bg-white rounded-2xl border border-gray-100">
+        <div className="mt-6 mb-4 mx-auto max-w-xs bg-white/40 backdrop-blur-xl rounded-3xl border border-white/50 shadow-sm">
           <MetronomeControl
             onStateChange={onMetronomeStateChange}
             disabled={metronomeDisabled}

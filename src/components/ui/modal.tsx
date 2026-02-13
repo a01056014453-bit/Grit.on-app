@@ -34,17 +34,17 @@ export function Modal({ isOpen, onClose, title, children, showClose = true }: Mo
       />
 
       {/* Modal Content */}
-      <div className="relative w-full max-w-lg bg-card text-card-foreground rounded-t-3xl max-h-[85vh] overflow-hidden animate-slide-up">
+      <div className="relative w-full max-w-lg bg-gradient-to-b from-violet-200 via-violet-100/80 to-white rounded-t-3xl max-h-[85vh] overflow-hidden animate-slide-up">
         {/* Header */}
         {(title || showClose) && (
-          <div className="sticky top-0 bg-card border-b border-border px-5 py-4 flex items-center justify-between z-10">
-            <h2 className="text-lg font-bold">{title}</h2>
+          <div className="sticky top-0 bg-white/30 backdrop-blur-xl border-b border-white/30 px-5 py-4 flex items-center justify-between z-10">
+            <h2 className="text-lg font-bold text-gray-900">{title}</h2>
             {showClose && (
               <button
                 onClick={onClose}
-                className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors"
+                className="w-8 h-8 rounded-full bg-white/40 backdrop-blur-sm flex items-center justify-center hover:bg-white/60 transition-colors"
               >
-                <X className="w-4 h-4 text-muted-foreground" />
+                <X className="w-4 h-4 text-gray-500" />
               </button>
             )}
           </div>

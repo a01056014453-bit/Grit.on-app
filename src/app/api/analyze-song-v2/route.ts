@@ -135,6 +135,12 @@ function createMusicologistPrompt(composer: string, title: string): string {
 ### 4. structure_analysis (곡 구조 - 🔥 형식 맞춤 분석)
 **⚠️ 핵심: 곡의 실제 형식(Form)에 맞는 용어와 구조로 분석할 것!**
 
+**🚨 절대 규칙: 다악장/다곡 구성의 작품은 반드시 모든 악장/곡을 빠짐없이 분석할 것!**
+- 소나타 3악장 → 3악장 모두 분석
+- 모음곡 8곡 → 8곡 모두 분석 (예: Kreisleriana 8곡, Kinderszenen 13곡, Carnaval 전곡)
+- 변주곡 → Theme + 모든 Variation 개별 분석
+- **절대 앞의 일부만 분석하고 생략하지 말 것. 하나라도 누락하면 분석 실패로 간주.**
+
 **형식별 분석 방법 (해당 형식의 용어만 사용):**
 
 **[소나타 형식]** Sonata, Sonatina
@@ -199,12 +205,37 @@ function createMusicologistPrompt(composer: string, title: string): string {
   * section: **해당 형식에 맞는 용어만** 사용
   * character: 한 문장 성격 묘사
   * description: 2-3문장 상세 설명 (조성, 리듬, 텍스처)
+- **🚨 다악장/다곡 작품은 모든 악장/곡을 반드시 개별 항목으로 나열할 것! 절대 생략 금지!**
 
 ### 5. technique_tips (테크닉 팁 - 🔥 3가지 카테고리 전문 솔루션)
 **⚠️ 핵심: 일반론 금지, 즉각 적용 가능한 구체적 솔루션만!**
 
+**🚨 절대 규칙: structure_analysis의 모든 섹션/악장/곡에 대해 각각 최소 1개의 technique_tip을 반드시 작성할 것!**
+- 8곡 구성 → technique_tips도 최소 8개 (각 곡당 1개 이상)
+- 3악장 소나타 → 최소 3개 (각 악장당 1개 이상)
+- **structure_analysis에 있는 섹션 중 technique_tip이 없는 섹션이 하나라도 있으면 안 됨**
+
+**🚨 중복 금지 - 이것을 반드시 지켜야 합니다:**
+- **각 곡/악장의 technique_tip은 반드시 해당 곡의 고유한 음악적 특징에 맞는 솔루션이어야 함**
+- **다른 곡과 동일하거나 유사한 problem/solution/practice를 절대 반복 사용 금지**
+- 각 곡은 조성, 템포, 텍스처, 기술적 요구가 모두 다르므로 솔루션도 반드시 달라야 함
+- 예를 들어 Kreisleriana에서:
+  * 1번(d단조, Äußerst bewegt): 빠른 아르페지오와 도약 → 팔 전체의 회전 운동
+  * 2번(B♭장조, Sehr innig): 내성부 voicing과 폴리포니 → 각 성부 독립 연습
+  * 3번(g단조, Sehr aufgeregt): 격렬한 화음 연타 → 손목 탄력과 팔 무게 낙하
+  * ... 이처럼 각 곡의 실제 악보 내용에 기반한 고유한 솔루션 제시
+- "손가락 독립성", "손목 유연성" 같은 일반적 표현을 여러 곡에 반복 사용하면 분석 실패
+
+**🔬 각 technique_tip에 반드시 포함할 구체적 요소:**
+- 해당 곡/악장에 실제로 등장하는 **구체적 음형** (예: 3도 병행, 옥타브 트레몰로, 반음계 하행 등)
+- **구체적 운지법/손 배치** (예: 1-2-4 운지, 엄지 넘기기, 손 교차 등)
+- **구체적 음악 기호/지시어** (예: sf에서의 팔 낙하, pp leggiero에서의 손끝 터치 등)
+- 해당 곡만의 **고유한 기술적 난점** (예: 2번 Intermezzo의 내성부 선율 vs 7번의 푸가적 성부 처리)
+
 **❌ 금지 표현:**
 - "느리게 연습하세요" / "반복 연습하세요" / "손가락 힘을 길러야 합니다"
+- "손가락 독립성 강화", "손목 유연성 유지" 등 구체성 없는 일반론
+- 동일한 solution/practice 문장을 2개 이상의 곡에 사용하는 것
 
 **✅ 필수 포함:**
 각 항목은 다음 구조로 작성:
@@ -329,7 +360,8 @@ function parseAndValidateResponse(
 export async function POST(request: Request) {
   try {
     const body: AnalyzeSongRequest = await request.json();
-    const { composer, title, forceRefresh = false } = body;
+    const { composer, title, forceRefresh = false, sheetMusicImages } = body;
+    const hasImages = sheetMusicImages && sheetMusicImages.length > 0;
 
     if (!composer || !title) {
       const response: AnalyzeSongResponse = {
@@ -339,8 +371,8 @@ export async function POST(request: Request) {
       return NextResponse.json(response, { status: 400 });
     }
 
-    // 1. 캐시 확인 (forceRefresh가 false일 때만)
-    if (!forceRefresh) {
+    // 1. 캐시 확인 (forceRefresh가 false이고 악보 이미지가 없을 때만)
+    if (!forceRefresh && !hasImages) {
       const cachedAnalysis = await getCachedAnalysis(composer, title);
       if (cachedAnalysis) {
         console.log(`[Cache HIT] ${composer} - ${title}`);
@@ -367,11 +399,31 @@ export async function POST(request: Request) {
 
     const prompt = createMusicologistPrompt(composer, title);
 
+    // 악보 이미지가 있으면 Vision API로 호출
+    let messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[];
+
+    if (hasImages) {
+      console.log(`[Vision] ${sheetMusicImages.length}장의 악보 이미지 포함`);
+      const imagePromptPrefix = `\n\n[🎼 첨부된 악보 이미지 분석 지침]\n첨부된 악보 이미지를 반드시 참조하여 분석하십시오.\n- 실제 악보에 표기된 정확한 마디 번호를 사용할 것\n- 실제 음형, 음정, 리듬 패턴을 악보에서 직접 읽어서 기술할 것\n- 아티큘레이션, 다이내믹, 페달 기호 등 악보에 표기된 모든 연주 지시를 반영할 것\n- 운지법이 표기되어 있다면 이를 참조하여 테크닉 솔루션을 제시할 것\n- 악보에서 확인할 수 없는 정보는 추측하지 말 것`;
+
+      const contentParts: OpenAI.Chat.Completions.ChatCompletionContentPart[] = [
+        { type: "text", text: prompt + imagePromptPrefix },
+        ...sheetMusicImages.map((img): OpenAI.Chat.Completions.ChatCompletionContentPart => ({
+          type: "image_url",
+          image_url: { url: img, detail: "high" },
+        })),
+      ];
+
+      messages = [{ role: "user", content: contentParts }];
+    } else {
+      messages = [{ role: "user", content: prompt }];
+    }
+
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
-      messages: [{ role: "user", content: prompt }],
-      max_tokens: 8192,
-      temperature: 0.1, // 낮은 temperature로 정확성 극대화
+      messages,
+      max_tokens: 16384,
+      temperature: 0.3,
     });
 
     const responseText = completion.choices[0]?.message?.content || "";

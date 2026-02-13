@@ -33,85 +33,44 @@ const TripletIcon = ({ className = "" }: { className?: string }) => (
 // 점8분+16분 아이콘 (Dotted eighth + sixteenth)
 const DottedEighthIcon = ({ className = "" }: { className?: string }) => (
   <svg viewBox="0 0 40 36" fill="currentColor" className={className}>
-    {/* Beam */}
-    <rect x="7" y="8" width="26" height="2.5" />
-    {/* Stem 1 (left) */}
-    <rect x="8" y="8" width="2" height="16" />
-    {/* Stem 2 (right) */}
-    <rect x="30" y="8" width="2" height="16" />
-    {/* Note head 1 - dotted note (larger) */}
-    <ellipse cx="6" cy="26" rx="4" ry="2.8" transform="rotate(-20 6 26)" />
-    {/* Dot for dotted note */}
-    <circle cx="13" cy="25" r="1.5" />
-    {/* Note head 2 - sixteenth (smaller) */}
-    <ellipse cx="28" cy="26" rx="3" ry="2.2" transform="rotate(-20 28 26)" />
+    {/* Top beam */}
+    <rect x="7" y="8" width="26" height="3" />
+    {/* Second beam (right only - 16th note) */}
+    <rect x="19" y="13" width="14" height="3" />
+    {/* Left stem */}
+    <rect x="8" y="8" width="2" height="17" />
+    {/* Right stem */}
+    <rect x="30" y="8" width="2" height="17" />
+    {/* Left note head */}
+    <ellipse cx="6" cy="27" rx="3" ry="2.2" transform="rotate(-20 6 27)" />
+    {/* Dot */}
+    <circle cx="12" cy="26" r="1.3" />
+    {/* Right note head */}
+    <ellipse cx="28" cy="27" rx="3" ry="2.2" transform="rotate(-20 28 27)" />
   </svg>
 );
 
 // 16분+점8분 아이콘 (Sixteenth + dotted eighth) - 역방향
 const ReverseDottedIcon = ({ className = "" }: { className?: string }) => (
   <svg viewBox="0 0 40 36" fill="currentColor" className={className}>
-    {/* Beam */}
-    <rect x="7" y="8" width="26" height="2.5" />
-    {/* Stem 1 (left) */}
-    <rect x="8" y="8" width="2" height="16" />
-    {/* Stem 2 (right) */}
-    <rect x="30" y="8" width="2" height="16" />
-    {/* Note head 1 - sixteenth (smaller) */}
-    <ellipse cx="6" cy="26" rx="3" ry="2.2" transform="rotate(-20 6 26)" />
-    {/* Note head 2 - dotted note (larger) */}
-    <ellipse cx="28" cy="26" rx="4" ry="2.8" transform="rotate(-20 28 26)" />
-    {/* Dot for dotted note */}
-    <circle cx="35" cy="25" r="1.5" />
+    {/* Top beam */}
+    <rect x="7" y="8" width="26" height="3" />
+    {/* Second beam (left only - 16th note) */}
+    <rect x="7" y="13" width="14" height="3" />
+    {/* Left stem */}
+    <rect x="8" y="8" width="2" height="17" />
+    {/* Right stem */}
+    <rect x="30" y="8" width="2" height="17" />
+    {/* Left note head */}
+    <ellipse cx="6" cy="27" rx="3" ry="2.2" transform="rotate(-20 6 27)" />
+    {/* Right note head */}
+    <ellipse cx="28" cy="27" rx="3" ry="2.2" transform="rotate(-20 28 27)" />
+    {/* Dot */}
+    <circle cx="34" cy="26" r="1.3" />
   </svg>
 );
 
 // 스윙/셔플 아이콘
-const SwingIcon = ({ className = "" }: { className?: string }) => (
-  <svg viewBox="0 0 40 36" fill="currentColor" className={className}>
-    {/* Left bracket ┌─ */}
-    <polyline points="5,1 5,5 14,5" fill="none" stroke="currentColor" strokeWidth="1.5" />
-    {/* Right bracket ─┐ */}
-    <polyline points="35,1 35,5 26,5" fill="none" stroke="currentColor" strokeWidth="1.5" />
-    {/* Number 3 with equals sign */}
-    <text x="20" y="6" textAnchor="middle" fontSize="8" fontWeight="bold">♪=♪</text>
-    {/* Beam */}
-    <rect x="7" y="11" width="26" height="2.5" />
-    {/* Stem 1 (left) - longer */}
-    <rect x="8" y="11" width="2" height="16" />
-    {/* Stem 2 (right) - shorter */}
-    <rect x="30" y="11" width="2" height="12" />
-    {/* Note head 1 (larger - long note) */}
-    <ellipse cx="6" cy="29" rx="4" ry="2.8" transform="rotate(-20 6 29)" />
-    {/* Note head 2 (smaller - short note) */}
-    <ellipse cx="28" cy="25" rx="3" ry="2.2" transform="rotate(-20 28 25)" />
-  </svg>
-);
-
-// 싱코페이션 아이콘 (8분+4분+8분)
-const SyncopationIcon = ({ className = "" }: { className?: string }) => (
-  <svg viewBox="0 0 40 36" fill="currentColor" className={className}>
-    {/* Upper beam for first and third */}
-    <rect x="5" y="6" width="8" height="2" />
-    <rect x="27" y="6" width="8" height="2" />
-    {/* Stem 1 */}
-    <rect x="6" y="6" width="1.5" height="14" />
-    {/* Stem 2 (middle, taller) */}
-    <rect x="19" y="10" width="2" height="14" />
-    {/* Stem 3 */}
-    <rect x="33" y="6" width="1.5" height="14" />
-    {/* Note head 1 - eighth */}
-    <ellipse cx="5" cy="22" rx="3" ry="2" transform="rotate(-20 5 22)" />
-    {/* Note head 2 - quarter (larger, center) */}
-    <ellipse cx="17" cy="26" rx="4" ry="2.8" transform="rotate(-20 17 26)" />
-    {/* Note head 3 - eighth */}
-    <ellipse cx="32" cy="22" rx="3" ry="2" transform="rotate(-20 32 22)" />
-    {/* Tie arc */}
-    <path d="M 8,23 Q 13,27 17,26" fill="none" stroke="currentColor" strokeWidth="1" />
-    <path d="M 20,26 Q 25,27 30,23" fill="none" stroke="currentColor" strokeWidth="1" />
-  </svg>
-);
-
 // 8분음표 3개 묶음 (복합박자용)
 const ThreeEighthsIcon = ({ className = "" }: { className?: string }) => (
   <svg viewBox="0 0 40 36" fill="currentColor" className={className}>
@@ -187,8 +146,6 @@ const SUBDIVISIONS: SubdivisionPattern[] = [
   { id: "4", icon: "♬", label: "16분음표", pattern: [0.25, 0.25, 0.25, 0.25] },
   { id: "5", icon: "dotted", label: "점8분+16분", pattern: [0.75, 0.25] },
   { id: "6", icon: "reverse-dotted", label: "16분+점8분", pattern: [0.25, 0.75] },
-  { id: "7", icon: "swing", label: "스윙", pattern: [2/3, 1/3] },
-  { id: "8", icon: "syncopation", label: "싱코페이션", pattern: [0.25, 0.5, 0.25] },
 ];
 
 // Compound meter subdivisions (3/8, 6/8, 9/8, 12/8)
@@ -635,9 +592,9 @@ export function MetronomeControl({
             disabled={disabled}
           >
             <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-              isPlaying ? "bg-black" : "bg-gray-100"
+              isPlaying ? "bg-violet-600" : "bg-white/40"
             }`}>
-              <span className={`text-sm ${isPlaying ? "text-white" : "text-gray-400"}`}>♩</span>
+              <span className={`text-sm ${isPlaying ? "text-white" : "text-gray-500"}`}>♩</span>
             </div>
             <div className="text-left">
               <span className="font-semibold text-sm text-black">메트로놈</span>
@@ -654,8 +611,8 @@ export function MetronomeControl({
               disabled={disabled}
               className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
                 isPlaying
-                  ? "bg-black text-white"
-                  : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                  ? "bg-violet-600 text-white"
+                  : "bg-white/40 text-gray-500 hover:bg-white/60"
               } disabled:opacity-50`}
             >
               {isPlaying ? "ON" : "OFF"}
@@ -679,7 +636,7 @@ export function MetronomeControl({
       {/* Header */}
       <button
         onClick={() => setIsExpanded(false)}
-        className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors border-b border-gray-100"
+        className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/30 transition-colors border-b border-white/30"
       >
         <span className="font-semibold text-black">메트로놈</span>
         <ChevronUp className="w-5 h-5 text-gray-400" />
@@ -772,8 +729,8 @@ export function MetronomeControl({
                       : hasAccent
                       ? "bg-violet-500"
                       : isSoundBeat
-                      ? "bg-gray-600"
-                      : "bg-gray-700"
+                      ? "bg-gray-300"
+                      : "bg-gray-200"
                   }`}
                 >
                   {hasAccent && (
@@ -792,7 +749,7 @@ export function MetronomeControl({
       </div>
 
       {/* BPM Control */}
-      <div ref={bpmContainerRef} className="px-4 py-3 border-b border-gray-100">
+      <div ref={bpmContainerRef} className="px-4 py-3 border-b border-white/30">
         <div className="flex items-center justify-center gap-3 mb-2">
           <button
             onClick={() => setBpm(b => Math.max(20, b - 1))}
@@ -929,10 +886,6 @@ export function MetronomeControl({
                 <DottedEighthIcon className="w-7 h-6 text-gray-700" />
               ) : subdiv.icon === "reverse-dotted" ? (
                 <ReverseDottedIcon className="w-7 h-6 text-gray-700" />
-              ) : subdiv.icon === "swing" ? (
-                <SwingIcon className="w-7 h-6 text-gray-700" />
-              ) : subdiv.icon === "syncopation" ? (
-                <SyncopationIcon className="w-7 h-6 text-gray-700" />
               ) : subdiv.icon === "three-eighths" ? (
                 <ThreeEighthsIcon className="w-7 h-6 text-gray-700" />
               ) : subdiv.icon === "three-eighths-rest" ? (
@@ -972,10 +925,6 @@ export function MetronomeControl({
                           <DottedEighthIcon className="w-6 h-5" />
                         ) : item.icon === "reverse-dotted" ? (
                           <ReverseDottedIcon className="w-6 h-5" />
-                        ) : item.icon === "swing" ? (
-                          <SwingIcon className="w-6 h-5" />
-                        ) : item.icon === "syncopation" ? (
-                          <SyncopationIcon className="w-6 h-5" />
                         ) : item.icon === "three-eighths" ? (
                           <ThreeEighthsIcon className="w-6 h-5" />
                         ) : item.icon === "three-eighths-rest" ? (
@@ -983,7 +932,7 @@ export function MetronomeControl({
                         ) : (
                           <span className="text-base leading-none">{item.icon}</span>
                         )}
-                        <span className="text-[7px] mt-0.5 opacity-70">{item.label}</span>
+                        {null}
                       </button>
                     ))}
                   </div>

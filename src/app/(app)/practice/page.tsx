@@ -1018,12 +1018,12 @@ export default function PracticePage() {
   const planProgress = totalPlanMinutes > 0 ? (completedMinutes / totalPlanMinutes) * 100 : 0;
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto bg-gray-50 min-h-screen">
+    <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-gradient-to-b from-violet-300 via-violet-100/60 to-white">
       {/* Header */}
       <div className="flex items-start gap-3 mb-6">
         <button
           onClick={() => router.push("/")}
-          className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center shrink-0 hover:bg-gray-200 transition-colors"
+          className="w-10 h-10 rounded-full bg-white/30 backdrop-blur-sm flex items-center justify-center shrink-0 hover:bg-white/50 transition-colors border border-white/40"
         >
           <ChevronLeft className="w-5 h-5 text-gray-600" />
         </button>
@@ -1138,7 +1138,7 @@ export default function PracticePage() {
           {/* 연습 기록 - Calendar */}
           <div>
             <span className="inline-block font-bold text-sm text-violet-700 bg-violet-100 px-3.5 py-1 rounded-full mb-3">연습 기록</span>
-            <div className="bg-white rounded-2xl border border-gray-100 p-4">
+            <div className="bg-white/40 backdrop-blur-xl rounded-3xl border border-white/50 p-4 shadow-sm">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-gray-900">{calYear}년 {calMonth + 1}월</span>
@@ -1171,7 +1171,7 @@ export default function PracticePage() {
                   const dow = (calFirstDay + i) % 7;
                   return (
                     <button key={day} onClick={() => setCalSelectedDate(new Date(calYear, calMonth, day))} className="flex flex-col items-center py-0.5">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-colors ${isToday ? "bg-black text-white" : count > 0 ? "bg-violet-600 text-white" : "bg-gray-50"} ${isSelected && !isToday ? "ring-2 ring-violet-400" : ""}`}>
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-colors ${isToday ? "bg-violet-700 text-white" : count > 0 ? "bg-violet-500 text-white" : "bg-white/40"} ${isSelected && !isToday ? "ring-2 ring-violet-400" : ""}`}>
                         {count > 0 ? count : ""}
                       </div>
                       <span className={`text-[10px] mt-0.5 ${dow === 0 ? "text-red-400" : dow === 6 ? "text-blue-400" : "text-gray-500"}`}>{day}</span>
@@ -1181,7 +1181,7 @@ export default function PracticePage() {
               </div>
 
               {/* 선택된 날짜 상세 - 캘린더 안에 포함 */}
-              <div className="mt-8 pt-5 border-t border-gray-100">
+              <div className="mt-8 pt-5 border-t border-white/40">
                 <h4 className="text-base font-bold text-gray-900">{calSelectedDate.getMonth() + 1}월 {calSelectedDate.getDate()}일 {calWeekdayNames[calSelectedDate.getDay()]}</h4>
                 {calIsSelectedToday ? (
                   <p className="text-sm text-gray-500 mt-0.5">{totalDrillCount}개 연습 · {calSelectedSessions.length}개 녹음</p>
@@ -1201,8 +1201,8 @@ export default function PracticePage() {
                   <p className="text-xs text-gray-500 font-medium mt-3 mb-2">연습 세션</p>
                 )}
                 {calSelectedSessions.length === 0 && !calIsSelectedToday ? (
-                  <div className="text-center py-6 bg-gray-50 rounded-xl mt-3">
-                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-2"><Mic className="w-5 h-5 text-gray-400" /></div>
+                  <div className="text-center py-6 bg-white/30 backdrop-blur-sm rounded-2xl mt-3 border border-white/40">
+                    <div className="w-10 h-10 bg-white/40 rounded-full flex items-center justify-center mx-auto mb-2"><Mic className="w-5 h-5 text-violet-300" /></div>
                     <p className="text-sm text-gray-500">이 날은 연습 기록이 없습니다</p>
                   </div>
                 ) : (
@@ -1214,8 +1214,8 @@ export default function PracticePage() {
                       const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
                       const timeStr = `${ampm} ${h12.toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
                       return (
-                        <Link key={session.id} href={`/recordings/${session.id}`} className="flex items-center gap-3 bg-gray-50 rounded-xl p-3 hover:bg-gray-100 transition-all active:scale-[0.99]">
-                          <div className="w-9 h-9 bg-violet-100 rounded-lg flex items-center justify-center shrink-0"><Music2 className="w-4 h-4 text-violet-600" /></div>
+                        <Link key={session.id} href={`/recordings/${session.id}`} className="flex items-center gap-3 bg-white/30 backdrop-blur-sm rounded-2xl p-3 hover:bg-white/50 transition-all active:scale-[0.99] border border-white/40">
+                          <div className="w-9 h-9 bg-violet-100/60 backdrop-blur-sm rounded-xl flex items-center justify-center shrink-0"><Music2 className="w-4 h-4 text-violet-600" /></div>
                           <div className="flex-1 min-w-0">
                             <h4 className="text-sm font-semibold text-gray-900 truncate">{session.pieceName}</h4>
                             {session.todoNote && <p className="text-xs text-gray-500 truncate mt-0.5">{session.todoNote}</p>}
@@ -1236,7 +1236,7 @@ export default function PracticePage() {
 
           {/* Carry-over Drills from Yesterday */}
           {carryOverDrills.length > 0 && showCarryOver && (
-            <div className="bg-amber-50 rounded-2xl p-4 border border-amber-200">
+            <div className="bg-amber-50/60 backdrop-blur-xl rounded-3xl p-4 border border-amber-200/60 shadow-sm">
               <div className="flex items-center gap-2 mb-3">
                 <RotateCcw className="w-4 h-4 text-amber-600" />
                 <span className="font-semibold text-amber-800 text-sm">어제 못 끝낸 연습</span>
@@ -1273,7 +1273,7 @@ export default function PracticePage() {
 
           {/* Routines Section */}
           {routines.length > 0 && (
-            <div className="bg-white rounded-2xl p-4 border border-gray-200">
+            <div className="bg-white/40 backdrop-blur-xl rounded-3xl p-4 border border-white/50 shadow-sm">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <Repeat className="w-4 h-4 text-violet-600" />

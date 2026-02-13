@@ -186,28 +186,31 @@ export default function HomePage() {
   }
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto bg-gray-50 min-h-screen">
+    <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-gradient-to-b from-violet-300 via-violet-100/60 to-white">
       {/* Header */}
       <div className="flex items-center justify-between mb-8 pt-2">
-        <div>
-          <h1 className="text-2xl font-bold text-black leading-tight">
-            {greeting} {(() => {
-              const h = new Date().getHours();
-              if (h < 7) return "🌙";
-              if (h < 12) return "☀️";
-              if (h < 18) return "🌤️";
-              return "🌙";
-            })()}
-            <br />
-            <span className="bg-gradient-to-r from-violet-700 to-violet-400 bg-clip-text text-transparent">{userName}</span>님
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            {dailyMessage}
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-full bg-white/40 backdrop-blur-sm flex items-center justify-center overflow-hidden shadow-sm ring-2 ring-white/50">
+            <span className="text-lg">🎹</span>
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-gray-900 leading-tight">
+              {greeting} <span className="bg-gradient-to-r from-violet-700 to-violet-400 bg-clip-text text-transparent">{userName}</span>님 {(() => {
+                const h = new Date().getHours();
+                if (h < 7) return "🌙";
+                if (h < 12) return "☀️";
+                if (h < 18) return "🌤️";
+                return "🌙";
+              })()}
+            </h1>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {dailyMessage}
+            </p>
+          </div>
         </div>
-        <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
-          <span className="text-lg">🎹</span>
-        </div>
+        <button className="w-10 h-10 rounded-full bg-white/30 backdrop-blur-sm flex items-center justify-center shadow-sm border border-white/40">
+          <span className="text-base">🔔</span>
+        </button>
       </div>
 
       {/* Daily Goal - Hero Section */}
@@ -220,7 +223,7 @@ export default function HomePage() {
       </div>
 
       {/* Stats Grid */}
-      <div className="bg-white rounded-2xl border border-gray-100 mb-6 divide-x divide-gray-100 grid grid-cols-3">
+      <div className="bg-white/40 backdrop-blur-xl rounded-3xl mb-6 divide-x divide-white/30 grid grid-cols-3 shadow-sm border border-white/50">
         <StatsCard
           value={isLoading ? 0 : totalHours}
           unit="시간"
@@ -251,35 +254,35 @@ export default function HomePage() {
       <div className="grid grid-cols-3 gap-3 mb-8">
         <Link
           href="/music-terms"
-          className="flex flex-col items-center bg-white rounded-2xl p-3 pt-4 hover:bg-gray-50 transition-all shadow-sm hover:shadow-md"
+          className="flex flex-col items-center bg-white/15 backdrop-blur-lg rounded-2xl p-3 pt-4 hover:bg-white/25 transition-all shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)] border border-white/30"
         >
-          <div className="w-11 h-11 rounded-full bg-gray-50 flex items-center justify-center mb-2 shrink-0">
+          <div className="w-11 h-11 rounded-full bg-white/30 backdrop-blur-sm flex items-center justify-center mb-2 shrink-0">
             <Search className="w-5 h-5 text-violet-600" />
           </div>
-          <p className="font-semibold text-black text-xs text-center">음악용어 검색</p>
-          <p className="text-[10px] text-gray-400 text-center mt-0.5 leading-tight line-clamp-2">악보 기호와 용어 뜻 알아보기</p>
+          <p className="font-semibold text-gray-900 text-xs text-center">음악용어 검색</p>
+          <p className="text-[10px] text-gray-500 text-center mt-0.5 leading-tight line-clamp-2">악보 기호와 용어 뜻 알아보기</p>
         </Link>
 
         <Link
           href="/teachers"
-          className="flex flex-col items-center bg-white rounded-2xl p-3 pt-4 hover:bg-gray-50 transition-all shadow-sm hover:shadow-md"
+          className="flex flex-col items-center bg-white/15 backdrop-blur-lg rounded-2xl p-3 pt-4 hover:bg-white/25 transition-all shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)] border border-white/30"
         >
-          <div className="w-11 h-11 rounded-full bg-gray-50 flex items-center justify-center mb-2 shrink-0">
+          <div className="w-11 h-11 rounded-full bg-white/30 backdrop-blur-sm flex items-center justify-center mb-2 shrink-0">
             <Users className="w-5 h-5 text-violet-600" />
           </div>
-          <p className="font-semibold text-black text-xs text-center">원포인트 레슨</p>
-          <p className="text-[10px] text-gray-400 text-center mt-0.5 leading-tight line-clamp-2">최고 전문가의 시선으로 막힌 구간의 해법을 제시합니다</p>
+          <p className="font-semibold text-gray-900 text-xs text-center">원포인트 레슨</p>
+          <p className="text-[10px] text-gray-500 text-center mt-0.5 leading-tight line-clamp-2">최고 전문가의 시선으로 막힌 구간의 해법을 제시합니다</p>
         </Link>
 
         <Link
           href="/rooms"
-          className="flex flex-col items-center bg-white rounded-2xl p-3 pt-4 hover:bg-gray-50 transition-all shadow-sm hover:shadow-md"
+          className="flex flex-col items-center bg-white/15 backdrop-blur-lg rounded-2xl p-3 pt-4 hover:bg-white/25 transition-all shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)] border border-white/30"
         >
-          <div className="w-11 h-11 rounded-full bg-gray-50 flex items-center justify-center mb-2 shrink-0">
+          <div className="w-11 h-11 rounded-full bg-white/30 backdrop-blur-sm flex items-center justify-center mb-2 shrink-0">
             <GraduationCap className="w-5 h-5 text-violet-600" />
           </div>
-          <p className="font-semibold text-black text-xs text-center">입시룸</p>
-          <p className="text-[10px] text-gray-400 text-center mt-0.5 leading-tight line-clamp-2">영상을 올리고 다른 학생들의 연습을 참고하세요</p>
+          <p className="font-semibold text-gray-900 text-xs text-center">입시룸</p>
+          <p className="text-[10px] text-gray-500 text-center mt-0.5 leading-tight line-clamp-2">영상을 올리고 다른 학생들의 연습을 참고하세요</p>
         </Link>
       </div>
 
@@ -288,7 +291,7 @@ export default function HomePage() {
         <span className="inline-block font-bold text-sm text-violet-700 bg-violet-100 px-3.5 py-1 rounded-full mb-3">연습 기록</span>
 
         {/* Calendar */}
-        <div className="bg-white rounded-2xl border border-gray-100 p-4">
+        <div className="bg-white/40 backdrop-blur-xl rounded-3xl border border-white/50 p-4 shadow-sm">
           {/* Calendar Header */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
@@ -358,10 +361,10 @@ export default function HomePage() {
                   <div
                     className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-colors ${
                       isToday
-                        ? "bg-black text-white"
+                        ? "bg-violet-700 text-white"
                         : count > 0
-                        ? "bg-violet-600 text-white"
-                        : "bg-gray-50"
+                        ? "bg-violet-500 text-white"
+                        : "bg-white/40"
                     } ${isSelected && !isToday ? "ring-2 ring-violet-400" : ""}`}
                   >
                     {count > 0 ? count : ""}
@@ -377,7 +380,7 @@ export default function HomePage() {
           </div>
 
           {/* 선택된 날짜 상세 - 캘린더 안에 포함 */}
-          <div className="mt-8 pt-5 border-t border-gray-100">
+          <div className="mt-8 pt-5 border-t border-white/40">
             <h4 className="text-base font-bold text-gray-900">{selectedDate.getMonth() + 1}월 {selectedDate.getDate()}일 {weekdayNames[selectedDate.getDay()]}</h4>
             {calIsSelectedToday ? (
               <p className="text-sm text-gray-500 mt-0.5">{totalDrillCount}개 연습 · {selectedDateSessions.length}개 녹음</p>
@@ -397,9 +400,9 @@ export default function HomePage() {
               <p className="text-xs text-gray-500 font-medium mt-3 mb-2">연습 세션</p>
             )}
             {selectedDateSessions.length === 0 && !calIsSelectedToday ? (
-              <div className="text-center py-6 bg-gray-50 rounded-xl mt-3">
-                <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <Mic className="w-5 h-5 text-gray-400" />
+              <div className="text-center py-6 bg-white/30 backdrop-blur-sm rounded-2xl mt-3 border border-white/40">
+                <div className="w-10 h-10 bg-white/40 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <Mic className="w-5 h-5 text-violet-300" />
                 </div>
                 <p className="text-sm text-gray-500">이 날은 연습 기록이 없습니다</p>
               </div>
@@ -412,8 +415,8 @@ export default function HomePage() {
                   const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
                   const timeStr = `${ampm} ${h12.toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
                   return (
-                    <Link key={session.id} href={`/recordings/${session.id}`} className="flex items-center gap-3 bg-gray-50 rounded-xl p-3 hover:bg-gray-100 transition-all active:scale-[0.99]">
-                      <div className="w-9 h-9 bg-violet-100 rounded-lg flex items-center justify-center shrink-0">
+                    <Link key={session.id} href={`/recordings/${session.id}`} className="flex items-center gap-3 bg-white/30 backdrop-blur-sm rounded-2xl p-3 hover:bg-white/50 transition-all active:scale-[0.99] border border-white/40">
+                      <div className="w-9 h-9 bg-violet-100/60 backdrop-blur-sm rounded-xl flex items-center justify-center shrink-0">
                         <Music className="w-4 h-4 text-violet-600" />
                       </div>
                       <div className="flex-1 min-w-0">

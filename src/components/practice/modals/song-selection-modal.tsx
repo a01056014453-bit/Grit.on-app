@@ -42,18 +42,18 @@ export function SongSelectionModal({
         {/* Search & Add */}
         <div className="flex gap-2 mb-4">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-violet-400" />
             <input
               type="text"
               placeholder="곡 검색..."
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-border bg-secondary/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-white/30 bg-white/30 backdrop-blur-sm text-sm focus:outline-none focus:ring-2 focus:ring-violet-300/40 placeholder:text-gray-400"
             />
           </div>
           <button
             onClick={onAddSongClick}
-            className="px-4 py-2.5 rounded-xl bg-primary text-white font-medium text-sm flex items-center gap-1.5 hover:bg-primary/90 transition-colors"
+            className="px-4 py-2.5 rounded-xl bg-violet-700 text-white font-medium text-sm flex items-center gap-1.5 hover:bg-violet-800 transition-colors shadow-sm"
           >
             <Plus className="w-4 h-4" />
             추가
@@ -66,39 +66,39 @@ export function SongSelectionModal({
             <button
               key={song.id}
               onClick={() => onSelectSong(song)}
-              className={`w-full p-4 rounded-xl border transition-all text-left ${
+              className={`w-full p-4 rounded-2xl border transition-all text-left ${
                 selectedSong?.id === song.id
-                  ? "border-primary bg-primary/5"
-                  : "border-border bg-card hover:bg-accent"
+                  ? "border-violet-300 bg-violet-100/50 shadow-[inset_0_1px_1px_rgba(255,255,255,0.5)]"
+                  : "border-white/30 bg-white/20 backdrop-blur-sm hover:bg-white/30 shadow-[inset_0_1px_1px_rgba(255,255,255,0.3)]"
               }`}
             >
               <div className="flex items-center gap-3">
                 <div
-                  className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                    selectedSong?.id === song.id ? "bg-primary/10" : "bg-secondary"
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                    selectedSong?.id === song.id ? "bg-violet-200/60" : "bg-white/30"
                   }`}
                 >
                   <Music
                     className={`w-5 h-5 ${
                       selectedSong?.id === song.id
-                        ? "text-primary"
-                        : "text-muted-foreground"
+                        ? "text-violet-600"
+                        : "text-violet-400"
                     }`}
                   />
                 </div>
                 <div className="flex-1">
-                  <p className="font-semibold text-foreground">{song.title}</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="font-semibold text-gray-900">{song.title}</p>
+                  <p className="text-xs text-gray-500">
                     {song.duration}
                   </p>
                 </div>
                 <div className="text-right">
                   {selectedSong?.id === song.id ? (
-                    <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
+                    <div className="w-6 h-6 rounded-full bg-violet-600 flex items-center justify-center">
                       <Check className="w-4 h-4 text-white" />
                     </div>
                   ) : (
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-xs text-gray-400">
                       {song.lastPracticed}
                     </span>
                   )}
@@ -108,12 +108,12 @@ export function SongSelectionModal({
           ))}
 
           {filteredSongs.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-8 text-gray-400">
               <Music className="w-8 h-8 mx-auto mb-2 opacity-50" />
               <p className="text-sm">검색 결과가 없습니다</p>
               <button
                 onClick={onAddSongClick}
-                className="mt-2 text-primary text-sm font-medium"
+                className="mt-2 text-violet-600 text-sm font-medium"
               >
                 새 곡 추가하기
               </button>

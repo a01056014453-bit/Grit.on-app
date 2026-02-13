@@ -73,23 +73,23 @@ export function DailyGoal({ completed, target, onTargetChange }: DailyGoalProps)
   };
 
   return (
-    <div className="block bg-white rounded-2xl p-6 border border-gray-100">
+    <div className="block bg-white/40 backdrop-blur-xl rounded-3xl p-6 border border-white/50 shadow-sm">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h4 className="font-bold text-black text-xl">오늘의 목표</h4>
+          <h4 className="font-bold text-gray-900 text-xl">오늘의 목표</h4>
           <p className="text-xs text-gray-500 mt-1">매일 조금씩 성장하는 습관</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setIsOpen(!isOpen)}
-              className="p-2 bg-gray-100 rounded-full hover:bg-violet-100 transition-colors"
+              className="p-2 bg-white/40 backdrop-blur-sm rounded-full hover:bg-white/60 transition-colors shadow-sm"
             >
-              <Target className="w-5 h-5 text-gray-600 hover:text-violet-600" />
+              <Target className="w-5 h-5 text-violet-600" />
             </button>
 
             {isOpen && (
-              <div className="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50 min-w-[140px]">
+              <div className="absolute right-0 top-full mt-2 bg-white rounded-2xl shadow-lg border border-gray-100 py-2 z-50 min-w-[140px]">
                 <p className="text-xs text-gray-500 px-4 py-1 border-b border-gray-100 mb-1">
                   목표 시간 설정
                 </p>
@@ -97,7 +97,7 @@ export function DailyGoal({ completed, target, onTargetChange }: DailyGoalProps)
                   <button
                     key={minutes}
                     onClick={() => handleSelectGoal(minutes)}
-                    className={`w-full px-4 py-2 text-left text-sm flex items-center justify-between hover:bg-gray-50 transition-colors ${
+                    className={`w-full px-4 py-2 text-left text-sm flex items-center justify-between hover:bg-violet-50 transition-colors ${
                       target === minutes ? "text-violet-600 font-semibold" : "text-gray-700"
                     }`}
                   >
@@ -110,9 +110,9 @@ export function DailyGoal({ completed, target, onTargetChange }: DailyGoalProps)
           </div>
           <Link
             href="/stats"
-            className="p-2 bg-gray-100 rounded-full hover:bg-violet-100 transition-colors"
+            className="p-2 bg-white/40 backdrop-blur-sm rounded-full hover:bg-white/60 transition-colors shadow-sm"
           >
-            <BarChart3 className="w-5 h-5 text-gray-600 hover:text-violet-600" />
+            <BarChart3 className="w-5 h-5 text-violet-600" />
           </Link>
         </div>
       </div>
@@ -154,7 +154,7 @@ export function DailyGoal({ completed, target, onTargetChange }: DailyGoalProps)
             </div>
           </div>
 
-          <div className="text-sm text-black bg-gray-50 rounded-lg p-2.5">
+          <div className="text-sm text-black bg-white/40 backdrop-blur-sm rounded-xl p-2.5">
             {remaining > 0 ? (
               <span className="flex items-center gap-2">
                 <span className="font-medium">{remaining}분</span> 더 힘내봐요!
@@ -169,7 +169,7 @@ export function DailyGoal({ completed, target, onTargetChange }: DailyGoalProps)
       </div>
 
       {/* 오늘의 명언 */}
-      <div className="mt-4 pt-4 border-t border-gray-100">
+      <div className="mt-4 pt-4 border-t border-white/40">
         <p className="text-xs text-gray-400 mb-1">오늘의 명언</p>
         <p className="text-sm text-gray-600 italic">&quot;{quote.text}&quot;</p>
         <p className="text-xs text-gray-400 mt-1">— {quote.author}</p>

@@ -35,6 +35,10 @@ export default function RecordingDetailPage() {
           const url = URL.createObjectURL(data.audioBlob);
           setAudioUrl(url);
         }
+        // Blob 오디오는 duration이 Infinity일 수 있으므로 세션 시간을 fallback으로 사용
+        if (data?.totalTime) {
+          setDuration(data.totalTime);
+        }
       } catch (error) {
         console.error("Failed to load session:", error);
       } finally {
@@ -76,7 +80,15 @@ export default function RecordingDetailPage() {
 
   const handleLoadedMetadata = () => {
     if (audioRef.current) {
-      setDuration(audioRef.current.duration);
+      const d = audioRef.current.duration;
+      if (isFinite(d) && d > 0) setDuration(d);
+    }
+  };
+
+  const handleDurationChange = () => {
+    if (audioRef.current) {
+      const d = audioRef.current.duration;
+      if (isFinite(d) && d > 0) setDuration(d);
     }
   };
 
@@ -111,6 +123,7 @@ export default function RecordingDetailPage() {
   };
 
   const formatAudioTime = (seconds: number) => {
+    if (!isFinite(seconds) || isNaN(seconds) || seconds < 0) return "0:00";
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, "0")}`;
@@ -207,8 +220,10 @@ export default function RecordingDetailPage() {
           <audio
             ref={audioRef}
             src={audioUrl}
+            preload="metadata"
             onTimeUpdate={handleTimeUpdate}
             onLoadedMetadata={handleLoadedMetadata}
+            onDurationChange={handleDurationChange}
             onEnded={handleEnded}
           />
 
@@ -229,7 +244,8 @@ export default function RecordingDetailPage() {
               <input
                 type="range"
                 min={0}
-                max={duration || 100}
+                max={duration > 0 ? duration : 1}
+                step={0.01}
                 value={currentTime}
                 onChange={handleSeek}
                 className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary"
