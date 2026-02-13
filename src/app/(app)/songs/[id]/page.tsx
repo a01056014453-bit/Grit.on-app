@@ -272,6 +272,8 @@ function SongDetailContent() {
     );
   }
 
+  if (!analysis) return null;
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-violet-300 via-violet-100/60 to-white">
       <div className="px-4 py-6 max-w-lg mx-auto pb-24">
@@ -295,7 +297,7 @@ function SongDetailContent() {
         {/* Song Title Card */}
         <div className="bg-white/40 backdrop-blur-xl rounded-3xl p-6 shadow-sm border border-white/50 mb-6">
           <div className="flex items-start gap-4">
-            {analysis && getComposerPortrait(analysis.meta.composer) ? (
+            {getComposerPortrait(analysis.meta.composer) ? (
               <div className="w-16 h-16 rounded-full overflow-hidden shrink-0 border-2 border-white/60 shadow-md">
                 <Image
                   src={getComposerPortrait(analysis.meta.composer)!}
