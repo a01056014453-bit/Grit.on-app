@@ -28,6 +28,18 @@ export function useTeacherMode() {
 
   useEffect(() => {
     reload();
+
+    // 다른 컴포넌트에서 토글했을 때 동기화
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === "grit-on-profile") reload();
+    };
+    const handleCustom = () => reload();
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener("teacher-mode-changed", handleCustom);
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("teacher-mode-changed", handleCustom);
+    };
   }, [reload]);
 
   const toggleMode = useCallback(() => {
@@ -36,6 +48,8 @@ export function useTeacherMode() {
     const newMode = !profile.teacherMode;
     updateTeacherProfile({ teacherMode: newMode });
     setTeacherMode(newMode);
+    // 같은 탭 내 다른 컴포넌트에 알림
+    window.dispatchEvent(new Event("teacher-mode-changed"));
     return newMode;
   }, []);
 

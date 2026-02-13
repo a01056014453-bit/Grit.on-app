@@ -15,10 +15,6 @@ import { TeacherDashboard } from "@/components/teacher";
 export default function HomePage() {
   const { isTeacher, teacherMode, teacherProfileId, toggleMode } = useTeacherMode();
 
-  // 선생님 모드일 때 대시보드 렌더링
-  if (isTeacher && teacherMode) {
-    return <TeacherDashboard teacherProfileId={teacherProfileId || "t8"} onToggleMode={toggleMode} />;
-  }
   // TODO: 목데이터 클리어 (1회 실행 후 제거)
   useEffect(() => { clearAllSessions(); }, []);
 
@@ -183,6 +179,11 @@ export default function HomePage() {
   const weekdayNames = ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"];
   const calIsSelectedToday = selectedDate.getFullYear() === today.getFullYear() && selectedDate.getMonth() === today.getMonth() && selectedDate.getDate() === today.getDate();
   const totalDrillCount = mockDrillCards.length;
+
+  // 선생님 모드일 때 대시보드 렌더링
+  if (isTeacher && teacherMode) {
+    return <TeacherDashboard teacherProfileId={teacherProfileId || "t8"} onToggleMode={toggleMode} />;
+  }
 
   return (
     <div className="px-4 py-6 max-w-lg mx-auto bg-gray-50 min-h-screen">

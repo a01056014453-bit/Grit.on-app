@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { CheckCircle, XCircle, Clock, FileText, Inbox } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, FileText, Inbox, Sparkles } from 'lucide-react';
 import { StatCard } from '@/components/admin/stat-card';
 import { StatusBadge, getStatusVariant } from '@/components/admin/status-badge';
 import { cn } from '@/lib/utils';
@@ -10,7 +10,7 @@ import {
   approveVerificationById,
   rejectVerificationById,
 } from '@/lib/teacher-store';
-import type { TeacherVerification } from '@/types';
+import type { TeacherVerification, AIVerdict } from '@/types';
 
 export default function ExpertsPage() {
   const [verifications, setVerifications] = useState<TeacherVerification[]>([]);
@@ -60,6 +60,14 @@ export default function ExpertsPage() {
     setSelected(null);
     setShowRejectInput(false);
     setRejectReason('');
+  };
+
+  const verdictLabel = (verdict: AIVerdict) => {
+    switch (verdict) {
+      case 'likely_valid': return '유효 판정';
+      case 'needs_attention': return '확인 필요';
+      case 'suspicious': return '의심';
+    }
   };
 
   const docTypeLabel = (type: string) => {
@@ -177,24 +185,127 @@ export default function ExpertsPage() {
                 </div>
               )}
 
+              {/* AI 전체 판정 패널 */}
+              {selected.aiReview ? (
+                <div className={cn(
+                  'p-4 rounded-lg border',
+                  selected.aiReview.verdict === 'likely_valid' && 'bg-green-50 border-green-200',
+                  selected.aiReview.verdict === 'needs_attention' && 'bg-amber-50 border-amber-200',
+                  selected.aiReview.verdict === 'suspicious' && 'bg-red-50 border-red-200',
+                )}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Sparkles className={cn(
+                      'w-4 h-4',
+                      selected.aiReview.verdict === 'likely_valid' && 'text-green-600',
+                      selected.aiReview.verdict === 'needs_attention' && 'text-amber-600',
+                      selected.aiReview.verdict === 'suspicious' && 'text-red-600',
+                    )} />
+                    <span className={cn(
+                      'text-sm font-semibold',
+                      selected.aiReview.verdict === 'likely_valid' && 'text-green-700',
+                      selected.aiReview.verdict === 'needs_attention' && 'text-amber-700',
+                      selected.aiReview.verdict === 'suspicious' && 'text-red-700',
+                    )}>
+                      AI 사전 심사: {verdictLabel(selected.aiReview.verdict)}
+                    </span>
+                  </div>
+                  <p className={cn(
+                    'text-xs',
+                    selected.aiReview.verdict === 'likely_valid' && 'text-green-600',
+                    selected.aiReview.verdict === 'needs_attention' && 'text-amber-600',
+                    selected.aiReview.verdict === 'suspicious' && 'text-red-600',
+                  )}>
+                    {selected.aiReview.summary}
+                  </p>
+                </div>
+              ) : (
+                <div className="p-4 rounded-lg border border-gray-200 bg-gray-50">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-gray-400" />
+                    <span className="text-sm text-gray-500">AI 사전 심사 결과 없음</span>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <h3 className="text-sm font-semibold text-gray-900 mb-3">제출 서류</h3>
-                <div className="space-y-3">
-                  {selected.documents.map((doc, i) => (
-                    <div key={i} className="p-4 bg-gray-50 rounded-lg border border-gray-100">
-                      <div className="flex items-center gap-2 mb-2">
-                        <FileText className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm font-medium text-gray-700">{docTypeLabel(doc.type)}</span>
+                <div className="space-y-4">
+                  {selected.documents.map((doc, i) => {
+                    const aiDoc = selected.aiReview?.documents.find((d) => d.documentId === doc.id);
+                    const isImage = doc.fileData?.startsWith('data:image');
+
+                    return (
+                      <div key={i} className="p-4 bg-gray-50 rounded-lg border border-gray-100">
+                        <div className="flex items-center gap-2 mb-3">
+                          <FileText className="w-4 h-4 text-gray-400" />
+                          <span className="text-sm font-medium text-gray-700">{docTypeLabel(doc.type)}</span>
+                          <span className="text-xs text-gray-400 ml-auto">
+                            {new Date(doc.uploadedAt).toLocaleDateString('ko-KR')}
+                          </span>
+                        </div>
+
+                        {/* 이미지 미리보기 */}
+                        {isImage && (
+                          <div className="mb-3 rounded-lg overflow-hidden border border-gray-200 bg-white">
+                            <img
+                              src={doc.fileData}
+                              alt={doc.fileName}
+                              className="w-full max-h-64 object-contain"
+                            />
+                          </div>
+                        )}
+
+                        <div className="bg-white p-3 rounded border border-gray-200 mb-2">
+                          <p className="text-xs text-gray-500">파일명</p>
+                          <p className="text-sm text-gray-900">{doc.fileName}</p>
+                        </div>
+
+                        {/* AI 문서별 분석 결과 */}
+                        {aiDoc && (
+                          <div className={cn(
+                            'p-3 rounded border text-xs space-y-1.5',
+                            aiDoc.isValid ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200',
+                          )}>
+                            <div className="flex items-center gap-2">
+                              <Sparkles className="w-3.5 h-3.5 text-violet-500" />
+                              <span className="font-medium text-gray-700">AI 분석 결과</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-gray-600">
+                              <div>
+                                <span className="text-gray-400">유효성: </span>
+                                <span className={aiDoc.isValid ? 'text-green-700 font-medium' : 'text-red-700 font-medium'}>
+                                  {aiDoc.isValid ? '유효' : '확인 필요'}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-gray-400">신뢰도: </span>
+                                <span className="font-medium">{Math.round(aiDoc.confidence * 100)}%</span>
+                              </div>
+                              {aiDoc.institution && (
+                                <div>
+                                  <span className="text-gray-400">기관: </span>
+                                  <span>{aiDoc.institution}</span>
+                                </div>
+                              )}
+                              {aiDoc.major && (
+                                <div>
+                                  <span className="text-gray-400">전공: </span>
+                                  <span>{aiDoc.major}</span>
+                                </div>
+                              )}
+                            </div>
+                            {aiDoc.warnings.length > 0 && (
+                              <div className="pt-1 border-t border-amber-200">
+                                {aiDoc.warnings.map((w, wi) => (
+                                  <p key={wi} className="text-amber-700">⚠ {w}</p>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
-                      <div className="bg-white p-3 rounded border border-gray-200">
-                        <p className="text-xs text-gray-500 mb-1">파일명</p>
-                        <p className="text-sm text-gray-900">{doc.fileName}</p>
-                        <p className="text-xs text-gray-400 mt-1">
-                          업로드: {new Date(doc.uploadedAt).toLocaleDateString('ko-KR')}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 

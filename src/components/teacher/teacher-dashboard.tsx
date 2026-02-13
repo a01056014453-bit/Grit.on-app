@@ -104,7 +104,7 @@ export function TeacherDashboard({ teacherProfileId, onToggleMode }: TeacherDash
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-bold text-slate-900 flex items-center gap-2">
             <Inbox className="w-4 h-4 text-violet-600" />
-            레슨 요청
+            피드백 요청
             {stats.pendingRequests > 0 && (
               <span className="px-1.5 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full">
                 {stats.pendingRequests}

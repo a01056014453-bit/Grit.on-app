@@ -12,6 +12,24 @@ export interface TeacherDocument {
   uploadedAt: string;
 }
 
+export interface AIDocumentReviewItem {
+  documentId: string;
+  isValid: boolean;
+  institution?: string;
+  major?: string;
+  confidence: number; // 0~1
+  warnings: string[];
+}
+
+export type AIVerdict = "likely_valid" | "needs_attention" | "suspicious";
+
+export interface AIReview {
+  verdict: AIVerdict;
+  summary: string;
+  documents: AIDocumentReviewItem[];
+  reviewedAt: string;
+}
+
 export interface TeacherVerification {
   id: string;
   applicantName: string;
@@ -21,6 +39,7 @@ export interface TeacherVerification {
   appliedAt?: string;
   reviewedAt?: string;
   rejectReason?: string;
+  aiReview?: AIReview;
 }
 
 export interface ManagedStudent {
@@ -32,7 +51,6 @@ export interface ManagedStudent {
   profileImage?: string;
   weeklyPracticeMinutes: number;
   currentPieces: string[];
-  lastAIScore?: number;
   lastPracticeDate?: string;
   joinedAt: string;
   totalLessons: number;
@@ -53,6 +71,22 @@ export interface TeacherProfile {
   isTeacher: boolean;
   teacherMode: boolean;
   teacherProfileId?: string; // links to mock teacher (e.g., "t8")
+}
+
+export interface TeacherProfileData {
+  profileImage?: string;
+  title: string;
+  specialty: string[];
+  bio: string;
+  lessonTarget: string[];
+  availableDays: string[];
+  priceCredits: number;
+  career: {
+    education: { school: string; degree: string; major: string; year?: number }[];
+    awards: { competition: string; prize: string; year: number }[];
+    performances: { title: string; venue?: string; year: number }[];
+    teachingExperience: number;
+  };
 }
 
 export const DOCUMENT_TYPE_LABELS: Record<TeacherDocumentType, string> = {

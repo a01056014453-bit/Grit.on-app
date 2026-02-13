@@ -70,7 +70,7 @@ export async function initDB(): Promise<IDBDatabase> {
 
 // Get a valid DB connection, reconnecting if stale
 async function getDB(): Promise<IDBDatabase> {
-  const db = await getDB();
+  const db = await initDB();
   try {
     // Test if connection is still alive
     db.transaction([SESSIONS_STORE], "readonly");

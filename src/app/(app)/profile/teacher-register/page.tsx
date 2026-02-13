@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -9,17 +9,17 @@ import {
   CheckCircle,
   X,
   Shield,
-  Sparkles,
 } from "lucide-react";
 import {
   TeacherDocument,
   TeacherDocumentType,
+  TeacherVerification,
   DOCUMENT_TYPE_LABELS,
+  AIReview,
 } from "@/types";
 import {
   getVerification,
   submitVerification,
-  approveVerification,
 } from "@/lib/teacher-store";
 
 type Step = 1 | 2 | 3;
@@ -31,8 +31,23 @@ export default function TeacherRegisterPage() {
   const [documents, setDocuments] = useState<TeacherDocument[]>([]);
   const [selectedDocType, setSelectedDocType] = useState<TeacherDocumentType>("graduation");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState("");
+  const [verification, setVerification] = useState<TeacherVerification | null>(null);
 
-  const verification = getVerification();
+  useEffect(() => {
+    setVerification(getVerification());
+  }, []);
+
+  // 클라이언트에서 verification 로딩 전까지 로딩 표시
+  if (!verification) {
+    return (
+      <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-gray-50">
+        <div className="flex items-center justify-center py-32">
+          <div className="w-8 h-8 border-2 border-violet-600 border-t-transparent rounded-full animate-spin" />
+        </div>
+      </div>
+    );
+  }
 
   // If already approved, show status
   if (verification.status === "approved") {
@@ -81,21 +96,6 @@ export default function TeacherRegisterPage() {
             신청일: {new Date(verification.appliedAt!).toLocaleDateString("ko-KR")}
           </p>
 
-          {/* Demo: 즉시 승인 버튼 */}
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
-            <p className="text-xs text-amber-700 mb-2 font-medium">데모 모드</p>
-            <button
-              onClick={() => {
-                approveVerification();
-                router.refresh();
-                window.location.reload();
-              }}
-              className="px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-semibold"
-            >
-              즉시 승인 (데모)
-            </button>
-          </div>
-
           <button
             onClick={() => router.push("/profile")}
             className="text-sm text-gray-500 underline"
@@ -135,14 +135,40 @@ export default function TeacherRegisterPage() {
     setDocuments((prev) => prev.filter((d) => d.id !== id));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (documents.length === 0) return;
     setIsSubmitting(true);
-    submitVerification(documents);
-    setTimeout(() => {
-      setStep(3);
-      setIsSubmitting(false);
-    }, 800);
+
+    let aiReview: AIReview | undefined;
+
+    // AI 사전 분석 시도
+    try {
+      setSubmitStatus("AI 서류 분석 중...");
+      const res = await fetch("/api/verify-document", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          documents: documents.map((d) => ({
+            id: d.id,
+            type: d.type,
+            fileName: d.fileName,
+            fileData: d.fileData,
+          })),
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        aiReview = data.aiReview;
+      }
+    } catch {
+      // AI 분석 실패해도 제출은 진행
+    }
+
+    setSubmitStatus("서류 제출 중...");
+    submitVerification(documents, aiReview);
+    setStep(3);
+    setIsSubmitting(false);
+    setSubmitStatus("");
   };
 
   return (
@@ -330,7 +356,7 @@ export default function TeacherRegisterPage() {
               disabled={documents.length === 0 || isSubmitting}
               className="flex-1 py-3 bg-violet-600 text-white rounded-xl font-semibold text-sm disabled:opacity-50"
             >
-              {isSubmitting ? "제출 중..." : "제출하기"}
+              {isSubmitting ? (submitStatus || "제출 중...") : "제출하기"}
             </button>
           </div>
         </div>
@@ -345,27 +371,10 @@ export default function TeacherRegisterPage() {
           <h2 className="text-xl font-bold text-gray-900 mb-2">
             신청 완료!
           </h2>
-          <p className="text-gray-500 text-sm mb-6">
+          <p className="text-gray-500 text-sm mb-8">
             서류 검토 후 결과를 알려드리겠습니다.<br />
             보통 1~2일 내에 완료됩니다.
           </p>
-
-          {/* Demo: 즉시 승인 */}
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
-            <div className="flex items-center gap-2 justify-center mb-2">
-              <Sparkles className="w-4 h-4 text-amber-600" />
-              <p className="text-xs text-amber-700 font-medium">데모 모드</p>
-            </div>
-            <button
-              onClick={() => {
-                approveVerification();
-                router.push("/profile");
-              }}
-              className="px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-semibold"
-            >
-              즉시 승인하고 시작하기
-            </button>
-          </div>
 
           <button
             onClick={() => router.push("/profile")}

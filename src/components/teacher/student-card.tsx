@@ -69,14 +69,12 @@ export function StudentCard({ student }: StudentCardProps) {
             주 {weeklyHours}시간
           </span>
         </div>
-        {student.lastAIScore && (
-          <div className="flex items-center gap-1">
-            <TrendingUp className="w-3 h-3 text-slate-400" />
-            <span className="text-[11px] text-slate-500">
-              AI {student.lastAIScore}점
-            </span>
-          </div>
-        )}
+        <div className="flex items-center gap-1">
+          <TrendingUp className="w-3 h-3 text-slate-400" />
+          <span className="text-[11px] text-slate-500">
+            일평균 {Math.round(student.weeklyPracticeMinutes / 7)}분
+          </span>
+        </div>
         <span className="text-[11px] text-slate-400 ml-auto">
           마지막 연습: {lastPractice}
         </span>

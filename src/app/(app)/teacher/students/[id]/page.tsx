@@ -107,13 +107,13 @@ export default function StudentDetailPage() {
         <div className="bg-white rounded-xl p-4 border border-slate-100">
           <div className="flex items-center gap-2 mb-2">
             <TrendingUp className="w-4 h-4 text-green-500" />
-            <span className="text-xs text-slate-500">AI 점수</span>
+            <span className="text-xs text-slate-500">일평균 연습</span>
           </div>
           <div className="flex items-baseline gap-1">
             <span className="text-xl font-bold text-slate-900">
-              {student.lastAIScore || "-"}
+              {Math.round(student.weeklyPracticeMinutes / 7)}
             </span>
-            <span className="text-sm text-slate-400">점</span>
+            <span className="text-sm text-slate-400">분</span>
           </div>
         </div>
 

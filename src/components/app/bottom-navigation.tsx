@@ -26,7 +26,6 @@ const teacherNavItems: NavItem[] = [
   { href: "/", icon: LayoutDashboard, label: "대시보드", exact: true },
   { href: "/inbox", icon: Inbox, label: "인박스" },
   { href: "/teacher/students", icon: Users, label: "학생관리" },
-  { href: "/ranking", icon: Trophy, label: "랭킹" },
   { href: "/profile", icon: User, label: "프로필" },
 ];
 

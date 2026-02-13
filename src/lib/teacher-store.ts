@@ -6,6 +6,8 @@ import {
   ManagedStudent,
   TeacherProfile,
   TeacherDashboardStats,
+  AIReview,
+  TeacherProfileData,
 } from "@/types";
 import { getFeedbackRequestsForTeacher } from "./feedback-store";
 
@@ -13,6 +15,7 @@ const PROFILE_KEY = "grit-on-profile";
 const VERIFICATION_KEY = "grit-on-teacher-verification";
 const VERIFICATIONS_LIST_KEY = "grit-on-teacher-verifications-list";
 const STUDENTS_KEY = "grit-on-teacher-students";
+const TEACHER_PROFILE_DATA_KEY = "grit-on-teacher-profile-data";
 
 // ─── Teacher Profile (extends existing profile) ───
 
@@ -100,7 +103,7 @@ function getApplicantInstrument(): string {
   return "피아노";
 }
 
-export function submitVerification(documents: TeacherDocument[]): TeacherVerification {
+export function submitVerification(documents: TeacherDocument[], aiReview?: AIReview): TeacherVerification {
   const id = `v-${Date.now()}`;
   const verification: TeacherVerification = {
     id,
@@ -109,6 +112,7 @@ export function submitVerification(documents: TeacherDocument[]): TeacherVerific
     status: "pending",
     documents,
     appliedAt: new Date().toISOString(),
+    aiReview,
   };
   saveVerification(verification);
   // Also add to admin-visible list
@@ -270,4 +274,35 @@ export function getTeacherDashboardStats(teacherId: string): TeacherDashboardSta
     avgRating: 4.8,
     responseRate: 96,
   };
+}
+
+// ─── Teacher Profile Data (editable profile) ───
+
+const DEFAULT_TEACHER_PROFILE_DATA: TeacherProfileData = {
+  title: "",
+  specialty: [],
+  bio: "",
+  lessonTarget: [],
+  availableDays: [],
+  priceCredits: 30,
+  career: {
+    education: [],
+    awards: [],
+    performances: [],
+    teachingExperience: 0,
+  },
+};
+
+export function getTeacherProfileData(): TeacherProfileData {
+  if (typeof window === "undefined") return DEFAULT_TEACHER_PROFILE_DATA;
+  try {
+    const saved = localStorage.getItem(TEACHER_PROFILE_DATA_KEY);
+    if (saved) return { ...DEFAULT_TEACHER_PROFILE_DATA, ...JSON.parse(saved) };
+  } catch {}
+  return DEFAULT_TEACHER_PROFILE_DATA;
+}
+
+export function saveTeacherProfileData(data: TeacherProfileData): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(TEACHER_PROFILE_DATA_KEY, JSON.stringify(data));
 }

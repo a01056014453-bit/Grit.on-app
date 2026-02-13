@@ -514,7 +514,7 @@ export default function ProfilePage() {
                 toggleMode();
                 reloadTeacher();
               }}
-              className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors"
+              className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors border-b border-gray-50"
             >
               <div className="flex items-center gap-3">
                 {teacherMode ? (
@@ -528,6 +528,16 @@ export default function ProfilePage() {
                 <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${teacherMode ? "translate-x-5" : "translate-x-0.5"}`} />
               </div>
             </button>
+            <Link
+              href="/profile/teacher-profile"
+              className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Pencil className="w-5 h-5 text-violet-500" />
+                <span className="text-sm text-gray-700">프로필 관리</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-gray-400" />
+            </Link>
           </>
         ) : (
           <Link
