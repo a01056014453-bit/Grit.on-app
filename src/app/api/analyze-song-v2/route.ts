@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import { getCachedAnalysis, saveCachedAnalysis } from "@/lib/song-analysis-db";
+import { getCachedAnalysis, saveCachedAnalysis, deleteCachedAnalysis } from "@/lib/song-analysis-db";
 import type {
   SongAnalysis,
   AnalyzeSongRequest,
@@ -453,6 +453,33 @@ export async function POST(request: Request) {
       error: `곡 분석 중 오류가 발생했습니다: ${errorMessage}`,
     };
     return NextResponse.json(response, { status: 500 });
+  }
+}
+
+/** 분석 삭제 */
+export async function DELETE(request: Request) {
+  try {
+    const { composer, title } = await request.json();
+    if (!composer || !title) {
+      return NextResponse.json(
+        { success: false, error: "composer와 title이 필요합니다" },
+        { status: 400 }
+      );
+    }
+    const result = await deleteCachedAnalysis(composer, title);
+    if (result) {
+      return NextResponse.json({ success: true });
+    }
+    return NextResponse.json(
+      { success: false, error: "삭제 실패" },
+      { status: 500 }
+    );
+  } catch (error) {
+    console.error("Delete analysis error:", error);
+    return NextResponse.json(
+      { success: false, error: "삭제 실패" },
+      { status: 500 }
+    );
   }
 }
 

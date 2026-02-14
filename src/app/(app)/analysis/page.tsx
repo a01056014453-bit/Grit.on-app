@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { ArrowLeft, Search, Sparkles, Music, ChevronRight, Plus, X, Camera } from "lucide-react";
+import { ArrowLeft, Search, Sparkles, Music, ChevronRight, Plus, X, Camera, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence, Variants } from "framer-motion";
 import { mockSongs, mockSongAIInfo, composerList } from "@/data";
@@ -108,6 +108,28 @@ export default function AnalysisPage() {
   const [savedAnalyses, setSavedAnalyses] = useState<SongAnalysis[]>([]);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isLoadingSaved, setIsLoadingSaved] = useState(true);
+  const [editMode, setEditMode] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<SongAnalysis | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = async (item: SongAnalysis) => {
+    setIsDeleting(true);
+    try {
+      const res = await fetch("/api/analyze-song-v2", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ composer: item.meta.composer, title: item.meta.title }),
+      });
+      if (res.ok) {
+        setSavedAnalyses((prev) => prev.filter((a) => a.id !== item.id));
+      }
+    } catch (err) {
+      console.error("Delete failed:", err);
+    } finally {
+      setIsDeleting(false);
+      setDeleteTarget(null);
+    }
+  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -328,7 +350,17 @@ export default function AnalysisPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15, duration: 0.4 }}
         >
-          <span className="inline-block font-bold text-sm text-violet-700 bg-violet-100/60 backdrop-blur-sm px-3.5 py-1 rounded-full mb-3">내 보관함</span>
+          <div className="flex items-center justify-between mb-3">
+            <span className="inline-block font-bold text-sm text-violet-700 bg-violet-100/60 backdrop-blur-sm px-3.5 py-1 rounded-full">내 보관함</span>
+            {savedAnalyses.length > 0 && (
+              <button
+                onClick={() => setEditMode(!editMode)}
+                className="text-xs text-violet-500 font-medium px-2 py-1 rounded-lg hover:bg-violet-100/40 transition-colors"
+              >
+                {editMode ? "완료" : "편집"}
+              </button>
+            )}
+          </div>
           {isLoadingSaved ? (
             <div className="bg-white/40 backdrop-blur-xl rounded-3xl border border-white/50 shadow-sm p-8 flex items-center justify-center">
               <div className="flex items-center gap-2 text-gray-400">
@@ -344,10 +376,21 @@ export default function AnalysisPage() {
               animate="show"
             >
               {savedAnalyses.map((item, index) => (
-                <motion.div key={item.id} variants={listItem}>
+                <motion.div key={item.id} variants={listItem} className="flex items-center">
+                  {editMode && (
+                    <motion.button
+                      initial={{ opacity: 0, width: 0 }}
+                      animate={{ opacity: 1, width: 40 }}
+                      exit={{ opacity: 0, width: 0 }}
+                      onClick={() => setDeleteTarget(item)}
+                      className="shrink-0 flex items-center justify-center w-10 h-full text-red-400 hover:text-red-500 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </motion.button>
+                  )}
                   <SpotlightCard
-                    href={`/songs/${item.id}?composer=${encodeURIComponent(item.meta.composer)}&title=${encodeURIComponent(item.meta.title)}`}
-                    className={`flex items-center gap-3 px-4 py-3 hover:bg-white/30 transition-colors ${
+                    href={editMode ? "#" : `/songs/${item.id}?composer=${encodeURIComponent(item.meta.composer)}&title=${encodeURIComponent(item.meta.title)}`}
+                    className={`flex-1 flex items-center gap-3 px-4 py-3 hover:bg-white/30 transition-colors ${
                       index !== savedAnalyses.length - 1 ? "border-b border-white/30" : ""
                     }`}
                   >
@@ -375,7 +418,7 @@ export default function AnalysisPage() {
                         <p className="text-xs text-gray-400 truncate">{item.meta.opus}</p>
                       )}
                     </div>
-                    <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
+                    {!editMode && <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />}
                   </SpotlightCard>
                 </motion.div>
               ))}
@@ -389,6 +432,55 @@ export default function AnalysisPage() {
           )}
         </motion.div>
       )}
+
+      {/* Delete Confirm Modal */}
+      <AnimatePresence>
+        {deleteTarget && (
+          <motion.div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setDeleteTarget(null);
+            }}
+          >
+            <motion.div
+              className="bg-white rounded-2xl w-full max-w-xs p-5 shadow-xl"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <div className="text-center mb-4">
+                <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-3">
+                  <Trash2 className="w-5 h-5 text-red-500" />
+                </div>
+                <h3 className="font-bold text-gray-900 mb-1">분석 삭제</h3>
+                <p className="text-sm text-gray-500">
+                  <span className="font-medium text-gray-700">{deleteTarget.meta.composer} - {deleteTarget.meta.title}</span>
+                  <br />보관함에서 삭제할까요?
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setDeleteTarget(null)}
+                  className="flex-1 py-2.5 rounded-xl bg-gray-100 text-gray-600 font-medium text-sm hover:bg-gray-200 transition-colors"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={() => handleDelete(deleteTarget)}
+                  disabled={isDeleting}
+                  className="flex-1 py-2.5 rounded-xl bg-red-500 text-white font-medium text-sm hover:bg-red-600 transition-colors disabled:opacity-50"
+                >
+                  {isDeleting ? "삭제 중..." : "삭제"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Add Song Modal */}
       <AnimatePresence>
