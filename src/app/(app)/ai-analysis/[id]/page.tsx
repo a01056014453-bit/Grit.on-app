@@ -359,7 +359,8 @@ export default function AnalysisDetailPage() {
 
   if (!analysis) {
     return (
-      <div className="px-4 py-6 max-w-lg mx-auto">
+      <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-violet">
+      <div className="bg-blob-extra" />
         <button onClick={() => router.back()} className="flex items-center gap-2 text-muted-foreground mb-6">
           <ArrowLeft className="w-5 h-5" />
           <span>뒤로</span>
@@ -372,7 +373,8 @@ export default function AnalysisDetailPage() {
   }
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto pb-24">
+    <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
+      <div className="bg-blob-extra" />
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button

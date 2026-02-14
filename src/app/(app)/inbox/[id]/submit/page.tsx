@@ -45,7 +45,8 @@ export default function SubmitFeedbackPage() {
 
   if (!request) {
     return (
-      <div className="px-4 py-6 max-w-lg mx-auto pb-24">
+      <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
+      <div className="bg-blob-extra" />
         <button
           onClick={() => router.back()}
           className="flex items-center gap-2 text-muted-foreground mb-6"
@@ -150,7 +151,8 @@ export default function SubmitFeedbackPage() {
   };
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto pb-32">
+    <div className="px-4 py-6 max-w-lg mx-auto pb-32 min-h-screen bg-blob-violet">
+      <div className="bg-blob-extra" />
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button

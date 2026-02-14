@@ -296,3 +296,55 @@ p, span, li, blockquote {
 .digit-animate {
   animation: digit-change 0.2s ease-out;
 }
+
+/* Organic blob gradient background */
+.bg-blob-violet {
+  position: relative;
+  background: #faf8ff;
+}
+
+.bg-blob-violet::before,
+.bg-blob-violet::after {
+  content: '';
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* 왼쪽 상단 blob */
+.bg-blob-violet::before {
+  width: 70vw;
+  height: 70vw;
+  top: -10vw;
+  left: -20vw;
+  background: radial-gradient(circle, rgba(196, 167, 255, 0.50) 0%, rgba(221, 200, 255, 0.25) 50%, transparent 70%);
+}
+
+/* 오른쪽 중간 blob */
+.bg-blob-violet::after {
+  width: 60vw;
+  height: 60vw;
+  top: 30vh;
+  right: -15vw;
+  background: radial-gradient(circle, rgba(183, 148, 255, 0.35) 0%, rgba(210, 185, 255, 0.18) 50%, transparent 70%);
+}
+
+/* blob 위에 콘텐츠가 보이도록 */
+.bg-blob-violet > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* 세 번째 blob */
+.bg-blob-extra {
+  position: fixed;
+  width: 50vw;
+  height: 50vw;
+  bottom: 10vh;
+  left: -5vw;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(206, 180, 255, 0.30) 0%, rgba(228, 210, 255, 0.15) 50%, transparent 70%);
+  pointer-events: none;
+  z-index: 0 !important;
+}

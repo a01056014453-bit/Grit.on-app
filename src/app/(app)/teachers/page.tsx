@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Users, Search, SlidersHorizontal, Star, Clock, Coins, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Users, Search, SlidersHorizontal, Star, Clock, Coins, X, ArrowLeft } from "lucide-react";
 import { TeacherCard } from "@/components/feedback/teacher-card";
 import { getTeachers, filterTeachers } from "@/lib/feedback-store";
 
@@ -25,6 +26,7 @@ const specialtyFilters = [
 ];
 
 export default function TeachersPage() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSpecialty, setSelectedSpecialty] = useState("전체");
   const [sortBy, setSortBy] = useState<SortOption>("rating");
@@ -65,51 +67,58 @@ export default function TeachersPage() {
   const hasActiveFilters = minRating || maxPrice || selectedSpecialty !== "전체";
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto pb-24">
+    <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
+      <div className="bg-blob-extra" />
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-          <Users className="w-6 h-6 text-primary" />
-          선생님 찾기
-        </h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          나에게 맞는 선생님을 찾아 1:1 피드백을 요청하세요
-        </p>
+      <div className="flex items-center gap-3 mb-6">
+        <button
+          onClick={() => router.back()}
+          className="w-10 h-10 rounded-full bg-white/40 backdrop-blur-sm flex items-center justify-center hover:bg-white/60 transition-colors border border-white/50"
+        >
+          <ArrowLeft className="w-5 h-5 text-gray-600" />
+        </button>
+        <div className="flex-1">
+          <h1 className="text-lg font-bold text-gray-900">선생님 찾기</h1>
+          <p className="text-xs text-gray-500">나에게 맞는 선생님을 찾아 1:1 피드백을 요청하세요</p>
+        </div>
+        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
+          <Users className="w-5 h-5 text-white" />
+        </div>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-2 mb-6">
-        <div className="bg-card rounded-xl p-3 border border-border text-center">
-          <Users className="w-5 h-5 text-primary mx-auto mb-1" />
-          <div className="text-lg font-bold text-foreground">{allTeachers.length}</div>
-          <div className="text-[10px] text-muted-foreground">등록 선생님</div>
+        <div className="bg-white/50 backdrop-blur-xl rounded-2xl p-3 border border-white/60 shadow-sm text-center">
+          <Users className="w-5 h-5 text-violet-600 mx-auto mb-1" />
+          <div className="text-lg font-bold text-gray-900">{allTeachers.length}</div>
+          <div className="text-[10px] text-gray-500">등록 선생님</div>
         </div>
-        <div className="bg-card rounded-xl p-3 border border-border text-center">
+        <div className="bg-white/50 backdrop-blur-xl rounded-2xl p-3 border border-white/60 shadow-sm text-center">
           <Star className="w-5 h-5 text-amber-500 mx-auto mb-1" />
-          <div className="text-lg font-bold text-foreground">4.7</div>
-          <div className="text-[10px] text-muted-foreground">평균 평점</div>
+          <div className="text-lg font-bold text-gray-900">4.7</div>
+          <div className="text-[10px] text-gray-500">평균 평점</div>
         </div>
-        <div className="bg-card rounded-xl p-3 border border-border text-center">
+        <div className="bg-white/50 backdrop-blur-xl rounded-2xl p-3 border border-white/60 shadow-sm text-center">
           <Clock className="w-5 h-5 text-blue-500 mx-auto mb-1" />
-          <div className="text-lg font-bold text-foreground">3.2h</div>
-          <div className="text-[10px] text-muted-foreground">평균 응답</div>
+          <div className="text-lg font-bold text-gray-900">3.2h</div>
+          <div className="text-[10px] text-gray-500">평균 응답</div>
         </div>
       </div>
 
       {/* Search */}
       <div className="relative mb-4">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
         <input
           type="text"
           placeholder="이름, 전공, 전문 분야 검색..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+          className="w-full pl-10 pr-10 py-3 rounded-2xl bg-white/60 backdrop-blur-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 border border-white/60 shadow-sm"
         />
         <button
           onClick={() => setShowFilters(!showFilters)}
           className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg transition-colors ${
-            showFilters ? "bg-primary text-white" : "text-muted-foreground hover:bg-secondary"
+            showFilters ? "bg-violet-600 text-white" : "text-gray-400 hover:bg-white/60"
           }`}
         >
           <SlidersHorizontal className="w-4 h-4" />
@@ -118,13 +127,13 @@ export default function TeachersPage() {
 
       {/* Advanced Filters */}
       {showFilters && (
-        <div className="bg-card rounded-xl p-4 border border-border mb-4 space-y-4">
+        <div className="bg-white/50 backdrop-blur-xl rounded-2xl p-4 border border-white/60 shadow-sm mb-4 space-y-4">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-foreground">상세 필터</span>
+            <span className="text-sm font-medium text-gray-900">상세 필터</span>
             {hasActiveFilters && (
               <button
                 onClick={clearFilters}
-                className="text-xs text-primary flex items-center gap-1"
+                className="text-xs text-violet-600 flex items-center gap-1"
               >
                 <X className="w-3 h-3" />
                 초기화
@@ -134,7 +143,7 @@ export default function TeachersPage() {
 
           {/* Min Rating Filter */}
           <div>
-            <label className="text-xs text-muted-foreground mb-1.5 block">
+            <label className="text-xs text-gray-500 mb-1.5 block">
               최소 평점
             </label>
             <div className="flex gap-2">
@@ -147,7 +156,7 @@ export default function TeachersPage() {
                   className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                     minRating === rating
                       ? "bg-amber-100 text-amber-700 border border-amber-200"
-                      : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                      : "bg-white/40 text-gray-600 hover:bg-white/60"
                   }`}
                 >
                   <Star className="w-3 h-3" />
@@ -159,7 +168,7 @@ export default function TeachersPage() {
 
           {/* Max Price Filter */}
           <div>
-            <label className="text-xs text-muted-foreground mb-1.5 block">
+            <label className="text-xs text-gray-500 mb-1.5 block">
               최대 가격
             </label>
             <div className="flex gap-2">
@@ -171,8 +180,8 @@ export default function TeachersPage() {
                   }
                   className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                     maxPrice === price
-                      ? "bg-primary/10 text-primary border border-primary/20"
-                      : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                      ? "bg-violet-100 text-violet-700 border border-violet-200"
+                      : "bg-white/40 text-gray-600 hover:bg-white/60"
                   }`}
                 >
                   <Coins className="w-3 h-3" />
@@ -193,7 +202,7 @@ export default function TeachersPage() {
             className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
               selectedSpecialty === specialty
                 ? "bg-violet-100 text-violet-700"
-                : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                : "bg-white/40 text-gray-600 hover:bg-white/60"
             }`}
           >
             {specialty}
@@ -209,8 +218,8 @@ export default function TeachersPage() {
             onClick={() => setSortBy(option.value)}
             className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
               sortBy === option.value
-                ? "bg-primary text-white"
-                : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                ? "bg-violet-600 text-white shadow-sm"
+                : "bg-white/40 text-gray-600 hover:bg-white/60"
             }`}
           >
             {option.label}
@@ -221,12 +230,12 @@ export default function TeachersPage() {
       {/* Teacher List */}
       <div className="space-y-3">
         {filteredTeachers.length === 0 ? (
-          <div className="text-center py-12 bg-card rounded-xl border border-border">
-            <Users className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
-            <p className="text-muted-foreground">조건에 맞는 선생님이 없습니다</p>
+          <div className="text-center py-12 bg-white/50 backdrop-blur-xl rounded-2xl border border-white/60 shadow-sm">
+            <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-500">조건에 맞는 선생님이 없습니다</p>
             <button
               onClick={clearFilters}
-              className="mt-3 text-sm text-primary font-medium"
+              className="mt-3 text-sm text-violet-600 font-medium"
             >
               필터 초기화
             </button>

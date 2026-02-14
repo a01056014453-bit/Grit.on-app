@@ -131,7 +131,8 @@ export default function RecordingDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="px-4 py-6 max-w-lg mx-auto">
+      <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-violet">
+      <div className="bg-blob-extra" />
         <div className="animate-pulse">
           <div className="h-10 bg-gray-200 rounded w-1/4 mb-6"></div>
           <div className="bg-gray-200 rounded-xl h-32 mb-4"></div>
@@ -143,7 +144,8 @@ export default function RecordingDetailPage() {
 
   if (!session) {
     return (
-      <div className="px-4 py-6 max-w-lg mx-auto">
+      <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-violet">
+      <div className="bg-blob-extra" />
         <button
           onClick={() => router.back()}
           className="flex items-center gap-2 text-gray-600 mb-6"
@@ -159,7 +161,8 @@ export default function RecordingDetailPage() {
   }
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto pb-24">
+    <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
+      <div className="bg-blob-extra" />
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <button

@@ -112,7 +112,8 @@ export default function NewFeedbackRequestPage() {
   // No teacher selected
   if (!teacherId) {
     return (
-      <div className="px-4 py-6 max-w-lg mx-auto pb-24">
+      <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
+      <div className="bg-blob-extra" />
         <div className="flex items-center gap-3 mb-6">
           <button
             onClick={() => router.back()}
@@ -137,7 +138,8 @@ export default function NewFeedbackRequestPage() {
   }
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto pb-24">
+    <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
+      <div className="bg-blob-extra" />
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button

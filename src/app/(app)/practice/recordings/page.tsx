@@ -12,7 +12,8 @@ export default function PracticeRecordingsPage() {
   const router = useRouter();
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto pb-24">
+    <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
+      <div className="bg-blob-extra" />
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button

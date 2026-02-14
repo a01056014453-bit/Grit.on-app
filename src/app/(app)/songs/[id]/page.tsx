@@ -199,7 +199,7 @@ function SongDetailContent() {
   // 로딩 또는 에러 UI
   if (isLoading || (!analysis && !error)) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-violet-300 via-violet-100/60 to-white">
+      <div className="min-h-screen bg-blob-violet">
         <div className="px-4 py-6 max-w-lg mx-auto pb-24">
           <div className="flex items-center gap-3 mb-6">
             <button onClick={() => router.back()} className="w-10 h-10 rounded-full bg-white/30 backdrop-blur-sm border border-white/40 flex items-center justify-center">
@@ -246,7 +246,7 @@ function SongDetailContent() {
   // 에러 UI
   if (error && !analysis) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-violet-300 via-violet-100/60 to-white">
+      <div className="min-h-screen bg-blob-violet">
         <div className="px-4 py-6 max-w-lg mx-auto pb-24">
           <div className="flex items-center gap-3 mb-6">
             <button onClick={() => router.back()} className="w-10 h-10 rounded-full bg-white/30 backdrop-blur-sm border border-white/40 flex items-center justify-center">
@@ -275,7 +275,7 @@ function SongDetailContent() {
   if (!analysis) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-violet-300 via-violet-100/60 to-white">
+    <div className="min-h-screen bg-blob-violet">
       <div className="px-4 py-6 max-w-lg mx-auto pb-24">
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">

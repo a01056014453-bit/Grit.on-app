@@ -397,7 +397,8 @@ export default function ProfilePage() {
   ];
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto">
+    <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-violet">
+      <div className="bg-blob-extra" />
       {/* Profile Header */}
       <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm mb-6">
         <div className="flex items-center gap-4">

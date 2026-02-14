@@ -25,7 +25,8 @@ export default function FeedbackListPage() {
   const completedCount = requests.filter((r) => completedStatuses.includes(r.status)).length;
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto pb-24">
+    <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
+      <div className="bg-blob-extra" />
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-xl font-bold text-foreground flex items-center gap-2">

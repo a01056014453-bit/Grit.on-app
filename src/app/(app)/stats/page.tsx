@@ -255,14 +255,14 @@ export default function StatsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center max-w-lg mx-auto">
+      <div className="min-h-screen bg-blob-violet flex items-center justify-center max-w-lg mx-auto">
         <div className="animate-pulse text-gray-400">로딩 중...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24 max-w-lg mx-auto">
+    <div className="min-h-screen bg-blob-violet pb-24 max-w-lg mx-auto">
       {/* Header */}
       <div className="bg-white border-b border-gray-100 sticky top-0 z-10">
         <div className="px-4 py-4 flex items-center justify-between">

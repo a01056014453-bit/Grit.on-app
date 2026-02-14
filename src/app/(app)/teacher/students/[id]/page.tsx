@@ -30,7 +30,8 @@ export default function StudentDetailPage() {
 
   if (!student) {
     return (
-      <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-slate-50">
+      <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-violet">
+      <div className="bg-blob-extra" />
         <button onClick={() => router.back()} className="mb-6">
           <ArrowLeft className="w-6 h-6 text-slate-700" />
         </button>
@@ -53,7 +54,8 @@ export default function StudentDetailPage() {
       : 0;
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-slate-50 pb-24">
+    <div className="px-4 py-6 max-w-lg mx-auto min-h-screen pb-24 bg-blob-violet">
+      <div className="bg-blob-extra" />
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button onClick={() => router.back()}>

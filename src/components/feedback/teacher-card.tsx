@@ -35,7 +35,7 @@ export function TeacherCard({ teacher, showCTA = true }: TeacherCardProps) {
   return (
     <Link
       href={`/teachers/${teacher.id}`}
-      className="block bg-card rounded-xl p-4 border border-border hover:border-primary/30 hover:shadow-sm transition-all"
+      className="block bg-white/50 backdrop-blur-xl rounded-2xl p-4 border border-white/60 shadow-sm hover:shadow-md transition-all"
     >
       {/* Header with profile image and basic info */}
       <div className="flex gap-3 mb-3">
@@ -100,7 +100,7 @@ export function TeacherCard({ teacher, showCTA = true }: TeacherCardProps) {
         {teacher.specialty.map((s) => (
           <span
             key={s}
-            className="px-2 py-0.5 rounded-full bg-secondary text-muted-foreground text-[10px] font-medium"
+            className="px-2 py-0.5 rounded-full bg-white/60 text-gray-600 text-[10px] font-medium"
           >
             {s}
           </span>
@@ -108,7 +108,7 @@ export function TeacherCard({ teacher, showCTA = true }: TeacherCardProps) {
       </div>
 
       {/* Stats */}
-      <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border">
+      <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-white/40">
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1">
             <CheckCircle className="w-3.5 h-3.5 text-green-500" />

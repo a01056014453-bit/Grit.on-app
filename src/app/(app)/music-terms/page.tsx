@@ -624,12 +624,13 @@ export default function MusicTermsPage() {
   };
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto pb-24">
+    <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
+      <div className="bg-blob-extra" />
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button
           onClick={() => router.back()}
-          className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors"
+          className="w-10 h-10 rounded-full bg-white/40 backdrop-blur-sm flex items-center justify-center hover:bg-white/60 transition-colors border border-white/50"
         >
           <ArrowLeft className="w-5 h-5 text-muted-foreground" />
         </button>
@@ -637,7 +638,7 @@ export default function MusicTermsPage() {
           <h1 className="text-lg font-bold text-foreground">음악용어 검색</h1>
           <p className="text-xs text-muted-foreground">악보 기호와 용어 뜻 알아보기</p>
         </div>
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center">
+        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
           <BookOpen className="w-5 h-5 text-white" />
         </div>
       </div>
@@ -650,7 +651,7 @@ export default function MusicTermsPage() {
           placeholder="용어 검색 (예: allegro, 알레그로, 빠르게)"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-10 pr-4 py-3 bg-secondary rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+          className="w-full pl-10 pr-4 py-3.5 bg-white/60 backdrop-blur-xl rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 border border-white/60 shadow-sm"
         />
       </div>
 
@@ -662,8 +663,8 @@ export default function MusicTermsPage() {
             onClick={() => setSelectedLanguage(lang.key)}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
               selectedLanguage === lang.key
-                ? "bg-primary text-white"
-                : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                ? "bg-violet-600 text-white shadow-sm"
+                : "bg-white/40 text-gray-600 hover:bg-white/60"
             }`}
           >
             {lang.label}
@@ -679,8 +680,8 @@ export default function MusicTermsPage() {
             onClick={() => setSelectedCategory(cat.key)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
               selectedCategory === cat.key
-                ? "bg-primary text-white"
-                : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                ? "bg-violet-600 text-white shadow-sm"
+                : "bg-white/40 text-gray-600 hover:bg-white/60"
             }`}
           >
             <cat.icon className="w-3.5 h-3.5" />
@@ -697,7 +698,7 @@ export default function MusicTermsPage() {
       {/* Terms List */}
       <div className="space-y-2">
         {filteredTerms.length === 0 ? (
-          <div className="text-center py-12 bg-card rounded-xl border border-border">
+          <div className="text-center py-12 bg-white/50 backdrop-blur-xl rounded-2xl border border-white/60 shadow-sm">
             <BookOpen className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
             <p className="text-muted-foreground">검색 결과가 없습니다</p>
           </div>
@@ -705,21 +706,17 @@ export default function MusicTermsPage() {
           filteredTerms.map((term, index) => (
             <div
               key={index}
-              className="bg-card rounded-xl p-4 border border-border"
+              className="bg-white/50 backdrop-blur-xl rounded-2xl px-3.5 py-2.5 border border-white/60 shadow-sm"
             >
-              <div className="flex items-start justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm">{getLanguageLabel(term.language)}</span>
-                  <div>
-                    <h3 className="font-bold text-foreground">{term.term}</h3>
-                    <p className="text-sm text-primary">{term.korean}</p>
-                  </div>
-                </div>
-                <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${getCategoryColor(term.category)}`}>
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-bold text-foreground">
+                  {term.term} <span className="font-medium text-violet-600">{term.korean}</span>
+                </p>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0 ml-2 ${getCategoryColor(term.category)}`}>
                   {getCategoryLabel(term.category)}
                 </span>
               </div>
-              <p className="text-sm text-muted-foreground">{term.meaning}</p>
+              <p className="text-xs text-gray-500 mt-0.5">{term.meaning}</p>
             </div>
           ))
         )}

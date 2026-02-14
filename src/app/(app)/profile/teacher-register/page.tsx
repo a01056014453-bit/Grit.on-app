@@ -41,7 +41,8 @@ export default function TeacherRegisterPage() {
   // 클라이언트에서 verification 로딩 전까지 로딩 표시
   if (!verification) {
     return (
-      <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-gray-50">
+      <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-violet">
+      <div className="bg-blob-extra" />
         <div className="flex items-center justify-center py-32">
           <div className="w-8 h-8 border-2 border-violet-600 border-t-transparent rounded-full animate-spin" />
         </div>
@@ -52,7 +53,8 @@ export default function TeacherRegisterPage() {
   // If already approved, show status
   if (verification.status === "approved") {
     return (
-      <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-gray-50">
+      <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-violet">
+      <div className="bg-blob-extra" />
         <button onClick={() => router.back()} className="mb-6">
           <ArrowLeft className="w-6 h-6 text-gray-700" />
         </button>
@@ -79,7 +81,8 @@ export default function TeacherRegisterPage() {
   // If pending
   if (verification.status === "pending") {
     return (
-      <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-gray-50">
+      <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-violet">
+      <div className="bg-blob-extra" />
         <button onClick={() => router.back()} className="mb-6">
           <ArrowLeft className="w-6 h-6 text-gray-700" />
         </button>
@@ -172,7 +175,8 @@ export default function TeacherRegisterPage() {
   };
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-gray-50">
+    <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-violet">
+      <div className="bg-blob-extra" />
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button onClick={() => router.back()}>

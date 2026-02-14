@@ -231,7 +231,8 @@ export default function RoomDetailPage() {
 
   if (!school || !room) {
     return (
-      <div className="px-4 py-6 max-w-lg mx-auto">
+      <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-violet">
+      <div className="bg-blob-extra" />
         <div className="animate-pulse">
           <div className="h-10 bg-secondary rounded-xl mb-4" />
           <div className="h-24 bg-secondary rounded-xl mb-4" />
@@ -255,7 +256,8 @@ export default function RoomDetailPage() {
       membership.uploadedPieces.length > 0);
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto pb-24">
+    <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
+      <div className="bg-blob-extra" />
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button

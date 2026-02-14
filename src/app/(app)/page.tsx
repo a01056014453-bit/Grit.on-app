@@ -186,7 +186,8 @@ export default function HomePage() {
   }
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-gradient-to-b from-violet-300 via-violet-100/60 to-white">
+    <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-violet">
+      <div className="bg-blob-extra" />
       {/* Header */}
       <div className="flex items-center justify-between mb-8 pt-2">
         <div className="flex items-center gap-3">
@@ -363,8 +364,8 @@ export default function HomePage() {
                       isToday
                         ? "bg-violet-700 text-white"
                         : count > 0
-                        ? "bg-violet-500 text-white"
-                        : "bg-white/40"
+                        ? "bg-violet-200 text-violet-700"
+                        : "bg-violet-100"
                     } ${isSelected && !isToday ? "ring-2 ring-violet-400" : ""}`}
                   >
                     {count > 0 ? count : ""}

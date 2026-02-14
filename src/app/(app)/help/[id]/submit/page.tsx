@@ -75,7 +75,8 @@ export default function SubmitProposalPage() {
   const isValid = comments.filter((c) => c.measure && c.text).length >= 2 && demoVideo;
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto pb-24">
+    <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
+      <div className="bg-blob-extra" />
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button

@@ -52,7 +52,8 @@ export default function RecordingsPage() {
 
   if (isLoading) {
     return (
-      <div className="px-4 py-6 max-w-lg mx-auto">
+      <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-violet">
+      <div className="bg-blob-extra" />
         <div className="animate-pulse">
           <div className="h-8 bg-gray-200 rounded w-1/3 mb-2"></div>
           <div className="h-4 bg-gray-200 rounded w-2/3 mb-6"></div>
@@ -70,7 +71,8 @@ export default function RecordingsPage() {
   }
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto pb-24">
+    <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
+      <div className="bg-blob-extra" />
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-xl font-bold text-gray-900">녹음 기록</h1>

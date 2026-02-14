@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Users,
@@ -14,6 +15,7 @@ import {
   Shield,
   FileText,
   Pen,
+  ArrowLeft,
 } from "lucide-react";
 import { mockRooms } from "@/data/mock-schools";
 import { isRoomJoined, getUserMembership } from "@/lib/room-store";
@@ -23,6 +25,7 @@ import { cn } from "@/lib/utils";
 const categories = ["전체", "서울대", "한예종", "연세대", "이화여대"];
 
 export default function RoomsPage() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("전체");
 
@@ -57,16 +60,23 @@ export default function RoomsPage() {
   const myRooms = roomsWithStatus.filter((room) => room.isJoined);
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto pb-24">
+    <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
+      <div className="bg-blob-extra" />
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-          <GraduationCap className="w-6 h-6 text-primary" />
-          입시 룸
-        </h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          영상을 올리고 다른 학생들의 연습을 참고하세요
-        </p>
+      <div className="flex items-center gap-3 mb-6">
+        <button
+          onClick={() => router.back()}
+          className="w-10 h-10 rounded-full bg-white/40 backdrop-blur-sm flex items-center justify-center hover:bg-white/60 transition-colors border border-white/50"
+        >
+          <ArrowLeft className="w-5 h-5 text-gray-600" />
+        </button>
+        <div className="flex-1">
+          <h1 className="text-lg font-bold text-gray-900">입시 룸</h1>
+          <p className="text-xs text-gray-500">영상을 올리고 다른 학생들의 연습을 참고하세요</p>
+        </div>
+        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
+          <GraduationCap className="w-5 h-5 text-white" />
+        </div>
       </div>
 
       {/* Upload-to-View Info */}

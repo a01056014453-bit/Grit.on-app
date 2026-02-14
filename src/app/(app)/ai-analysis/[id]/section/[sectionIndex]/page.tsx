@@ -87,7 +87,8 @@ export default function SectionDetailPage() {
 
   if (!piece || !analysis || !section) {
     return (
-      <div className="px-4 py-6 max-w-lg mx-auto">
+      <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-violet">
+      <div className="bg-blob-extra" />
         <div className="text-center py-12 text-gray-500">
           섹션 정보를 불러오는 중...
         </div>
@@ -108,7 +109,8 @@ export default function SectionDetailPage() {
   };
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto pb-24">
+    <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
+      <div className="bg-blob-extra" />
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button

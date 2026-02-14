@@ -16,7 +16,8 @@ export default function TeacherStudentsPage() {
   }, []);
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto bg-slate-50 min-h-screen pb-24">
+    <div className="px-4 py-6 max-w-lg mx-auto min-h-screen pb-24 bg-blob-violet">
+      <div className="bg-blob-extra" />
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">

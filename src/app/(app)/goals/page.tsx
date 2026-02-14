@@ -570,7 +570,8 @@ export default function GoalsPage() {
 
   if (isLoading) {
     return (
-      <div className="px-4 py-6 max-w-lg mx-auto bg-gray-50 min-h-screen">
+      <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-violet">
+      <div className="bg-blob-extra" />
         <div className="animate-pulse">
           <div className="h-10 bg-gray-200 rounded w-1/4 mb-6"></div>
           <div className="bg-gray-200 rounded-2xl h-48 mb-4"></div>
@@ -580,7 +581,8 @@ export default function GoalsPage() {
   }
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto bg-gray-50 min-h-screen pb-24">
+    <div className="px-4 py-6 max-w-lg mx-auto min-h-screen pb-24 bg-blob-violet">
+      <div className="bg-blob-extra" />
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">

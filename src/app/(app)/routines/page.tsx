@@ -178,7 +178,8 @@ export default function RoutinesPage() {
   };
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto bg-gray-50 min-h-screen">
+    <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-violet">
+      <div className="bg-blob-extra" />
       {/* Header */}
       <div className="flex items-start gap-3 mb-6">
         <button
