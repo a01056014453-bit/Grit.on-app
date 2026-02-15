@@ -60,23 +60,26 @@ export function TeacherDashboard({ teacherProfileId, onToggleMode }: TeacherDash
 
   if (!stats) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-50">
-        <div className="animate-pulse text-slate-400">로딩 중...</div>
+      <div className="flex items-center justify-center min-h-screen bg-blob-orange">
+        <div className="bg-blob-orange-extra" />
+        <div className="animate-pulse text-gray-400">로딩 중...</div>
       </div>
     );
   }
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto bg-slate-50 min-h-screen pb-24">
+    <div className="px-4 py-6 max-w-lg mx-auto min-h-screen pb-24 bg-blob-orange">
+      <div className="bg-blob-orange-extra" />
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6 pt-2">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <LayoutDashboard className="w-5 h-5 text-violet-600" />
-            <h1 className="text-lg font-bold text-slate-900">선생님 대시보드</h1>
+            <LayoutDashboard className="w-5 h-5 text-orange-600" />
+            <h1 className="text-lg font-bold text-gray-900">선생님 대시보드</h1>
           </div>
-          <p className="text-sm text-slate-500">
-            안녕하세요, <span className="font-semibold text-slate-700">{userName}</span> 선생님
+          <p className="text-sm text-gray-500">
+            안녕하세요, <span className="font-semibold text-gray-700">{userName}</span> 선생님
           </p>
         </div>
         <TeacherModeToggle enabled={true} onToggle={onToggleMode} />
@@ -84,13 +87,13 @@ export function TeacherDashboard({ teacherProfileId, onToggleMode }: TeacherDash
 
       {/* Quick Stats */}
       <div className="flex items-center gap-3 mb-6">
-        <div className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-full border border-slate-100">
+        <div className="flex items-center gap-1.5 bg-white/40 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white/50">
           <Star className="w-3.5 h-3.5 text-amber-500" />
-          <span className="text-xs font-semibold text-slate-700">{stats.avgRating}</span>
+          <span className="text-xs font-semibold text-gray-700">{stats.avgRating}</span>
         </div>
-        <div className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-full border border-slate-100">
+        <div className="flex items-center gap-1.5 bg-white/40 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white/50">
           <Zap className="w-3.5 h-3.5 text-green-500" />
-          <span className="text-xs font-semibold text-slate-700">응답률 {stats.responseRate}%</span>
+          <span className="text-xs font-semibold text-gray-700">응답률 {stats.responseRate}%</span>
         </div>
       </div>
 
@@ -102,8 +105,8 @@ export function TeacherDashboard({ teacherProfileId, onToggleMode }: TeacherDash
       {/* Pending Requests */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-bold text-slate-900 flex items-center gap-2">
-            <Inbox className="w-4 h-4 text-violet-600" />
+          <h2 className="font-bold text-gray-900 flex items-center gap-2">
+            <Inbox className="w-4 h-4 text-orange-600" />
             피드백 요청
             {stats.pendingRequests > 0 && (
               <span className="px-1.5 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full">
@@ -113,7 +116,7 @@ export function TeacherDashboard({ teacherProfileId, onToggleMode }: TeacherDash
           </h2>
           <Link
             href="/inbox"
-            className="text-xs text-violet-600 font-medium flex items-center gap-0.5"
+            className="text-xs text-orange-600 font-medium flex items-center gap-0.5"
           >
             전체 보기
             <ChevronRight className="w-3.5 h-3.5" />
@@ -121,9 +124,9 @@ export function TeacherDashboard({ teacherProfileId, onToggleMode }: TeacherDash
         </div>
 
         {recentRequests.length === 0 ? (
-          <div className="bg-white rounded-xl p-8 border border-slate-100 text-center">
-            <Inbox className="w-10 h-10 text-slate-200 mx-auto mb-2" />
-            <p className="text-sm text-slate-400">새로운 요청이 없습니다</p>
+          <div className="bg-white/60 backdrop-blur-xl rounded-2xl p-8 border border-white/60 text-center">
+            <Inbox className="w-10 h-10 text-gray-200 mx-auto mb-2" />
+            <p className="text-sm text-gray-400">새로운 요청이 없습니다</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -137,13 +140,13 @@ export function TeacherDashboard({ teacherProfileId, onToggleMode }: TeacherDash
       {/* My Students Preview */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-bold text-slate-900 flex items-center gap-2">
-            <Users className="w-4 h-4 text-violet-600" />
+          <h2 className="font-bold text-gray-900 flex items-center gap-2">
+            <Users className="w-4 h-4 text-orange-600" />
             내 학생
           </h2>
           <Link
             href="/teacher/students"
-            className="text-xs text-violet-600 font-medium flex items-center gap-0.5"
+            className="text-xs text-orange-600 font-medium flex items-center gap-0.5"
           >
             전체 보기
             <ChevronRight className="w-3.5 h-3.5" />
@@ -151,44 +154,44 @@ export function TeacherDashboard({ teacherProfileId, onToggleMode }: TeacherDash
         </div>
 
         {students.length === 0 ? (
-          <div className="bg-white rounded-xl p-8 border border-slate-100 text-center">
-            <Users className="w-10 h-10 text-slate-200 mx-auto mb-2" />
-            <p className="text-sm text-slate-400">등록된 학생이 없습니다</p>
+          <div className="bg-white/60 backdrop-blur-xl rounded-2xl p-8 border border-white/60 text-center">
+            <Users className="w-10 h-10 text-gray-200 mx-auto mb-2" />
+            <p className="text-sm text-gray-400">등록된 학생이 없습니다</p>
           </div>
         ) : (
-          <div className="bg-white rounded-xl border border-slate-100 divide-y divide-slate-50 overflow-hidden">
+          <div className="bg-white/60 backdrop-blur-xl rounded-2xl border border-white/60 divide-y divide-white/40 overflow-hidden">
             {students.map((student) => (
               <Link
                 key={student.id}
                 href={`/teacher/students/${student.id}`}
-                className="flex items-center gap-3 p-3.5 hover:bg-slate-50 transition-colors"
+                className="flex items-center gap-3 p-3.5 hover:bg-white/40 transition-colors"
               >
-                <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center shrink-0">
-                  <span className="text-sm font-semibold text-slate-500">
+                <div className="w-10 h-10 bg-orange-100/60 rounded-full flex items-center justify-center shrink-0">
+                  <span className="text-sm font-semibold text-orange-600">
                     {student.nickname[0]}
                   </span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-slate-900">
+                    <span className="text-sm font-semibold text-gray-900">
                       {student.nickname}
                     </span>
-                    <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded-full">
+                    <span className="text-[10px] px-1.5 py-0.5 bg-white/60 text-gray-500 rounded-full">
                       {student.grade}
                     </span>
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
                       student.type === "전공"
-                        ? "bg-violet-100 text-violet-600"
-                        : "bg-green-100 text-green-600"
+                        ? "bg-orange-100/80 text-orange-600"
+                        : "bg-green-100/80 text-green-600"
                     }`}>
                       {student.type}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-400 mt-0.5 truncate">
+                  <p className="text-xs text-gray-400 mt-0.5 truncate">
                     {student.currentPieces.join(", ")}
                   </p>
                 </div>
-                <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
+                <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
               </Link>
             ))}
           </div>

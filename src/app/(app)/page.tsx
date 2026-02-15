@@ -7,6 +7,7 @@ import { StatsCard, DailyGoal } from "@/components/app";
 import { TodayDrillList } from "@/components/practice";
 import { mockUser, mockStats, getGreeting, mockDrillCards } from "@/data";
 import { getTodayPracticeTime, getPracticeStats, clearAllSessions, type PracticeSession } from "@/lib/db";
+import { syncPracticeSessions } from "@/lib/sync-practice";
 import { usePracticeSessions } from "@/hooks/usePracticeSessions";
 import { formatTime } from "@/lib/format";
 import { useTeacherMode } from "@/hooks/useTeacherMode";
@@ -17,6 +18,19 @@ export default function HomePage() {
 
   // TODO: 목데이터 클리어 (1회 실행 후 제거)
   useEffect(() => { clearAllSessions(); }, []);
+
+  // Sync practice sessions to Supabase on load + tab visibility change
+  useEffect(() => {
+    syncPracticeSessions().catch(console.error);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        syncPracticeSessions().catch(console.error);
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, []);
 
   const greeting = getGreeting();
 

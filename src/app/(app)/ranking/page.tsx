@@ -11,11 +11,17 @@ import {
   Medal,
   Award,
 } from "lucide-react";
-import { mockRankingUsers, currentUserRanking } from "@/data/mock-rankings";
 import type { RankingUser } from "@/types";
-import { INSTRUMENT_EMOJIS } from "@/types/ranking";
+import { INSTRUMENT_EMOJIS, INSTRUMENT_LABELS } from "@/types/ranking";
+import { fetchTodayRankings, fetchMyRanking } from "@/lib/ranking-queries";
+import { getUserId } from "@/lib/user-id";
 import { cn } from "@/lib/utils";
-import { ShinyText } from "@/components/ui/shiny-text";
+import dynamic from "next/dynamic";
+
+const ShinyText = dynamic(
+  () => import("@/components/ui/shiny-text").then((mod) => mod.ShinyText),
+  { ssr: false, loading: () => <span className="text-sm font-bold text-amber-700">...</span> }
+);
 
 // 시간을 HH:MM:SS 형식으로 포맷
 function formatTime(totalSeconds: number): string {
@@ -155,41 +161,46 @@ interface MyStatusCardProps {
 
 function MyStatusCard({ user, totalUsers }: MyStatusCardProps) {
   const percentile = Math.round((user.rank / totalUsers) * 100);
+  const progressWidth = Math.max(5, 100 - percentile);
 
   return (
-    <div className="bg-white/60 backdrop-blur-xl rounded-2xl border border-white/60 shadow-sm p-4 mb-6">
-      <div className="flex items-center justify-between mb-3">
-        {/* Left: rank + name + instrument */}
-        <div className="flex items-center gap-3">
-          <span className="text-2xl font-extrabold text-violet-600">
-            {user.rank}
-          </span>
-          <div>
-            <p className="font-semibold text-gray-900">
-              {user.nickname}
-              <span className="ml-1 text-xs text-violet-500">(나)</span>
-            </p>
-            <span className="text-lg">{INSTRUMENT_EMOJIS[user.instrument]}</span>
+    <div className="bg-white/40 backdrop-blur-xl rounded-2xl border border-white/50 shadow-sm shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)] p-3.5 mb-5">
+      {/* Top row */}
+      <div className="flex items-center gap-3 mb-3">
+        {/* Rank badge */}
+        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-md shadow-violet-500/25">
+          <span className="text-sm font-extrabold text-white">{user.rank}</span>
+        </div>
+
+        {/* Name + instrument */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            <p className="font-bold text-sm text-gray-900 truncate">{user.nickname}</p>
+            <span className="text-[9px] px-1.5 py-px rounded-full bg-violet-100 text-violet-600 font-semibold shrink-0">나</span>
+          </div>
+          <div className="flex items-center gap-1 mt-0.5">
+            <span className="text-sm">{INSTRUMENT_EMOJIS[user.instrument]}</span>
+            <span className="text-[11px] text-gray-400">{INSTRUMENT_LABELS[user.instrument]}</span>
           </div>
         </div>
 
-        {/* Right: practice time */}
-        <span className="font-mono text-lg font-bold text-gray-700">
+        {/* Practice time */}
+        <span className="font-mono text-base font-bold bg-gradient-to-r from-violet-700 to-violet-400 bg-clip-text text-transparent">
           {formatTime(user.netPracticeTime)}
         </span>
       </div>
 
       {/* Progress bar */}
-      <div>
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-xs text-gray-500">상위 {percentile}%</span>
-        </div>
-        <div className="h-2 bg-violet-100 rounded-full overflow-hidden">
+      <div className="flex items-center gap-3">
+        <div className="flex-1 h-2 bg-violet-100/80 rounded-full overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-violet-500 to-purple-600 rounded-full transition-all"
-            style={{ width: `${100 - percentile}%` }}
+            className="h-full bg-gradient-to-r from-violet-500 via-purple-500 to-violet-400 rounded-full transition-all"
+            style={{ width: `${progressWidth}%` }}
           />
         </div>
+        <span className="text-[11px] font-semibold text-violet-500 shrink-0">
+          상위 {percentile}%
+        </span>
       </div>
     </div>
   );
@@ -247,7 +258,31 @@ function LiveRankItem({ user, elapsedSeconds }: LiveRankItemProps) {
 // ─── Main Page ──────────────────────────────────────────────
 export default function RankingPage() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [rankers, setRankers] = useState<RankingUser[]>(mockRankingUsers);
+  const [rankers, setRankers] = useState<RankingUser[]>([]);
+  const [myRanking, setMyRanking] = useState<RankingUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Supabase에서 랭킹 데이터 조회
+  const loadRankings = async () => {
+    try {
+      const [rankings, my] = await Promise.all([
+        fetchTodayRankings(),
+        fetchMyRanking(getUserId()),
+      ]);
+      setRankers(rankings);
+      setMyRanking(my);
+      setElapsedSeconds(0);
+    } catch (err) {
+      console.error("Failed to load rankings:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 초기 로드
+  useEffect(() => {
+    loadRankings();
+  }, []);
 
   // 1초마다 타이머 업데이트
   useEffect(() => {
@@ -258,11 +293,10 @@ export default function RankingPage() {
     return () => clearInterval(timerInterval);
   }, []);
 
-  // 1분마다 데이터 갱신 (mock에서는 동일한 데이터)
+  // 60초마다 Supabase 재조회
   useEffect(() => {
     const pollInterval = setInterval(() => {
-      setRankers([...mockRankingUsers]);
-      setElapsedSeconds(0);
+      loadRankings();
     }, 60000);
 
     return () => clearInterval(pollInterval);
@@ -283,12 +317,9 @@ export default function RankingPage() {
         >
           <ArrowLeft className="w-5 h-5 text-gray-600" />
         </Link>
-        <div className="flex-1">
-          <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            <Trophy className="w-6 h-6 text-transparent bg-gradient-to-br from-violet-500 to-purple-600 bg-clip-text" style={{ WebkitTextStroke: '0px' }} />
-            오늘의 랭킹
-          </h1>
-          <p className="text-xs text-gray-500 flex items-center gap-1">
+        <div className="flex-1 text-left">
+          <h1 className="text-lg font-bold text-gray-900">오늘의 랭킹</h1>
+          <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
             <Flame className="w-3 h-3 text-orange-500" />
             {practicingCount}명 실시간 연습 중
           </p>
@@ -298,11 +329,29 @@ export default function RankingPage() {
         </div>
       </div>
 
-      {/* Top 3 Podium */}
-      <PodiumSection rankers={rankers} elapsedSeconds={elapsedSeconds} />
+      {/* Loading / Empty State */}
+      {isLoading ? (
+        <div className="text-center py-12">
+          <div className="w-10 h-10 border-3 border-violet-300 border-t-violet-600 rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm text-gray-500">랭킹을 불러오는 중...</p>
+        </div>
+      ) : rankers.length === 0 ? (
+        <div className="text-center py-12 bg-white/40 backdrop-blur-xl rounded-2xl border border-white/50 mb-6">
+          <Trophy className="w-12 h-12 text-violet-300 mx-auto mb-3" />
+          <p className="font-semibold text-gray-700">아직 오늘의 랭킹 데이터가 없어요</p>
+          <p className="text-sm text-gray-500 mt-1">연습을 시작하면 랭킹에 표시됩니다</p>
+        </div>
+      ) : (
+        <>
+          {/* Top 3 Podium */}
+          <PodiumSection rankers={rankers} elapsedSeconds={elapsedSeconds} />
 
-      {/* My Ranking Card */}
-      <MyStatusCard user={currentUserRanking} totalUsers={totalUsers} />
+          {/* My Ranking Card */}
+          {myRanking && (
+            <MyStatusCard user={myRanking} totalUsers={totalUsers} />
+          )}
+        </>
+      )}
 
       {/* Full Ranking List - 4위부터 */}
       <div>
@@ -320,15 +369,17 @@ export default function RankingPage() {
         </div>
       </div>
 
-      {/* Floating CTA */}
-      <div className="fixed bottom-20 left-0 right-0 px-4 max-w-lg mx-auto">
-        <Link
-          href="/practice"
-          className="flex items-center justify-center gap-2 w-full py-4 rounded-2xl bg-gradient-to-r from-violet-500 to-violet-900 text-white font-bold shadow-lg shadow-violet-500/20 transition-transform active:scale-[0.98]"
-        >
-          <Play className="w-5 h-5 fill-white" />
-          연습 시작하고 순위 올리기
-        </Link>
+      {/* CTA - sticky: 스크롤 따라다님 */}
+      <div className="sticky bottom-20 z-30 mt-6">
+        <div className="bg-gradient-to-t from-white/80 via-white/40 to-transparent pt-4 pb-2">
+          <Link
+            href="/practice"
+            className="flex items-center justify-center gap-2 w-full py-4 rounded-2xl bg-gradient-to-r from-violet-500 to-violet-900 text-white font-bold shadow-lg shadow-violet-500/20 transition-transform active:scale-[0.98]"
+          >
+            <Play className="w-5 h-5 fill-white" />
+            연습 시작하고 순위 올리기
+          </Link>
+        </div>
       </div>
     </div>
   );

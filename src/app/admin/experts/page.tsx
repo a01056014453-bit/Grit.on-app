@@ -6,9 +6,9 @@ import { StatCard } from '@/components/admin/stat-card';
 import { StatusBadge, getStatusVariant } from '@/components/admin/status-badge';
 import { cn } from '@/lib/utils';
 import {
-  getAllVerifications,
   approveVerificationById,
   rejectVerificationById,
+  getAllVerificationsFromSupabase,
 } from '@/lib/teacher-store';
 import type { TeacherVerification, AIVerdict } from '@/types';
 
@@ -19,8 +19,9 @@ export default function ExpertsPage() {
   const [rejectReason, setRejectReason] = useState('');
   const [showRejectInput, setShowRejectInput] = useState(false);
 
-  const load = useCallback(() => {
-    setVerifications(getAllVerifications());
+  const load = useCallback(async () => {
+    const list = await getAllVerificationsFromSupabase();
+    setVerifications(list);
   }, []);
 
   useEffect(() => {

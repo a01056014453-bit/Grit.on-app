@@ -30,8 +30,8 @@ export default function StudentDetailPage() {
 
   if (!student) {
     return (
-      <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-violet">
-      <div className="bg-blob-extra" />
+      <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-orange">
+      <div className="bg-blob-orange-extra" />
         <button onClick={() => router.back()} className="mb-6">
           <ArrowLeft className="w-6 h-6 text-slate-700" />
         </button>
@@ -54,8 +54,8 @@ export default function StudentDetailPage() {
       : 0;
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto min-h-screen pb-24 bg-blob-violet">
-      <div className="bg-blob-extra" />
+    <div className="px-4 py-6 max-w-lg mx-auto min-h-screen pb-24 bg-blob-orange">
+      <div className="bg-blob-orange-extra" />
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button onClick={() => router.back()}>
@@ -81,7 +81,7 @@ export default function StudentDetailPage() {
               <span
                 className={`text-xs px-2 py-0.5 rounded-full ${
                   student.type === "전공"
-                    ? "bg-violet-100 text-violet-600"
+                    ? "bg-orange-100 text-orange-600"
                     : "bg-green-100 text-green-600"
                 }`}
               >
@@ -121,7 +121,7 @@ export default function StudentDetailPage() {
 
         <div className="bg-white rounded-xl p-4 border border-slate-100">
           <div className="flex items-center gap-2 mb-2">
-            <Target className="w-4 h-4 text-violet-500" />
+            <Target className="w-4 h-4 text-orange-500" />
             <span className="text-xs text-slate-500">레슨 완료율</span>
           </div>
           <div className="flex items-baseline gap-1">
@@ -130,7 +130,7 @@ export default function StudentDetailPage() {
           </div>
           <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2">
             <div
-              className="bg-violet-500 rounded-full h-1.5 transition-all"
+              className="bg-orange-500 rounded-full h-1.5 transition-all"
               style={{ width: `${lessonCompletion}%` }}
             />
           </div>
@@ -153,7 +153,7 @@ export default function StudentDetailPage() {
       {/* Current Pieces */}
       <div className="bg-white rounded-xl p-4 border border-slate-100 mb-4">
         <h3 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
-          <Music className="w-4 h-4 text-violet-600" />
+          <Music className="w-4 h-4 text-orange-600" />
           현재 연습곡
         </h3>
         <div className="space-y-2">
@@ -162,8 +162,8 @@ export default function StudentDetailPage() {
               key={i}
               className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg"
             >
-              <div className="w-8 h-8 bg-violet-100 rounded-lg flex items-center justify-center shrink-0">
-                <BookOpen className="w-4 h-4 text-violet-600" />
+              <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center shrink-0">
+                <BookOpen className="w-4 h-4 text-orange-600" />
               </div>
               <span className="text-sm text-slate-700 font-medium">{piece}</span>
             </div>
@@ -174,7 +174,7 @@ export default function StudentDetailPage() {
       {/* Info */}
       <div className="bg-white rounded-xl p-4 border border-slate-100">
         <h3 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-violet-600" />
+          <Calendar className="w-4 h-4 text-orange-600" />
           정보
         </h3>
         <div className="space-y-2.5">

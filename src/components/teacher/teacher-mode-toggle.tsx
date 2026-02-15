@@ -13,23 +13,23 @@ export function TeacherModeToggle({ enabled, onToggle }: TeacherModeToggleProps)
       onClick={onToggle}
       className="flex items-center gap-2 px-3 py-1.5 rounded-full border transition-colors"
       style={{
-        borderColor: enabled ? "#7c3aed" : "#e5e7eb",
-        backgroundColor: enabled ? "#f5f3ff" : "#ffffff",
+        borderColor: enabled ? "#ea580c" : "#e5e7eb",
+        backgroundColor: enabled ? "#fff7ed" : "#ffffff",
       }}
     >
       <GraduationCap
         className="w-4 h-4"
-        style={{ color: enabled ? "#7c3aed" : "#9ca3af" }}
+        style={{ color: enabled ? "#ea580c" : "#9ca3af" }}
       />
       <span
         className="text-xs font-semibold"
-        style={{ color: enabled ? "#7c3aed" : "#9ca3af" }}
+        style={{ color: enabled ? "#ea580c" : "#9ca3af" }}
       >
         선생님
       </span>
       <div
         className={`w-8 h-4.5 rounded-full relative transition-colors ${
-          enabled ? "bg-violet-600" : "bg-gray-300"
+          enabled ? "bg-orange-600" : "bg-gray-300"
         }`}
         style={{ width: 32, height: 18 }}
       >

@@ -59,6 +59,10 @@ export interface SongAnalysis {
   verification_status: VerificationStatus;
   created_at: string;
   updated_at: string;
+  /** PDF 원본 저장 경로 (Supabase Storage) */
+  pdf_storage_path?: string;
+  /** MusicXML 소스 저장 경로 (Supabase Storage) */
+  musicxml_storage_path?: string;
 }
 
 /** DB 캐시 저장 형식 */
@@ -72,6 +76,10 @@ export interface AnalyzeSongRequest {
   title: string;
   forceRefresh?: boolean; // 캐시 무시하고 재분석
   sheetMusicImages?: string[]; // 악보 이미지 base64 data URL 배열 (선택)
+  musicXml?: string; // MusicXML 텍스트 (OMR 변환 결과, 선택)
+  pdfStoragePath?: string; // Supabase Storage PDF 경로
+  musicxmlStoragePath?: string; // Supabase Storage MusicXML 경로
+  useStoredSource?: boolean; // 관리자: 저장된 악보로 재분석
 }
 
 /** API 응답 타입 */

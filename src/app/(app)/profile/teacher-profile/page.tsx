@@ -170,8 +170,8 @@ export default function TeacherProfileEditPage() {
   // ─── Preview Mode ───
   if (isPreview) {
     return (
-      <div className="min-h-screen bg-blob-violet">
-      <div className="bg-blob-extra" />
+      <div className="min-h-screen bg-blob-orange">
+      <div className="bg-blob-orange-extra" />
         {/* Header */}
         <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-gray-100">
           <div className="flex items-center justify-between px-4 py-3 max-w-lg mx-auto">
@@ -179,7 +179,7 @@ export default function TeacherProfileEditPage() {
               <EyeOff className="w-4 h-4" />
               편집으로 돌아가기
             </button>
-            <span className="text-xs font-medium text-violet-600 bg-violet-50 px-3 py-1 rounded-full">
+            <span className="text-xs font-medium text-orange-600 bg-orange-50 px-3 py-1 rounded-full">
               학생 시점 미리보기
             </span>
           </div>
@@ -189,7 +189,7 @@ export default function TeacherProfileEditPage() {
           {/* Profile Card */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             {/* Header gradient */}
-            <div className="h-20 bg-gradient-to-r from-violet-500 to-purple-600" />
+            <div className="h-20 bg-gradient-to-r from-orange-500 to-amber-600" />
 
             <div className="px-5 pb-5">
               {/* Avatar */}
@@ -213,7 +213,7 @@ export default function TeacherProfileEditPage() {
               {specialty.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-3">
                   {specialty.map((s) => (
-                    <span key={s} className="px-2.5 py-1 bg-violet-50 text-violet-700 text-xs font-medium rounded-full">
+                    <span key={s} className="px-2.5 py-1 bg-orange-50 text-orange-700 text-xs font-medium rounded-full">
                       {s}
                     </span>
                   ))}
@@ -265,7 +265,7 @@ export default function TeacherProfileEditPage() {
               {education.length > 0 && (
                 <div className="mt-5">
                   <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-1.5">
-                    <GraduationCap className="w-4 h-4 text-violet-600" />
+                    <GraduationCap className="w-4 h-4 text-orange-600" />
                     학력
                   </h3>
                   <div className="space-y-2">
@@ -277,7 +277,7 @@ export default function TeacherProfileEditPage() {
                           {edu.year && <span className="text-gray-400 text-xs ml-1">{edu.year}</span>}
                         </div>
                         {isEducationVerified(edu.school) && (
-                          <span className="flex items-center gap-0.5 text-xs text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full shrink-0">
+                          <span className="flex items-center gap-0.5 text-xs text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full shrink-0">
                             <CheckCircle className="w-3.5 h-3.5" />
                             AI 인증
                           </span>
@@ -332,8 +332,8 @@ export default function TeacherProfileEditPage() {
 
   // ─── Edit Mode ───
   return (
-    <div className="min-h-screen bg-blob-violet">
-      <div className="bg-blob-extra" />
+    <div className="min-h-screen bg-blob-orange">
+      <div className="bg-blob-orange-extra" />
       {/* Header */}
       <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-gray-100">
         <div className="flex items-center justify-between px-4 py-3 max-w-lg mx-auto">
@@ -344,7 +344,7 @@ export default function TeacherProfileEditPage() {
           <h1 className="text-sm font-semibold text-gray-900">프로필 관리</h1>
           <button
             onClick={() => setIsPreview(true)}
-            className="flex items-center gap-1 text-sm text-violet-600 font-medium"
+            className="flex items-center gap-1 text-sm text-orange-600 font-medium"
           >
             <Eye className="w-4 h-4" />
             미리보기
@@ -360,7 +360,7 @@ export default function TeacherProfileEditPage() {
               onClick={() => fileInputRef.current?.click()}
               className="relative shrink-0"
             >
-              <div className="w-24 h-24 rounded-full ring-4 ring-violet-400/30 shadow-[0_0_30px_rgba(139,92,246,0.3)] overflow-hidden bg-gray-100">
+              <div className="w-24 h-24 rounded-full ring-4 ring-orange-400/30 shadow-[0_0_30px_rgba(249,115,22,0.3)] overflow-hidden bg-gray-100">
                 {profileImage ? (
                   <Image src={profileImage} alt="프로필" fill className="object-cover rounded-full" />
                 ) : (
@@ -369,7 +369,7 @@ export default function TeacherProfileEditPage() {
                   </div>
                 )}
               </div>
-              <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-violet-600 rounded-full flex items-center justify-center border-2 border-white shadow">
+              <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-orange-600 rounded-full flex items-center justify-center border-2 border-white shadow">
                 <Camera className="w-4 h-4 text-white" />
               </div>
             </button>
@@ -383,7 +383,7 @@ export default function TeacherProfileEditPage() {
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="한 줄 소개 (예: 서울대 피아노 전공)"
                 maxLength={40}
-                className="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent placeholder:text-gray-400"
+                className="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent placeholder:text-gray-400"
               />
             </div>
           </div>
@@ -398,7 +398,7 @@ export default function TeacherProfileEditPage() {
                 key={s}
                 onClick={() => toggleChip(specialty, s, setSpecialty)}
                 className={`px-3.5 py-2 rounded-full text-sm font-medium transition-colors ${
-                  specialty.includes(s) ? "bg-violet-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  specialty.includes(s) ? "bg-orange-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
               >
                 {s}
@@ -411,12 +411,12 @@ export default function TeacherProfileEditPage() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-1.5">
-              <GraduationCap className="w-4 h-4 text-violet-600" />
+              <GraduationCap className="w-4 h-4 text-orange-600" />
               학력
             </h3>
             <button
               onClick={() => setEducation([...education, { school: "", degree: "학사", major: "" }])}
-              className="flex items-center gap-1 text-xs text-violet-600 font-medium"
+              className="flex items-center gap-1 text-xs text-orange-600 font-medium"
             >
               <Plus className="w-3.5 h-3.5" />
               추가
@@ -432,7 +432,7 @@ export default function TeacherProfileEditPage() {
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs font-medium text-gray-500">학력 {i + 1}</span>
                     {isEducationVerified(edu.school) && (
-                      <span className="flex items-center gap-0.5 text-xs text-violet-600">
+                      <span className="flex items-center gap-0.5 text-xs text-orange-600">
                         <CheckCircle className="w-3.5 h-3.5" />
                         AI 인증
                       </span>
@@ -454,7 +454,7 @@ export default function TeacherProfileEditPage() {
                     setEducation(updated);
                   }}
                   placeholder="학교명"
-                  className="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent"
+                  className="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
                 />
                 <div className="flex gap-2">
                   <select
@@ -464,7 +464,7 @@ export default function TeacherProfileEditPage() {
                       updated[i] = { ...updated[i], degree: e.target.value };
                       setEducation(updated);
                     }}
-                    className="flex-1 text-sm px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-400 bg-white"
+                    className="flex-1 text-sm px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
                   >
                     {DEGREE_OPTIONS.map((d) => (
                       <option key={d} value={d}>{d}</option>
@@ -479,7 +479,7 @@ export default function TeacherProfileEditPage() {
                       setEducation(updated);
                     }}
                     placeholder="전공"
-                    className="flex-1 text-sm px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent"
+                    className="flex-1 text-sm px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
                   />
                 </div>
                 <input
@@ -491,7 +491,7 @@ export default function TeacherProfileEditPage() {
                     setEducation(updated);
                   }}
                   placeholder="졸업년도 (선택)"
-                  className="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent"
+                  className="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
                 />
               </div>
             ))}
@@ -507,7 +507,7 @@ export default function TeacherProfileEditPage() {
             </h3>
             <button
               onClick={() => setAwards([...awards, { competition: "", prize: "", year: new Date().getFullYear() }])}
-              className="flex items-center gap-1 text-xs text-violet-600 font-medium"
+              className="flex items-center gap-1 text-xs text-orange-600 font-medium"
             >
               <Plus className="w-3.5 h-3.5" />
               추가
@@ -537,7 +537,7 @@ export default function TeacherProfileEditPage() {
                     setAwards(updated);
                   }}
                   placeholder="대회명"
-                  className="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent"
+                  className="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
                 />
                 <div className="flex gap-2">
                   <input
@@ -549,7 +549,7 @@ export default function TeacherProfileEditPage() {
                       setAwards(updated);
                     }}
                     placeholder="수상 내역"
-                    className="flex-1 text-sm px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent"
+                    className="flex-1 text-sm px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
                   />
                   <input
                     type="number"
@@ -560,7 +560,7 @@ export default function TeacherProfileEditPage() {
                       setAwards(updated);
                     }}
                     placeholder="년도"
-                    className="w-24 text-sm px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent"
+                    className="w-24 text-sm px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
                   />
                 </div>
               </div>
@@ -577,7 +577,7 @@ export default function TeacherProfileEditPage() {
             </h3>
             <button
               onClick={() => setPerformances([...performances, { title: "", year: new Date().getFullYear() }])}
-              className="flex items-center gap-1 text-xs text-violet-600 font-medium"
+              className="flex items-center gap-1 text-xs text-orange-600 font-medium"
             >
               <Plus className="w-3.5 h-3.5" />
               추가
@@ -607,7 +607,7 @@ export default function TeacherProfileEditPage() {
                     setPerformances(updated);
                   }}
                   placeholder="연주 제목/프로그램"
-                  className="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent"
+                  className="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
                 />
                 <div className="flex gap-2">
                   <input
@@ -619,7 +619,7 @@ export default function TeacherProfileEditPage() {
                       setPerformances(updated);
                     }}
                     placeholder="장소 (선택)"
-                    className="flex-1 text-sm px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent"
+                    className="flex-1 text-sm px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
                   />
                   <input
                     type="number"
@@ -630,7 +630,7 @@ export default function TeacherProfileEditPage() {
                       setPerformances(updated);
                     }}
                     placeholder="년도"
-                    className="w-24 text-sm px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent"
+                    className="w-24 text-sm px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
                   />
                 </div>
               </div>
@@ -647,7 +647,7 @@ export default function TeacherProfileEditPage() {
             max={50}
             value={teachingExperience}
             onChange={(e) => setTeachingExperience(Math.max(0, parseInt(e.target.value) || 0))}
-            className="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent"
+            className="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
           />
         </div>
 
@@ -660,7 +660,7 @@ export default function TeacherProfileEditPage() {
                 key={t}
                 onClick={() => toggleChip(lessonTarget, t, setLessonTarget)}
                 className={`px-3.5 py-2 rounded-full text-sm font-medium transition-colors ${
-                  lessonTarget.includes(t) ? "bg-violet-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  lessonTarget.includes(t) ? "bg-orange-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
               >
                 {t}
@@ -678,7 +678,7 @@ export default function TeacherProfileEditPage() {
                 key={d}
                 onClick={() => toggleChip(availableDays, d, setAvailableDays)}
                 className={`w-10 h-10 rounded-full text-sm font-medium transition-colors ${
-                  availableDays.includes(d) ? "bg-violet-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  availableDays.includes(d) ? "bg-orange-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
               >
                 {d}
@@ -690,7 +690,7 @@ export default function TeacherProfileEditPage() {
         {/* Price */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
           <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-1.5">
-            <CreditCard className="w-4 h-4 text-violet-600" />
+            <CreditCard className="w-4 h-4 text-orange-600" />
             레슨 비용
           </h3>
           <div className="space-y-3">
@@ -701,11 +701,11 @@ export default function TeacherProfileEditPage() {
               step={5}
               value={priceCredits}
               onChange={(e) => setPriceCredits(parseInt(e.target.value))}
-              className="w-full accent-violet-600"
+              className="w-full accent-orange-600"
             />
             <div className="flex items-center justify-between">
               <span className="text-xs text-gray-400">10 크레딧</span>
-              <span className="text-lg font-bold text-violet-600">{priceCredits} 크레딧</span>
+              <span className="text-lg font-bold text-orange-600">{priceCredits} 크레딧</span>
               <span className="text-xs text-gray-400">200 크레딧</span>
             </div>
           </div>
@@ -720,7 +720,7 @@ export default function TeacherProfileEditPage() {
             placeholder="자기소개와 레슨 철학을 작성해주세요.&#10;예: 학생 개개인의 수준과 목표에 맞춘 맞춤형 레슨을 지향합니다..."
             rows={5}
             maxLength={500}
-            className="w-full text-sm px-4 py-3 bg-white/60 backdrop-blur-sm border border-violet-200/50 rounded-2xl focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent resize-none placeholder:text-gray-400"
+            className="w-full text-sm px-4 py-3 bg-white/60 backdrop-blur-sm border border-orange-200/50 rounded-2xl focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent resize-none placeholder:text-gray-400"
           />
           <p className="text-xs text-gray-400 text-right mt-1">{bio.length}/500</p>
         </div>
@@ -731,7 +731,7 @@ export default function TeacherProfileEditPage() {
         <button
           onClick={handleSave}
           disabled={isSaving}
-          className="w-full py-3.5 bg-violet-600 text-white rounded-2xl font-semibold text-sm flex items-center justify-center gap-2 shadow-lg shadow-violet-600/25 hover:bg-violet-700 transition-colors disabled:opacity-50"
+          className="w-full py-3.5 bg-orange-600 text-white rounded-2xl font-semibold text-sm flex items-center justify-center gap-2 shadow-lg shadow-orange-600/25 hover:bg-orange-700 transition-colors disabled:opacity-50"
         >
           <Save className="w-4 h-4" />
           {isSaving ? "저장 중..." : "저장하기"}

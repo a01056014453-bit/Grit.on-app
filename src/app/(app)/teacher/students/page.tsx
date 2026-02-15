@@ -16,12 +16,12 @@ export default function TeacherStudentsPage() {
   }, []);
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto min-h-screen pb-24 bg-blob-violet">
-      <div className="bg-blob-extra" />
+    <div className="px-4 py-6 max-w-lg mx-auto min-h-screen pb-24 bg-blob-orange">
+      <div className="bg-blob-orange-extra" />
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-          <Users className="w-6 h-6 text-violet-600" />
+          <Users className="w-6 h-6 text-orange-600" />
           학생 관리
         </h1>
         <p className="text-sm text-slate-500 mt-0.5">

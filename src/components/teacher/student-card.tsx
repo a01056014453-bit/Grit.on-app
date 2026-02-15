@@ -20,7 +20,7 @@ export function StudentCard({ student }: StudentCardProps) {
   return (
     <Link
       href={`/teacher/students/${student.id}`}
-      className="block bg-white rounded-xl p-4 border border-slate-100 hover:border-violet-200 hover:shadow-sm transition-all"
+      className="block bg-white/60 backdrop-blur-xl rounded-2xl p-4 border border-white/60 hover:border-orange-200/60 hover:shadow-sm transition-all"
     >
       <div className="flex items-center gap-3 mb-3">
         <div className="w-11 h-11 bg-slate-100 rounded-full flex items-center justify-center shrink-0">
@@ -40,7 +40,7 @@ export function StudentCard({ student }: StudentCardProps) {
             </span>
             <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
               student.type === "전공"
-                ? "bg-violet-100 text-violet-600"
+                ? "bg-orange-100 text-orange-600"
                 : "bg-green-100 text-green-600"
             }`}>
               {student.type}
@@ -55,7 +55,7 @@ export function StudentCard({ student }: StudentCardProps) {
 
       {/* Current Pieces */}
       <div className="flex items-center gap-1.5 mb-2.5">
-        <Music className="w-3.5 h-3.5 text-violet-500 shrink-0" />
+        <Music className="w-3.5 h-3.5 text-orange-500 shrink-0" />
         <p className="text-xs text-slate-600 truncate">
           {student.currentPieces.join(", ")}
         </p>

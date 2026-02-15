@@ -348,3 +348,51 @@ p, span, li, blockquote {
   pointer-events: none;
   z-index: 0 !important;
 }
+
+/* Orange blob gradient background (선생님 모드) */
+.bg-blob-orange {
+  position: relative;
+  background: #fffaf5;
+}
+
+.bg-blob-orange::before,
+.bg-blob-orange::after {
+  content: '';
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.bg-blob-orange::before {
+  width: 70vw;
+  height: 70vw;
+  top: -10vw;
+  left: -20vw;
+  background: radial-gradient(circle, rgba(255, 186, 120, 0.45) 0%, rgba(255, 210, 160, 0.22) 50%, transparent 70%);
+}
+
+.bg-blob-orange::after {
+  width: 60vw;
+  height: 60vw;
+  top: 30vh;
+  right: -15vw;
+  background: radial-gradient(circle, rgba(255, 165, 90, 0.30) 0%, rgba(255, 200, 150, 0.15) 50%, transparent 70%);
+}
+
+.bg-blob-orange > * {
+  position: relative;
+  z-index: 1;
+}
+
+.bg-blob-orange-extra {
+  position: fixed;
+  width: 50vw;
+  height: 50vw;
+  bottom: 10vh;
+  left: -5vw;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 195, 140, 0.25) 0%, rgba(255, 215, 175, 0.12) 50%, transparent 70%);
+  pointer-events: none;
+  z-index: 0 !important;
+}

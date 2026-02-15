@@ -2,33 +2,63 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { ArrowLeft, Search, Sparkles, Music, ChevronRight, Plus, X, Camera, Trash2 } from "lucide-react";
+import { ArrowLeft, Search, Sparkles, Music, ChevronRight, Plus, X, FileText, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence, Variants } from "framer-motion";
 import { mockSongs, mockSongAIInfo, composerList } from "@/data";
 import type { SongAnalysis } from "@/types/song-analysis";
 import Image from "next/image";
 
-/** 작곡가 초상화 (Wikimedia Commons, public domain) */
+/** 작곡가 초상화 (Wikimedia Commons, public domain) — Wikipedia API 기반 최신 URL */
 const COMPOSER_PORTRAITS: Record<string, string> = {
-  chopin: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e8/Frederic_Chopin_photo.jpeg/200px-Frederic_Chopin_photo.jpeg",
-  beethoven: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/Joseph_Karl_Stieler%27s_Beethoven_mit_dem_Manuskript_der_Missa_solemnis.jpg/200px-Joseph_Karl_Stieler%27s_Beethoven_mit_dem_Manuskript_der_Missa_solemnis.jpg",
-  bach: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6a/Johann_Sebastian_Bach.jpg/200px-Johann_Sebastian_Bach.jpg",
-  mozart: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ad/The_Mozart_Family_-_Wolfgang_Amadeus_Mozart_headshot.jpg/200px-The_Mozart_Family_-_Wolfgang_Amadeus_Mozart_headshot.jpg",
-  schubert: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/Franz_Schubert_by_Wilhelm_August_Rieder_1875.jpg/200px-Franz_Schubert_by_Wilhelm_August_Rieder_1875.jpg",
-  schumann: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Robert_Schumann_1839.jpg/200px-Robert_Schumann_1839.jpg",
-  liszt: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/Franz_Liszt_by_Herman_Biow-_1843.png/200px-Franz_Liszt_by_Herman_Biow-_1843.png",
-  debussy: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Claude_Debussy_by_Atelier_Nadar.jpg/200px-Claude_Debussy_by_Atelier_Nadar.jpg",
-  rachmaninoff: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/be/Sergei_Rachmaninoff_cph.3a40575.jpg/200px-Sergei_Rachmaninoff_cph.3a40575.jpg",
-  rachmaninov: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/be/Sergei_Rachmaninoff_cph.3a40575.jpg/200px-Sergei_Rachmaninoff_cph.3a40575.jpg",
-  tchaikovsky: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/Tchaikovsky_by_Reutlinger_%28cropped%29.jpg/200px-Tchaikovsky_by_Reutlinger_%28cropped%29.jpg",
-  ravel: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/Maurice_Ravel_1925.jpg/200px-Maurice_Ravel_1925.jpg",
-  brahms: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/JohannesBrahms.jpg/200px-JohannesBrahms.jpg",
-  haydn: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Joseph_Haydn%2C_target_of_a_prank.jpg/200px-Joseph_Haydn%2C_target_of_a_prank.jpg",
-  prokofiev: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f4/Sergei_Prokofiev_circa_1918_over_Chair_%28cropped%29.jpg/200px-Sergei_Prokofiev_circa_1918_over_Chair_%28cropped%29.jpg",
-  scriabin: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Scriabin_prometheus.jpg/200px-Scriabin_prometheus.jpg",
-  grieg: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Edvard_Grieg_%281888%29_by_Elliot_and_Fry_-_02.jpg/200px-Edvard_Grieg_%281888%29_by_Elliot_and_Fry_-_02.jpg",
-  mendelssohn: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Felix_Mendelssohn_Bartholdy.jpg/200px-Felix_Mendelssohn_Bartholdy.jpg",
+  // 바로크
+  bach: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6a/Johann_Sebastian_Bach.jpg/250px-Johann_Sebastian_Bach.jpg",
+  handel: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/George_Frideric_Handel_by_Balthasar_Denner.jpg/250px-George_Frideric_Handel_by_Balthasar_Denner.jpg",
+  scarlatti: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Retrato_de_Domenico_Scarlatti.jpg/250px-Retrato_de_Domenico_Scarlatti.jpg",
+  couperin: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c4/Francois_Couperin_2.jpg/250px-Francois_Couperin_2.jpg",
+  rameau: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/98/Attribu%C3%A9_%C3%A0_Joseph_Aved%2C_Portrait_de_Jean-Philippe_Rameau_%28vers_1728%29_-_001.jpg/250px-Attribu%C3%A9_%C3%A0_Joseph_Aved%2C_Portrait_de_Jean-Philippe_Rameau_%28vers_1728%29_-_001.jpg",
+  // 고전
+  haydn: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Joseph_Haydn.jpg/250px-Joseph_Haydn.jpg",
+  mozart: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ad/The_Mozart_Family_-_Wolfgang_Amadeus_Mozart_headshot.jpg/250px-The_Mozart_Family_-_Wolfgang_Amadeus_Mozart_headshot.jpg",
+  beethoven: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/Joseph_Karl_Stieler%27s_Beethoven_mit_dem_Manuskript_der_Missa_solemnis.jpg/250px-Joseph_Karl_Stieler%27s_Beethoven_mit_dem_Manuskript_der_Missa_solemnis.jpg",
+  clementi: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c9/Muzio_Clementi.jpeg/250px-Muzio_Clementi.jpeg",
+  // 초기 낭만
+  schubert: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/Franz_Schubert_by_Wilhelm_August_Rieder_1875.jpg/250px-Franz_Schubert_by_Wilhelm_August_Rieder_1875.jpg",
+  mendelssohn: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Felix_Mendelssohn_Bartholdy_by_Eduard_Magnus_%281833%29.jpg/250px-Felix_Mendelssohn_Bartholdy_by_Eduard_Magnus_%281833%29.jpg",
+  schumann: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Robert_Schumann_1839.jpg/250px-Robert_Schumann_1839.jpg",
+  chopin: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e8/Frederic_Chopin_photo.jpeg/250px-Frederic_Chopin_photo.jpeg",
+  liszt: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/Franz_Liszt_by_Herman_Biow-_1843.png/250px-Franz_Liszt_by_Herman_Biow-_1843.png",
+  alkan: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fd/Charles-Valentin_Alkan%2C_sitting.jpg/200px-Charles-Valentin_Alkan%2C_sitting.jpg",
+  // 후기 낭만
+  brahms: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/JohannesBrahms.jpg/250px-JohannesBrahms.jpg",
+  tchaikovsky: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/Tchaikovsky_by_Reutlinger_%28cropped%29.jpg/250px-Tchaikovsky_by_Reutlinger_%28cropped%29.jpg",
+  grieg: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/50/Edvard_Grieg_portrait_%28cropped%29.jpg/250px-Edvard_Grieg_portrait_%28cropped%29.jpg",
+  dvorak: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Dvorak.jpg/250px-Dvorak.jpg",
+  franck: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1c/C%C3%A9sar_Franck_by_Pierre_Petit.jpg/250px-C%C3%A9sar_Franck_by_Pierre_Petit.jpg",
+  "saint-saens": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/98/Saint-Sa%C3%ABns-circa-1880.jpg/250px-Saint-Sa%C3%ABns-circa-1880.jpg",
+  mussorgsky: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/01/Modest_M%C3%BAsorgski%2C_por_Ili%C3%A1_Repin.jpg/250px-Modest_M%C3%BAsorgski%2C_por_Ili%C3%A1_Repin.jpg",
+  // 프랑스 인상주의 / 근대
+  faure: "https://upload.wikimedia.org/wikipedia/en/thumb/1/1f/Faure1907.jpg/250px-Faure1907.jpg",
+  debussy: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Claude_Debussy_by_Atelier_Nadar.jpg/250px-Claude_Debussy_by_Atelier_Nadar.jpg",
+  ravel: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/78/Maurice_Ravel_1925.jpg/250px-Maurice_Ravel_1925.jpg",
+  satie: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/58/Ericsatie.jpg/250px-Ericsatie.jpg",
+  poulenc: "https://upload.wikimedia.org/wikipedia/en/thumb/b/b8/Poulenc-1922.jpg/220px-Poulenc-1922.jpg",
+  // 러시아 / 동유럽
+  rachmaninoff: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/be/Sergei_Rachmaninoff_cph.3a40575.jpg/250px-Sergei_Rachmaninoff_cph.3a40575.jpg",
+  rachmaninov: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/be/Sergei_Rachmaninoff_cph.3a40575.jpg/250px-Sergei_Rachmaninoff_cph.3a40575.jpg",
+  scriabin: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Scriabin_1909_Cropped.jpg/250px-Scriabin_1909_Cropped.jpg",
+  prokofiev: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/Sergei_Prokofiev_circa_1918_over_Chair_Bain.jpg/250px-Sergei_Prokofiev_circa_1918_over_Chair_Bain.jpg",
+  shostakovich: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/64/%D0%9A%D0%BE%D0%BC%D0%BF%D0%BE%D0%B7%D0%B8%D1%82%D0%BE%D1%80_%D0%94%D0%BC%D0%B8%D1%82%D1%80%D0%B8%D0%B9_%D0%94%D0%BC%D0%B8%D1%82%D1%80%D0%B8%D0%B5%D0%B2%D0%B8%D1%87_%D0%A8%D0%BE%D1%81%D1%82%D0%B0%D0%BA%D0%BE%D0%B2%D0%B8%D1%87.jpg/250px-%D0%9A%D0%BE%D0%BC%D0%BF%D0%BE%D0%B7%D0%B8%D1%82%D0%BE%D1%80_%D0%94%D0%BC%D0%B8%D1%82%D1%80%D0%B8%D0%B9_%D0%94%D0%BC%D0%B8%D1%82%D1%80%D0%B8%D0%B5%D0%B2%D0%B8%D1%87_%D0%A8%D0%BE%D1%81%D1%82%D0%B0%D0%BA%D0%BE%D0%B2%D0%B8%D1%87.jpg",
+  bartok: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Bart%C3%B3k_B%C3%A9la_1927.jpg/250px-Bart%C3%B3k_B%C3%A9la_1927.jpg",
+  janacek: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/Leo%C5%A1_Jan%C3%A1%C4%8Dek_el_1914.png/250px-Leo%C5%A1_Jan%C3%A1%C4%8Dek_el_1914.png",
+  // 스페인
+  albeniz: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/Isaac_Alb%C3%A9niz%2C_de_Napoleon.jpg/250px-Isaac_Alb%C3%A9niz%2C_de_Napoleon.jpg",
+  granados: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Granados.jpg/242px-Granados.jpg",
+  // 20세기
+  gershwin: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/72/Portrait_of_George_Gershwin_LCCN2004662906.jpg/250px-Portrait_of_George_Gershwin_LCCN2004662906.jpg",
+  barber: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Samuel_Barber.jpg/250px-Samuel_Barber.jpg",
+  copland: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Aaron_Copland_1970.JPG/250px-Aaron_Copland_1970.JPG",
+  messiaen: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0a/Messiaen_Harcourt_1937_2.jpg/250px-Messiaen_Harcourt_1937_2.jpg",
 };
 
 function getComposerPortrait(composerName: string): string | null {
@@ -104,7 +134,9 @@ export default function AnalysisPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newSong, setNewSong] = useState({ composer: "", title: "" });
-  const [sheetImages, setSheetImages] = useState<string[]>([]);
+  const [musicXmlContent, setMusicXmlContent] = useState<string | null>(null);
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
+  const [pendingPdfBase64, setPendingPdfBase64] = useState<string | null>(null);
   const [savedAnalyses, setSavedAnalyses] = useState<SongAnalysis[]>([]);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isLoadingSaved, setIsLoadingSaved] = useState(true);
@@ -131,32 +163,46 @@ export default function AnalysisPage() {
     }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-    Array.from(files).forEach((file) => {
-      if (file.size > 10 * 1024 * 1024) {
-        alert("파일 크기는 10MB 이하여야 합니다.");
-        return;
-      }
-      if (!file.type.startsWith("image/")) {
-        alert("이미지 파일만 업로드 가능합니다.");
-        return;
-      }
+    if (file.size > 20 * 1024 * 1024) {
+      alert("파일 크기는 20MB 이하여야 합니다.");
+      e.target.value = "";
+      return;
+    }
+
+    const ext = file.name.toLowerCase();
+    const isPdf = ext.endsWith(".pdf");
+    const isMusicXml = ext.endsWith(".xml") || ext.endsWith(".musicxml") || ext.endsWith(".mxl");
+
+    if (!isPdf && !isMusicXml) {
+      alert("PDF 또는 MusicXML(.xml, .musicxml, .mxl) 파일만 업로드 가능합니다.");
+      e.target.value = "";
+      return;
+    }
+
+    if (isPdf) {
+      // PDF는 상세 페이지에서 변환 — 여기서는 base64로만 읽어둠
+      setUploadedFileName(file.name);
+      setMusicXmlContent(null);
       const reader = new FileReader();
-      reader.onload = (event) => {
-        const dataUrl = event.target?.result as string;
-        setSheetImages((prev) => {
-          if (prev.length >= 5) {
-            alert("최대 5장까지 첨부 가능합니다.");
-            return prev;
-          }
-          return [...prev, dataUrl];
-        });
+      reader.onload = () => {
+        setPendingPdfBase64(reader.result as string);
       };
       reader.readAsDataURL(file);
-    });
+    } else {
+      // MusicXML 직접 읽기
+      try {
+        const text = await file.text();
+        setMusicXmlContent(text);
+        setUploadedFileName(file.name);
+        setPendingPdfBase64(null);
+      } catch {
+        alert("파일을 읽을 수 없습니다.");
+      }
+    }
     e.target.value = "";
   };
 
@@ -286,7 +332,7 @@ export default function AnalysisPage() {
 
       {/* Add Song Button */}
       <motion.button
-        onClick={() => setIsModalOpen(true)}
+        onClick={() => setIsModalOpen(!isModalOpen)}
         className="group w-full flex items-center justify-center gap-2 py-3 mb-6 rounded-2xl border-2 border-dashed border-violet-300/50 bg-white/15 backdrop-blur-sm text-violet-600 relative overflow-hidden hover:bg-white/25 transition-all"
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
@@ -294,6 +340,187 @@ export default function AnalysisPage() {
         <Plus className="w-5 h-5 relative z-10" />
         <span className="font-medium relative z-10">새로운 곡 분석하기</span>
       </motion.button>
+
+      {/* Add Song Card (inline) */}
+      <AnimatePresence>
+        {isModalOpen && (
+            <motion.div
+              className="bg-white rounded-2xl w-full p-5 shadow-lg border border-gray-100 mb-6"
+              initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+              animate={{ opacity: 1, height: "auto", marginBottom: 24 }}
+              exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <AnimatePresence mode="wait">
+                    {getComposerPortrait(newSong.composer) ? (
+                      <motion.div
+                        key={newSong.composer}
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="w-10 h-10 rounded-full overflow-hidden border-2 border-violet-300 shadow-md shrink-0"
+                      >
+                        <Image
+                          src={getComposerPortrait(newSong.composer)!}
+                          alt={newSong.composer}
+                          width={80}
+                          height={80}
+                          className="w-full h-full object-cover"
+                          unoptimized
+                        />
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="placeholder"
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 0, opacity: 0 }}
+                        className="w-10 h-10 rounded-full bg-violet-200/60 flex items-center justify-center shrink-0"
+                      >
+                        <Music className="w-5 h-5 text-violet-500" />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                  <h3 className="text-lg font-bold text-gray-900">새로운 곡 분석</h3>
+                </div>
+                <button
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    setNewSong({ composer: "", title: "" });
+                  }}
+                  className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
+                >
+                  <X className="w-4 h-4 text-gray-500" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-1.5 block">
+                    작곡가
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="2글자 이상 입력"
+                    value={newSong.composer}
+                    onChange={(e) => setNewSong({ ...newSong, composer: e.target.value })}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300/40 placeholder:text-gray-400 transition-all"
+                    autoFocus
+                  />
+                  {filteredComposers.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {filteredComposers.map((c) => (
+                        <button
+                          key={c.key}
+                          onClick={() => setNewSong({ ...newSong, composer: c.label })}
+                          className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                            newSong.composer === c.label
+                              ? "bg-violet-600 text-white border-violet-600"
+                              : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100"
+                          }`}
+                        >
+                          {c.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-1.5 block">
+                    곡 제목
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="예) Ballade Op.23 No.1"
+                    value={newSong.title}
+                    onChange={(e) => setNewSong({ ...newSong, title: e.target.value })}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300/40 placeholder:text-gray-400 transition-all"
+                  />
+                </div>
+
+                {/* 악보 파일 첨부 (PDF / MusicXML) */}
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-1.5 block">
+                    악보 첨부 <span className="text-gray-400 font-normal">(선택)</span>
+                  </label>
+                  {!uploadedFileName ? (
+                    <label className="flex items-center justify-center gap-2 py-3 rounded-xl border border-dashed border-violet-300/50 bg-violet-50/50 text-violet-600 text-sm cursor-pointer hover:bg-violet-50 transition-colors">
+                      <FileText className="w-4 h-4" />
+                      <span>PDF / MusicXML 파일 업로드</span>
+                      <input
+                        type="file"
+                        accept=".pdf,.xml,.musicxml,.mxl"
+                        onChange={handleFileUpload}
+                        className="hidden"
+                      />
+                    </label>
+                  ) : (
+                    <div className="flex items-center gap-2 py-2.5 px-3 rounded-xl border border-violet-300/40 bg-violet-50/30 text-sm">
+                      <FileText className="w-4 h-4 text-violet-500 shrink-0" />
+                      <span className="flex-1 truncate text-gray-700">{uploadedFileName}</span>
+                      {pendingPdfBase64 && (
+                        <span className="text-xs text-violet-500 shrink-0">PDF</span>
+                      )}
+                      {musicXmlContent && (
+                        <span className="text-xs text-violet-500 shrink-0">XML</span>
+                      )}
+                      <button
+                        onClick={() => {
+                          setUploadedFileName(null);
+                          setPendingPdfBase64(null);
+                          setMusicXmlContent(null);
+                        }}
+                        className="w-5 h-5 rounded-full bg-black/10 flex items-center justify-center shrink-0 hover:bg-black/20"
+                      >
+                        <X className="w-3 h-3 text-gray-500" />
+                      </button>
+                    </div>
+                  )}
+                  <p className="text-xs text-gray-400 mt-1.5">PDF는 이미지로 변환 후 분석, MusicXML은 정밀 구조 분석</p>
+                </div>
+              </div>
+
+              <motion.button
+                onClick={() => {
+                  if (newSong.composer.length >= 2 && newSong.title.length >= 2) {
+                    if (pendingPdfBase64) {
+                      try {
+                        sessionStorage.setItem("pendingPdf", pendingPdfBase64);
+                        sessionStorage.setItem("pendingPdfName", uploadedFileName || "upload.pdf");
+                      } catch (e) {
+                        console.error("PDF sessionStorage 저장 실패:", e);
+                      }
+                    }
+                    if (musicXmlContent) {
+                      sessionStorage.setItem("musicXml", musicXmlContent);
+                    } else {
+                      sessionStorage.removeItem("musicXml");
+                    }
+                    sessionStorage.removeItem("sheetMusicImages");
+                    const newId = `new-${Date.now()}`;
+                    router.push(`/songs/${newId}?composer=${encodeURIComponent(newSong.composer)}&title=${encodeURIComponent(newSong.title)}`);
+                    setIsModalOpen(false);
+                    setNewSong({ composer: "", title: "" });
+                    setPendingPdfBase64(null);
+                    setMusicXmlContent(null);
+                    setUploadedFileName(null);
+                  }
+                }}
+                disabled={newSong.composer.length < 2 || newSong.title.length < 2}
+                className="group/btn relative w-full mt-5 py-3 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden transition-all"
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700" />
+                <span className="relative z-10">분석하기</span>
+              </motion.button>
+            </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Search Results */}
       {searchQuery.length >= 2 && (
@@ -483,150 +710,6 @@ export default function AnalysisPage() {
         )}
       </AnimatePresence>
 
-      {/* Add Song Modal */}
-      <AnimatePresence>
-        {isModalOpen && (
-          <motion.div
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            onClick={(e) => {
-              if (e.target === e.currentTarget) {
-                setIsModalOpen(false);
-                setNewSong({ composer: "", title: "" });
-              }
-            }}
-          >
-            <motion.div
-              className="bg-gradient-to-b from-violet-200 via-violet-100/80 to-white rounded-2xl w-full max-w-sm p-5 shadow-xl border border-white/50"
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              transition={{ duration: 0.25, ease: "easeOut" }}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-gray-900">새로운 곡 분석</h3>
-                <button
-                  onClick={() => {
-                    setIsModalOpen(false);
-                    setNewSong({ composer: "", title: "" });
-                  }}
-                  className="w-8 h-8 rounded-full bg-white/40 backdrop-blur-sm flex items-center justify-center hover:bg-white/60"
-                >
-                  <X className="w-4 h-4 text-gray-500" />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-700 mb-1.5 block">
-                    작곡가
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="2글자 이상 입력"
-                    value={newSong.composer}
-                    onChange={(e) => setNewSong({ ...newSong, composer: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border border-white/30 bg-white/40 backdrop-blur-sm text-sm focus:outline-none focus:ring-2 focus:ring-violet-300/40 placeholder:text-gray-400 transition-all"
-                    autoFocus
-                  />
-                  {filteredComposers.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {filteredComposers.map((c) => (
-                        <button
-                          key={c.key}
-                          onClick={() => setNewSong({ ...newSong, composer: c.label })}
-                          className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
-                            newSong.composer === c.label
-                              ? "bg-violet-600 text-white border-violet-600"
-                              : "bg-white/40 text-gray-700 border-white/30 hover:bg-white/60"
-                          }`}
-                        >
-                          {c.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-gray-700 mb-1.5 block">
-                    곡 제목
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="예) Ballade Op.23 No.1"
-                    value={newSong.title}
-                    onChange={(e) => setNewSong({ ...newSong, title: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border border-white/30 bg-white/40 backdrop-blur-sm text-sm focus:outline-none focus:ring-2 focus:ring-violet-300/40 placeholder:text-gray-400 transition-all"
-                  />
-                </div>
-
-                {/* 악보 이미지 첨부 */}
-                <div>
-                  <label className="text-sm font-medium text-gray-700 mb-1.5 block">
-                    악보 첨부 <span className="text-gray-400 font-normal">(선택)</span>
-                  </label>
-                  <label className="flex items-center justify-center gap-2 py-3 rounded-xl border border-dashed border-violet-300/50 bg-white/20 text-violet-600 text-sm cursor-pointer hover:bg-white/30 transition-colors">
-                    <Camera className="w-4 h-4" />
-                    <span>악보 이미지 추가 (최대 5장)</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      onChange={handleImageUpload}
-                      className="hidden"
-                    />
-                  </label>
-                  {sheetImages.length > 0 && (
-                    <div className="flex gap-2 mt-2 overflow-x-auto pb-1">
-                      {sheetImages.map((img, idx) => (
-                        <div key={idx} className="relative shrink-0 w-16 h-16 rounded-lg overflow-hidden border border-white/40">
-                          <Image src={img} alt={`악보 ${idx + 1}`} width={64} height={64} className="w-full h-full object-cover" unoptimized />
-                          <button
-                            onClick={() => setSheetImages((prev) => prev.filter((_, i) => i !== idx))}
-                            className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-black/50 flex items-center justify-center"
-                          >
-                            <X className="w-2.5 h-2.5 text-white" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <motion.button
-                onClick={() => {
-                  if (newSong.composer.length >= 2 && newSong.title.length >= 2) {
-                    // 악보 이미지가 있으면 sessionStorage에 저장
-                    if (sheetImages.length > 0) {
-                      sessionStorage.setItem("sheetMusicImages", JSON.stringify(sheetImages));
-                    } else {
-                      sessionStorage.removeItem("sheetMusicImages");
-                    }
-                    const newId = `new-${Date.now()}`;
-                    router.push(`/songs/${newId}?composer=${encodeURIComponent(newSong.composer)}&title=${encodeURIComponent(newSong.title)}`);
-                    setIsModalOpen(false);
-                    setNewSong({ composer: "", title: "" });
-                    setSheetImages([]);
-                  }
-                }}
-                disabled={newSong.composer.length < 2 || newSong.title.length < 2}
-                className="group/btn relative w-full mt-5 py-3 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden transition-all"
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                {/* Hover shimmer */}
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700" />
-                <span className="relative z-10">분석하기</span>
-              </motion.button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

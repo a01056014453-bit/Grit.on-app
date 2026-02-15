@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import type { DrillCard } from "@/types";
 import { useAudioRecorder, usePracticeSessions } from "@/hooks";
 import { savePracticeSession, type PracticeSession } from "@/lib/db";
+import { syncPracticeSessions } from "@/lib/sync-practice";
 import { completePracticeTodo } from "@/lib/practice-todo-store";
 import { formatTime } from "@/lib/format";
 import { mockSongs as initialSongs, mockDrillCards, hasAIAnalysis, groupDrillsBySong, composerList } from "@/data";
@@ -597,6 +598,8 @@ export default function PracticePage() {
 
       try {
         await savePracticeSession(session);
+        // Sync to Supabase (non-blocking, failure won't affect local save)
+        syncPracticeSessions().catch(console.error);
         await loadRecentSessions();
 
         // 선택된 To-do가 있으면 완료 처리

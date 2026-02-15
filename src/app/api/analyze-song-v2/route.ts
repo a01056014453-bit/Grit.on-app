@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { getCachedAnalysis, saveCachedAnalysis, deleteCachedAnalysis } from "@/lib/song-analysis-db";
+import { supabaseServer } from "@/lib/supabase-server";
 import type {
   SongAnalysis,
   AnalyzeSongRequest,
@@ -42,6 +43,262 @@ function filterNeedsReview(text: string | undefined): string | undefined {
   return text;
 }
 
+/** 대형 작품 감지 (10개 이상 섹션이 예상되는 작품) */
+function isLargeWork(title: string): boolean {
+  const lower = title.toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // Remove accents for matching
+  // Variations
+  if (lower.includes("variation") || lower.includes("변주")) return true;
+  // Known large multi-section works
+  const largeKeywords = [
+    "kreisleriana", "kinderszenen", "carnaval", "papillons", "waldszenen",
+    "novelletten", "études-tableaux", "etudes-tableaux", "etudes d'execution",
+    "transcendental", "paganini etude", "preludes op.28", "preludes, op.28",
+    "well-tempered", "평균율", "wohltemperierte", "scenes from childhood",
+    "pictures at an exhibition", "전람회의 그림", "goyescas", "iberia",
+    "annees de pelerinage", "순례의 해", "goldberg", "diabelli",
+    "enigma", "symphonic etudes", "교향적 연습곡",
+    // Known variation works without "variation" in the title
+    "festin d'esope", "festin d esope", "le festin",
+    "rhapsody on a theme", "rapsodie sur un theme",
+    "enigma", "chaconne", "passacaglia",
+  ];
+  return largeKeywords.some((k) => lower.includes(k));
+}
+
+/** 구조 분석 전용 프롬프트 (대형 작품용 Call 1) */
+function createStructureOnlyPrompt(composer: string, title: string): string {
+  return `당신은 세계적인 음악학자(Musicologist)입니다.
+
+작곡가: ${composer}
+곡 제목: ${title}
+
+🚨 **모든 출력은 반드시 한국어로 작성하십시오.** (고유명사, 음악 용어 원어 병기 가능)
+
+이 곡의 **모든 섹션/악장/변주/소품**을 빠짐없이 분석하십시오.
+
+🚨 **절대 규칙**: 하나라도 누락하면 분석 실패로 간주합니다.
+- 변주곡 → Theme + 모든 Variation (예: 25개 변주면 반드시 Theme + Variation 1~25 = 26개 항목)
+- 모음곡/다곡 구성 → 모든 곡을 개별 항목으로
+- 소나타 다악장 → 각 악장 내부 구조까지
+
+**형식별 용어:**
+- [변주곡]: Theme, Variation 1, Variation 2, ... Variation N
+- [소나타]: Exposition, Development, Recapitulation, Coda (다악장이면 각 악장별)
+- [론도]: A, B, A', C, A'', Coda
+- [3부 형식]: A, B, A', Coda
+- [모음곡]: 각 춤곡/소품명
+
+각 항목에 포함할 내용:
+- section: 형식에 맞는 섹션명
+- measures: 마디 범위 (주요 음표/화성 병기)
+- key_tempo: 조성, 박자, 템포 지시
+- character: 한 문장 성격 묘사
+- description: 1-2문장 핵심 특징 (조성, 리듬, 텍스처)
+
+JSON만 출력:
+{
+  "structure_analysis": [
+    {
+      "section": "섹션명",
+      "measures": "마디 범위 (화성 정보)",
+      "key_tempo": "조성/박자/템포",
+      "character": "한 문장 성격",
+      "description": "1-2문장 설명"
+    }
+  ]
+}`;
+}
+
+/** 추가 technique_tips 프롬프트 (대형 작품용 Call 3+ - 나머지 섹션) */
+function createExtraTechniquePrompt(
+  composer: string,
+  title: string,
+  sectionNames: string[],
+  batchIndex: number,
+  totalBatches: number
+): string {
+  return `당신은 **세계적인 피아노 교수법 전문가**입니다.
+
+작곡가: ${composer}
+곡 제목: ${title}
+
+🚨 **모든 출력은 반드시 한국어로 작성** (고유명사, 음악 용어만 원어 병기 가능)
+
+아래 섹션들에 대한 technique_tips를 작성하십시오 (${batchIndex + 1}/${totalBatches} 배치):
+
+${sectionNames.map((s, i) => `${i + 1}. ${s}`).join("\n")}
+
+**각 섹션마다 반드시 1개의 technique_tip을 작성하십시오. 누락 금지.**
+
+JSON만 출력:
+{
+  "technique_tips": [
+    {
+      "section": "섹션명 (mm. 마디범위, 화성 정보)",
+      "problem": "한국어로 — 기술적 난관과 물리적 원인을 구체적으로",
+      "category": "Physiological/Interpretative/Structural",
+      "solution": "한국어로 — 구체적 해결책 (손가락 번호, 동작 등 포함)",
+      "practice": "한국어로 — 변형 연습법 (리듬변형, 분리연습 등 구체적으로)"
+    }
+  ]
+}
+
+**카테고리별 솔루션:**
+- [Physiological]: 근육 이완, 손가락 독립, 팔 무게, 손목 회전
+- [Interpretative]: 페달링, Voicing, Agogic, 루바토
+- [Structural]: 형식 호흡법, 섹션별 연습 전략, 템포 설계
+
+**금지:** "느리게 연습하세요", "반복 연습하세요" 등 일반론. 중복 금지.
+
+JSON만 출력하십시오.`;
+}
+
+/** 상세 분석 프롬프트 (대형 작품용 Call 2 - 구조는 이미 확보) */
+function createDetailAnalysisPrompt(
+  composer: string,
+  title: string,
+  sectionNames: string[]
+): string {
+  return `당신은 **세계적인 피아노 교수법 전문가**이자 **음악학자**입니다.
+
+작곡가: ${composer}
+곡 제목: ${title}
+
+이 곡의 구조는 이미 분석되었습니다 (총 ${sectionNames.length}개 섹션):
+${sectionNames.map((s, i) => `${i + 1}. ${s}`).join("\n")}
+
+위 구조를 참고하여 나머지 분석을 수행하십시오.
+
+[🚨 핵심 원칙]
+- 🚨 **모든 출력은 반드시 한국어로 작성** (고유명사, 음악 용어만 원어 병기 가능)
+- Urtext 원전판 기반 분석
+- 일반론 금지, 구체적 솔루션만
+- 전문 용어 사용 (원어 병기)
+- **각 필드의 내용을 충실하게 작성** — 빈 값이나 생략 금지
+
+JSON 출력:
+{
+  "meta": {
+    "composer": "작곡가",
+    "title": "곡 제목 (원어)",
+    "opus": "작품번호",
+    "key": "조성",
+    "difficulty_level": "Beginner/Intermediate/Advanced/Virtuoso"
+  },
+  "content": {
+    "composer_background": "작곡가 배경 — 한국어 5-8문장, 생애/음악적 특징/시대적 위치를 구체적으로",
+    "historical_context": "시대적 상황 — 한국어 5-8문장, 당시 음악계 흐름/동시대 작곡가와의 관계",
+    "work_background": "작품 배경 — 한국어 5-8문장, 작곡 동기/헌정/초연/출판 정보/음악사적 의의",
+    "technique_tips": [
+      {
+        "section": "섹션명 (mm. 마디, 화성 정보)",
+        "problem": "한국어로 — 기술적 난관과 물리적 원인을 구체적으로",
+        "category": "Physiological/Interpretative/Structural",
+        "solution": "한국어로 — 구체적 해결책 (손가락 번호, 동작 등 포함)",
+        "practice": "한국어로 — 변형 연습법 (리듬변형, 분리연습 등 구체적으로)"
+      }
+    ],
+    "musical_interpretation": "음악적 해석 가이드 — 한국어 5-8문장, 곡 전체의 음악적 서사/감정 흐름/표현 방법",
+    "recommended_performances": [
+      { "artist": "연주자 이름", "year": "연도", "comment": "한국어로 특징 설명" }
+    ]
+  },
+  "verification_status": "Verified/Needs Review"
+}
+
+### technique_tips 지침
+- 총 ${sectionNames.length}개 섹션 중 **가장 중요한 기술적 난점을 가진 섹션**을 선별
+- **최소 ${Math.min(sectionNames.length, 15)}개** technique_tip 작성
+- 유사한 성격의 연속 변주는 그룹화 가능 (예: "Variation 3-5 (빠른 패시지 군)")
+- 각 tip은 해당 섹션의 **고유한** 음악적 특징에 맞는 솔루션
+- **중복 금지**: 동일한 solution/practice를 여러 섹션에 반복 사용 금지
+
+**카테고리별 솔루션:**
+- [Physiological]: 근육 이완, 손가락 독립, 팔 무게, 손목 회전
+- [Interpretative]: 페달링, Voicing, Agogic, 루바토
+- [Structural]: 형식 호흡법, 섹션별 연습 전략, 템포 설계
+
+**금지:** "느리게 연습하세요", "반복 연습하세요" 등 일반론
+
+JSON만 출력하십시오.`;
+}
+
+/** MusicXML 기반 분석 프롬프트 (OMR 변환 결과 사용) */
+function createMusicXmlPrompt(composer: string, title: string, musicXml: string): string {
+  // MusicXML이 너무 길면 핵심 부분만 추출
+  const truncated = musicXml.length > 60000 ? musicXml.substring(0, 60000) + "\n<!-- ... truncated -->" : musicXml;
+
+  return `당신은 **세계적인 피아노 교수법 전문가**이자 **음악학자(Musicologist)**입니다.
+
+작곡가: ${composer}
+곡 제목: ${title}
+
+아래는 이 곡의 **MusicXML 데이터**입니다. 이것은 악보를 구조화된 텍스트로 변환한 것으로, 모든 음표, 마디, 다이내믹, 아티큘레이션 정보가 포함되어 있습니다.
+
+\`\`\`xml
+${truncated}
+\`\`\`
+
+[🚨 MusicXML 분석 지침]
+- MusicXML의 <measure> 태그에서 **정확한 마디 번호**를 읽어 사용하십시오
+- <note>, <pitch>, <duration> 태그에서 **실제 음형과 리듬 패턴**을 파악하십시오
+- <dynamics>, <direction> 태그에서 **다이내믹과 연주 지시**를 확인하십시오
+- <key>, <time>, <clef> 태그에서 **조성, 박자, 음자리표**를 확인하십시오
+- <fingering> 태그가 있으면 **운지법** 정보를 활용하십시오
+- 추측이 아닌 **MusicXML 데이터에 기반한 분석**만 하십시오
+
+[🚨 핵심 원칙]
+- 🚨 **모든 출력은 반드시 한국어로 작성** (고유명사, 음악 용어만 원어 병기 가능)
+- Urtext 원전판 기반 분석 (MusicXML 데이터로 검증)
+- 일반론 금지, 구체적 솔루션만
+- 전문 용어 사용 (원어 병기)
+- **각 필드의 내용을 충실하게 작성** — 빈 값이나 생략 금지
+
+[🚨 절대 규칙: 모든 섹션/악장/변주를 빠짐없이 분석할 것]
+
+JSON 출력:
+{
+  "meta": {
+    "composer": "작곡가",
+    "title": "곡 제목 (원어)",
+    "opus": "작품번호",
+    "key": "조성",
+    "difficulty_level": "Beginner/Intermediate/Advanced/Virtuoso"
+  },
+  "content": {
+    "composer_background": "한국어 8-10문장 — 작곡가 생애/음악적 특징/시대적 위치를 구체적으로",
+    "historical_context": "한국어 8-10문장 — 당시 음악계 흐름/동시대 작곡가와의 관계",
+    "work_background": "한국어 8-10문장 — 작곡 동기/헌정/초연/출판 정보/음악사적 의의",
+    "structure_analysis": [
+      {
+        "section": "섹션명",
+        "measures": "마디 범위 (MusicXML에서 확인한 정확한 마디)",
+        "key_tempo": "조성/박자/템포",
+        "character": "한국어로 한 문장 성격 묘사",
+        "description": "한국어로 2-3문장 상세 설명"
+      }
+    ],
+    "technique_tips": [
+      {
+        "section": "섹션명 (mm. 마디, 화성 정보)",
+        "problem": "한국어로 — 기술적 난관과 물리적 원인을 구체적으로",
+        "category": "Physiological/Interpretative/Structural",
+        "solution": "한국어로 — 구체적 해결책 (손가락 번호, 동작 등 포함)",
+        "practice": "한국어로 — 변형 연습법 (리듬변형, 분리연습 등 구체적으로)"
+      }
+    ],
+    "musical_interpretation": "한국어 8-10문장 — 곡 전체의 음악적 서사/감정 흐름/표현 방법",
+    "recommended_performances": [
+      { "artist": "연주자 이름", "year": "연도", "comment": "한국어로 특징 설명" }
+    ]
+  },
+  "verification_status": "Verified"
+}
+
+JSON만 출력하십시오.`;
+}
+
 /** 음악학자 프롬프트 생성 - Professional Piano Pedagogy Mode */
 function createMusicologistPrompt(composer: string, title: string): string {
   return `당신은 **세계적인 피아노 교수법 전문가**이자 **음악학자(Musicologist)**입니다. 다음 클래식 피아노 작품에 대해 **학술적 근거와 실용적 연주 솔루션**을 제공하십시오.
@@ -81,7 +338,7 @@ function createMusicologistPrompt(composer: string, title: string): string {
 - **Interpretative (해석적)**: 페달링, 음색 층위(Voicing), 아고직 표현, 루바토
 - **Structural (구조적)**: 형식에 따른 호흡법, 섹션별 연습 전략, 템포 설계
 
-**Korean Output**: 최종 출력은 한국어. 고유명사/전문용어는 원어 병기.
+🚨 **Korean Output**: 모든 내용을 반드시 한국어로 작성하십시오. 고유명사/전문용어만 원어 병기. 영어로 작성하면 무효 처리됩니다.
 
 [JSON 출력 형식]
 
@@ -94,33 +351,33 @@ function createMusicologistPrompt(composer: string, title: string): string {
     "difficulty_level": "Beginner/Intermediate/Advanced/Virtuoso"
   },
   "content": {
-    "composer_background": "작곡가 배경 (8-10문장)",
-    "historical_context": "시대적 상황 (8-10문장)",
-    "work_background": "작품 배경 (8-10문장)",
+    "composer_background": "한국어 8-10문장 — 작곡가 생애/음악적 특징/시대적 위치를 구체적으로",
+    "historical_context": "한국어 8-10문장 — 당시 음악계 흐름/동시대 작곡가와의 관계",
+    "work_background": "한국어 8-10문장 — 작곡 동기/헌정/초연/출판 정보/음악사적 의의",
     "structure_analysis": [
       {
         "section": "섹션명/변주번호",
         "measures": "마디 범위",
         "key_tempo": "조성 및 박자/템포",
-        "character": "음악적 성격 (한 문장)",
-        "description": "리듬적/화성적 특징 상세 설명"
+        "character": "한국어로 음악적 성격 (한 문장)",
+        "description": "한국어로 리듬적/화성적 특징 상세 설명"
       }
     ],
     "technique_tips": [
       {
         "section": "섹션명 (mm. 마디범위, 화성 정보)",
-        "problem": "구체적 기술적 난관과 물리적 원인",
+        "problem": "한국어로 — 기술적 난관과 물리적 원인을 구체적으로",
         "category": "Physiological 또는 Interpretative 또는 Structural",
-        "solution": "카테고리에 맞는 구체적 해결책",
-        "practice": "즉각 적용 가능한 변형 연습법"
+        "solution": "한국어로 — 구체적 해결책 (손가락 번호, 동작 등 포함)",
+        "practice": "한국어로 — 변형 연습법 (리듬변형, 분리연습 등 구체적으로)"
       }
     ],
-    "musical_interpretation": "음악적 해석 가이드 (8-10문장)",
+    "musical_interpretation": "한국어 8-10문장 — 곡 전체의 음악적 서사/감정 흐름/표현 방법",
     "recommended_performances": [
       {
         "artist": "연주자 이름",
         "year": "녹음 연도",
-        "comment": "이 녹음의 특징과 추천 이유"
+        "comment": "한국어로 이 녹음의 특징과 추천 이유"
       }
     ]
   },
@@ -360,8 +617,8 @@ function parseAndValidateResponse(
 export async function POST(request: Request) {
   try {
     const body: AnalyzeSongRequest = await request.json();
-    const { composer, title, forceRefresh = false, sheetMusicImages } = body;
-    const hasImages = sheetMusicImages && sheetMusicImages.length > 0;
+    let { composer, title, forceRefresh = false, sheetMusicImages, musicXml } = body;
+    const { pdfStoragePath, musicxmlStoragePath, useStoredSource } = body;
 
     if (!composer || !title) {
       const response: AnalyzeSongResponse = {
@@ -371,8 +628,98 @@ export async function POST(request: Request) {
       return NextResponse.json(response, { status: 400 });
     }
 
-    // 1. 캐시 확인 (forceRefresh가 false이고 악보 이미지가 없을 때만)
-    if (!forceRefresh && !hasImages) {
+    // ── 관리자: 저장된 악보로 재분석 ──
+    let storedPdfPath: string | undefined = pdfStoragePath;
+    let storedMusicxmlPath: string | undefined = musicxmlStoragePath;
+
+    if (useStoredSource) {
+      forceRefresh = true;
+      const existing = await getCachedAnalysis(composer, title);
+
+      if (existing?.musicxml_storage_path) {
+        // MusicXML 소스 다운로드
+        console.log(`[Stored Source] Downloading MusicXML: ${existing.musicxml_storage_path}`);
+        try {
+          const { data } = await supabaseServer.storage
+            .from("sheet-music")
+            .download(existing.musicxml_storage_path);
+          if (data) {
+            musicXml = await data.text();
+            console.log(`[Stored Source] MusicXML loaded: ${musicXml.length} chars`);
+          }
+        } catch (e) {
+          console.error("[Stored Source] MusicXML download failed:", e);
+        }
+        storedPdfPath = existing.pdf_storage_path;
+        storedMusicxmlPath = existing.musicxml_storage_path;
+      } else if (existing?.pdf_storage_path) {
+        // PDF 다운로드 → OMR 변환
+        console.log(`[Stored Source] Downloading PDF: ${existing.pdf_storage_path}`);
+        try {
+          const { data } = await supabaseServer.storage
+            .from("sheet-music")
+            .download(existing.pdf_storage_path);
+          if (data) {
+            const pdfBuffer = await data.arrayBuffer();
+            const pdfBlob = new Blob([pdfBuffer], { type: "application/pdf" });
+
+            const OMR_URL = process.env.OMR_SERVER_URL;
+            if (OMR_URL) {
+              // MusicXML 변환 시도
+              const formData = new FormData();
+              formData.append("file", pdfBlob, "input.pdf");
+              try {
+                const omrRes = await fetch(`${OMR_URL}/convert-to-musicxml`, {
+                  method: "POST",
+                  body: formData,
+                  signal: AbortSignal.timeout(630000),
+                });
+                if (omrRes.ok) {
+                  const omrResult = await omrRes.json();
+                  if (omrResult.musicxml) {
+                    musicXml = omrResult.musicxml;
+                    console.log(`[Stored Source] OMR MusicXML: ${musicXml!.length} chars`);
+                  }
+                }
+              } catch {
+                console.log("[Stored Source] OMR MusicXML failed, trying images");
+              }
+
+              // Fallback: 이미지 변환
+              if (!musicXml) {
+                const imgForm = new FormData();
+                imgForm.append("file", pdfBlob, "input.pdf");
+                try {
+                  const imgRes = await fetch(`${OMR_URL}/convert-to-images`, {
+                    method: "POST",
+                    body: imgForm,
+                  });
+                  if (imgRes.ok) {
+                    const imgResult = await imgRes.json();
+                    sheetMusicImages = imgResult.images;
+                    console.log(`[Stored Source] Images: ${sheetMusicImages?.length} pages`);
+                  }
+                } catch {
+                  console.error("[Stored Source] Image conversion also failed");
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.error("[Stored Source] PDF download failed:", e);
+        }
+        storedPdfPath = existing.pdf_storage_path;
+        storedMusicxmlPath = existing.musicxml_storage_path;
+      } else {
+        console.log("[Stored Source] No stored source found, using text-only analysis");
+      }
+    }
+
+    const hasImages = sheetMusicImages && sheetMusicImages.length > 0;
+    const hasMusicXml = musicXml && musicXml.length > 0;
+
+    // 1. 캐시 확인 (forceRefresh가 false이고 악보 데이터가 없을 때만)
+    if (!forceRefresh && !hasImages && !hasMusicXml) {
       const cachedAnalysis = await getCachedAnalysis(composer, title);
       if (cachedAnalysis) {
         console.log(`[Cache HIT] ${composer} - ${title}`);
@@ -397,44 +744,259 @@ export async function POST(request: Request) {
       return NextResponse.json(response, { status: 500 });
     }
 
-    const prompt = createMusicologistPrompt(composer, title);
+    let analysis: SongAnalysis;
 
-    // 악보 이미지가 있으면 Vision API로 호출
-    let messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[];
+    if (hasMusicXml) {
+      // ── MusicXML 기반 분석 (가장 정확, Vision 불필요) ──
+      console.log(`[MusicXML] ${title} - MusicXML 텍스트 기반 분석 (${musicXml!.length} chars)`);
 
-    if (hasImages) {
-      console.log(`[Vision] ${sheetMusicImages.length}장의 악보 이미지 포함`);
-      const imagePromptPrefix = `\n\n[🎼 첨부된 악보 이미지 분석 지침]\n첨부된 악보 이미지를 반드시 참조하여 분석하십시오.\n- 실제 악보에 표기된 정확한 마디 번호를 사용할 것\n- 실제 음형, 음정, 리듬 패턴을 악보에서 직접 읽어서 기술할 것\n- 아티큘레이션, 다이내믹, 페달 기호 등 악보에 표기된 모든 연주 지시를 반영할 것\n- 운지법이 표기되어 있다면 이를 참조하여 테크닉 솔루션을 제시할 것\n- 악보에서 확인할 수 없는 정보는 추측하지 말 것`;
+      const xmlPrompt = createMusicXmlPrompt(composer, title, musicXml!);
 
-      const contentParts: OpenAI.Chat.Completions.ChatCompletionContentPart[] = [
-        { type: "text", text: prompt + imagePromptPrefix },
-        ...sheetMusicImages.map((img): OpenAI.Chat.Completions.ChatCompletionContentPart => ({
-          type: "image_url",
-          image_url: { url: img, detail: "high" },
-        })),
-      ];
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: xmlPrompt }],
+        max_tokens: 16384,
+        temperature: 0.3,
+      });
 
-      messages = [{ role: "user", content: contentParts }];
+      const responseText = completion.choices[0]?.message?.content || "";
+      console.log(`[MusicXML] Response length: ${responseText.length}`);
+
+      analysis = parseAndValidateResponse(responseText, composer, title);
+    } else if (isLargeWork(title) && !hasImages) {
+      // ── 대형 작품: 2회 분할 호출 ──
+      console.log(`[Large Work] ${title} - Using two-pass analysis`);
+
+      // Call 1: 구조 분석만 (모든 섹션 확보)
+      const structurePrompt = createStructureOnlyPrompt(composer, title);
+      const structureCompletion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: structurePrompt }],
+        max_tokens: 16384,
+        temperature: 0.3,
+      });
+
+      const structureText = structureCompletion.choices[0]?.message?.content || "";
+      console.log(`[Call 1] Structure response length: ${structureText.length}`);
+
+      const structureJson = JSON.parse(extractJSON(structureText));
+      const structureAnalysis: Array<{ section: string; measures?: string; key_tempo?: string; character?: string; description: string }> =
+        Array.isArray(structureJson.structure_analysis) ? structureJson.structure_analysis : [];
+
+      console.log(`[Call 1] Got ${structureAnalysis.length} sections`);
+
+      const sectionNames = structureAnalysis.map((s) => s.section);
+
+      // Call 2: 배경, 해석, 추천 연주 (technique_tips는 분할 호출)
+      const detailPrompt = createDetailAnalysisPrompt(composer, title, sectionNames);
+      const detailCompletion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: detailPrompt }],
+        max_tokens: 16384,
+        temperature: 0.3,
+      });
+
+      const detailText = detailCompletion.choices[0]?.message?.content || "";
+      console.log(`[Call 2] Detail response length: ${detailText.length}`);
+
+      const detailJson = JSON.parse(extractJSON(detailText));
+      let allTechniqueTips = detailJson.content?.technique_tips || [];
+
+      // Call 3+: 섹션이 많으면 technique_tips 분할 호출로 누락 보완
+      const coveredSections = new Set(
+        allTechniqueTips.map((t: { section: string }) =>
+          t.section.replace(/\s*\(.*\)/, "").trim()
+        )
+      );
+      const missingSections = sectionNames.filter(
+        (s) => !coveredSections.has(s)
+      );
+
+      if (missingSections.length > 0) {
+        console.log(`[Call 2] ${allTechniqueTips.length} tips, missing ${missingSections.length} sections → extra calls`);
+
+        const BATCH_SIZE = 12;
+        for (let i = 0; i < missingSections.length; i += BATCH_SIZE) {
+          const batch = missingSections.slice(i, i + BATCH_SIZE);
+          const batchIdx = Math.floor(i / BATCH_SIZE);
+          const totalBatches = Math.ceil(missingSections.length / BATCH_SIZE);
+
+          const extraPrompt = createExtraTechniquePrompt(
+            composer, title, batch, batchIdx, totalBatches
+          );
+          const extraCompletion = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [{ role: "user", content: extraPrompt }],
+            max_tokens: 16384,
+            temperature: 0.3,
+          });
+
+          const extraText = extraCompletion.choices[0]?.message?.content || "";
+          console.log(`[Call 3-${batchIdx + 1}] Extra tips response length: ${extraText.length}`);
+
+          try {
+            const extraJson = JSON.parse(extractJSON(extraText));
+            if (Array.isArray(extraJson.technique_tips)) {
+              allTechniqueTips = [...allTechniqueTips, ...extraJson.technique_tips];
+            }
+          } catch {
+            console.error(`[Call 3-${batchIdx + 1}] Failed to parse extra tips`);
+          }
+        }
+
+        console.log(`[Total] ${allTechniqueTips.length} technique_tips for ${sectionNames.length} sections`);
+      }
+
+      // 병합된 전체 JSON 구성
+      const mergedResponse = JSON.stringify({
+        meta: detailJson.meta || { composer, title },
+        content: {
+          composer_background: detailJson.content?.composer_background || "",
+          historical_context: detailJson.content?.historical_context || "",
+          work_background: detailJson.content?.work_background || "",
+          structure_analysis: structureAnalysis, // Call 1에서 확보한 전체 구조
+          technique_tips: allTechniqueTips,
+          musical_interpretation: detailJson.content?.musical_interpretation || "",
+          recommended_performances: detailJson.content?.recommended_performances || [],
+        },
+        verification_status: detailJson.verification_status || "Needs Review",
+      });
+
+      analysis = parseAndValidateResponse(mergedResponse, composer, title);
     } else {
-      messages = [{ role: "user", content: prompt }];
+      // ── 일반 작품: 기존 단일 호출 ──
+      const prompt = createMusicologistPrompt(composer, title);
+
+      let messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[];
+
+      if (hasImages) {
+        console.log(`[Vision] ${sheetMusicImages!.length}장의 악보 이미지 포함`);
+        const imagePromptPrefix = `\n\n[🎼 첨부된 악보 이미지 분석 지침]\n첨부된 악보 이미지를 반드시 참조하여 분석하십시오.\n- 실제 악보에 표기된 정확한 마디 번호를 사용할 것\n- 실제 음형, 음정, 리듬 패턴을 악보에서 직접 읽어서 기술할 것\n- 아티큘레이션, 다이내믹, 페달 기호 등 악보에 표기된 모든 연주 지시를 반영할 것\n- 운지법이 표기되어 있다면 이를 참조하여 테크닉 솔루션을 제시할 것\n- 악보에서 확인할 수 없는 정보는 추측하지 말 것`;
+
+        const contentParts: OpenAI.Chat.Completions.ChatCompletionContentPart[] = [
+          { type: "text", text: prompt + imagePromptPrefix },
+          ...sheetMusicImages!.map((img): OpenAI.Chat.Completions.ChatCompletionContentPart => ({
+            type: "image_url",
+            image_url: { url: img, detail: "high" },
+          })),
+        ];
+
+        messages = [{ role: "user", content: contentParts }];
+      } else {
+        messages = [{ role: "user", content: prompt }];
+      }
+
+      let completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages,
+        max_tokens: 16384,
+        temperature: 0.3,
+      });
+
+      let responseText = completion.choices[0]?.message?.content || "";
+      console.log("AI Response (first 500 chars):", responseText.substring(0, 500));
+
+      // Vision 거절 시 텍스트 전용 분석으로 fallback
+      if (hasImages && (responseText.startsWith("I'm sorry") || responseText.startsWith("I can't") || responseText.startsWith("Sorry"))) {
+        console.log("[Vision Fallback] GPT refused image analysis, retrying text-only...");
+
+        // 대형 작품이면 two-pass 분석으로 fallback (섹션 누락 방지)
+        if (isLargeWork(title)) {
+          console.log(`[Vision Fallback → Large Work] ${title} - Using two-pass analysis`);
+
+          const structurePrompt = createStructureOnlyPrompt(composer, title);
+          const structureCompletion = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [{ role: "user", content: structurePrompt }],
+            max_tokens: 16384,
+            temperature: 0.3,
+          });
+          const structureText = structureCompletion.choices[0]?.message?.content || "";
+          const structureJson = JSON.parse(extractJSON(structureText));
+          const sectionNames: string[] = structureJson.structure_analysis.map(
+            (s: { section: string }) => s.section
+          );
+          console.log(`[Vision Fallback Call 1] Got ${sectionNames.length} sections`);
+
+          const detailPrompt = createDetailAnalysisPrompt(composer, title, sectionNames);
+          const detailCompletion = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [{ role: "user", content: detailPrompt }],
+            max_tokens: 16384,
+            temperature: 0.3,
+          });
+          const detailText = detailCompletion.choices[0]?.message?.content || "";
+          console.log(`[Vision Fallback Call 2] Detail response length: ${detailText.length}`);
+
+          const fbDetailJson = JSON.parse(extractJSON(detailText));
+          let fbAllTips = fbDetailJson.content?.technique_tips || [];
+
+          // 누락 섹션 보완 호출
+          const fbCovered = new Set(
+            fbAllTips.map((t: { section: string }) => t.section.replace(/\s*\(.*\)/, "").trim())
+          );
+          const fbMissing = sectionNames.filter((s) => !fbCovered.has(s));
+          if (fbMissing.length > 0) {
+            console.log(`[Vision Fallback] ${fbAllTips.length} tips, missing ${fbMissing.length} → extra calls`);
+            const BATCH = 12;
+            for (let i = 0; i < fbMissing.length; i += BATCH) {
+              const batch = fbMissing.slice(i, i + BATCH);
+              const ep = createExtraTechniquePrompt(composer, title, batch, Math.floor(i / BATCH), Math.ceil(fbMissing.length / BATCH));
+              const ec = await openai.chat.completions.create({ model: "gpt-4o", messages: [{ role: "user", content: ep }], max_tokens: 16384, temperature: 0.3 });
+              try {
+                const ej = JSON.parse(extractJSON(ec.choices[0]?.message?.content || ""));
+                if (Array.isArray(ej.technique_tips)) fbAllTips = [...fbAllTips, ...ej.technique_tips];
+              } catch { /* skip */ }
+            }
+            console.log(`[Vision Fallback Total] ${fbAllTips.length} technique_tips`);
+          }
+
+          const fbMerged = JSON.stringify({
+            meta: fbDetailJson.meta || { composer, title },
+            content: {
+              ...fbDetailJson.content,
+              structure_analysis: structureJson.structure_analysis,
+              technique_tips: fbAllTips,
+            },
+            verification_status: fbDetailJson.verification_status || "Needs Review",
+          });
+          analysis = parseAndValidateResponse(fbMerged, composer, title);
+        } else {
+          const fallbackCompletion = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [{ role: "user", content: prompt }],
+            max_tokens: 16384,
+            temperature: 0.3,
+          });
+          responseText = fallbackCompletion.choices[0]?.message?.content || "";
+          console.log("[Vision Fallback] Text response (first 500 chars):", responseText.substring(0, 500));
+          analysis = parseAndValidateResponse(responseText, composer, title);
+        }
+      } else {
+        analysis = parseAndValidateResponse(responseText, composer, title);
+      }
     }
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages,
-      max_tokens: 16384,
-      temperature: 0.3,
-    });
+    // 4. 저장 경로 보존 (새 분석 시 기존 경로 유지)
+    if (storedPdfPath) {
+      analysis.pdf_storage_path = storedPdfPath;
+    }
+    if (storedMusicxmlPath) {
+      analysis.musicxml_storage_path = storedMusicxmlPath;
+    }
+    if (!analysis.pdf_storage_path || !analysis.musicxml_storage_path) {
+      const existingForPaths = await getCachedAnalysis(composer, title);
+      if (!analysis.pdf_storage_path && existingForPaths?.pdf_storage_path) {
+        analysis.pdf_storage_path = existingForPaths.pdf_storage_path;
+      }
+      if (!analysis.musicxml_storage_path && existingForPaths?.musicxml_storage_path) {
+        analysis.musicxml_storage_path = existingForPaths.musicxml_storage_path;
+      }
+    }
 
-    const responseText = completion.choices[0]?.message?.content || "";
-    console.log("AI Response (first 500 chars):", responseText.substring(0, 500));
-
-    // 3. 응답 파싱 및 검증
-    const analysis = parseAndValidateResponse(responseText, composer, title);
-
-    // 4. 캐시에 저장 (원본 키와 메타 키 모두 저장)
+    // 5. 캐시에 저장 (원본 키와 메타 키 모두 저장)
     await saveCachedAnalysis(analysis, composer, title);
-    console.log(`[Cache SAVED] ${composer} - ${title}`);
+    console.log(`[Cache SAVED] ${composer} - ${title} (${analysis.content.structure_analysis.length} sections)`);
 
     const response: AnalyzeSongResponse = {
       success: true,

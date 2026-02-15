@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   ArrowLeft,
   Upload,
@@ -24,7 +25,6 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { VideoProtection } from "@/components/app/video-protection";
-import { UploadDesignatedModal, UploadFreeModal } from "@/components/rooms";
 import {
   getSchoolById,
   getRoomBySchoolId,
@@ -32,7 +32,6 @@ import {
 } from "@/data/mock-schools";
 import {
   getUserMembership,
-  saveUserUpload,
   joinRoom,
 } from "@/lib/room-store";
 import { groupVideosByPiece, type PieceGroup } from "@/lib/room-access";
@@ -41,8 +40,6 @@ import type {
   Room,
   RoomVideo,
   RoomMembership,
-  DesignatedPiece,
-  FreePiece,
 } from "@/types";
 import { SCHOOL_TYPE_LABELS, SCHOOL_TYPE_COLORS } from "@/types";
 import { cn } from "@/lib/utils";
@@ -85,7 +82,6 @@ export default function RoomDetailPage() {
   const [membership, setMembership] = useState<RoomMembership | null>(null);
   const [pieceGroups, setPieceGroups] = useState<PieceGroup[]>([]);
 
-  const [showUploadModal, setShowUploadModal] = useState(false);
   const [showRulesModal, setShowRulesModal] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<RoomVideo | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
@@ -135,83 +131,6 @@ export default function RoomDetailPage() {
     loadData();
   }, [schoolId, router]);
 
-  // 업로드 핸들러
-  const handleUploadDesignated = (
-    pieceId: string,
-    piece: DesignatedPiece
-  ) => {
-    if (!room || !school) return;
-
-    const newVideo: RoomVideo = {
-      id: `v-${Date.now()}`,
-      roomId: room.id,
-      userId: "current-user",
-      userName: `익명 #${Math.floor(Math.random() * 1000)}`,
-      pieceId,
-      piece: {
-        composer: piece.composer,
-        title: piece.title,
-      },
-      section: "전곡",
-      duration: 300,
-      uploadedAt: new Date().toISOString(),
-      helpfulCount: 0,
-      tags: [],
-      faceBlurred: true,
-    };
-
-    saveUserUpload(room.id, newVideo, pieceId, undefined);
-
-    // 상태 업데이트
-    const updatedVideos = [...videos, newVideo];
-    setVideos(updatedVideos);
-
-    const updatedMembership = getUserMembership(room.id);
-    setMembership(updatedMembership);
-
-    const groups = groupVideosByPiece(updatedVideos, updatedMembership, school);
-    setPieceGroups(groups);
-
-    // 새로 업로드한 곡 그룹 펼치기
-    setExpandedGroups((prev) => new Set([...prev, pieceId]));
-  };
-
-  const handleUploadFree = (piece: FreePiece) => {
-    if (!room || !school) return;
-
-    const newVideo: RoomVideo = {
-      id: `v-${Date.now()}`,
-      roomId: room.id,
-      userId: "current-user",
-      userName: `익명 #${Math.floor(Math.random() * 1000)}`,
-      piece: {
-        composer: piece.composer,
-        title: piece.title,
-      },
-      section: "전곡",
-      duration: 300,
-      uploadedAt: new Date().toISOString(),
-      helpfulCount: 0,
-      tags: [],
-      faceBlurred: true,
-    };
-
-    saveUserUpload(room.id, newVideo, undefined, piece);
-
-    // 상태 업데이트
-    const updatedVideos = [...videos, newVideo];
-    setVideos(updatedVideos);
-
-    const updatedMembership = getUserMembership(room.id);
-    setMembership(updatedMembership);
-
-    const groups = groupVideosByPiece(updatedVideos, updatedMembership, school);
-    setPieceGroups(groups);
-
-    // 새로 업로드한 곡 그룹 펼치기
-    const groupKey = `${piece.composer.toLowerCase().replace(/\s+/g, "")}-${piece.title.toLowerCase().replace(/\s+/g, "")}`;
-    setExpandedGroups((prev) => new Set([...prev, groupKey]));
-  };
 
   const toggleGroup = (groupKey: string) => {
     setExpandedGroups((prev) => {
@@ -225,9 +144,6 @@ export default function RoomDetailPage() {
     });
   };
 
-  const handleUploadForPiece = (group: PieceGroup) => {
-    setShowUploadModal(true);
-  };
 
   if (!school || !room) {
     return (
@@ -336,22 +252,22 @@ export default function RoomDetailPage() {
               <p className="text-xs text-amber-700 mb-3">
                 같은 곡을 업로드한 학생들끼리 서로의 영상을 볼 수 있어요.
               </p>
-              <button
-                onClick={() => setShowUploadModal(true)}
+              <Link
+                href={`/rooms/${schoolId}/upload`}
                 className="w-full py-3 rounded-xl bg-amber-600 text-white font-medium flex items-center justify-center gap-2"
               >
                 <Upload className="w-4 h-4" />내 영상 업로드하기
-              </button>
+              </Link>
             </div>
           </div>
         </div>
       ) : (
-        <button
-          onClick={() => setShowUploadModal(true)}
+        <Link
+          href={`/rooms/${schoolId}/upload`}
           className="w-full mb-4 py-3 rounded-xl border border-primary text-primary font-medium flex items-center justify-center gap-2 hover:bg-primary/5 transition-colors"
         >
           <Upload className="w-4 h-4" />새 영상 업로드
-        </button>
+        </Link>
       )}
 
       {/* Videos by Piece */}
@@ -518,13 +434,13 @@ export default function RoomDetailPage() {
                           수 있어요
                         </p>
                       </div>
-                      <button
-                        onClick={() => handleUploadForPiece(group)}
+                      <Link
+                        href={`/rooms/${schoolId}/upload`}
                         className="px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-medium flex items-center gap-1"
                       >
                         <Upload className="w-3 h-3" />
                         업로드
-                      </button>
+                      </Link>
                     </div>
                   </div>
                 )}
@@ -661,27 +577,6 @@ export default function RoomDetailPage() {
         </VideoProtection>
       )}
 
-      {/* Upload Modal - Designated */}
-      {school.type === "designated" && (
-        <UploadDesignatedModal
-          isOpen={showUploadModal}
-          onClose={() => setShowUploadModal(false)}
-          school={school}
-          videos={videos}
-          onUpload={handleUploadDesignated}
-        />
-      )}
-
-      {/* Upload Modal - Free */}
-      {school.type === "free" && (
-        <UploadFreeModal
-          isOpen={showUploadModal}
-          onClose={() => setShowUploadModal(false)}
-          school={school}
-          videos={videos}
-          onUpload={handleUploadFree}
-        />
-      )}
 
       {/* Rules Modal */}
       {showRulesModal && (

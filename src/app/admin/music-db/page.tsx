@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Music, CheckCircle, AlertTriangle, Plus, RefreshCw, Trash2, Loader2, X } from 'lucide-react';
+import { Music, CheckCircle, AlertTriangle, Plus, RefreshCw, Trash2, Loader2, X, FileText, Eye, Upload } from 'lucide-react';
 import { StatCard } from '@/components/admin/stat-card';
 import { ChartCard } from '@/components/admin/chart-card';
 import { DataTable, type Column } from '@/components/admin/data-table';
@@ -20,6 +20,7 @@ export default function MusicDBPage() {
   const [newTitle, setNewTitle] = useState('');
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeStatus, setAnalyzeStatus] = useState('');
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
   // 재분석 중인 항목
   const [reanalyzingId, setReanalyzingId] = useState<string | null>(null);
@@ -56,27 +57,104 @@ export default function MusicDBPage() {
 
   const verified = analyses.filter((a) => a.verification_status === 'Verified').length;
   const needsReview = analyses.filter((a) => a.verification_status === 'Needs Review').length;
+  const withSheetMusic = analyses.filter((a) => a.pdf_storage_path || a.musicxml_storage_path).length;
 
-  // 새 곡 분석
+  // 새 곡 분석 (PDF/MusicXML 첨부 지원)
   const handleAnalyze = async () => {
     if (!newComposer.trim() || !newTitle.trim()) return;
     setAnalyzing(true);
-    setAnalyzeStatus('AI 분석 중... (1-2분 소요)');
+
+    const composer = newComposer.trim();
+    const title = newTitle.trim();
+
     try {
+      const requestBody: Record<string, unknown> = { composer, title, forceRefresh: true };
+
+      if (uploadedFile) {
+        const ext = uploadedFile.name.toLowerCase();
+        const isPdf = ext.endsWith('.pdf');
+        const isMusicXml = ext.endsWith('.xml') || ext.endsWith('.musicxml') || ext.endsWith('.mxl');
+
+        // 1) Supabase Storage에 원본 업로드
+        setAnalyzeStatus('악보 파일 업로드 중...');
+        const uploadForm = new FormData();
+        uploadForm.append('file', uploadedFile);
+        uploadForm.append('composer', composer);
+        uploadForm.append('title', title);
+        uploadForm.append('fileType', isPdf ? 'pdf' : 'musicxml');
+        try {
+          const uploadRes = await fetch('/api/upload-sheet-music', { method: 'POST', body: uploadForm });
+          if (uploadRes.ok) {
+            const uploadResult = await uploadRes.json();
+            if (uploadResult.success) {
+              if (isPdf) requestBody.pdfStoragePath = uploadResult.path;
+              else requestBody.musicxmlStoragePath = uploadResult.path;
+            }
+          }
+        } catch { /* 업로드 실패해도 분석 계속 */ }
+
+        // 2) MusicXML이면 텍스트 읽어서 전달
+        if (isMusicXml) {
+          setAnalyzeStatus('MusicXML 분석 중... (1-2분 소요)');
+          const xmlText = await uploadedFile.text();
+          requestBody.musicXml = xmlText;
+        }
+
+        // 3) PDF면 변환 시도
+        if (isPdf) {
+          // MusicXML 변환 시도
+          setAnalyzeStatus('PDF → MusicXML 변환 중...');
+          let converted = false;
+          try {
+            const formData = new FormData();
+            formData.append('file', uploadedFile);
+            const xmlRes = await fetch('/api/convert-pdf?format=musicxml', {
+              method: 'POST',
+              body: formData,
+              signal: AbortSignal.timeout(630000),
+            });
+            if (xmlRes.ok) {
+              const xmlResult = await xmlRes.json();
+              if (xmlResult.success && xmlResult.musicxml) {
+                requestBody.musicXml = xmlResult.musicxml;
+                converted = true;
+              }
+            }
+          } catch { /* fallback to images */ }
+
+          // 이미지 변환 fallback
+          if (!converted) {
+            setAnalyzeStatus('PDF → 이미지 변환 중...');
+            try {
+              const imgForm = new FormData();
+              imgForm.append('file', uploadedFile);
+              const imgRes = await fetch('/api/convert-pdf', { method: 'POST', body: imgForm });
+              if (imgRes.ok) {
+                const imgResult = await imgRes.json();
+                if (imgResult.images) {
+                  requestBody.sheetMusicImages = imgResult.images;
+                }
+              }
+            } catch { /* 변환 실패 시 텍스트 분석으로 진행 */ }
+          }
+
+          setAnalyzeStatus('AI 악보 기반 분석 중... (1-3분 소요)');
+        }
+      } else {
+        setAnalyzeStatus('AI 분석 중... (1-2분 소요)');
+      }
+
       const res = await fetch('/api/analyze-song-v2', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          composer: newComposer.trim(),
-          title: newTitle.trim(),
-          forceRefresh: true,
-        }),
+        body: JSON.stringify(requestBody),
       });
       const json = await res.json();
       if (json.success) {
         setAnalyzeStatus('분석 완료!');
         setNewComposer('');
         setNewTitle('');
+        setUploadedFile(null);
         await fetchAnalyses();
       } else {
         setAnalyzeStatus(`분석 실패: ${json.error}`);
@@ -113,6 +191,49 @@ export default function MusicDBPage() {
       alert('네트워크 오류');
     } finally {
       setReanalyzingId(null);
+    }
+  };
+
+  // 악보 기반 재분석 (저장된 PDF/MusicXML 사용)
+  const handleReanalyzeWithSource = async (item: AnalysisListItem) => {
+    if (!confirm(`"${item._composer} - ${item._title}" 곡을 저장된 악보로 재분석하시겠습니까?\nPDF/MusicXML 기반으로 정밀 분석합니다.`)) return;
+    setReanalyzingId(item.id);
+    try {
+      const res = await fetch('/api/analyze-song-v2', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          composer: item._composer,
+          title: item._title,
+          forceRefresh: true,
+          useStoredSource: true,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        await fetchAnalyses();
+      } else {
+        alert(`악보 재분석 실패: ${json.error}`);
+      }
+    } catch {
+      alert('네트워크 오류');
+    } finally {
+      setReanalyzingId(null);
+    }
+  };
+
+  // PDF 보기 (signed URL 생성 후 새 탭)
+  const handleViewPdf = async (path: string) => {
+    try {
+      const res = await fetch(`/api/upload-sheet-music?path=${encodeURIComponent(path)}`);
+      const json = await res.json();
+      if (json.success && json.url) {
+        window.open(json.url, '_blank');
+      } else {
+        alert('PDF URL 생성 실패');
+      }
+    } catch {
+      alert('PDF 조회 오류');
     }
   };
 
@@ -176,6 +297,24 @@ export default function MusicDBPage() {
       },
     },
     {
+      key: 'source',
+      header: '악보',
+      className: 'w-20',
+      render: (row) => (
+        <div className="flex items-center gap-1">
+          {row.pdf_storage_path && (
+            <span className="text-[10px] px-1.5 py-0.5 bg-red-50 text-red-600 rounded font-medium">PDF</span>
+          )}
+          {row.musicxml_storage_path && (
+            <span className="text-[10px] px-1.5 py-0.5 bg-violet-50 text-violet-600 rounded font-medium">XML</span>
+          )}
+          {!row.pdf_storage_path && !row.musicxml_storage_path && (
+            <span className="text-[10px] text-gray-300">-</span>
+          )}
+        </div>
+      ),
+    },
+    {
       key: 'date',
       header: '분석일',
       render: (row) => (
@@ -187,14 +326,37 @@ export default function MusicDBPage() {
     {
       key: 'actions',
       header: '',
-      className: 'w-24',
+      className: 'w-32',
       render: (row) => (
         <div className="flex items-center gap-1">
+          {row.pdf_storage_path && (
+            <button
+              onClick={(e) => { e.stopPropagation(); handleViewPdf(row.pdf_storage_path!); }}
+              className="p-1.5 rounded-md hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-colors"
+              title="PDF 보기"
+            >
+              <Eye className="w-4 h-4" />
+            </button>
+          )}
+          {(row.pdf_storage_path || row.musicxml_storage_path) && (
+            <button
+              onClick={(e) => { e.stopPropagation(); handleReanalyzeWithSource(row); }}
+              disabled={reanalyzingId === row.id}
+              className="p-1.5 rounded-md hover:bg-green-50 text-gray-400 hover:text-green-600 transition-colors disabled:opacity-50"
+              title="악보 기반 재분석"
+            >
+              {reanalyzingId === row.id ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <FileText className="w-4 h-4" />
+              )}
+            </button>
+          )}
           <button
             onClick={(e) => { e.stopPropagation(); handleReanalyze(row); }}
             disabled={reanalyzingId === row.id}
             className="p-1.5 rounded-md hover:bg-violet-50 text-gray-400 hover:text-violet-600 transition-colors disabled:opacity-50"
-            title="재분석"
+            title="텍스트 재분석"
           >
             {reanalyzingId === row.id ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -219,7 +381,7 @@ export default function MusicDBPage() {
       <h1 className="text-xl font-bold text-gray-900">곡 DB / AI 분석 관리</h1>
 
       {/* 통계 카드 */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-4 gap-4">
         <StatCard title="전체 분석 수" value={analyses.length} icon={Music} />
         <StatCard
           title="검증 완료"
@@ -235,10 +397,17 @@ export default function MusicDBPage() {
           changeType={needsReview > 0 ? 'negative' : 'neutral'}
           change={needsReview > 0 ? '확인 필요' : undefined}
         />
+        <StatCard
+          title="악보 보유"
+          value={withSheetMusic}
+          icon={FileText}
+          changeType="neutral"
+          change={analyses.length ? `${Math.round((withSheetMusic / analyses.length) * 100)}%` : '0%'}
+        />
       </div>
 
       {/* 새 곡 분석 */}
-      <ChartCard title="새 곡 분석하기" description="작곡가와 곡 제목을 입력하여 AI 분석을 시작합니다">
+      <ChartCard title="새 곡 분석하기" description="작곡가와 곡 제목을 입력하고, 악보 파일(PDF/MusicXML)을 첨부하면 정밀 분석합니다">
         <div className="flex items-end gap-3">
           <div className="flex-1">
             <label className="block text-xs font-medium text-gray-500 mb-1">작곡가</label>
@@ -263,6 +432,38 @@ export default function MusicDBPage() {
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent disabled:bg-gray-50"
             />
           </div>
+          <div className="flex-shrink-0">
+            <label className="block text-xs font-medium text-gray-500 mb-1">악보 첨부</label>
+            {uploadedFile ? (
+              <div className="flex items-center gap-2 px-3 py-2 bg-violet-50 border border-violet-200 rounded-lg">
+                <FileText className="w-4 h-4 text-violet-600 flex-shrink-0" />
+                <span className="text-sm text-violet-700 truncate max-w-[140px]">{uploadedFile.name}</span>
+                <button
+                  onClick={() => setUploadedFile(null)}
+                  disabled={analyzing}
+                  className="p-0.5 hover:bg-violet-100 rounded transition-colors disabled:opacity-50"
+                >
+                  <X className="w-3.5 h-3.5 text-violet-400" />
+                </button>
+              </div>
+            ) : (
+              <label className={`flex items-center gap-2 px-3 py-2 border border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-violet-400 hover:bg-violet-50 transition-colors ${analyzing ? 'opacity-50 pointer-events-none' : ''}`}>
+                <Upload className="w-4 h-4 text-gray-400" />
+                <span className="text-sm text-gray-500">PDF / XML</span>
+                <input
+                  type="file"
+                  accept=".pdf,.xml,.musicxml,.mxl"
+                  className="hidden"
+                  disabled={analyzing}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) setUploadedFile(file);
+                    e.target.value = '';
+                  }}
+                />
+              </label>
+            )}
+          </div>
           <button
             onClick={handleAnalyze}
             disabled={analyzing || !newComposer.trim() || !newTitle.trim()}
@@ -273,7 +474,7 @@ export default function MusicDBPage() {
             ) : (
               <Plus className="w-4 h-4" />
             )}
-            분석 시작
+            {uploadedFile ? '악보 분석' : '분석 시작'}
           </button>
         </div>
         {analyzeStatus && (
@@ -304,11 +505,37 @@ export default function MusicDBPage() {
             <div className="flex items-center justify-between p-6 border-b border-gray-100">
               <div>
                 <h3 className="text-lg font-bold text-gray-900">{detailTarget._composer} - {detailTarget._title}</h3>
-                {detailTarget.meta.opus && <p className="text-sm text-gray-500">{detailTarget.meta.opus} · {detailTarget.meta.key}</p>}
+                <div className="flex items-center gap-2 mt-1">
+                  {detailTarget.meta.opus && <span className="text-sm text-gray-500">{detailTarget.meta.opus} · {detailTarget.meta.key}</span>}
+                  {detailTarget.pdf_storage_path && (
+                    <button
+                      onClick={() => handleViewPdf(detailTarget.pdf_storage_path!)}
+                      className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-red-50 text-red-600 rounded-md hover:bg-red-100 transition-colors"
+                    >
+                      <Eye className="w-3 h-3" />
+                      PDF 보기
+                    </button>
+                  )}
+                  {detailTarget.musicxml_storage_path && (
+                    <span className="text-xs px-2 py-0.5 bg-violet-50 text-violet-600 rounded-md">MusicXML 저장됨</span>
+                  )}
+                </div>
               </div>
-              <button onClick={() => setDetailTarget(null)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                <X className="w-5 h-5 text-gray-400" />
-              </button>
+              <div className="flex items-center gap-2">
+                {(detailTarget.pdf_storage_path || detailTarget.musicxml_storage_path) && (
+                  <button
+                    onClick={() => { setDetailTarget(null); handleReanalyzeWithSource(detailTarget); }}
+                    disabled={reanalyzingId === detailTarget.id}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors disabled:opacity-50"
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    악보 재분석
+                  </button>
+                )}
+                <button onClick={() => setDetailTarget(null)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                  <X className="w-5 h-5 text-gray-400" />
+                </button>
+              </div>
             </div>
 
             {/* 본문 */}

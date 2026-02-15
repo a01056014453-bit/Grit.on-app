@@ -41,8 +41,8 @@ export default function InboxPage() {
   }, [tab, pendingRequests, activeRequests, completedRequests]);
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
-      <div className="bg-blob-extra" />
+    <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-orange">
+      <div className="bg-blob-orange-extra" />
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
@@ -151,7 +151,7 @@ export default function InboxPage() {
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <RequestStatusChip status={request.status} />
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 font-medium">
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-medium">
                       {PROBLEM_TYPE_LABELS[request.problemType]}
                     </span>
                   </div>

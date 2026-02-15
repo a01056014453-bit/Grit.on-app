@@ -41,10 +41,10 @@ export default function TeacherRegisterPage() {
   // 클라이언트에서 verification 로딩 전까지 로딩 표시
   if (!verification) {
     return (
-      <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-violet">
-      <div className="bg-blob-extra" />
+      <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-orange">
+      <div className="bg-blob-orange-extra" />
         <div className="flex items-center justify-center py-32">
-          <div className="w-8 h-8 border-2 border-violet-600 border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-orange-600 border-t-transparent rounded-full animate-spin" />
         </div>
       </div>
     );
@@ -53,8 +53,8 @@ export default function TeacherRegisterPage() {
   // If already approved, show status
   if (verification.status === "approved") {
     return (
-      <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-violet">
-      <div className="bg-blob-extra" />
+      <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-orange">
+      <div className="bg-blob-orange-extra" />
         <button onClick={() => router.back()} className="mb-6">
           <ArrowLeft className="w-6 h-6 text-gray-700" />
         </button>
@@ -69,7 +69,7 @@ export default function TeacherRegisterPage() {
           </p>
           <button
             onClick={() => router.push("/profile")}
-            className="px-6 py-3 bg-violet-600 text-white rounded-xl font-semibold"
+            className="px-6 py-3 bg-orange-600 text-white rounded-xl font-semibold"
           >
             프로필로 돌아가기
           </button>
@@ -81,8 +81,8 @@ export default function TeacherRegisterPage() {
   // If pending
   if (verification.status === "pending") {
     return (
-      <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-violet">
-      <div className="bg-blob-extra" />
+      <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-orange">
+      <div className="bg-blob-orange-extra" />
         <button onClick={() => router.back()} className="mb-6">
           <ArrowLeft className="w-6 h-6 text-gray-700" />
         </button>
@@ -175,8 +175,8 @@ export default function TeacherRegisterPage() {
   };
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-violet">
-      <div className="bg-blob-extra" />
+    <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-orange">
+      <div className="bg-blob-orange-extra" />
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button onClick={() => router.back()}>
@@ -192,7 +192,7 @@ export default function TeacherRegisterPage() {
             <div
               className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
                 step >= s
-                  ? "bg-violet-600 text-white"
+                  ? "bg-orange-600 text-white"
                   : "bg-gray-200 text-gray-400"
               }`}
             >
@@ -201,7 +201,7 @@ export default function TeacherRegisterPage() {
             {s < 3 && (
               <div
                 className={`flex-1 h-0.5 ${
-                  step > s ? "bg-violet-600" : "bg-gray-200"
+                  step > s ? "bg-orange-600" : "bg-gray-200"
                 }`}
               />
             )}
@@ -213,8 +213,8 @@ export default function TeacherRegisterPage() {
       {step === 1 && (
         <div>
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-violet-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <Shield className="w-8 h-8 text-violet-600" />
+            <div className="w-16 h-16 bg-orange-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Shield className="w-8 h-8 text-orange-600" />
             </div>
             <h2 className="text-xl font-bold text-gray-900 mb-2">
               선생님으로 활동하기
@@ -235,8 +235,8 @@ export default function TeacherRegisterPage() {
                 key={i}
                 className="flex items-start gap-3 bg-white rounded-xl p-4 border border-gray-100"
               >
-                <div className="w-8 h-8 bg-violet-100 rounded-lg flex items-center justify-center shrink-0 mt-0.5">
-                  <span className="text-sm font-bold text-violet-600">
+                <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center shrink-0 mt-0.5">
+                  <span className="text-sm font-bold text-orange-600">
                     {i + 1}
                   </span>
                 </div>
@@ -252,7 +252,7 @@ export default function TeacherRegisterPage() {
 
           <button
             onClick={() => setStep(2)}
-            className="w-full py-3.5 bg-violet-600 text-white rounded-xl font-semibold text-sm"
+            className="w-full py-3.5 bg-orange-600 text-white rounded-xl font-semibold text-sm"
           >
             서류 제출하기
           </button>
@@ -284,7 +284,7 @@ export default function TeacherRegisterPage() {
                   onClick={() => setSelectedDocType(key)}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                     selectedDocType === key
-                      ? "bg-violet-600 text-white"
+                      ? "bg-orange-600 text-white"
                       : "bg-gray-100 text-gray-600"
                   }`}
                 >
@@ -297,7 +297,7 @@ export default function TeacherRegisterPage() {
           {/* Upload Area */}
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="w-full border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-violet-400 hover:bg-violet-50/50 transition-colors mb-4"
+            className="w-full border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-orange-400 hover:bg-orange-50/50 transition-colors mb-4"
           >
             <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
             <p className="text-sm font-medium text-gray-600">
@@ -326,8 +326,8 @@ export default function TeacherRegisterPage() {
                   key={doc.id}
                   className="flex items-center gap-3 bg-white rounded-xl p-3 border border-gray-100"
                 >
-                  <div className="w-10 h-10 bg-violet-100 rounded-lg flex items-center justify-center shrink-0">
-                    <FileText className="w-5 h-5 text-violet-600" />
+                  <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center shrink-0">
+                    <FileText className="w-5 h-5 text-orange-600" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">
@@ -358,7 +358,7 @@ export default function TeacherRegisterPage() {
             <button
               onClick={handleSubmit}
               disabled={documents.length === 0 || isSubmitting}
-              className="flex-1 py-3 bg-violet-600 text-white rounded-xl font-semibold text-sm disabled:opacity-50"
+              className="flex-1 py-3 bg-orange-600 text-white rounded-xl font-semibold text-sm disabled:opacity-50"
             >
               {isSubmitting ? (submitStatus || "제출 중...") : "제출하기"}
             </button>

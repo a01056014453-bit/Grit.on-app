@@ -44,7 +44,7 @@ export function StudentList({ students }: StudentListProps) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="학생 이름 또는 곡명 검색"
-          className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+          className="w-full pl-9 pr-4 py-2.5 bg-white/60 backdrop-blur-sm border border-white/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
         />
       </div>
 
@@ -56,7 +56,7 @@ export function StudentList({ students }: StudentListProps) {
             onClick={() => setFilter(f)}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
               filter === f
-                ? "bg-violet-600 text-white"
+                ? "bg-orange-600 text-white"
                 : "bg-white text-slate-500 border border-slate-200"
             }`}
           >

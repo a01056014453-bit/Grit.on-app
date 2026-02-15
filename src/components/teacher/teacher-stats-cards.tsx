@@ -15,7 +15,7 @@ export function TeacherStatsCards({ stats }: TeacherStatsCardsProps) {
       value: stats.totalStudents,
       unit: "명",
       color: "text-blue-600",
-      bg: "bg-blue-50",
+      bg: "bg-blue-100/60",
     },
     {
       icon: Inbox,
@@ -23,7 +23,7 @@ export function TeacherStatsCards({ stats }: TeacherStatsCardsProps) {
       value: stats.pendingRequests,
       unit: "건",
       color: "text-red-600",
-      bg: "bg-red-50",
+      bg: "bg-red-100/60",
       highlight: stats.pendingRequests > 0,
     },
     {
@@ -32,7 +32,7 @@ export function TeacherStatsCards({ stats }: TeacherStatsCardsProps) {
       value: stats.completedThisMonth,
       unit: "건",
       color: "text-green-600",
-      bg: "bg-green-50",
+      bg: "bg-green-100/60",
     },
     {
       icon: Coins,
@@ -40,7 +40,7 @@ export function TeacherStatsCards({ stats }: TeacherStatsCardsProps) {
       value: stats.totalCreditsEarned,
       unit: "C",
       color: "text-amber-600",
-      bg: "bg-amber-50",
+      bg: "bg-amber-100/60",
     },
   ];
 
@@ -49,8 +49,8 @@ export function TeacherStatsCards({ stats }: TeacherStatsCardsProps) {
       {cards.map((card) => (
         <div
           key={card.label}
-          className={`bg-white rounded-xl p-4 border ${
-            card.highlight ? "border-red-200" : "border-slate-100"
+          className={`bg-white/60 backdrop-blur-xl rounded-2xl p-4 border ${
+            card.highlight ? "border-red-200/60" : "border-white/60"
           }`}
         >
           <div className="flex items-center gap-2 mb-2">
@@ -59,13 +59,13 @@ export function TeacherStatsCards({ stats }: TeacherStatsCardsProps) {
             >
               <card.icon className={`w-4 h-4 ${card.color}`} />
             </div>
-            <span className="text-xs text-slate-500">{card.label}</span>
+            <span className="text-xs text-gray-500">{card.label}</span>
           </div>
           <div className="flex items-baseline gap-1">
-            <span className="text-2xl font-bold text-slate-900">
+            <span className="text-2xl font-bold text-gray-900">
               {card.value}
             </span>
-            <span className="text-sm text-slate-400">{card.unit}</span>
+            <span className="text-sm text-gray-400">{card.unit}</span>
           </div>
         </div>
       ))}
