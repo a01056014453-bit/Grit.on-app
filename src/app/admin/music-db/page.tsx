@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Music, CheckCircle, AlertTriangle, Plus, RefreshCw, Trash2, Loader2, X, FileText, Eye, Upload } from 'lucide-react';
+import { Music, CheckCircle, AlertTriangle, Plus, RefreshCw, Trash2, Loader2, X, FileText, Eye, Upload, Filter } from 'lucide-react';
 import { StatCard } from '@/components/admin/stat-card';
 import { ChartCard } from '@/components/admin/chart-card';
 import { DataTable, type Column } from '@/components/admin/data-table';
@@ -30,6 +30,13 @@ export default function MusicDBPage() {
 
   // 상세 보기
   const [detailTarget, setDetailTarget] = useState<AnalysisListItem | null>(null);
+
+  // 필터
+  type FilterType = 'all' | 'needs_review' | 'verified' | 'with_sheet';
+  const [filter, setFilter] = useState<FilterType>('all');
+
+  // 기존 곡 악보 업로드
+  const [uploadingSheetFor, setUploadingSheetFor] = useState<string | null>(null);
 
   const fetchAnalyses = useCallback(async () => {
     try {
@@ -262,6 +269,85 @@ export default function MusicDBPage() {
     }
   };
 
+  // 기존 곡에 악보 파일 업로드
+  const handleUploadSheet = async (item: AnalysisListItem, file: File) => {
+    setUploadingSheetFor(item.id);
+    try {
+      const ext = file.name.toLowerCase();
+      const isPdf = ext.endsWith('.pdf');
+
+      // Supabase Storage 업로드
+      const uploadForm = new FormData();
+      uploadForm.append('file', file);
+      uploadForm.append('composer', item._composer);
+      uploadForm.append('title', item._title);
+      uploadForm.append('fileType', isPdf ? 'pdf' : 'musicxml');
+
+      const uploadRes = await fetch('/api/upload-sheet-music', { method: 'POST', body: uploadForm });
+      if (!uploadRes.ok) throw new Error('업로드 실패');
+      const uploadResult = await uploadRes.json();
+      if (!uploadResult.success) throw new Error('업로드 실패');
+
+      // 분석 데이터에 storage path 업데이트 (재분석으로 연결)
+      const body: Record<string, unknown> = {
+        composer: item._composer,
+        title: item._title,
+        forceRefresh: true,
+      };
+      if (isPdf) body.pdfStoragePath = uploadResult.path;
+      else body.musicxmlStoragePath = uploadResult.path;
+
+      // PDF면 변환 시도
+      if (isPdf) {
+        try {
+          const formData = new FormData();
+          formData.append('file', file);
+          const xmlRes = await fetch('/api/convert-pdf?format=musicxml', { method: 'POST', body: formData, signal: AbortSignal.timeout(630000) });
+          if (xmlRes.ok) {
+            const xmlResult = await xmlRes.json();
+            if (xmlResult.success && xmlResult.musicxml) body.musicXml = xmlResult.musicxml;
+          }
+        } catch { /* fallback */ }
+
+        if (!body.musicXml) {
+          try {
+            const imgForm = new FormData();
+            imgForm.append('file', file);
+            const imgRes = await fetch('/api/convert-pdf', { method: 'POST', body: imgForm });
+            if (imgRes.ok) {
+              const imgResult = await imgRes.json();
+              if (imgResult.images) body.sheetMusicImages = imgResult.images;
+            }
+          } catch { /* fallback */ }
+        }
+      } else {
+        body.musicXml = await file.text();
+      }
+
+      const res = await fetch('/api/analyze-song-v2', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const json = await res.json();
+      if (json.success) {
+        await fetchAnalyses();
+      } else {
+        alert(`악보 업로드 후 재분석 실패: ${json.error}`);
+      }
+    } catch {
+      alert('악보 업로드 오류');
+    } finally {
+      setUploadingSheetFor(null);
+    }
+  };
+
+  // 필터링된 데이터
+  const filteredAnalyses = filter === 'all' ? analyses
+    : filter === 'needs_review' ? analyses.filter((a) => a.verification_status === 'Needs Review')
+    : filter === 'verified' ? analyses.filter((a) => a.verification_status === 'Verified')
+    : analyses.filter((a) => a.pdf_storage_path || a.musicxml_storage_path);
+
   const columns: Column<AnalysisListItem>[] = [
     {
       key: 'composer',
@@ -326,7 +412,7 @@ export default function MusicDBPage() {
     {
       key: 'actions',
       header: '',
-      className: 'w-32',
+      className: 'w-40',
       render: (row) => (
         <div className="flex items-center gap-1">
           {row.pdf_storage_path && (
@@ -338,6 +424,28 @@ export default function MusicDBPage() {
               <Eye className="w-4 h-4" />
             </button>
           )}
+          {/* 악보 업로드 버튼 */}
+          <label
+            onClick={(e) => e.stopPropagation()}
+            className={`p-1.5 rounded-md hover:bg-orange-50 text-gray-400 hover:text-orange-600 transition-colors cursor-pointer ${uploadingSheetFor === row.id ? 'opacity-50 pointer-events-none' : ''}`}
+            title={row.pdf_storage_path ? '악보 교체' : '악보 업로드'}
+          >
+            {uploadingSheetFor === row.id ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Upload className="w-4 h-4" />
+            )}
+            <input
+              type="file"
+              accept=".pdf,.xml,.musicxml,.mxl"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleUploadSheet(row, file);
+                e.target.value = '';
+              }}
+            />
+          </label>
           {(row.pdf_storage_path || row.musicxml_storage_path) && (
             <button
               onClick={(e) => { e.stopPropagation(); handleReanalyzeWithSource(row); }}
@@ -382,20 +490,30 @@ export default function MusicDBPage() {
 
       {/* 통계 카드 */}
       <div className="grid grid-cols-4 gap-4">
-        <StatCard title="전체 분석 수" value={analyses.length} icon={Music} />
+        <StatCard
+          title="전체 분석 수"
+          value={analyses.length}
+          icon={Music}
+          onClick={() => setFilter(filter === 'all' ? 'all' : 'all')}
+          active={filter === 'all'}
+        />
         <StatCard
           title="검증 완료"
           value={verified}
           icon={CheckCircle}
           changeType="positive"
           change={analyses.length ? `${Math.round((verified / analyses.length) * 100)}%` : '0%'}
+          onClick={() => setFilter(filter === 'verified' ? 'all' : 'verified')}
+          active={filter === 'verified'}
         />
         <StatCard
           title="검수 필요"
           value={needsReview}
           icon={AlertTriangle}
           changeType={needsReview > 0 ? 'negative' : 'neutral'}
-          change={needsReview > 0 ? '확인 필요' : undefined}
+          change={needsReview > 0 ? '클릭하여 확인' : undefined}
+          onClick={() => setFilter(filter === 'needs_review' ? 'all' : 'needs_review')}
+          active={filter === 'needs_review'}
         />
         <StatCard
           title="악보 보유"
@@ -403,6 +521,8 @@ export default function MusicDBPage() {
           icon={FileText}
           changeType="neutral"
           change={analyses.length ? `${Math.round((withSheetMusic / analyses.length) * 100)}%` : '0%'}
+          onClick={() => setFilter(filter === 'with_sheet' ? 'all' : 'with_sheet')}
+          active={filter === 'with_sheet'}
         />
       </div>
 
@@ -486,14 +606,31 @@ export default function MusicDBPage() {
       </ChartCard>
 
       {/* 분석 목록 */}
-      <ChartCard title="분석 목록" description={`총 ${analyses.length}개의 AI 분석 데이터`}>
+      <ChartCard
+        title="분석 목록"
+        description={filter === 'all' ? `총 ${analyses.length}개의 AI 분석 데이터` : `${filteredAnalyses.length}개 필터됨 (전체 ${analyses.length}개)`}
+        action={filter !== 'all' ? (
+          <button
+            onClick={() => setFilter('all')}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-violet-50 text-violet-700 rounded-lg hover:bg-violet-100 transition-colors"
+          >
+            <Filter className="w-3.5 h-3.5" />
+            {filter === 'needs_review' ? '검수 필요' : filter === 'verified' ? '검증 완료' : '악보 보유'} 필터 해제
+          </button>
+        ) : undefined}
+      >
         {loading ? (
           <div className="flex items-center justify-center py-12 text-gray-400">
             <Loader2 className="w-5 h-5 animate-spin mr-2" />
             로딩 중...
           </div>
         ) : (
-          <DataTable columns={columns} data={analyses} emptyMessage="아직 분석된 곡이 없습니다" onRowClick={(row) => setDetailTarget(row)} />
+          <DataTable
+            columns={columns}
+            data={filteredAnalyses}
+            emptyMessage={filter === 'needs_review' ? '검수 필요한 곡이 없습니다' : filter === 'with_sheet' ? '악보가 등록된 곡이 없습니다' : '아직 분석된 곡이 없습니다'}
+            onRowClick={(row) => setDetailTarget(row)}
+          />
         )}
       </ChartCard>
 
@@ -522,6 +659,27 @@ export default function MusicDBPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                {/* 악보 업로드 버튼 */}
+                <label className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 transition-colors cursor-pointer ${uploadingSheetFor === detailTarget.id ? 'opacity-50 pointer-events-none' : ''}`}>
+                  {uploadingSheetFor === detailTarget.id ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Upload className="w-3.5 h-3.5" />
+                  )}
+                  {uploadingSheetFor === detailTarget.id ? '업로드 중...' : detailTarget.pdf_storage_path ? '악보 교체' : '악보 업로드'}
+                  <input
+                    type="file"
+                    accept=".pdf,.xml,.musicxml,.mxl"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        handleUploadSheet(detailTarget, file);
+                      }
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
                 {(detailTarget.pdf_storage_path || detailTarget.musicxml_storage_path) && (
                   <button
                     onClick={() => { setDetailTarget(null); handleReanalyzeWithSource(detailTarget); }}
