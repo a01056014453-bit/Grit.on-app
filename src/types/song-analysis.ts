@@ -52,10 +52,140 @@ export interface SongAnalysisContent {
   recommended_performances: RecommendedPerformance[];
 }
 
+// ── V2 타입: 7개 섹션 상세 분석 ──
+
+/** 1. 곡의 개요 */
+export interface SongOverview {
+  title_original: string;
+  title_korean?: string;
+  composition_period: string;
+  tempo_marking: string;
+  genre: string;
+  form: string;
+  musical_features: string[];
+}
+
+/** 2. 작곡가 생애 - 타임라인 항목 */
+export interface ComposerTimelineEntry {
+  period: string;
+  description: string;
+}
+
+/** 2. 작곡가 생애 */
+export interface ComposerLife {
+  summary: string;
+  timeline: ComposerTimelineEntry[];
+  at_composition: string;
+}
+
+/** 3. 시대적 배경 */
+export interface HistoricalBackground {
+  era_characteristics: string;
+  contemporary_composers: string;
+  musical_movement: string;
+}
+
+/** 4. 곡의 특징 */
+export interface SongCharacteristics {
+  composition_background: string;
+  form_and_structure: string;
+  technique: string;
+  literary_dramatic: string;
+  conclusion: string;
+}
+
+/** 5. 구조/화성 분석 V2 - 구간별 구성 */
+export interface StructureSectionV2 {
+  section: string;
+  measures: string;
+  key_signature: string;
+  time_signature: string;
+  tempo: string;
+  mood: string;
+  description: string;
+}
+
+/** 5. 구조/화성 분석 V2 - 화성 분석 테이블 행 */
+export interface HarmonyTableRow {
+  measure: string;
+  beat: string;
+  chord: string;
+  roman_numeral: string;
+  function: string;
+  voice_leading: string;
+  pedal: string;
+  note: string;
+}
+
+/** 5. 구조/화성 분석 V2 */
+export interface StructureAnalysisV2 {
+  sections: StructureSectionV2[];
+  harmony_table: HarmonyTableRow[];
+}
+
+/** 6. 연습법 - 기술 카테고리 표 항목 */
+export interface PracticeTechniqueItem {
+  category: string;
+  items: string[];
+}
+
+/** 6. 연습법 - 구간별 연습 가이드 */
+export interface PracticeSectionGuide {
+  section: string;
+  guide: string;
+}
+
+/** 6. 연습법 - 4주 루틴 1일 항목 */
+export interface WeeklyRoutineDay {
+  day: string;
+  focus: string;
+  tasks: string[];
+}
+
+/** 6. 연습법 - 4주 루틴 1주 */
+export interface WeeklyRoutine {
+  week: number;
+  theme: string;
+  days: WeeklyRoutineDay[];
+}
+
+/** 6. 연습법 */
+export interface PracticeMethod {
+  technique_summary: PracticeTechniqueItem[];
+  section_guides: PracticeSectionGuide[];
+  weekly_routine: WeeklyRoutine[];
+}
+
+/** 7. 추천 연주 V2 */
+export interface RecommendedPerformanceV2 {
+  artist: string;
+  year: string;
+  comment: string;
+  youtube_url?: string;
+}
+
+/** V2 확장 콘텐츠 (기존 content에 optional로 추가) */
+export interface SongAnalysisContentV2 extends SongAnalysisContent {
+  /** V2: 곡의 개요 */
+  song_overview?: SongOverview;
+  /** V2: 작곡가 생애 */
+  composer_life?: ComposerLife;
+  /** V2: 시대적 배경 */
+  historical_background?: HistoricalBackground;
+  /** V2: 곡의 특징 */
+  song_characteristics?: SongCharacteristics;
+  /** V2: 구조/화성 분석 */
+  structure_analysis_v2?: StructureAnalysisV2;
+  /** V2: 연습법 + 4주 루틴 */
+  practice_method?: PracticeMethod;
+  /** V2: 추천 연주 (youtube_url 포함) */
+  recommended_performances_v2?: RecommendedPerformanceV2[];
+}
+
 export interface SongAnalysis {
   id: string;
   meta: SongAnalysisMeta;
-  content: SongAnalysisContent;
+  content: SongAnalysisContent | SongAnalysisContentV2;
   verification_status: VerificationStatus;
   created_at: string;
   updated_at: string;
@@ -63,6 +193,13 @@ export interface SongAnalysis {
   pdf_storage_path?: string;
   /** MusicXML 소스 저장 경로 (Supabase Storage) */
   musicxml_storage_path?: string;
+  /** V2: 스키마 버전 (1 = 기존, 2 = 7섹션 상세) */
+  schema_version?: number;
+}
+
+/** V2 타입 가드 */
+export function isV2Content(content: SongAnalysisContent | SongAnalysisContentV2): content is SongAnalysisContentV2 {
+  return 'song_overview' in content || 'composer_life' in content;
 }
 
 /** DB 캐시 저장 형식 */
@@ -80,6 +217,7 @@ export interface AnalyzeSongRequest {
   pdfStoragePath?: string; // Supabase Storage PDF 경로
   musicxmlStoragePath?: string; // Supabase Storage MusicXML 경로
   useStoredSource?: boolean; // 관리자: 저장된 악보로 재분석
+  useV2?: boolean; // V2 상세 분석 사용
 }
 
 /** API 응답 타입 */

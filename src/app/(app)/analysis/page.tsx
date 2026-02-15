@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
-import { ArrowLeft, Search, Sparkles, Music, ChevronRight, Plus, X, FileText, Trash2 } from "lucide-react";
+import { ArrowLeft, Search, Sparkles, Music, ChevronRight, X, FileText, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence, Variants } from "framer-motion";
 import { mockSongs, mockSongAIInfo, composerList } from "@/data";
 import type { SongAnalysis } from "@/types/song-analysis";
+import { addToLibrary, removeFromLibrary, filterByLibrary } from "@/lib/user-library";
 import Image from "next/image";
 
 /** 작곡가 초상화 (Wikimedia Commons, public domain) — Wikipedia API 기반 최신 URL */
@@ -132,7 +134,6 @@ function SpotlightCard({
 export default function AnalysisPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [newSong, setNewSong] = useState({ composer: "", title: "" });
   const [musicXmlContent, setMusicXmlContent] = useState<string | null>(null);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
@@ -147,14 +148,9 @@ export default function AnalysisPage() {
   const handleDelete = async (item: SongAnalysis) => {
     setIsDeleting(true);
     try {
-      const res = await fetch("/api/analyze-song-v2", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ composer: item.meta.composer, title: item.meta.title }),
-      });
-      if (res.ok) {
-        setSavedAnalyses((prev) => prev.filter((a) => a.id !== item.id));
-      }
+      // 사용자 보관함에서 제거 (전역 캐시는 유지)
+      removeFromLibrary(item.meta.composer, item.meta.title);
+      setSavedAnalyses((prev) => prev.filter((a) => a.id !== item.id));
     } catch (err) {
       console.error("Delete failed:", err);
     } finally {
@@ -206,7 +202,7 @@ export default function AnalysisPage() {
     e.target.value = "";
   };
 
-  // Supabase에서 저장된 분석 목록 불러오기
+  // Supabase에서 저장된 분석 목록 불러오기 (사용자 보관함 필터링)
   useEffect(() => {
     async function fetchSavedAnalyses() {
       try {
@@ -214,7 +210,8 @@ export default function AnalysisPage() {
         if (res.ok) {
           const data = await res.json();
           if (data.success && data.data) {
-            setSavedAnalyses(data.data);
+            // 사용자가 직접 분석/추가한 곡만 표시
+            setSavedAnalyses(filterByLibrary(data.data));
           }
         }
       } catch (err) {
@@ -330,29 +327,9 @@ export default function AnalysisPage() {
         />
       </motion.div>
 
-      {/* Add Song Button */}
-      <motion.button
-        onClick={() => setIsModalOpen(!isModalOpen)}
-        className="group w-full flex items-center justify-center gap-2 py-3 mb-6 rounded-2xl border-2 border-dashed border-violet-300/50 bg-white/15 backdrop-blur-sm text-violet-600 relative overflow-hidden hover:bg-white/25 transition-all"
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-      >
-        <Plus className="w-5 h-5 relative z-10" />
-        <span className="font-medium relative z-10">새로운 곡 분석하기</span>
-      </motion.button>
-
       {/* Add Song Card (inline) */}
-      <AnimatePresence>
-        {isModalOpen && (
-            <motion.div
-              className="bg-white rounded-2xl w-full p-5 shadow-lg border border-gray-100 mb-6"
-              initial={{ opacity: 0, height: 0, marginBottom: 0 }}
-              animate={{ opacity: 1, height: "auto", marginBottom: 24 }}
-              exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-              transition={{ duration: 0.25, ease: "easeOut" }}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
+      <div className="bg-white rounded-2xl w-full p-5 shadow-lg border border-gray-100 mb-6">
+              <div className="flex items-center gap-3 mb-4">
                   <AnimatePresence mode="wait">
                     {getComposerPortrait(newSong.composer) ? (
                       <motion.div
@@ -385,16 +362,6 @@ export default function AnalysisPage() {
                     )}
                   </AnimatePresence>
                   <h3 className="text-lg font-bold text-gray-900">새로운 곡 분석</h3>
-                </div>
-                <button
-                  onClick={() => {
-                    setIsModalOpen(false);
-                    setNewSong({ composer: "", title: "" });
-                  }}
-                  className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
-                >
-                  <X className="w-4 h-4 text-gray-500" />
-                </button>
               </div>
 
               <div className="space-y-4">
@@ -501,9 +468,10 @@ export default function AnalysisPage() {
                       sessionStorage.removeItem("musicXml");
                     }
                     sessionStorage.removeItem("sheetMusicImages");
+                    // 사용자 보관함에 추가
+                    addToLibrary(newSong.composer, newSong.title);
                     const newId = `new-${Date.now()}`;
                     router.push(`/songs/${newId}?composer=${encodeURIComponent(newSong.composer)}&title=${encodeURIComponent(newSong.title)}`);
-                    setIsModalOpen(false);
                     setNewSong({ composer: "", title: "" });
                     setPendingPdfBase64(null);
                     setMusicXmlContent(null);
@@ -518,9 +486,7 @@ export default function AnalysisPage() {
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700" />
                 <span className="relative z-10">분석하기</span>
               </motion.button>
-            </motion.div>
-        )}
-      </AnimatePresence>
+      </div>
 
       {/* Search Results */}
       {searchQuery.length >= 2 && (
@@ -661,54 +627,54 @@ export default function AnalysisPage() {
         </motion.div>
       )}
 
-      {/* Delete Confirm Modal */}
-      <AnimatePresence>
-        {deleteTarget && (
-          <motion.div
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={(e) => {
-              if (e.target === e.currentTarget) setDeleteTarget(null);
-            }}
-          >
+      {/* Delete Confirm Card (portal to body for correct centering) */}
+      {typeof document !== "undefined" && createPortal(
+        <AnimatePresence>
+          {deleteTarget && (
             <motion.div
-              className="bg-white rounded-2xl w-full max-w-xs p-5 shadow-xl"
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              transition={{ duration: 0.2 }}
+              className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
             >
-              <div className="text-center mb-4">
-                <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-3">
-                  <Trash2 className="w-5 h-5 text-red-500" />
+              <motion.div
+                className="bg-white rounded-2xl max-w-[260px] w-full p-4 shadow-xl border border-gray-100 pointer-events-auto"
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                transition={{ duration: 0.15 }}
+              >
+                <div className="text-center mb-3">
+                  <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-2">
+                    <Trash2 className="w-4 h-4 text-red-500" />
+                  </div>
+                  <h3 className="font-bold text-sm text-gray-900 mb-0.5">분석 삭제</h3>
+                  <p className="text-xs text-gray-500">
+                    <span className="font-medium text-gray-700">{deleteTarget.meta.composer} - {deleteTarget.meta.title}</span>
+                    <br />보관함에서 삭제할까요?
+                  </p>
                 </div>
-                <h3 className="font-bold text-gray-900 mb-1">분석 삭제</h3>
-                <p className="text-sm text-gray-500">
-                  <span className="font-medium text-gray-700">{deleteTarget.meta.composer} - {deleteTarget.meta.title}</span>
-                  <br />보관함에서 삭제할까요?
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setDeleteTarget(null)}
-                  className="flex-1 py-2.5 rounded-xl bg-gray-100 text-gray-600 font-medium text-sm hover:bg-gray-200 transition-colors"
-                >
-                  취소
-                </button>
-                <button
-                  onClick={() => handleDelete(deleteTarget)}
-                  disabled={isDeleting}
-                  className="flex-1 py-2.5 rounded-xl bg-red-500 text-white font-medium text-sm hover:bg-red-600 transition-colors disabled:opacity-50"
-                >
-                  {isDeleting ? "삭제 중..." : "삭제"}
-                </button>
-              </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setDeleteTarget(null)}
+                    className="flex-1 py-2 rounded-xl bg-gray-100 text-gray-600 font-medium text-xs hover:bg-gray-200 transition-colors"
+                  >
+                    취소
+                  </button>
+                  <button
+                    onClick={() => handleDelete(deleteTarget)}
+                    disabled={isDeleting}
+                    className="flex-1 py-2 rounded-xl bg-red-500 text-white font-medium text-xs hover:bg-red-600 transition-colors disabled:opacity-50"
+                  >
+                    {isDeleting ? "삭제 중..." : "삭제"}
+                  </button>
+                </div>
+              </motion.div>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
 
     </div>
   );

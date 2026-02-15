@@ -1,13 +1,14 @@
 "use client";
 
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Music, Calendar, Sparkles, BookOpen, Lightbulb, Users, ChevronRight, ChevronDown, User, Globe, Loader2, AlertTriangle, CheckCircle, Shield, Layers, FileText, Upload } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { ArrowLeft, Music, Sparkles, Loader2, AlertTriangle, CheckCircle, Shield, FileText, Upload } from "lucide-react";
 import { mockSongs, saveAnalyzedSong } from "@/data";
 import type { SongAnalysis, AnalyzeSongResponse } from "@/types/song-analysis";
 import { getDifficultyLabel, getVerificationLabel } from "@/types/song-analysis";
 import { useState, useEffect, useCallback, Suspense } from "react";
 import Image from "next/image";
+import { AnalysisDisplay } from "@/components/analysis/analysis-display";
+import { addToLibrary } from "@/lib/user-library";
 
 /** 작곡가 초상화 (Wikimedia Commons, public domain) — Wikipedia API 기반 최신 URL */
 const COMPOSER_PORTRAITS: Record<string, string> = {
@@ -81,7 +82,6 @@ function SongDetailContent() {
   const [xmlStatus, setXmlStatus] = useState<string | null>(null);
   const [omrAvailable, setOmrAvailable] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState<string | null>(null);
-  const [openSections, setOpenSections] = useState<Set<number>>(new Set());
 
   const songId = params.id as string;
   const song = mockSongs.find((s) => s.id === songId);
@@ -274,6 +274,8 @@ function SongDetailContent() {
           console.log("[AI Analysis V2] Success - cached:", data.cached);
           setAnalysis(data.data);
           setIsCached(data.cached || false);
+          // 사용자 보관함에 추가
+          addToLibrary(data.data.meta.composer, data.data.meta.title);
         } else {
           setError(data.error || "분석에 실패했습니다.");
         }
@@ -646,198 +648,8 @@ function SongDetailContent() {
           )}
         </div>
 
-        {/* Accordion Sections */}
-        {[
-          {
-            icon: <User className="w-5 h-5 text-violet-600" />,
-            title: "작곡가 배경",
-            content: (
-              <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">
-                {analysis.content.composer_background}
-              </p>
-            ),
-          },
-          {
-            icon: <Globe className="w-5 h-5 text-violet-600" />,
-            title: "시대적 상황",
-            content: (
-              <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">
-                {analysis.content.historical_context}
-              </p>
-            ),
-          },
-          {
-            icon: <BookOpen className="w-5 h-5 text-violet-600" />,
-            title: "작품 배경",
-            content: (
-              <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">
-                {analysis.content.work_background}
-              </p>
-            ),
-          },
-          {
-            icon: <Layers className="w-5 h-5 text-violet-600" />,
-            title: "곡 구조",
-            content: (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-violet-200/30">
-                      <th className="text-left py-2 px-2 font-semibold text-gray-700 w-24">섹션</th>
-                      <th className="text-left py-2 px-2 font-semibold text-gray-700">특징</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {analysis.content.structure_analysis.map((s, i) => (
-                      <tr key={i} className="border-b border-white/30 last:border-0">
-                        <td className="py-3 px-2 align-top">
-                          <span className="font-semibold text-violet-700">{s.section}</span>
-                        </td>
-                        <td className="py-3 px-2 text-gray-600">
-                          {s.character && <span className="font-medium text-gray-800">{s.character}. </span>}
-                          {s.description}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ),
-          },
-          {
-            icon: <Lightbulb className="w-5 h-5 text-violet-600" />,
-            title: "테크닉 솔루션",
-            content: (
-              <div className="space-y-3">
-                {[...analysis.content.technique_tips].sort((a, b) => {
-                  // 곡 구조(structure_analysis) 순서에 맞춰 정렬
-                  const sectionOrder = analysis.content.structure_analysis.map((s) => s.section.toLowerCase());
-                  const aIdx = sectionOrder.findIndex((s) => a.section.toLowerCase().includes(s) || s.includes(a.section.toLowerCase()));
-                  const bIdx = sectionOrder.findIndex((s) => b.section.toLowerCase().includes(s) || s.includes(b.section.toLowerCase()));
-                  // 매칭 안 되면 숫자 기반 자연 정렬
-                  const aNum = parseInt(a.section.replace(/\D/g, "")) || 9999;
-                  const bNum = parseInt(b.section.replace(/\D/g, "")) || 9999;
-                  const aOrder = aIdx >= 0 ? aIdx : 1000 + aNum;
-                  const bOrder = bIdx >= 0 ? bIdx : 1000 + bNum;
-                  return aOrder - bOrder;
-                }).map((tip, i) => (
-                  <div key={i} className="bg-white/40 backdrop-blur-xl rounded-2xl p-4 border border-white/50">
-                    <p className="text-sm font-bold text-violet-700 mb-3">{tip.section}</p>
-                    <div className="space-y-2.5">
-                      {tip.problem && (
-                        <div className="flex items-start gap-2.5">
-                          <span className="text-xs font-semibold text-violet-600 bg-violet-100/60 px-1.5 py-0.5 rounded shrink-0 mt-0.5">문제</span>
-                          <p className="text-sm text-gray-700">{tip.problem}</p>
-                        </div>
-                      )}
-                      {tip.solution && (
-                        <div className="flex items-start gap-2.5">
-                          <span className="text-xs font-semibold text-violet-600 bg-violet-100/60 px-1.5 py-0.5 rounded shrink-0 mt-0.5">해결</span>
-                          <p className="text-sm text-gray-700">{tip.solution}</p>
-                        </div>
-                      )}
-                      {tip.practice && (
-                        <div className="flex items-start gap-2.5">
-                          <span className="text-xs font-semibold text-violet-600 bg-violet-100/60 px-1.5 py-0.5 rounded shrink-0 mt-0.5">연습</span>
-                          <p className="text-sm text-gray-700">{tip.practice}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ),
-          },
-          {
-            icon: <Sparkles className="w-5 h-5 text-violet-600" />,
-            title: "음악적 해석",
-            content: (
-              <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">
-                {analysis.content.musical_interpretation}
-              </p>
-            ),
-          },
-          {
-            icon: <Users className="w-5 h-5 text-violet-600" />,
-            title: "추천 연주",
-            content: (
-              <div>
-                <p className="text-xs text-gray-500 mb-4">탭하면 YouTube에서 연주를 들을 수 있습니다</p>
-                <div className="space-y-3">
-                  {analysis.content.recommended_performances.map((perf, i) => {
-                    const q = encodeURIComponent(`${perf.artist} ${analysis.meta.title} ${analysis.meta.composer}`);
-                    const youtubeUrl = `https://www.youtube.com/results?search_query=${q}`;
-                    return (
-                      <a
-                        key={i}
-                        href={youtubeUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-4 p-4 rounded-xl bg-white/30 hover:bg-white/50 transition-colors border border-white/30"
-                      >
-                        <div className="w-10 h-10 rounded-full bg-violet-200/50 flex items-center justify-center shrink-0">
-                          <svg className="w-5 h-5 text-violet-600" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-                          </svg>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-gray-900">{perf.artist}</p>
-                          <p className="text-sm text-gray-500 truncate">
-                            {perf.year && `${perf.year}년`} {perf.comment && `· ${perf.comment}`}
-                          </p>
-                        </div>
-                        <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
-                      </a>
-                    );
-                  })}
-                </div>
-              </div>
-            ),
-          },
-        ].map((section, idx) => {
-          const isOpen = openSections.has(idx);
-          return (
-            <div key={idx} className="bg-white/40 backdrop-blur-xl rounded-2xl border border-white/50 mb-4 shadow-sm overflow-hidden">
-              <button
-                onClick={() => {
-                  setOpenSections((prev) => {
-                    const next = new Set(prev);
-                    if (next.has(idx)) next.delete(idx);
-                    else next.add(idx);
-                    return next;
-                  });
-                }}
-                className="w-full flex items-center gap-3 p-5 text-left"
-              >
-                <div className="w-10 h-10 rounded-full bg-violet-200/50 flex items-center justify-center shrink-0">
-                  {section.icon}
-                </div>
-                <h3 className="font-bold text-gray-900 flex-1">{section.title}</h3>
-                <motion.div
-                  animate={{ rotate: isOpen ? 180 : 0 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <ChevronDown className="w-5 h-5 text-gray-400" />
-                </motion.div>
-              </button>
-              <AnimatePresence initial={false}>
-                {isOpen && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.25, ease: "easeInOut" }}
-                    className="overflow-hidden"
-                  >
-                    <div className="px-5 pb-5">
-                      {section.content}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          );
-        })}
+        {/* Analysis Sections — schema_version 기반 자동 분기 */}
+        <AnalysisDisplay analysis={analysis} />
       </div>
     </div>
   );

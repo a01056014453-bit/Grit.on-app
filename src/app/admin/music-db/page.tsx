@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Music, CheckCircle, AlertTriangle, Plus, RefreshCw, Trash2, Loader2, X, FileText, Eye, Upload, Filter } from 'lucide-react';
+import { Music, CheckCircle, AlertTriangle, Plus, RefreshCw, Trash2, Loader2, X, FileText, Eye, Upload, Filter, Sparkles } from 'lucide-react';
 import { StatCard } from '@/components/admin/stat-card';
 import { ChartCard } from '@/components/admin/chart-card';
 import { DataTable, type Column } from '@/components/admin/data-table';
 import { StatusBadge } from '@/components/admin/status-badge';
+import { AnalysisDetailModal } from '@/components/analysis/analysis-display';
 import type { SongAnalysis } from '@/types/song-analysis';
 import { getDifficultyLabel, getVerificationLabel } from '@/types/song-analysis';
 
@@ -229,6 +230,34 @@ export default function MusicDBPage() {
     }
   };
 
+  // V2 상세 분석으로 업그레이드
+  const handleReanalyzeV2 = async (item: AnalysisListItem) => {
+    if (!confirm(`"${item._composer} - ${item._title}" 곡을 V2 상세 분석으로 업그레이드하시겠습니까?\n7개 섹션 상세 분석 + 4주 연습 루틴이 생성됩니다.`)) return;
+    setReanalyzingId(item.id);
+    try {
+      const res = await fetch('/api/analyze-song-v2', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          composer: item._composer,
+          title: item._title,
+          forceRefresh: true,
+          useV2: true,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        await fetchAnalyses();
+      } else {
+        alert(`V2 분석 실패: ${json.error}`);
+      }
+    } catch {
+      alert('네트워크 오류');
+    } finally {
+      setReanalyzingId(null);
+    }
+  };
+
   // PDF 보기 (signed URL 생성 후 새 탭)
   const handleViewPdf = async (path: string) => {
     try {
@@ -252,8 +281,7 @@ export default function MusicDBPage() {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          composer: deleteTarget._composer,
-          title: deleteTarget._title,
+          id: deleteTarget.id,
         }),
       });
       const json = await res.json();
@@ -696,83 +724,33 @@ export default function MusicDBPage() {
               </div>
             </div>
 
-            {/* 본문 */}
-            <div className="overflow-y-auto p-6 space-y-6">
-              {/* 1. 작곡가 배경 */}
-              <section>
-                <h4 className="text-sm font-bold text-violet-700 mb-2">작곡가 배경</h4>
-                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{detailTarget.content.composer_background}</p>
-              </section>
-
-              {/* 2. 시대적 상황 */}
-              <section>
-                <h4 className="text-sm font-bold text-violet-700 mb-2">시대적 상황</h4>
-                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{detailTarget.content.historical_context}</p>
-              </section>
-
-              {/* 3. 작품 배경 */}
-              <section>
-                <h4 className="text-sm font-bold text-violet-700 mb-2">작품 배경</h4>
-                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{detailTarget.content.work_background}</p>
-              </section>
-
-              {/* 4. 곡 구조 */}
-              <section>
-                <h4 className="text-sm font-bold text-violet-700 mb-2">곡 구조</h4>
-                <div className="space-y-3">
-                  {detailTarget.content.structure_analysis.map((s, i) => (
-                    <div key={i} className="bg-gray-50 rounded-lg p-3">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-semibold text-sm text-gray-900">{s.section}</span>
-                        {s.measures && <span className="text-xs text-gray-400">마디 {s.measures}</span>}
-                        {s.key_tempo && <span className="text-xs text-violet-500">{s.key_tempo}</span>}
-                      </div>
-                      {s.character && <p className="text-xs text-gray-500 mb-1">{s.character}</p>}
-                      <p className="text-sm text-gray-700">{s.description}</p>
-                    </div>
-                  ))}
+            {/* 본문 — 공유 분석 컴포넌트 사용 */}
+            <div className="overflow-y-auto p-6">
+              {/* V1 → V2 업그레이드 버튼 */}
+              {(!detailTarget.schema_version || detailTarget.schema_version < 2) && (
+                <div className="mb-4 p-3 bg-violet-50 border border-violet-200 rounded-lg flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-violet-600" />
+                    <span className="text-sm text-violet-700">기존 분석 (V1)</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setDetailTarget(null);
+                      handleReanalyzeV2(detailTarget);
+                    }}
+                    disabled={reanalyzingId === detailTarget.id}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors disabled:opacity-50"
+                  >
+                    {reanalyzingId === detailTarget.id ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="w-3.5 h-3.5" />
+                    )}
+                    상세 분석으로 업그레이드
+                  </button>
                 </div>
-              </section>
-
-              {/* 5. 테크닉 팁 */}
-              <section>
-                <h4 className="text-sm font-bold text-violet-700 mb-2">테크닉 팁</h4>
-                <div className="space-y-3">
-                  {detailTarget.content.technique_tips.map((t, i) => (
-                    <div key={i} className="bg-gray-50 rounded-lg p-3">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-semibold text-sm text-gray-900">{t.section}</span>
-                        {t.category && <span className="text-xs px-1.5 py-0.5 bg-violet-100 text-violet-600 rounded">{t.category}</span>}
-                      </div>
-                      <p className="text-sm text-red-600 mb-1">문제: {t.problem}</p>
-                      <p className="text-sm text-green-700 mb-1">해결: {t.solution}</p>
-                      <p className="text-sm text-blue-700">연습법: {t.practice}</p>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              {/* 6. 음악적 해석 */}
-              <section>
-                <h4 className="text-sm font-bold text-violet-700 mb-2">음악적 해석</h4>
-                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{detailTarget.content.musical_interpretation}</p>
-              </section>
-
-              {/* 7. 추천 연주 */}
-              <section>
-                <h4 className="text-sm font-bold text-violet-700 mb-2">추천 연주</h4>
-                <div className="space-y-2">
-                  {detailTarget.content.recommended_performances.map((p, i) => (
-                    <div key={i} className="flex items-start gap-3 bg-gray-50 rounded-lg p-3">
-                      <div>
-                        <span className="font-semibold text-sm text-gray-900">{p.artist}</span>
-                        <span className="text-xs text-gray-400 ml-2">({p.year})</span>
-                        <p className="text-sm text-gray-600 mt-0.5">{p.comment}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
+              )}
+              <AnalysisDetailModal analysis={detailTarget} />
             </div>
           </div>
         </div>

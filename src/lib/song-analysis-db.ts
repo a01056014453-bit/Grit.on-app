@@ -70,7 +70,17 @@ function reconstructAnalysis(row: {
   const content = row.content as Record<string, unknown>;
 
   if (content && content.meta && content.content) {
-    return content as unknown as SongAnalysis;
+    const restored = content as unknown as SongAnalysis;
+    // Supabase row ID를 사용 (content 내부 자체 생성 ID 대신)
+    restored.id = row.id;
+    restored.updated_at = row.updated_at || restored.updated_at;
+    restored.created_at = row.created_at || restored.created_at;
+    // schema_version이 저장되어 있으면 유지, 없으면 V2 필드 존재 여부로 판단
+    if (!restored.schema_version) {
+      const c = restored.content as unknown as Record<string, unknown>;
+      restored.schema_version = (c && ('song_overview' in c || 'composer_life' in c)) ? 2 : 1;
+    }
+    return restored;
   }
 
   // 개별 컬럼에서 복원 (fallback)
@@ -87,6 +97,7 @@ function reconstructAnalysis(row: {
     verification_status: (row.verification_status as SongAnalysis["verification_status"]) || "Needs Review",
     created_at: row.created_at || new Date().toISOString(),
     updated_at: row.updated_at || new Date().toISOString(),
+    schema_version: 1,
   };
 }
 
@@ -151,53 +162,34 @@ export async function saveCachedAnalysis(
       }
     }
 
-    // 원본 키가 다르면 원본 키로도 저장 (다양한 검색 지원)
+    // 원본 키가 다르면 기존 원본 키 row 삭제 (중복 방지)
     if (
       originalComposer &&
       originalTitle &&
       (originalComposer.trim().toLowerCase() !== composer.trim().toLowerCase() ||
         originalTitle.trim().toLowerCase() !== title.trim().toLowerCase())
     ) {
-      const { data: existingOriginal } = await supabase
+      await supabase
         .from("song_analyses")
-        .select("id")
+        .delete()
         .ilike("composer", originalComposer.trim())
-        .ilike("title", originalTitle.trim())
-        .limit(1)
-        .single();
-
-      if (!existingOriginal) {
-        await supabase
-          .from("song_analyses")
-          .insert({
-            composer: originalComposer.trim(),
-            title: originalTitle.trim(),
-            content: analysis as unknown as Json,
-            key: analysis.meta.key || null,
-            opus: analysis.meta.opus || null,
-            difficulty_level: analysis.meta.difficulty_level,
-            verification_status: analysis.verification_status,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          });
-      }
+        .ilike("title", originalTitle.trim());
+      console.log(`[Supabase] Cleaned duplicate: ${originalComposer} - ${originalTitle}`);
     }
   } catch (error) {
     console.error("[Supabase] saveCachedAnalysis error:", error);
   }
 }
 
-/** 캐시에서 분석 데이터 삭제 */
+/** 캐시에서 분석 데이터 삭제 (id 기반) */
 export async function deleteCachedAnalysis(
-  composer: string,
-  title: string
+  id: string
 ): Promise<boolean> {
   try {
     const { error } = await supabase
       .from("song_analyses")
       .delete()
-      .ilike("composer", composer.trim())
-      .ilike("title", title.trim());
+      .eq("id", id);
 
     return !error;
   } catch {
