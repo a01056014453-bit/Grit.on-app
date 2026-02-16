@@ -69,7 +69,8 @@ async function safeParseJSON(
   text: string,
   openai: OpenAI,
   label: string,
-): Promise<Record<string, unknown>> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Promise<Record<string, any>> {
   const jsonStr = extractJSON(text);
   try {
     return JSON.parse(jsonStr);

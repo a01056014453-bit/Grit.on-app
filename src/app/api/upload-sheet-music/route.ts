@@ -106,8 +106,8 @@ export async function GET(request: NextRequest) {
   }
 }
 
-/** DELETE: Storage 파일 다운로드 (서버 내부용) */
-export async function downloadFromStorage(
+/** Storage 파일 다운로드 (서버 내부용) */
+async function downloadFromStorage(
   path: string
 ): Promise<Buffer | null> {
   try {
