@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Music, Sparkles, Loader2, AlertTriangle, CheckCircle, Shield, FileText, Upload } from "lucide-react";
+import { ArrowLeft, Music, Sparkles, Loader2, AlertTriangle, CheckCircle, Shield } from "lucide-react";
 import { mockSongs, saveAnalyzedSong } from "@/data";
 import type { SongAnalysis, AnalyzeSongResponse } from "@/types/song-analysis";
 import { getDifficultyLabel, getVerificationLabel } from "@/types/song-analysis";
@@ -78,9 +78,6 @@ function SongDetailContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [isCached, setIsCached] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [xmlUploading, setXmlUploading] = useState(false);
-  const [xmlStatus, setXmlStatus] = useState<string | null>(null);
-  const [omrAvailable, setOmrAvailable] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState<string | null>(null);
 
   const songId = params.id as string;
@@ -122,143 +119,12 @@ function SongDetailContent() {
     try {
       console.log("[AI Analysis V2] Calling API for:", finalComposer, finalTitle);
 
-      let sheetMusicImages: string[] | undefined;
-      let musicXml: string | undefined;
-      let forceRefresh = false;
-      let hasPdfFile: File | null = null;
-
-      try {
-        // PDF 파일이 있으면 여기서 변환 처리 (분석 모달에서 전달)
-        const pendingPdf = sessionStorage.getItem("pendingPdf");
-        const pendingPdfName = sessionStorage.getItem("pendingPdfName");
-        if (pendingPdf) {
-          sessionStorage.removeItem("pendingPdf");
-          sessionStorage.removeItem("pendingPdfName");
-          forceRefresh = true;
-
-          // base64 data URL → File 변환
-          const pdfRes = await fetch(pendingPdf);
-          const pdfBlob = await pdfRes.blob();
-          const pdfFile = new File([pdfBlob], pendingPdfName || "upload.pdf", { type: "application/pdf" });
-          hasPdfFile = pdfFile;
-
-          // 1) MusicXML 변환 우선 시도
-          setLoadingMessage("MusicXML 변환 중...");
-          let musicXmlSuccess = false;
-          try {
-            const formData = new FormData();
-            formData.append("file", pdfFile);
-            const xmlRes = await fetch("/api/convert-pdf?format=musicxml", {
-              method: "POST",
-              body: formData,
-              signal: AbortSignal.timeout(630000),
-            });
-            if (xmlRes.ok) {
-              const xmlResult = await xmlRes.json();
-              if (xmlResult.success && xmlResult.musicxml) {
-                musicXml = xmlResult.musicxml;
-                musicXmlSuccess = true;
-                console.log("[AI Analysis V2] MusicXML conversion success:", musicXml!.length, "chars");
-              }
-            }
-          } catch {
-            console.log("[AI Analysis V2] MusicXML conversion failed, falling back to images");
-          }
-
-          // 2) 실패 시 이미지 변환 fallback
-          if (!musicXmlSuccess) {
-            setLoadingMessage("이미지 변환으로 전환...");
-            try {
-              const imgFormData = new FormData();
-              imgFormData.append("file", pdfFile);
-              const imgRes = await fetch("/api/convert-pdf", {
-                method: "POST",
-                body: imgFormData,
-              });
-              if (imgRes.ok) {
-                const imgResult = await imgRes.json();
-                sheetMusicImages = imgResult.images;
-                console.log("[AI Analysis V2] Image conversion success:", sheetMusicImages?.length, "pages");
-              }
-            } catch (err) {
-              console.error("[AI Analysis V2] Image conversion also failed:", err);
-            }
-          }
-        }
-
-        // MusicXML 직접 업로드 확인
-        const storedXml = sessionStorage.getItem("musicXml");
-        if (storedXml) {
-          musicXml = storedXml;
-          sessionStorage.removeItem("musicXml");
-          forceRefresh = true;
-          console.log("[AI Analysis V2] MusicXML found:", musicXml.length, "chars");
-        }
-
-        // 기존 이미지 확인 (하위 호환)
-        const stored = sessionStorage.getItem("sheetMusicImages");
-        if (stored) {
-          sheetMusicImages = JSON.parse(stored);
-          sessionStorage.removeItem("sheetMusicImages");
-          console.log("[AI Analysis V2] Sheet music images found:", sheetMusicImages?.length);
-        }
-      } catch { /* ignore */ }
-
-      // ── Supabase Storage에 PDF/MusicXML 업로드 (관리자 재분석용) ──
-      let pdfStoragePath: string | undefined;
-      let musicxmlStoragePath: string | undefined;
-
-      if (hasPdfFile) {
-        setLoadingMessage("악보 저장 중...");
-        try {
-          const uploadForm = new FormData();
-          uploadForm.append("file", hasPdfFile);
-          uploadForm.append("composer", finalComposer);
-          uploadForm.append("title", finalTitle);
-          uploadForm.append("fileType", "pdf");
-          const uploadRes = await fetch("/api/upload-sheet-music", { method: "POST", body: uploadForm });
-          if (uploadRes.ok) {
-            const uploadResult = await uploadRes.json();
-            if (uploadResult.success) pdfStoragePath = uploadResult.path;
-          }
-        } catch { /* 업로드 실패해도 분석은 계속 진행 */ }
-      }
-
-      if (musicXml && forceRefresh) {
-        try {
-          const xmlBlob = new Blob([musicXml], { type: "application/xml" });
-          const xmlFile = new File([xmlBlob], "source.musicxml", { type: "application/xml" });
-          const uploadForm = new FormData();
-          uploadForm.append("file", xmlFile);
-          uploadForm.append("composer", finalComposer);
-          uploadForm.append("title", finalTitle);
-          uploadForm.append("fileType", "musicxml");
-          const uploadRes = await fetch("/api/upload-sheet-music", { method: "POST", body: uploadForm });
-          if (uploadRes.ok) {
-            const uploadResult = await uploadRes.json();
-            if (uploadResult.success) musicxmlStoragePath = uploadResult.path;
-          }
-        } catch { /* 업로드 실패해도 분석은 계속 진행 */ }
-      }
-
       setLoadingMessage("AI 분석 중...");
 
       const controller = new AbortController();
-      const timeoutMs = musicXml ? 180000 : 120000;
-      const timeout = setTimeout(() => controller.abort(), timeoutMs);
+      const timeout = setTimeout(() => controller.abort(), 120000);
 
       const requestBody: Record<string, unknown> = { composer: finalComposer, title: finalTitle };
-      if (sheetMusicImages?.length) {
-        requestBody.sheetMusicImages = sheetMusicImages;
-      }
-      if (musicXml) {
-        requestBody.musicXml = musicXml;
-        requestBody.forceRefresh = true;
-      } else if (forceRefresh) {
-        requestBody.forceRefresh = true;
-      }
-      if (pdfStoragePath) requestBody.pdfStoragePath = pdfStoragePath;
-      if (musicxmlStoragePath) requestBody.musicxmlStoragePath = musicxmlStoragePath;
 
       const res = await fetch("/api/analyze-song-v2", {
         method: "POST",
@@ -298,103 +164,6 @@ function SongDetailContent() {
   useEffect(() => {
     loadAIAnalysis();
   }, [loadAIAnalysis]);
-
-  // OMR 서버 가용성 확인
-  useEffect(() => {
-    fetch("/api/convert-pdf")
-      .then((res) => res.json())
-      .then((data) => setOmrAvailable(data.available === true))
-      .catch(() => setOmrAvailable(false));
-  }, []);
-
-  // PDF 또는 MusicXML 파일 업로드 → GPT 분석
-  const handleScoreUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const ext = file.name.toLowerCase();
-    const isPdf = ext.endsWith(".pdf");
-    const isMusicXml = ext.endsWith(".xml") || ext.endsWith(".musicxml") || ext.endsWith(".mxl");
-
-    if (!isPdf && !isMusicXml) {
-      setXmlStatus("PDF 또는 MusicXML 파일만 업로드 가능합니다.");
-      return;
-    }
-
-    if (isPdf && !omrAvailable) {
-      setXmlStatus("PDF 변환 서버가 연결되지 않았습니다. MusicXML 파일을 업로드하세요.");
-      return;
-    }
-
-    setXmlUploading(true);
-
-    try {
-      let requestBody: Record<string, unknown>;
-
-      if (isPdf) {
-        // PDF → 서버에서 이미지 변환 → GPT-4o Vision 분석
-        setXmlStatus("PDF 악보 이미지 변환 중...");
-        const formData = new FormData();
-        formData.append("file", file);
-
-        const convertRes = await fetch("/api/convert-pdf", {
-          method: "POST",
-          body: formData,
-        });
-
-        if (!convertRes.ok) {
-          const err = await convertRes.json().catch(() => ({}));
-          throw new Error(err.error || "PDF 변환 실패");
-        }
-
-        const result = await convertRes.json();
-        setXmlStatus(`${result.page_count}페이지 악보 분석 중...`);
-
-        requestBody = {
-          composer: finalComposer,
-          title: finalTitle,
-          sheetMusicImages: result.images,
-          forceRefresh: true,
-        };
-      } else {
-        // MusicXML 직접 읽기 → GPT 텍스트 분석
-        const musicxml = await file.text();
-        setXmlStatus("MusicXML 분석 중...");
-
-        requestBody = {
-          composer: finalComposer,
-          title: finalTitle,
-          musicXml: musicxml,
-          forceRefresh: true,
-        };
-      }
-
-      const analyzeRes = await fetch("/api/analyze-song-v2", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestBody),
-      });
-
-      if (!analyzeRes.ok) {
-        throw new Error("MusicXML 분석 실패");
-      }
-
-      const data: AnalyzeSongResponse = await analyzeRes.json();
-      if (data.success && data.data) {
-        setAnalysis(data.data);
-        setIsCached(false);
-        setXmlStatus("악보 기반 정밀 분석 완료!");
-        setTimeout(() => setXmlStatus(null), 3000);
-      } else {
-        throw new Error(data.error || "분석 실패");
-      }
-    } catch (err) {
-      setXmlStatus(`오류: ${err instanceof Error ? err.message : "알 수 없는 오류"}`);
-    } finally {
-      setXmlUploading(false);
-      e.target.value = "";
-    }
-  };
 
   useEffect(() => {
     if (analysis) {
@@ -610,42 +379,6 @@ function SongDetailContent() {
             </div>
           )}
 
-          {/* 악보 업로드 (PDF → MusicXML 자동 변환 / MusicXML 직접) — 이미 악보 있으면 숨김 */}
-          {!analysis.pdf_storage_path && !analysis.musicxml_storage_path && (
-          <div className="mt-4 pt-4 border-t border-gray-100">
-            <label className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-dashed transition-colors cursor-pointer ${
-              xmlUploading
-                ? "border-violet-300 bg-violet-50/50"
-                : "border-gray-200 hover:border-violet-400 hover:bg-violet-50/30"
-            }`}>
-              <input
-                type="file"
-                accept={omrAvailable ? ".pdf,.xml,.musicxml,.mxl" : ".xml,.musicxml,.mxl"}
-                onChange={handleScoreUpload}
-                disabled={xmlUploading}
-                className="hidden"
-              />
-              {xmlUploading ? (
-                <Loader2 className="w-5 h-5 text-violet-600 animate-spin shrink-0" />
-              ) : (
-                <FileText className="w-5 h-5 text-violet-600 shrink-0" />
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-700">
-                  {xmlUploading ? "분석 중..." : omrAvailable ? "PDF/MusicXML 악보로 정밀 분석" : "MusicXML 악보로 정밀 분석"}
-                </p>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  {xmlStatus || (omrAvailable
-                    ? "PDF 또는 MusicXML을 업로드하면 정확한 마디별 분석을 제공합니다"
-                    : "MusicXML 파일을 업로드하면 정확한 마디별 분석을 제공합니다")}
-                </p>
-              </div>
-              {!xmlUploading && (
-                <Upload className="w-4 h-4 text-gray-400 shrink-0" />
-              )}
-            </label>
-          </div>
-          )}
         </div>
 
         {/* Analysis Sections — schema_version 기반 자동 분기 */}

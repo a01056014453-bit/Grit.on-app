@@ -269,9 +269,9 @@ export default function HomePage() {
       <div className="grid grid-cols-3 gap-3 mb-8">
         <Link
           href="/music-terms"
-          className="flex flex-col items-center bg-white/15 backdrop-blur-lg rounded-2xl p-3 pt-4 hover:bg-white/25 transition-all shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)] border border-white/30"
+          className="flex flex-col items-center bg-white/60 backdrop-blur-lg rounded-2xl p-3 pt-4 hover:bg-white/80 transition-all shadow-sm border border-white/70"
         >
-          <div className="w-11 h-11 rounded-full bg-white/30 backdrop-blur-sm flex items-center justify-center mb-2 shrink-0">
+          <div className="w-11 h-11 rounded-full bg-violet-100/70 flex items-center justify-center mb-2 shrink-0">
             <Search className="w-5 h-5 text-violet-600" />
           </div>
           <p className="font-semibold text-gray-900 text-xs text-center">음악용어 검색</p>
@@ -280,9 +280,9 @@ export default function HomePage() {
 
         <Link
           href="/teachers"
-          className="flex flex-col items-center bg-white/15 backdrop-blur-lg rounded-2xl p-3 pt-4 hover:bg-white/25 transition-all shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)] border border-white/30"
+          className="flex flex-col items-center bg-white/60 backdrop-blur-lg rounded-2xl p-3 pt-4 hover:bg-white/80 transition-all shadow-sm border border-white/70"
         >
-          <div className="w-11 h-11 rounded-full bg-white/30 backdrop-blur-sm flex items-center justify-center mb-2 shrink-0">
+          <div className="w-11 h-11 rounded-full bg-violet-100/70 flex items-center justify-center mb-2 shrink-0">
             <Users className="w-5 h-5 text-violet-600" />
           </div>
           <p className="font-semibold text-gray-900 text-xs text-center">원포인트 레슨</p>
@@ -291,9 +291,9 @@ export default function HomePage() {
 
         <Link
           href="/rooms"
-          className="flex flex-col items-center bg-white/15 backdrop-blur-lg rounded-2xl p-3 pt-4 hover:bg-white/25 transition-all shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)] border border-white/30"
+          className="flex flex-col items-center bg-white/60 backdrop-blur-lg rounded-2xl p-3 pt-4 hover:bg-white/80 transition-all shadow-sm border border-white/70"
         >
-          <div className="w-11 h-11 rounded-full bg-white/30 backdrop-blur-sm flex items-center justify-center mb-2 shrink-0">
+          <div className="w-11 h-11 rounded-full bg-violet-100/70 flex items-center justify-center mb-2 shrink-0">
             <GraduationCap className="w-5 h-5 text-violet-600" />
           </div>
           <p className="font-semibold text-gray-900 text-xs text-center">입시룸</p>

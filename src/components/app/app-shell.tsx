@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
 import { BottomNavigation } from "./bottom-navigation";
+import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
 
 const CircularText = dynamic(
   () => import("@/components/ui/circular-text").then((mod) => mod.CircularText),
@@ -14,7 +15,7 @@ interface AppShellProps {
   children: React.ReactNode;
 }
 
-type AppState = "splash" | "login" | "app";
+type AppState = "splash" | "login" | "onboarding" | "app";
 
 export function AppShell({ children }: AppShellProps) {
   const [appState, setAppState] = useState<AppState>("splash");
@@ -26,10 +27,12 @@ export function AppShell({ children }: AppShellProps) {
     const isLoggedIn = localStorage.getItem("grit-on-logged-in");
 
     if (isLoggedIn) {
+      const onboardingComplete = localStorage.getItem("grit-on-onboarding-complete");
+      const targetState: AppState = onboardingComplete ? "app" : "onboarding";
       // Skip login screen if already logged in
       const timer = setTimeout(() => {
         setSplashFading(true);
-        setTimeout(() => setAppState("app"), 600);
+        setTimeout(() => setAppState(targetState), 600);
       }, 2200);
       return () => clearTimeout(timer);
     }
@@ -54,8 +57,9 @@ export function AppShell({ children }: AppShellProps) {
   const handleLogin = () => {
     // Save login state
     localStorage.setItem("grit-on-logged-in", "true");
+    const onboardingComplete = localStorage.getItem("grit-on-onboarding-complete");
     setIsAnimating(true);
-    setTimeout(() => setAppState("app"), 500);
+    setTimeout(() => setAppState(onboardingComplete ? "app" : "onboarding"), 500);
   };
 
   return (
@@ -272,6 +276,13 @@ export function AppShell({ children }: AppShellProps) {
               </p>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Onboarding Flow */}
+      <AnimatePresence>
+        {appState === "onboarding" && (
+          <OnboardingFlow onComplete={() => setAppState("app")} />
         )}
       </AnimatePresence>
 

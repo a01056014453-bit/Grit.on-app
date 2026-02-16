@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { ArrowLeft, Search, Sparkles, Music, ChevronRight, X, FileText, Trash2 } from "lucide-react";
+import { ArrowLeft, Search, Sparkles, Music, ChevronRight, X, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence, Variants } from "framer-motion";
 import { mockSongs, mockSongAIInfo, composerList } from "@/data";
@@ -135,9 +135,6 @@ export default function AnalysisPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [newSong, setNewSong] = useState({ composer: "", title: "" });
-  const [musicXmlContent, setMusicXmlContent] = useState<string | null>(null);
-  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
-  const [pendingPdfBase64, setPendingPdfBase64] = useState<string | null>(null);
   const [savedAnalyses, setSavedAnalyses] = useState<SongAnalysis[]>([]);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isLoadingSaved, setIsLoadingSaved] = useState(true);
@@ -157,49 +154,6 @@ export default function AnalysisPage() {
       setIsDeleting(false);
       setDeleteTarget(null);
     }
-  };
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 20 * 1024 * 1024) {
-      alert("파일 크기는 20MB 이하여야 합니다.");
-      e.target.value = "";
-      return;
-    }
-
-    const ext = file.name.toLowerCase();
-    const isPdf = ext.endsWith(".pdf");
-    const isMusicXml = ext.endsWith(".xml") || ext.endsWith(".musicxml") || ext.endsWith(".mxl");
-
-    if (!isPdf && !isMusicXml) {
-      alert("PDF 또는 MusicXML(.xml, .musicxml, .mxl) 파일만 업로드 가능합니다.");
-      e.target.value = "";
-      return;
-    }
-
-    if (isPdf) {
-      // PDF는 상세 페이지에서 변환 — 여기서는 base64로만 읽어둠
-      setUploadedFileName(file.name);
-      setMusicXmlContent(null);
-      const reader = new FileReader();
-      reader.onload = () => {
-        setPendingPdfBase64(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    } else {
-      // MusicXML 직접 읽기
-      try {
-        const text = await file.text();
-        setMusicXmlContent(text);
-        setUploadedFileName(file.name);
-        setPendingPdfBase64(null);
-      } catch {
-        alert("파일을 읽을 수 없습니다.");
-      }
-    }
-    e.target.value = "";
   };
 
   // Supabase에서 저장된 분석 목록 불러오기 (사용자 보관함 필터링)
@@ -409,73 +363,16 @@ export default function AnalysisPage() {
                   />
                 </div>
 
-                {/* 악보 파일 첨부 (PDF / MusicXML) */}
-                <div>
-                  <label className="text-sm font-medium text-gray-700 mb-1.5 block">
-                    악보 첨부 <span className="text-gray-400 font-normal">(선택)</span>
-                  </label>
-                  {!uploadedFileName ? (
-                    <label className="flex items-center justify-center gap-2 py-3 rounded-xl border border-dashed border-violet-300/50 bg-violet-50/50 text-violet-600 text-sm cursor-pointer hover:bg-violet-50 transition-colors">
-                      <FileText className="w-4 h-4" />
-                      <span>PDF / MusicXML 파일 업로드</span>
-                      <input
-                        type="file"
-                        accept=".pdf,.xml,.musicxml,.mxl"
-                        onChange={handleFileUpload}
-                        className="hidden"
-                      />
-                    </label>
-                  ) : (
-                    <div className="flex items-center gap-2 py-2.5 px-3 rounded-xl border border-violet-300/40 bg-violet-50/30 text-sm">
-                      <FileText className="w-4 h-4 text-violet-500 shrink-0" />
-                      <span className="flex-1 truncate text-gray-700">{uploadedFileName}</span>
-                      {pendingPdfBase64 && (
-                        <span className="text-xs text-violet-500 shrink-0">PDF</span>
-                      )}
-                      {musicXmlContent && (
-                        <span className="text-xs text-violet-500 shrink-0">XML</span>
-                      )}
-                      <button
-                        onClick={() => {
-                          setUploadedFileName(null);
-                          setPendingPdfBase64(null);
-                          setMusicXmlContent(null);
-                        }}
-                        className="w-5 h-5 rounded-full bg-black/10 flex items-center justify-center shrink-0 hover:bg-black/20"
-                      >
-                        <X className="w-3 h-3 text-gray-500" />
-                      </button>
-                    </div>
-                  )}
-                  <p className="text-xs text-gray-400 mt-1.5">PDF는 이미지로 변환 후 분석, MusicXML은 정밀 구조 분석</p>
-                </div>
               </div>
 
               <motion.button
                 onClick={() => {
                   if (newSong.composer.length >= 2 && newSong.title.length >= 2) {
-                    if (pendingPdfBase64) {
-                      try {
-                        sessionStorage.setItem("pendingPdf", pendingPdfBase64);
-                        sessionStorage.setItem("pendingPdfName", uploadedFileName || "upload.pdf");
-                      } catch (e) {
-                        console.error("PDF sessionStorage 저장 실패:", e);
-                      }
-                    }
-                    if (musicXmlContent) {
-                      sessionStorage.setItem("musicXml", musicXmlContent);
-                    } else {
-                      sessionStorage.removeItem("musicXml");
-                    }
-                    sessionStorage.removeItem("sheetMusicImages");
                     // 사용자 보관함에 추가
                     addToLibrary(newSong.composer, newSong.title);
                     const newId = `new-${Date.now()}`;
                     router.push(`/songs/${newId}?composer=${encodeURIComponent(newSong.composer)}&title=${encodeURIComponent(newSong.title)}`);
                     setNewSong({ composer: "", title: "" });
-                    setPendingPdfBase64(null);
-                    setMusicXmlContent(null);
-                    setUploadedFileName(null);
                   }
                 }}
                 disabled={newSong.composer.length < 2 || newSong.title.length < 2}

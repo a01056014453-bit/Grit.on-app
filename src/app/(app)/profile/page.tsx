@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -23,18 +23,72 @@ import {
   BookOpen,
   Camera,
   Pencil,
-  X,
   Trash2,
   GraduationCap,
   Shield,
   ToggleLeft,
   ToggleRight,
 } from "lucide-react";
+import { motion, Variants } from "framer-motion";
 import { Modal } from "@/components/ui/modal";
 import { getAllSessions, getPracticeStats } from "@/lib/db";
 import { useTeacherMode } from "@/hooks/useTeacherMode";
 import { TeacherVerificationStatus } from "@/types";
+import BlurText from "@/components/reactbits/BlurText";
+import GradientText from "@/components/reactbits/GradientText";
 
+/* ─── Animation variants ─── */
+const listContainer: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.05 } },
+};
+const listItem: Variants = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: "easeOut" } },
+};
+
+/* ─── SpotlightCard (mouse-following violet glow) ─── */
+function SpotlightCard({
+  children,
+  className = "",
+  href,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  href: string;
+}) {
+  const cardRef = useRef<HTMLAnchorElement>(null);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [isHovered, setIsHovered] = useState(false);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+  }, []);
+
+  return (
+    <Link
+      ref={cardRef}
+      href={href}
+      className={`relative overflow-hidden ${className}`}
+      onMouseMove={handleMouseMove}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      {isHovered && (
+        <div
+          className="pointer-events-none absolute inset-0 z-0 transition-opacity duration-300"
+          style={{
+            background: `radial-gradient(200px circle at ${mousePos.x}px ${mousePos.y}px, rgba(139,92,246,0.12), transparent 60%)`,
+          }}
+        />
+      )}
+      <div className="relative z-10 flex items-center gap-3 w-full">{children}</div>
+    </Link>
+  );
+}
+
+/* ─── Data helpers ─── */
 const defaultUser = {
   nickname: "지민",
   instrument: "피아노",
@@ -399,8 +453,14 @@ export default function ProfilePage() {
   return (
     <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-violet">
       <div className="bg-blob-extra" />
-      {/* Profile Header */}
-      <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm mb-6">
+
+      {/* ─── Profile Header ─── */}
+      <motion.div
+        className="bg-white/40 backdrop-blur-xl rounded-3xl p-5 border border-white/50 shadow-sm mb-6"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
+      >
         <div className="flex items-center gap-4">
           {/* 프로필 사진 (탭하면 사진 메뉴) */}
           <button
@@ -415,7 +475,7 @@ export default function ProfilePage() {
                 className="rounded-full object-cover"
               />
             ) : (
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+              <div className="w-16 h-16 bg-white/60 rounded-full flex items-center justify-center">
                 <User className="w-8 h-8 text-gray-400" />
               </div>
             )}
@@ -435,15 +495,21 @@ export default function ProfilePage() {
 
           <div className="flex-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-xl font-bold text-gray-900">{profile.nickname}</h2>
+              <BlurText
+                text={profile.nickname}
+                className="text-xl font-bold text-gray-900"
+                animateBy="letters"
+                delay={50}
+                direction="top"
+              />
               <div className="flex items-center gap-1.5">
-                <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
+                <span className="px-2 py-0.5 bg-white/60 text-gray-600 text-xs font-medium rounded-full">
                   {profile.grade}
                 </span>
                 <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
                   profile.type === "전공"
-                    ? "bg-violet-100 text-violet-600"
-                    : "bg-green-100 text-green-600"
+                    ? "bg-violet-100/60 text-violet-600"
+                    : "bg-green-100/60 text-green-600"
                 }`}>
                   {profile.type}
                 </span>
@@ -458,22 +524,31 @@ export default function ProfilePage() {
           {/* 편집 버튼 */}
           <button
             onClick={openEditProfile}
-            className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors shrink-0"
+            className="w-8 h-8 rounded-full bg-white/30 backdrop-blur-sm border border-white/40 flex items-center justify-center hover:bg-white/50 transition-colors shrink-0"
           >
             <Pencil className="w-4 h-4 text-gray-500" />
           </button>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Subscription Card */}
-      <div className="bg-gradient-to-r from-primary to-purple-600 rounded-xl p-4 mb-6 text-white">
+      {/* ─── Subscription Card ─── */}
+      <motion.div
+        className="bg-gradient-to-r from-primary to-purple-600 rounded-3xl p-4 mb-6 text-white"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.05, ease: "easeOut" }}
+      >
         <div className="flex items-center justify-between">
           <div>
             <div className="flex items-center gap-2">
               <Crown className="w-4 h-4" />
-              <span className="text-sm font-medium">
+              <GradientText
+                colors={["#ffffff", "#e9d5ff", "#ffffff"]}
+                animationSpeed={5}
+                className="text-sm font-medium !mx-0"
+              >
                 {profile.plan === "free" ? "무료 플랜" : "Pro 플랜"}
-              </span>
+              </GradientText>
             </div>
             <p className="text-xs text-white/80 mt-1">
               {profile.plan === "free"
@@ -490,21 +565,28 @@ export default function ProfilePage() {
             </button>
           )}
         </div>
-      </div>
+      </motion.div>
 
-      {/* Teacher Section */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden mb-6">
-        <h3 className="px-4 py-3 text-sm font-semibold text-gray-900 border-b border-gray-100 bg-gray-50/50">
-          선생님
-        </h3>
+      {/* ─── Teacher Section ─── */}
+      <motion.div
+        className="bg-white/40 backdrop-blur-xl rounded-3xl border border-white/50 shadow-sm overflow-hidden mb-6"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.1, ease: "easeOut" }}
+      >
+        <div className="px-4 py-3">
+          <span className="inline-block font-bold text-sm text-violet-700 bg-violet-100/60 backdrop-blur-sm px-3.5 py-1 rounded-full">
+            선생님
+          </span>
+        </div>
         {isTeacher ? (
           <>
-            <div className="flex items-center justify-between px-4 py-3.5 border-b border-gray-50">
+            <div className="flex items-center justify-between px-4 py-3.5 border-b border-white/30">
               <div className="flex items-center gap-3">
                 <Shield className="w-5 h-5 text-green-500" />
                 <div>
                   <span className="text-sm text-gray-700">인증 상태</span>
-                  <span className="ml-2 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                  <span className="ml-2 px-2 py-0.5 bg-green-100/60 text-green-700 text-xs font-medium rounded-full">
                     인증됨
                   </span>
                 </div>
@@ -515,7 +597,7 @@ export default function ProfilePage() {
                 toggleMode();
                 reloadTeacher();
               }}
-              className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors border-b border-gray-50"
+              className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-white/30 transition-colors border-b border-white/30"
             >
               <div className="flex items-center gap-3">
                 {teacherMode ? (
@@ -531,7 +613,7 @@ export default function ProfilePage() {
             </button>
             <Link
               href="/profile/teacher-profile"
-              className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors"
+              className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-white/30 transition-colors"
             >
               <div className="flex items-center gap-3">
                 <Pencil className="w-5 h-5 text-violet-500" />
@@ -543,19 +625,19 @@ export default function ProfilePage() {
         ) : (
           <Link
             href="/profile/teacher-register"
-            className="flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors"
+            className="flex items-center justify-between px-4 py-3.5 hover:bg-white/30 transition-colors"
           >
             <div className="flex items-center gap-3">
               <GraduationCap className="w-5 h-5 text-violet-500" />
               <div>
                 <span className="text-sm text-gray-700">선생님 등록</span>
                 {verificationStatus === "pending" && (
-                  <span className="ml-2 px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-medium rounded-full">
+                  <span className="ml-2 px-2 py-0.5 bg-amber-100/60 text-amber-700 text-xs font-medium rounded-full">
                     심사중
                   </span>
                 )}
                 {verificationStatus === "rejected" && (
-                  <span className="ml-2 px-2 py-0.5 bg-red-100 text-red-700 text-xs font-medium rounded-full">
+                  <span className="ml-2 px-2 py-0.5 bg-red-100/60 text-red-700 text-xs font-medium rounded-full">
                     반려됨
                   </span>
                 )}
@@ -564,18 +646,26 @@ export default function ProfilePage() {
             <ChevronRight className="w-4 h-4 text-gray-400" />
           </Link>
         )}
-      </div>
+      </motion.div>
 
-      {/* Settings List */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden mb-8">
-        <h3 className="px-4 py-3 text-sm font-semibold text-gray-900 border-b border-gray-100 bg-gray-50/50">
-          설정
-        </h3>
+      {/* ─── Settings List ─── */}
+      <motion.div
+        className="bg-white/40 backdrop-blur-xl rounded-3xl border border-white/50 shadow-sm overflow-hidden mb-8"
+        variants={listContainer}
+        initial="hidden"
+        animate="show"
+      >
+        <div className="px-4 py-3">
+          <span className="inline-block font-bold text-sm text-violet-700 bg-violet-100/60 backdrop-blur-sm px-3.5 py-1 rounded-full">
+            설정
+          </span>
+        </div>
         {settingsItems.map((item, index) => (
-          <button
+          <motion.button
             key={index}
+            variants={listItem}
             onClick={item.onClick}
-            className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-b-0"
+            className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-white/30 transition-colors border-b border-white/30 last:border-b-0"
           >
             <div className="flex items-center gap-3">
               <item.icon className="w-5 h-5 text-gray-400" />
@@ -585,14 +675,21 @@ export default function ProfilePage() {
               <span className="text-sm text-gray-500">{item.value}</span>
               <ChevronRight className="w-4 h-4 text-gray-400" />
             </div>
-          </button>
+          </motion.button>
         ))}
-      </div>
+      </motion.div>
 
-      {/* My Analysis List */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden mb-6">
-        <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-900">나의 분석 리스트</h3>
+      {/* ─── My Analysis List ─── */}
+      <motion.div
+        className="bg-white/40 backdrop-blur-xl rounded-3xl border border-white/50 shadow-sm overflow-hidden mb-6"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.2, ease: "easeOut" }}
+      >
+        <div className="px-4 py-3 flex items-center justify-between">
+          <span className="inline-block font-bold text-sm text-violet-700 bg-violet-100/60 backdrop-blur-sm px-3.5 py-1 rounded-full">
+            나의 분석 리스트
+          </span>
           <span className="text-xs text-gray-500">{analyses.length}곡</span>
         </div>
         {isLoading ? (
@@ -601,80 +698,98 @@ export default function ProfilePage() {
           <div className="p-6 text-center">
             <BookOpen className="w-8 h-8 text-gray-300 mx-auto mb-2" />
             <p className="text-sm text-gray-500">아직 분석한 곡이 없습니다</p>
-            <Link href="/songs" className="text-xs text-primary mt-1 inline-block">
+            <Link href="/analysis" className="text-xs text-primary mt-1 inline-block">
               곡 분석하러 가기 →
             </Link>
           </div>
         ) : (
-          <div className="divide-y divide-gray-50">
+          <motion.div variants={listContainer} initial="hidden" animate="show">
             {analyses.slice(0, 5).map((item, idx) => (
-              <Link
-                key={`${item.id}-${idx}`}
-                href={`/songs/${item.id}`}
-                className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{item.title}</p>
-                  <p className="text-xs text-gray-500">{item.composer}</p>
-                </div>
-                <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
-              </Link>
+              <motion.div key={`${item.id}-${idx}`} variants={listItem}>
+                <SpotlightCard
+                  href={`/songs/${item.id}`}
+                  className={`flex items-center justify-between px-4 py-3 hover:bg-white/30 transition-colors ${
+                    idx !== Math.min(analyses.length, 5) - 1 ? "border-b border-white/30" : ""
+                  }`}
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{item.title}</p>
+                    <p className="text-xs text-gray-500">{item.composer}</p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
+                </SpotlightCard>
+              </motion.div>
             ))}
             {analyses.length > 5 && (
               <Link
-                href="/songs"
-                className="block px-4 py-3 text-center text-sm text-primary hover:bg-gray-50 transition-colors"
+                href="/analysis"
+                className="block px-4 py-3 text-center text-sm text-primary hover:bg-white/30 transition-colors"
               >
                 전체 보기 ({analyses.length}곡)
               </Link>
             )}
-          </div>
+          </motion.div>
         )}
-      </div>
+      </motion.div>
 
-      {/* Practice Insights */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden mb-6">
-        <h3 className="px-4 py-3 text-sm font-semibold text-gray-900 border-b border-gray-100 bg-gray-50/50">
-          연습 인사이트
-        </h3>
+      {/* ─── Practice Insights ─── */}
+      <motion.div
+        className="bg-white/40 backdrop-blur-xl rounded-3xl border border-white/50 shadow-sm overflow-hidden mb-6"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.25, ease: "easeOut" }}
+      >
+        <div className="px-4 py-3">
+          <span className="inline-block font-bold text-sm text-violet-700 bg-violet-100/60 backdrop-blur-sm px-3.5 py-1 rounded-full">
+            연습 인사이트
+          </span>
+        </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-3 divide-x divide-gray-100 border-b border-gray-100">
-          <div className="p-4 text-center">
-            <Clock className="w-5 h-5 text-blue-500 mx-auto mb-1" />
-            <p className="text-lg font-bold text-gray-900">{isLoading ? "-" : totalHours}</p>
-            <p className="text-xs text-gray-500">총 시간</p>
-          </div>
-          <div className="p-4 text-center">
-            <Flame className="w-5 h-5 text-orange-500 mx-auto mb-1" />
-            <p className="text-lg font-bold text-gray-900">{isLoading ? "-" : weekSessions}</p>
-            <p className="text-xs text-gray-500">이번 주</p>
-          </div>
-          <div className="p-4 text-center">
-            <Trophy className="w-5 h-5 text-yellow-500 mx-auto mb-1" />
-            <p className="text-lg font-bold text-gray-900">{isLoading ? "-" : maxStreak}</p>
-            <p className="text-xs text-gray-500">최대 연속</p>
-          </div>
+        <div className="grid grid-cols-3 divide-x divide-white/30 border-b border-white/30">
+          {[
+            { icon: Clock, color: "text-blue-500", value: totalHours, label: "총 시간" },
+            { icon: Flame, color: "text-orange-500", value: weekSessions, label: "이번 주" },
+            { icon: Trophy, color: "text-yellow-500", value: maxStreak, label: "최대 연속" },
+          ].map((stat, i) => (
+            <motion.div
+              key={stat.label}
+              className="p-4 text-center"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.35, delay: 0.3 + i * 0.08, ease: "easeOut" }}
+            >
+              <stat.icon className={`w-5 h-5 ${stat.color} mx-auto mb-1`} />
+              <p className="text-lg font-bold text-gray-900">{isLoading ? "-" : stat.value}</p>
+              <p className="text-xs text-gray-500">{stat.label}</p>
+            </motion.div>
+          ))}
         </div>
 
         {/* Badges */}
         <div className="p-4">
           <p className="text-xs font-medium text-gray-500 mb-3">활동 배지</p>
-          <div className="grid grid-cols-3 gap-3">
+          <motion.div
+            className="grid grid-cols-3 gap-3"
+            variants={listContainer}
+            initial="hidden"
+            animate="show"
+          >
             {badges.map((badge) => {
               const colorClasses: Record<string, string> = {
-                blue: badge.earned ? "bg-blue-100 text-blue-600" : "bg-gray-100 text-gray-300",
-                orange: badge.earned ? "bg-orange-100 text-orange-600" : "bg-gray-100 text-gray-300",
-                yellow: badge.earned ? "bg-yellow-100 text-yellow-600" : "bg-gray-100 text-gray-300",
-                purple: badge.earned ? "bg-purple-100 text-purple-600" : "bg-gray-100 text-gray-300",
-                green: badge.earned ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-300",
-                red: badge.earned ? "bg-red-100 text-red-600" : "bg-gray-100 text-gray-300",
+                blue: badge.earned ? "bg-blue-100/60 text-blue-600" : "bg-white/30 text-gray-300",
+                orange: badge.earned ? "bg-orange-100/60 text-orange-600" : "bg-white/30 text-gray-300",
+                yellow: badge.earned ? "bg-yellow-100/60 text-yellow-600" : "bg-white/30 text-gray-300",
+                purple: badge.earned ? "bg-purple-100/60 text-purple-600" : "bg-white/30 text-gray-300",
+                green: badge.earned ? "bg-green-100/60 text-green-600" : "bg-white/30 text-gray-300",
+                red: badge.earned ? "bg-red-100/60 text-red-600" : "bg-white/30 text-gray-300",
               };
 
               return (
-                <div
+                <motion.div
                   key={badge.id}
-                  className={`flex flex-col items-center p-3 rounded-xl transition-all ${
+                  variants={listItem}
+                  className={`flex flex-col items-center p-3 bg-white/30 rounded-2xl transition-all ${
                     badge.earned ? "opacity-100" : "opacity-50"
                   }`}
                   title={badge.description}
@@ -685,21 +800,24 @@ export default function ProfilePage() {
                   <span className={`text-xs font-medium text-center ${badge.earned ? "text-gray-700" : "text-gray-400"}`}>
                     {badge.label}
                   </span>
-                </div>
+                </motion.div>
               );
             })}
-          </div>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Logout */}
-      <button
+      {/* ─── Logout ─── */}
+      <motion.button
         onClick={handleLogout}
-        className="w-full flex items-center justify-center gap-2 py-3 text-red-500 text-sm font-medium hover:bg-red-50 rounded-xl transition-colors mb-20"
+        className="w-full flex items-center justify-center gap-2 py-3 text-red-500 text-sm font-medium bg-white/30 backdrop-blur-sm rounded-2xl border border-white/30 hover:bg-white/50 transition-colors mb-20"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.3, ease: "easeOut" }}
       >
         <LogOut className="w-4 h-4" />
         로그아웃
-      </button>
+      </motion.button>
 
       {/* Goal Modal */}
       <Modal
