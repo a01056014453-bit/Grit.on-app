@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Circle, CheckCircle2, Plus, Repeat, Play, Trash2 } from "lucide-react";
+import { Circle, CheckCircle2, Plus, Repeat, Play, Trash2, X } from "lucide-react";
 import { mockDrillCards, groupDrillsBySong, type GroupedDrills } from "@/data";
 import { savePracticeSession, getAllSessions, deleteSession } from "@/lib/db";
 import type { DrillCard } from "@/types";
@@ -154,6 +154,18 @@ function SwipeableDrillItem({
             {drill.recurrence > 0 && ` ${drill.recurrence}회`}
           </span>
         </div>
+        {/* 삭제 버튼 */}
+        {isToday && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(drill.id);
+            }}
+            className="shrink-0 p-1 rounded-full hover:bg-red-50 text-gray-300 hover:text-red-400 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
         {/* 체크 버튼 - 오른쪽 */}
         <button
           onClick={(e) => {
@@ -178,6 +190,7 @@ export function TodayDrillList({ onDrillSelect, selectedDrillId, showPlayButton 
   const router = useRouter();
   const [completedDrills, setCompletedDrills] = useState<Set<string>>(new Set());
   const [customDrills, setCustomDrills] = useState<DrillCard[]>([]);
+  const [hiddenDrills, setHiddenDrills] = useState<Set<string>>(new Set());
 
   const now = new Date();
   const isToday = !date || (date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth() && date.getDate() === now.getDate());
@@ -225,18 +238,36 @@ export function TodayDrillList({ onDrillSelect, selectedDrillId, showPlayButton 
       }));
       setCustomDrills(converted);
     }
+
+    // 숨긴 드릴 로드
+    const savedHidden = localStorage.getItem("grit-on-hidden-drills");
+    if (savedHidden) {
+      setHiddenDrills(new Set(JSON.parse(savedHidden)));
+    } else {
+      setHiddenDrills(new Set());
+    }
   }, [date]);
 
-  // 커스텀 드릴 삭제
+  // 드릴 삭제 (커스텀: localStorage에서 제거, 기본: 숨김 처리)
   const handleDeleteDrill = useCallback((drillId: string) => {
-    const savedCustom = localStorage.getItem("grit-on-custom-drills");
-    if (savedCustom) {
-      const drills = JSON.parse(savedCustom);
-      const updated = drills.filter((d: any) => d.id !== drillId);
-      localStorage.setItem("grit-on-custom-drills", JSON.stringify(updated));
+    const isCustomDrill = customDrills.some(d => d.id === drillId);
+    if (isCustomDrill) {
+      const savedCustom = localStorage.getItem("grit-on-custom-drills");
+      if (savedCustom) {
+        const drills = JSON.parse(savedCustom);
+        const updated = drills.filter((d: any) => d.id !== drillId);
+        localStorage.setItem("grit-on-custom-drills", JSON.stringify(updated));
+      }
+      setCustomDrills(prev => prev.filter(d => d.id !== drillId));
+    } else {
+      setHiddenDrills(prev => {
+        const newSet = new Set(prev);
+        newSet.add(drillId);
+        localStorage.setItem("grit-on-hidden-drills", JSON.stringify(Array.from(newSet)));
+        return newSet;
+      });
     }
-    setCustomDrills(prev => prev.filter(d => d.id !== drillId));
-  }, []);
+  }, [customDrills]);
 
   // 드릴 완료 토글 (오늘만 가능)
   const handleToggle = async (drillId: string) => {
@@ -314,8 +345,8 @@ export function TodayDrillList({ onDrillSelect, selectedDrillId, showPlayButton 
   // 커스텀 드릴 ID 목록
   const customDrillIds = new Set(customDrills.map(d => d.id));
 
-  // 모든 드릴 합치기
-  const allDrills = [...mockDrillCards, ...customDrills];
+  // 모든 드릴 합치기 (숨긴 드릴 제외)
+  const allDrills = [...mockDrillCards, ...customDrills].filter(d => !hiddenDrills.has(d.id));
   const groupedDrills = groupDrillsBySong(allDrills);
 
   const totalCount = allDrills.length;

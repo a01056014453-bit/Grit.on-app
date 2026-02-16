@@ -1,14 +1,15 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Music, CheckCircle, AlertTriangle, Plus, RefreshCw, Trash2, Loader2, X, FileText, Eye, Upload, Filter, Sparkles } from 'lucide-react';
+import { Music, CheckCircle, AlertTriangle, Plus, RefreshCw, Trash2, Loader2, X, FileText, Eye, Upload, Filter, Sparkles, Pencil } from 'lucide-react';
+import { AnalysisEditForm } from '@/components/admin/analysis-edit-form';
 import { StatCard } from '@/components/admin/stat-card';
 import { ChartCard } from '@/components/admin/chart-card';
 import { DataTable, type Column } from '@/components/admin/data-table';
 import { StatusBadge } from '@/components/admin/status-badge';
 import { AnalysisDetailModal } from '@/components/analysis/analysis-display';
 import type { SongAnalysis } from '@/types/song-analysis';
-import { getDifficultyLabel, getVerificationLabel } from '@/types/song-analysis';
+import { getVerificationLabel } from '@/types/song-analysis';
 
 type AnalysisListItem = SongAnalysis & { _composer: string; _title: string };
 
@@ -31,6 +32,10 @@ export default function MusicDBPage() {
 
   // 상세 보기
   const [detailTarget, setDetailTarget] = useState<AnalysisListItem | null>(null);
+
+  // 수정 모드
+  const [editTarget, setEditTarget] = useState<AnalysisListItem | null>(null);
+  const [saving, setSaving] = useState(false);
 
   // 필터
   type FilterType = 'all' | 'needs_review' | 'verified' | 'with_sheet';
@@ -370,11 +375,16 @@ export default function MusicDBPage() {
     }
   };
 
-  // 필터링된 데이터
-  const filteredAnalyses = filter === 'all' ? analyses
+  // 필터링 + 작곡가 A-Z → 곡명 A-Z 정렬
+  const filteredAnalyses = (filter === 'all' ? analyses
     : filter === 'needs_review' ? analyses.filter((a) => a.verification_status === 'Needs Review')
     : filter === 'verified' ? analyses.filter((a) => a.verification_status === 'Verified')
-    : analyses.filter((a) => a.pdf_storage_path || a.musicxml_storage_path);
+    : analyses.filter((a) => a.pdf_storage_path || a.musicxml_storage_path)
+  ).sort((a, b) => {
+    const composerCmp = a._composer.localeCompare(b._composer);
+    if (composerCmp !== 0) return composerCmp;
+    return a._title.localeCompare(b._title);
+  });
 
   const columns: Column<AnalysisListItem>[] = [
     {
@@ -391,15 +401,6 @@ export default function MusicDBPage() {
           {row.meta.opus && <p className="text-xs text-gray-400">{row.meta.opus}</p>}
         </div>
       ),
-    },
-    {
-      key: 'difficulty',
-      header: '난이도',
-      render: (row) => {
-        const level = row.meta.difficulty_level;
-        const variant = level === 'Virtuoso' ? 'error' : level === 'Advanced' ? 'warning' : level === 'Intermediate' ? 'info' : 'success';
-        return <StatusBadge label={getDifficultyLabel(level)} variant={variant} />;
-      },
     },
     {
       key: 'verification',
@@ -718,6 +719,13 @@ export default function MusicDBPage() {
                     악보 재분석
                   </button>
                 )}
+                <button
+                  onClick={() => { setEditTarget(detailTarget); setDetailTarget(null); }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-violet-50 text-violet-700 rounded-lg hover:bg-violet-100 transition-colors"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  수정
+                </button>
                 <button onClick={() => setDetailTarget(null)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
                   <X className="w-5 h-5 text-gray-400" />
                 </button>
@@ -751,6 +759,53 @@ export default function MusicDBPage() {
                 </div>
               )}
               <AnalysisDetailModal analysis={detailTarget} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 수정 모달 */}
+      {editTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => !saving && setEditTarget(null)}>
+          <div className="bg-white rounded-xl max-w-4xl w-full mx-4 shadow-xl max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+            {/* 헤더 */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-100 flex-shrink-0">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">분석 데이터 수정</h3>
+                <p className="text-sm text-gray-500 mt-0.5">{editTarget._composer} - {editTarget._title}</p>
+              </div>
+              <button onClick={() => !saving && setEditTarget(null)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                <X className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
+            {/* 본문 */}
+            <div className="overflow-y-auto p-6">
+              <AnalysisEditForm
+                analysis={editTarget}
+                saving={saving}
+                onCancel={() => setEditTarget(null)}
+                onSave={async (updated) => {
+                  setSaving(true);
+                  try {
+                    const res = await fetch('/api/analyze-song-v2', {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ id: editTarget.id, analysis: updated }),
+                    });
+                    const json = await res.json();
+                    if (json.success) {
+                      await fetchAnalyses();
+                      setEditTarget(null);
+                    } else {
+                      alert(`저장 실패: ${json.error}`);
+                    }
+                  } catch {
+                    alert('네트워크 오류');
+                  } finally {
+                    setSaving(false);
+                  }
+                }}
+              />
             </div>
           </div>
         </div>

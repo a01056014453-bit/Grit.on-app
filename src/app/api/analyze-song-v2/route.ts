@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import { getCachedAnalysis, saveCachedAnalysis, deleteCachedAnalysis } from "@/lib/song-analysis-db";
+import { getCachedAnalysis, saveCachedAnalysis, deleteCachedAnalysis, updateAnalysisById } from "@/lib/song-analysis-db";
 import { supabaseServer } from "@/lib/supabase-server";
 import {
   createReferenceSearchPrompt,
@@ -47,10 +47,21 @@ function extractJSON(text: string): string {
   let cleaned = text.replace(/\[(\d+)\]/g, "");
 
   const jsonBlockMatch = cleaned.match(/```json\s*([\s\S]*?)```/);
-  if (jsonBlockMatch) return jsonBlockMatch[1].trim();
-  const braceMatch = cleaned.match(/\{[\s\S]*\}/);
-  if (braceMatch) return braceMatch[0].trim();
-  return cleaned.trim();
+  if (jsonBlockMatch) cleaned = jsonBlockMatch[1].trim();
+  else {
+    const braceMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (braceMatch) cleaned = braceMatch[0].trim();
+    else cleaned = cleaned.trim();
+  }
+
+  // JSON 내부 마크다운 서식 제거: **bold**, *italic*
+  cleaned = cleaned.replace(/\*\*([^*]+)\*\*/g, "$1");
+  cleaned = cleaned.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, "$1");
+
+  // 일본어 카타카나/히라가나 제거 (예: "カデンツ" → "")
+  cleaned = cleaned.replace(/[\u3040-\u309F\u30A0-\u30FF]+/g, "");
+
+  return cleaned;
 }
 
 /** 안전한 JSON 파싱: 실패 시 GPT로 재포맷 */
@@ -850,6 +861,34 @@ export async function DELETE(request: Request) {
     console.error("Delete analysis error:", error);
     return NextResponse.json(
       { success: false, error: "삭제 실패" },
+      { status: 500 }
+    );
+  }
+}
+
+/** 분석 데이터 직접 수정 (관리자용) */
+export async function PATCH(request: Request) {
+  try {
+    const { id, analysis } = await request.json();
+    if (!id || !analysis) {
+      return NextResponse.json(
+        { success: false, error: "id와 analysis가 필요합니다" },
+        { status: 400 }
+      );
+    }
+
+    const result = await updateAnalysisById(id, analysis);
+    if (result) {
+      return NextResponse.json({ success: true });
+    }
+    return NextResponse.json(
+      { success: false, error: "업데이트 실패" },
+      { status: 500 }
+    );
+  } catch (error) {
+    console.error("Patch analysis error:", error);
+    return NextResponse.json(
+      { success: false, error: "업데이트 실패" },
       { status: 500 }
     );
   }

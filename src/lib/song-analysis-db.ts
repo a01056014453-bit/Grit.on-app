@@ -181,6 +181,38 @@ export async function saveCachedAnalysis(
   }
 }
 
+/** ID 기반 분석 데이터 직접 업데이트 (관리자 수정용) */
+export async function updateAnalysisById(
+  id: string,
+  analysis: SongAnalysis
+): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from("song_analyses")
+      .update({
+        content: analysis as unknown as Json,
+        composer: analysis.meta.composer.trim(),
+        title: analysis.meta.title.trim(),
+        key: analysis.meta.key || null,
+        opus: analysis.meta.opus || null,
+        difficulty_level: analysis.meta.difficulty_level,
+        verification_status: analysis.verification_status,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id);
+
+    if (error) {
+      console.error("[Supabase] updateAnalysisById error:", error.message);
+      return false;
+    }
+    console.log(`[Supabase] Updated by ID: ${id}`);
+    return true;
+  } catch (error) {
+    console.error("[Supabase] updateAnalysisById error:", error);
+    return false;
+  }
+}
+
 /** 캐시에서 분석 데이터 삭제 (id 기반) */
 export async function deleteCachedAnalysis(
   id: string
