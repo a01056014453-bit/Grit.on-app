@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { motion } from "framer-motion";
 
 interface TextTypeProps {
@@ -10,6 +10,7 @@ interface TextTypeProps {
   /** Delay before typing starts (ms) */
   delay?: number;
   className?: string;
+  style?: CSSProperties;
   /** Show blinking cursor */
   showCursor?: boolean;
   /** Cursor character */
@@ -23,6 +24,7 @@ export default function TextType({
   speed = 60,
   delay = 0,
   className = "",
+  style,
   showCursor = true,
   cursor = "|",
   cursorClassName = "",
@@ -55,7 +57,7 @@ export default function TextType({
   }, [started, text, speed, onComplete]);
 
   return (
-    <span className={`inline-block ${className}`}>
+    <span className={`inline-block ${className}`} style={style}>
       {displayed}
       {showCursor && !done && (
         <motion.span
