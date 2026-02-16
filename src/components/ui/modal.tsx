@@ -2,6 +2,7 @@
 
 import { X } from "lucide-react";
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 
 interface ModalProps {
   isOpen: boolean;
@@ -25,8 +26,8 @@ export function Modal({ isOpen, onClose, title, children, showClose = true }: Mo
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-end justify-center">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-fade-in"
@@ -55,6 +56,7 @@ export function Modal({ isOpen, onClose, title, children, showClose = true }: Mo
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

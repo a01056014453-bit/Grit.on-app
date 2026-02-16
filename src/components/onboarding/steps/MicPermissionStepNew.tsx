@@ -14,16 +14,16 @@ const BlurText = dynamic(() => import("@/components/reactbits/BlurText"), {
   ssr: false,
 });
 
-interface MicPermissionStepProps {
+interface MicPermissionStepNewProps {
   onNext: () => void;
 }
 
-export function MicPermissionStep({ onNext }: MicPermissionStepProps) {
+export function MicPermissionStepNew({ onNext }: MicPermissionStepNewProps) {
   const [micState, setMicState] = useState<
     "idle" | "requesting" | "granted" | "denied"
   >("idle");
   const [soundDetected, setSoundDetected] = useState(false);
-  const [glowIntensity, setGlowIntensity] = useState(0);
+  const [audioLevel, setAudioLevel] = useState(0);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const rafRef = useRef<number>(0);
@@ -54,7 +54,7 @@ export function MicPermissionStep({ onNext }: MicPermissionStepProps) {
       analyser.getByteFrequencyData(dataArray);
       const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
       const normalized = Math.min(avg / 80, 1);
-      setGlowIntensity(normalized);
+      setAudioLevel(normalized);
 
       if (avg > 15) {
         setSoundDetected(true);
@@ -84,8 +84,8 @@ export function MicPermissionStep({ onNext }: MicPermissionStepProps) {
     }
   };
 
-  const glowPx = 20 + glowIntensity * 60;
-  const glowOpacity = 0.3 + glowIntensity * 0.5;
+  // Orbital ring scale reacts to audio
+  const orbitScale = micState === "granted" ? 1 + audioLevel * 0.15 : 1;
 
   return (
     <div className="flex flex-col items-center justify-center h-full px-6 text-center">
@@ -94,10 +94,10 @@ export function MicPermissionStep({ onNext }: MicPermissionStepProps) {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2, duration: 0.5 }}
-        className="mb-2"
+        className="mb-2 px-4"
       >
         <BlurText
-          text="AI 청각 동의 & 캘리브레이션"
+          text="마이크 권한이 필요합니다"
           className="text-lg font-bold text-white justify-center"
           animateBy="words"
           delay={80}
@@ -110,29 +110,64 @@ export function MicPermissionStep({ onNext }: MicPermissionStepProps) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.5, duration: 0.5 }}
-        className="text-violet-300/70 text-sm mb-10 leading-relaxed"
+        className="text-violet-300/70 text-sm mb-10 leading-relaxed max-w-[280px]"
       >
-        그릿온 AI는 당신의 악기 소리에만 반응합니다.
+        당신의 소중한 연습 시간을
+        <br />
+        1초도 놓치지 않고 기록하기 위해
+        <br />
+        마이크 권한이 필요합니다.
       </motion.p>
 
-      {/* Circular Logo with Glow */}
+      {/* Circular Logo with Orbital Rings */}
       <motion.div
         className="relative mb-10"
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.3, duration: 0.6, ease: "easeOut" }}
       >
-        <div
-          className="rounded-full transition-all duration-150"
-          style={{
-            boxShadow:
-              micState === "granted"
-                ? `0 0 ${glowPx}px rgba(139,92,246,${glowOpacity})`
-                : "0 0 20px rgba(139,92,246,0.2)",
+        {/* Orbital Ring 1 - slowest */}
+        <motion.div
+          className="absolute inset-[-20px] rounded-full border border-violet-400/20"
+          animate={{
+            rotate: 360,
+            scale: orbitScale,
           }}
-        >
+          transition={{
+            rotate: { duration: 16, repeat: Infinity, ease: "linear" },
+            scale: { duration: 0.15 },
+          }}
+        />
+
+        {/* Orbital Ring 2 - medium */}
+        <motion.div
+          className="absolute inset-[-35px] rounded-full border border-violet-400/15"
+          animate={{
+            rotate: -360,
+            scale: orbitScale,
+          }}
+          transition={{
+            rotate: { duration: 12, repeat: Infinity, ease: "linear" },
+            scale: { duration: 0.15 },
+          }}
+        />
+
+        {/* Orbital Ring 3 - fastest */}
+        <motion.div
+          className="absolute inset-[-50px] rounded-full border border-violet-400/10"
+          animate={{
+            rotate: 360,
+            scale: orbitScale,
+          }}
+          transition={{
+            rotate: { duration: 8, repeat: Infinity, ease: "linear" },
+            scale: { duration: 0.15 },
+          }}
+        />
+
+        <div className="rounded-full">
           <CircularText
-            text="GRIT.ON · CLASSICAL · PRACTICE · COACH · "
+            text="SEMPRE · CLASSICAL · PRACTICE · COACH ·"
             radius={75}
             fontSize={10}
             duration={12}
@@ -142,7 +177,7 @@ export function MicPermissionStep({ onNext }: MicPermissionStepProps) {
         </div>
 
         {/* Pulse rings when sound detected */}
-        {micState === "granted" && glowIntensity > 0.1 && (
+        {micState === "granted" && audioLevel > 0.1 && (
           <>
             <motion.div
               className="absolute inset-0 rounded-full border-2 border-violet-400/40"
@@ -228,7 +263,7 @@ export function MicPermissionStep({ onNext }: MicPermissionStepProps) {
           <div className="w-48 h-1.5 bg-white/10 rounded-full mt-3 overflow-hidden">
             <motion.div
               className="h-full bg-violet-400 rounded-full"
-              style={{ width: `${glowIntensity * 100}%` }}
+              style={{ width: `${audioLevel * 100}%` }}
             />
           </div>
         </motion.div>
@@ -263,7 +298,7 @@ export function MicPermissionStep({ onNext }: MicPermissionStepProps) {
           </motion.div>
           <p className="text-white font-semibold">소리 감지 성공!</p>
           <p className="text-violet-300/70 text-xs">
-            그릿온이 당신의 연주를 들을 준비가 되었습니다.
+            Sempre가 당신의 연주를 들을 준비가 되었습니다.
           </p>
 
           <motion.button

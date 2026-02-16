@@ -122,7 +122,26 @@ function saveProfile(data: Partial<typeof defaultUser>) {
 
 const gradeOptions = ["중1", "중2", "중3", "고1", "고2", "고3", "대학생", "일반"];
 const typeOptions = ["전공", "취미"];
-const instrumentOptions = ["피아노", "바이올린", "첼로", "플루트", "클라리넷", "기타", "보컬"];
+const instrumentOptions = [
+  { name: "피아노", emoji: "🎹" },
+  { name: "바이올린", emoji: "🎻" },
+  { name: "비올라", emoji: "🎻" },
+  { name: "첼로", emoji: "🎻" },
+  { name: "콘트라베이스", emoji: "🎻" },
+  { name: "플루트", emoji: "🪈" },
+  { name: "오보에", emoji: "🎵" },
+  { name: "클라리넷", emoji: "🎵" },
+  { name: "바순", emoji: "🎵" },
+  { name: "호른", emoji: "📯" },
+  { name: "트럼펫", emoji: "🎺" },
+  { name: "트롬본", emoji: "🎺" },
+  { name: "튜바", emoji: "🎺" },
+  { name: "하프", emoji: "🎵" },
+  { name: "타악기", emoji: "🥁" },
+  { name: "성악", emoji: "🎤" },
+  { name: "작곡", emoji: "🎼" },
+  { name: "지휘", emoji: "🎼" },
+];
 
 interface AnalysisItem {
   id: string;
@@ -523,8 +542,9 @@ export default function ProfilePage() {
 
           {/* 편집 버튼 */}
           <button
+            type="button"
             onClick={openEditProfile}
-            className="w-8 h-8 rounded-full bg-white/30 backdrop-blur-sm border border-white/40 flex items-center justify-center hover:bg-white/50 transition-colors shrink-0"
+            className="w-10 h-10 rounded-full bg-white/30 backdrop-blur-sm border border-white/40 flex items-center justify-center hover:bg-white/50 active:bg-white/60 transition-colors shrink-0 cursor-pointer"
           >
             <Pencil className="w-4 h-4 text-gray-500" />
           </button>
@@ -1084,18 +1104,19 @@ export default function ProfilePage() {
           {/* 악기 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">악기</label>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
               {instrumentOptions.map((inst) => (
                 <button
-                  key={inst}
-                  onClick={() => setEditInstrument(inst)}
-                  className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    editInstrument === inst
+                  key={inst.name}
+                  onClick={() => setEditInstrument(inst.name)}
+                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap shrink-0 ${
+                    editInstrument === inst.name
                       ? "bg-violet-600 text-white"
                       : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                   }`}
                 >
-                  {inst}
+                  <span>{inst.emoji}</span>
+                  {inst.name}
                 </button>
               ))}
             </div>
@@ -1123,7 +1144,7 @@ export default function ProfilePage() {
             <div className="w-16 h-16 bg-gradient-to-r from-primary to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <Crown className="w-8 h-8 text-white" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900">GRIT.ON Pro</h3>
+            <h3 className="text-xl font-bold text-gray-900">Sempre Pro</h3>
             <p className="text-gray-500 mt-1">무제한 AI 분석으로 실력을 높이세요</p>
           </div>
 

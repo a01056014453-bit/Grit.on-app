@@ -602,7 +602,7 @@ export default function RoomDetailPage() {
                     <div className="absolute inset-0 pointer-events-none overflow-hidden">
                       <div className="absolute inset-0 flex items-center justify-center">
                         <div className="text-white/[0.07] text-4xl font-bold rotate-[-30deg] select-none whitespace-nowrap">
-                          Grit.on 학습용
+                          Sempre 학습용
                         </div>
                       </div>
                       <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 gap-4 p-8">

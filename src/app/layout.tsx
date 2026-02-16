@@ -11,19 +11,19 @@ const montserrat = Montserrat({
 
 export const metadata: Metadata = {
   title: {
-    default: "GRIT.ON - 클래식 연습 코치",
-    template: "%s | GRIT.ON",
+    default: "Sempre - 클래식 연습 코치",
+    template: "%s | Sempre",
   },
   description: "AI 기반 클래식 음악 연습 지원 앱. 체계적인 연습 계획과 실시간 분석으로 실력을 향상시키세요.",
   keywords: ["클래식", "음악", "연습", "코치", "AI", "바이올린", "피아노", "음악교육", "연습실", "음악분석"],
-  authors: [{ name: "GRIT.ON Team" }],
-  creator: "GRIT.ON",
-  publisher: "GRIT.ON",
+  authors: [{ name: "Sempre Team" }],
+  creator: "Sempre",
+  publisher: "Sempre",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "GRIT.ON",
+    title: "Sempre",
   },
   formatDetection: {
     telephone: false,
@@ -32,21 +32,21 @@ export const metadata: Metadata = {
     type: "website",
     locale: "ko_KR",
     url: "https://griton-app.vercel.app",
-    siteName: "GRIT.ON",
-    title: "GRIT.ON - 클래식 연습 코치",
+    siteName: "Sempre",
+    title: "Sempre - 클래식 연습 코치",
     description: "AI 기반 클래식 음악 연습 지원 앱. 체계적인 연습 계획과 실시간 분석으로 실력을 향상시키세요.",
     images: [
       {
         url: "https://griton-app.vercel.app/og-image.png",
         width: 1200,
         height: 630,
-        alt: "GRIT.ON - 클래식 연습 코치",
+        alt: "Sempre - 클래식 연습 코치",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "GRIT.ON - 클래식 연습 코치",
+    title: "Sempre - 클래식 연습 코치",
     description: "AI 기반 클래식 음악 연습 지원 앱. 체계적인 연습 계획과 실시간 분석으로 실력을 향상시키세요.",
     images: ["https://griton-app.vercel.app/og-image.png"],
   },

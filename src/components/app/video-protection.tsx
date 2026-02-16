@@ -222,7 +222,7 @@ export function ProtectedVideo({
       {/* 워터마크 오버레이 */}
       <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
         <div className="text-white/10 text-2xl font-bold rotate-[-30deg] select-none">
-          Grit.on 학습용
+          Sempre 학습용
         </div>
       </div>
 

@@ -205,11 +205,9 @@ export default function HomePage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8 pt-2">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-full bg-white/40 backdrop-blur-sm flex items-center justify-center overflow-hidden shadow-sm ring-2 ring-white/50">
-            <span className="text-lg">🎹</span>
-          </div>
+          <img src="/sempre-logo.png" alt="Sempre" className="w-9 h-9 object-contain shrink-0" />
           <div>
-            <h1 className="text-lg font-bold text-gray-900 leading-tight">
+            <h1 className="text-xl font-bold text-gray-900 leading-tight">
               {greeting} <span className="bg-gradient-to-r from-violet-700 to-violet-400 bg-clip-text text-transparent">{userName}</span>님 {(() => {
                 const h = new Date().getHours();
                 if (h < 7) return "🌙";
@@ -218,7 +216,7 @@ export default function HomePage() {
                 return "🌙";
               })()}
             </h1>
-            <p className="text-xs text-gray-500 mt-0.5">
+            <p className="text-sm text-gray-500 mt-0.5">
               {dailyMessage}
             </p>
           </div>

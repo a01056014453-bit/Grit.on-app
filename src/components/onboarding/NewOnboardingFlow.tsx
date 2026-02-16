@@ -2,16 +2,19 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MicPermissionStep } from "./MicPermissionStep";
-import { TimerSpotlightStep } from "./TimerSpotlightStep";
-import { RankingStep } from "./RankingStep";
-import { CoachingStep } from "./CoachingStep";
+import { LoginStep } from "./steps/LoginStep";
+import { MicPermissionStepNew } from "./steps/MicPermissionStepNew";
+import { ProfileSetupFlow } from "./steps/ProfileSetupFlow";
+import { PracticeTrialStep } from "./steps/PracticeTrialStep";
 
-interface OnboardingFlowProps {
+interface NewOnboardingFlowProps {
   onComplete: () => void;
+  isAlreadyLoggedIn: boolean;
 }
 
-const TOTAL_STEPS = 4;
+type OnboardingPhase = "login" | "mic" | "profile" | "trial";
+
+const PHASES: OnboardingPhase[] = ["login", "mic", "profile", "trial"];
 
 const slideVariants = {
   enter: { opacity: 0, x: 60 },
@@ -25,25 +28,26 @@ const slideTransition = {
   stiffness: 250,
 };
 
-export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
-  const [step, setStep] = useState(0);
+export function NewOnboardingFlow({
+  onComplete,
+  isAlreadyLoggedIn,
+}: NewOnboardingFlowProps) {
+  const [phase, setPhase] = useState<OnboardingPhase>(
+    isAlreadyLoggedIn ? "mic" : "login"
+  );
 
-  const nextStep = () => {
-    if (step < TOTAL_STEPS - 1) {
-      setStep((prev) => prev + 1);
-    }
-  };
+  const currentIndex = PHASES.indexOf(phase);
 
-  const renderStep = () => {
-    switch (step) {
-      case 0:
-        return <MicPermissionStep onNext={nextStep} />;
-      case 1:
-        return <TimerSpotlightStep onNext={nextStep} />;
-      case 2:
-        return <RankingStep onNext={nextStep} />;
-      case 3:
-        return <CoachingStep onComplete={onComplete} />;
+  const renderPhase = () => {
+    switch (phase) {
+      case "login":
+        return <LoginStep onLogin={() => setPhase("mic")} />;
+      case "mic":
+        return <MicPermissionStepNew onNext={() => setPhase("profile")} />;
+      case "profile":
+        return <ProfileSetupFlow onComplete={() => setPhase("trial")} />;
+      case "trial":
+        return <PracticeTrialStep onComplete={onComplete} />;
       default:
         return null;
     }
@@ -102,7 +106,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       <div className="relative z-10 flex-1 flex flex-col">
         <AnimatePresence mode="wait">
           <motion.div
-            key={step}
+            key={phase}
             variants={slideVariants}
             initial="enter"
             animate="center"
@@ -110,19 +114,20 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
             transition={slideTransition}
             className="flex-1 flex flex-col"
           >
-            {renderStep()}
+            {renderPhase()}
           </motion.div>
         </AnimatePresence>
 
         {/* Step Indicator Dots */}
         <div className="relative z-10 flex items-center justify-center gap-2 pb-12">
-          {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+          {PHASES.map((_, i) => (
             <motion.div
               key={i}
               className="w-2 h-2 rounded-full"
               animate={{
-                backgroundColor: i === step ? "#ffffff" : "rgba(255,255,255,0.3)",
-                scale: i === step ? 1.2 : 1,
+                backgroundColor:
+                  i === currentIndex ? "#ffffff" : "rgba(255,255,255,0.3)",
+                scale: i === currentIndex ? 1.2 : 1,
               }}
               transition={{ duration: 0.3 }}
             />

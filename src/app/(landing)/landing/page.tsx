@@ -1,7 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { ArrowRight } from "lucide-react";
+
+const WaveText = dynamic(() => import("@/components/reactbits/WaveText"), {
+  ssr: false,
+});
 
 export default function LandingPage() {
   return (
@@ -9,12 +14,18 @@ export default function LandingPage() {
       {/* SECTION 1 — Hero */}
       <section className="min-h-screen flex flex-col items-center justify-center px-6 py-20">
         <div className="max-w-3xl mx-auto text-center">
-          {/* Logo */}
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
-            GRIT.ON
+          {/* Logo with Wave Effect */}
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 flex justify-center">
+            <WaveText
+              text="Sempre"
+              className="text-4xl md:text-5xl font-bold tracking-tight text-black"
+              duration={2.5}
+              amplitude={10}
+              stagger={0.08}
+            />
           </h1>
-          <p className="text-lg text-gray-500 mb-2">
-            클래식 연습의 모든 것
+          <p className="text-sm text-gray-400 italic tracking-wide mb-2">
+            Practice always, grow forever.
           </p>
           <p className="text-base text-gray-600 mb-12 leading-relaxed">
             실시간 연습 녹음과 분석으로<br />
@@ -106,7 +117,7 @@ export default function LandingPage() {
             <span className="text-gray-400">무엇을 연습하라고 했는지 기억나지 않나요?</span>
           </p>
           <p className="text-xl text-black font-semibold">
-            GRIT.ON이 연습을 명확하게 만들어줍니다.
+            Sempre가 연습을 명확하게 만들어줍니다.
           </p>
         </div>
       </section>
@@ -430,7 +441,7 @@ export default function LandingPage() {
             연습을 더 명확하게
           </p>
           <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-12">
-            GRIT.ON
+            Sempre
           </h2>
           <Link
             href="/"
@@ -445,7 +456,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="py-8 px-6 bg-black text-white border-t border-gray-800">
         <div className="max-w-5xl mx-auto text-center text-sm text-gray-500">
-          <p>&copy; 2025 GRIT.ON. All rights reserved.</p>
+          <p>&copy; 2025 Sempre. All rights reserved.</p>
         </div>
       </footer>
     </div>

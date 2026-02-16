@@ -35,9 +35,9 @@ export function AdminSidebar() {
       <div className="h-14 flex items-center px-5 border-b border-gray-200">
         <Link href="/admin" className="flex items-center gap-2">
           <div className="w-7 h-7 bg-violet-600 rounded-lg flex items-center justify-center">
-            <span className="text-white text-xs font-bold">G</span>
+            <span className="text-white text-xs font-bold">S</span>
           </div>
-          <span className="font-bold text-gray-900">grit.on</span>
+          <span className="font-bold text-gray-900">Sempre</span>
           <span className="text-xs bg-violet-100 text-violet-700 px-1.5 py-0.5 rounded font-medium">Admin</span>
         </Link>
       </div>
@@ -73,7 +73,7 @@ export function AdminSidebar() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-gray-900 truncate">관리자</p>
-            <p className="text-xs text-gray-500 truncate">admin@grit.on</p>
+            <p className="text-xs text-gray-500 truncate">admin@sempre.app</p>
           </div>
         </div>
       </div>

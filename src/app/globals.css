@@ -7,6 +7,9 @@
 /* Montserrat Font (for numbers/timer) */
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&display=swap');
 
+/* Playfair Display (premium serif for branding) */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&display=swap');
+
 /* Roboto Flex Variable Font (for VariableProximity effect) */
 @import url('https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,100..1000&display=swap');
 
@@ -25,7 +28,7 @@
   letter-spacing: -0.02em;
 }
 
-/* grit.on App Design System - Minimal Black & White */
+/* Sempre App Design System - Minimal Black & White */
 :root {
   /* Colors - Minimal Clean Palette */
   --background: #ffffff; /* Pure white */
@@ -347,6 +350,24 @@ p, span, li, blockquote {
   background: radial-gradient(circle, rgba(206, 180, 255, 0.30) 0%, rgba(228, 210, 255, 0.15) 50%, transparent 70%);
   pointer-events: none;
   z-index: 0 !important;
+}
+
+/* Slow spin */
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.animate-spin-slow {
+  animation: spin-slow 8s linear infinite;
+}
+
+/* Hide scrollbar */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
 
 /* Orange blob gradient background (선생님 모드) */
