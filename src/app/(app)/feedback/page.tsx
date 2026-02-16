@@ -2,7 +2,8 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { MessageSquare, Clock, CheckCircle, Plus, ChevronRight } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { MessageSquare, Clock, CheckCircle, Plus, ChevronRight, ChevronLeft } from "lucide-react";
 import { RequestStatusChip } from "@/components/feedback/request-status-chip";
 import { getFeedbackRequestsByStudent, getRemainingTime } from "@/lib/feedback-store";
 import { FeedbackRequestStatus } from "@/types";
@@ -13,6 +14,7 @@ const activeStatuses: FeedbackRequestStatus[] = ["DRAFT", "HELD", "SENT", "ACCEP
 const completedStatuses: FeedbackRequestStatus[] = ["COMPLETED", "DECLINED", "EXPIRED", "DISPUTED", "REFUNDED"];
 
 export default function FeedbackListPage() {
+  const router = useRouter();
   const [tab, setTab] = useState<TabType>("active");
   const requests = getFeedbackRequestsByStudent("student1");
 
@@ -28,43 +30,51 @@ export default function FeedbackListPage() {
     <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
       <div className="bg-blob-extra" />
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-          <MessageSquare className="w-6 h-6 text-primary" />
-          내 피드백 요청
-        </h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          요청한 피드백의 진행 상황을 확인하세요
-        </p>
+      <div className="mb-6 flex items-center gap-3">
+        <button
+          onClick={() => router.back()}
+          className="w-9 h-9 rounded-full bg-white/30 backdrop-blur-sm flex items-center justify-center border border-white/40 hover:bg-white/50 transition-colors shrink-0"
+        >
+          <ChevronLeft className="w-5 h-5 text-gray-700" />
+        </button>
+        <div>
+          <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
+            <MessageSquare className="w-6 h-6 text-primary" />
+            내 피드백 요청
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            요청한 피드백의 진행 상황을 확인하세요
+          </p>
+        </div>
       </div>
 
       {/* New Request Button */}
       <Link
         href="/teachers"
-        className="block w-full mb-6 py-4 rounded-xl bg-gradient-to-r from-primary to-violet-600 text-white font-semibold text-center shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-shadow"
+        className="block w-full mb-6 py-4 rounded-2xl bg-gradient-to-r from-violet-500 to-violet-900 text-white font-semibold text-center shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40 transition-shadow"
       >
         <Plus className="w-5 h-5 inline mr-2" />
         새 피드백 요청하기
       </Link>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-2 mb-4 bg-white/30 backdrop-blur-sm rounded-2xl p-1.5 border border-white/40">
         <button
           onClick={() => setTab("active")}
-          className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+          className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all ${
             tab === "active"
-              ? "bg-primary text-white"
-              : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+              ? "bg-white/70 text-violet-700 shadow-sm backdrop-blur-sm"
+              : "text-gray-500 hover:text-gray-700"
           }`}
         >
           진행중 ({activeCount})
         </button>
         <button
           onClick={() => setTab("completed")}
-          className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+          className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all ${
             tab === "completed"
-              ? "bg-primary text-white"
-              : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+              ? "bg-white/70 text-violet-700 shadow-sm backdrop-blur-sm"
+              : "text-gray-500 hover:text-gray-700"
           }`}
         >
           완료 ({completedCount})
@@ -74,7 +84,7 @@ export default function FeedbackListPage() {
       {/* Request List */}
       <div className="space-y-3">
         {filteredRequests.length === 0 ? (
-          <div className="text-center py-12 bg-card rounded-xl border border-border">
+          <div className="text-center py-12 bg-white/40 backdrop-blur-xl rounded-2xl border border-white/50">
             <MessageSquare className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
             <p className="text-muted-foreground">
               {tab === "active" ? "진행중인 요청이 없습니다" : "완료된 요청이 없습니다"}
@@ -105,7 +115,7 @@ export default function FeedbackListPage() {
                     ? `/feedback/${request.id}/view`
                     : `/feedback/${request.id}`
                 }
-                className="block bg-card rounded-xl p-4 border border-border hover:border-primary/30 hover:shadow-sm transition-all"
+                className="block bg-white/40 backdrop-blur-xl rounded-2xl p-4 border border-white/50 hover:bg-white/60 hover:shadow-sm transition-all"
               >
                 {/* Header */}
                 <div className="flex items-start justify-between mb-2">
@@ -128,7 +138,7 @@ export default function FeedbackListPage() {
 
                 {/* Teacher Info */}
                 {request.teacher && (
-                  <div className="flex items-center gap-2 pt-2 border-t border-border">
+                  <div className="flex items-center gap-2 pt-2 border-t border-white/40">
                     <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary/20 to-violet-200 flex items-center justify-center text-xs font-bold text-primary">
                       {request.teacher.name.charAt(0)}
                     </div>
@@ -141,13 +151,13 @@ export default function FeedbackListPage() {
 
                 {/* Status-specific messages */}
                 {request.status === "DECLINED" && request.declineReason && (
-                  <div className="mt-2 p-2 bg-red-50 rounded-lg">
+                  <div className="mt-2 p-2 bg-red-50/80 backdrop-blur-sm rounded-xl">
                     <p className="text-xs text-red-700">{request.declineReason}</p>
                   </div>
                 )}
 
                 {request.status === "SUBMITTED" && (
-                  <div className="mt-2 p-2 bg-emerald-50 rounded-lg flex items-center gap-2">
+                  <div className="mt-2 p-2 bg-emerald-50/80 backdrop-blur-sm rounded-xl flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-emerald-600" />
                     <p className="text-xs text-emerald-700">피드백이 도착했습니다!</p>
                   </div>

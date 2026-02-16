@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { Play, ChevronRight, ChevronLeft, Search, Users, GraduationCap, Music, Clock, Calendar, Mic, Check } from "lucide-react";
+import { Play, ChevronRight, ChevronLeft, Search, Users, GraduationCap, Music, Clock, Calendar, Mic, Check, Bell, BookOpen } from "lucide-react";
+import { BentoGrid, BentoCard } from "@/components/ui/bento-grid";
 import { StatsCard, DailyGoal } from "@/components/app";
 import { TodayDrillList } from "@/components/practice";
 import { mockUser, mockStats, getGreeting, mockDrillCards } from "@/data";
@@ -11,6 +12,7 @@ import { syncPracticeSessions } from "@/lib/sync-practice";
 import { usePracticeSessions } from "@/hooks/usePracticeSessions";
 import { formatTime } from "@/lib/format";
 import { useTeacherMode } from "@/hooks/useTeacherMode";
+import { getUnreadCount } from "@/lib/notification-store";
 import { TeacherDashboard } from "@/components/teacher";
 
 export default function HomePage() {
@@ -93,9 +95,14 @@ export default function HomePage() {
   const [weekSessions, setWeekSessions] = useState(0);
   const [streakDays, setStreakDays] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [notifCount, setNotifCount] = useState(0);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth());
   const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
+
+  useEffect(() => {
+    setNotifCount(getUnreadCount());
+  }, []);
 
   // 세션 데이터에서 통계 계산
   useEffect(() => {
@@ -221,9 +228,14 @@ export default function HomePage() {
             </p>
           </div>
         </div>
-        <button className="w-10 h-10 rounded-full bg-white/30 backdrop-blur-sm flex items-center justify-center shadow-sm border border-white/40">
-          <span className="text-base">🔔</span>
-        </button>
+        <Link href="/notifications" className="relative w-10 h-10 rounded-full bg-white/30 backdrop-blur-sm flex items-center justify-center shadow-sm border border-white/40">
+          <Bell className="w-5 h-5 text-gray-700" />
+          {notifCount > 0 && (
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
+              {notifCount > 9 ? "9+" : notifCount}
+            </span>
+          )}
+        </Link>
       </div>
 
       {/* Daily Goal - Hero Section */}
@@ -263,41 +275,105 @@ export default function HomePage() {
         <span>연습 시작하기</span>
       </Link>
 
-      {/* Feature Cards */}
-      <div className="grid grid-cols-3 gap-3 mb-8">
-        <Link
+      {/* Feature Bento Grid */}
+      <BentoGrid className="mb-8">
+        <BentoCard
+          Icon={Search}
+          name="음악용어 검색"
+          description="악보 기호와 용어 뜻 알아보기"
           href="/music-terms"
-          className="flex flex-col items-center bg-white/60 backdrop-blur-lg rounded-2xl p-3 pt-4 hover:bg-white/80 transition-all shadow-sm border border-white/70"
-        >
-          <div className="w-11 h-11 rounded-full bg-violet-100/70 flex items-center justify-center mb-2 shrink-0">
-            <Search className="w-5 h-5 text-violet-600" />
-          </div>
-          <p className="font-semibold text-gray-900 text-xs text-center">음악용어 검색</p>
-          <p className="text-[10px] text-gray-500 text-center mt-0.5 leading-tight line-clamp-2">악보 기호와 용어 뜻 알아보기</p>
-        </Link>
-
-        <Link
+          cta="검색하기"
+          className="col-span-1 min-h-[160px]"
+          background={
+            <div className="absolute top-3 right-2 opacity-30 select-none pointer-events-none">
+              <div className="bg-violet-200 rounded-lg px-2.5 py-1.5">
+                <span className="text-xs font-bold text-gray-900">Dolce</span>
+                <span className="text-[10px] text-violet-700 ml-1 font-semibold">돌체</span>
+              </div>
+            </div>
+          }
+        />
+        <BentoCard
+          Icon={Users}
+          name="원포인트 레슨"
+          description="전문가의 시선으로 막힌 구간의 해법을 제시합니다"
           href="/teachers"
-          className="flex flex-col items-center bg-white/60 backdrop-blur-lg rounded-2xl p-3 pt-4 hover:bg-white/80 transition-all shadow-sm border border-white/70"
-        >
-          <div className="w-11 h-11 rounded-full bg-violet-100/70 flex items-center justify-center mb-2 shrink-0">
-            <Users className="w-5 h-5 text-violet-600" />
-          </div>
-          <p className="font-semibold text-gray-900 text-xs text-center">원포인트 레슨</p>
-          <p className="text-[10px] text-gray-500 text-center mt-0.5 leading-tight line-clamp-2">최고 전문가의 시선으로 막힌 구간의 해법을 제시합니다</p>
-        </Link>
-
-        <Link
+          cta="선생님 찾기"
+          subLink={{ label: "내 피드백", href: "/feedback" }}
+          className="col-span-2 min-h-[160px]"
+          background={
+            <div className="absolute inset-0 pointer-events-none select-none">
+              {/* 악보 오선지 배경 */}
+              <div className="absolute top-4 left-3 right-3 flex flex-col gap-[6px] opacity-[0.06]">
+                {[0, 1, 2, 3].map((row) => (
+                  <div key={row} className="flex flex-col gap-[2px]">
+                    {[0, 1, 2, 3, 4].map((line) => (
+                      <div key={line} className="h-[1px] bg-gray-900 w-full" />
+                    ))}
+                  </div>
+                ))}
+              </div>
+              {/* 선생님 이모지 아바타 */}
+              <div className="absolute top-3 right-3 flex -space-x-1.5 opacity-30 group-hover:opacity-40 transition-opacity">
+                {["👩‍🏫", "👨‍🎓", "🧑‍🎤", "👩‍🎨"].map((emoji, i) => (
+                  <div key={i} className="w-9 h-9 rounded-full bg-white/80 border-2 border-white/60 flex items-center justify-center text-base shadow-sm">
+                    {emoji}
+                  </div>
+                ))}
+              </div>
+            </div>
+          }
+        />
+        <BentoCard
+          Icon={BookOpen}
+          name="연습 캘린더"
+          description="나의 연습 기록을 한눈에"
+          href="#calendar"
+          cta="기록 보기"
+          className="col-span-2 min-h-[160px]"
+          background={
+            <div className="absolute top-2 right-2 opacity-20 group-hover:opacity-30 transition-opacity select-none pointer-events-none">
+              <div className="bg-white/60 rounded-lg p-2 shadow-sm border border-white/40">
+                <div className="text-[8px] font-bold text-gray-700 text-center mb-1">2월 2026</div>
+                <div className="grid grid-cols-7 gap-x-[5px] gap-y-[3px] text-[7px] text-gray-400 text-center mb-0.5">
+                  {["일","월","화","수","목","금","토"].map((d) => (
+                    <span key={d}>{d}</span>
+                  ))}
+                </div>
+                <div className="grid grid-cols-7 gap-x-[5px] gap-y-[2px] text-[7px] text-center">
+                  {Array.from({ length: 28 }).map((_, i) => {
+                    const day = i + 1;
+                    const practiced = [2, 3, 5, 7, 9, 10, 11, 12, 14, 15, 16].includes(day);
+                    return (
+                      <div key={i} className="relative flex items-center justify-center w-4 h-4">
+                        <span className={practiced ? "text-violet-700 font-bold" : "text-gray-400"}>{day}</span>
+                        {practiced && (
+                          <Check className="absolute -top-0.5 -right-0.5 w-2 h-2 text-violet-500" />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          }
+        />
+        <BentoCard
+          Icon={GraduationCap}
+          name="입시룸"
+          description="다른 학생들의 연습을 참고하세요"
           href="/rooms"
-          className="flex flex-col items-center bg-white/60 backdrop-blur-lg rounded-2xl p-3 pt-4 hover:bg-white/80 transition-all shadow-sm border border-white/70"
-        >
-          <div className="w-11 h-11 rounded-full bg-violet-100/70 flex items-center justify-center mb-2 shrink-0">
-            <GraduationCap className="w-5 h-5 text-violet-600" />
-          </div>
-          <p className="font-semibold text-gray-900 text-xs text-center">입시룸</p>
-          <p className="text-[10px] text-gray-500 text-center mt-0.5 leading-tight line-clamp-2">영상을 올리고 다른 학생들의 연습을 참고하세요</p>
-        </Link>
-      </div>
+          cta="입장하기"
+          className="col-span-1 min-h-[160px]"
+          background={
+            <div className="absolute top-3 right-3 opacity-15 group-hover:opacity-25 transition-opacity select-none pointer-events-none">
+              <div className="w-12 h-12 rounded-xl bg-violet-200 flex items-center justify-center">
+                <Play className="w-6 h-6 text-violet-600 fill-violet-600 ml-0.5" />
+              </div>
+            </div>
+          }
+        />
+      </BentoGrid>
 
       {/* Practice Records - Calendar + List */}
       <div className="mb-8">
