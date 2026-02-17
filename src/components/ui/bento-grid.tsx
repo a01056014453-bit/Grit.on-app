@@ -56,7 +56,7 @@ export function BentoCard({
         <p className="text-[11px] text-gray-500 mt-0.5 leading-snug line-clamp-2">
           {description}
         </p>
-        <div className="flex items-center gap-1 mt-2 text-xs font-semibold text-violet-600 opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200">
+        <div className="flex items-center gap-1 mt-2 text-xs font-semibold text-violet-600">
           {cta}
           <ArrowRight className="w-3.5 h-3.5" />
         </div>
