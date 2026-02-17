@@ -48,7 +48,7 @@ export function BentoCard({
       <div className="absolute inset-0 pointer-events-none">{background}</div>
 
       {/* Content - pinned to bottom */}
-      <div className="relative z-10 p-4 mt-auto">
+      <div className="relative z-10 px-4 pt-3 pb-3 mt-auto">
         <Icon className="w-5 h-5 text-violet-600 mb-1.5" />
         <h3 className="text-sm font-bold text-gray-900 leading-tight">
           {name}
