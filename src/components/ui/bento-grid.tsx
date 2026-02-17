@@ -12,7 +12,7 @@ interface BentoGridProps {
 
 export function BentoGrid({ children, className }: BentoGridProps) {
   return (
-    <div className={cn("grid grid-cols-3 gap-3", className)}>{children}</div>
+    <div className={cn("grid grid-cols-5 gap-3", className)}>{children}</div>
   );
 }
 
