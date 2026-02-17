@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { Suspense, useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { DrillCard } from "@/types";
 import { useAudioRecorder, usePracticeSessions } from "@/hooks";
@@ -60,6 +60,21 @@ interface DailyCompletion {
 }
 
 export default function PracticePage() {
+  return (
+    <Suspense fallback={
+      <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-violet">
+        <div className="bg-blob-extra" />
+        <div className="flex items-center justify-center py-32">
+          <div className="w-8 h-8 border-2 border-violet-600 border-t-transparent rounded-full animate-spin" />
+        </div>
+      </div>
+    }>
+      <PracticePageContent />
+    </Suspense>
+  );
+}
+
+function PracticePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   // 공유 훅으로 세션 데이터 로드 (홈 페이지와 동일 데이터 소스)

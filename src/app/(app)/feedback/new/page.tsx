@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -34,6 +34,21 @@ const problemTypes: { value: ProblemType; label: string; description: string }[]
 ];
 
 export default function NewFeedbackRequestPage() {
+  return (
+    <Suspense fallback={
+      <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-violet">
+        <div className="bg-blob-extra" />
+        <div className="flex items-center justify-center py-32">
+          <div className="w-8 h-8 border-2 border-violet-600 border-t-transparent rounded-full animate-spin" />
+        </div>
+      </div>
+    }>
+      <NewFeedbackRequestContent />
+    </Suspense>
+  );
+}
+
+function NewFeedbackRequestContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const teacherId = searchParams.get("teacherId");
