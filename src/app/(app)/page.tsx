@@ -7,7 +7,7 @@ import { BentoGrid, BentoCard } from "@/components/ui/bento-grid";
 import { StatsCard, DailyGoal } from "@/components/app";
 import { TodayDrillList } from "@/components/practice";
 import { mockUser, mockStats, getGreeting, mockDrillCards } from "@/data";
-import { getTodayPracticeTime, getPracticeStats, clearAllSessions, type PracticeSession } from "@/lib/db";
+import { getTodayPracticeTime, getPracticeStats, seedMockSessions, type PracticeSession } from "@/lib/db";
 import { syncPracticeSessions } from "@/lib/sync-practice";
 import { usePracticeSessions } from "@/hooks/usePracticeSessions";
 import { formatTime } from "@/lib/format";
@@ -18,8 +18,8 @@ import { TeacherDashboard } from "@/components/teacher";
 export default function HomePage() {
   const { isTeacher, teacherMode, teacherProfileId, toggleMode } = useTeacherMode();
 
-  // TODO: 목데이터 클리어 (1회 실행 후 제거)
-  useEffect(() => { clearAllSessions(); }, []);
+  // 목데이터 시드 (DB 비어있을 때만)
+  useEffect(() => { seedMockSessions().catch(console.error); }, []);
 
   // Sync practice sessions to Supabase on load + tab visibility change
   useEffect(() => {

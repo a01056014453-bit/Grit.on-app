@@ -14,6 +14,7 @@ import {
 import type { RankingUser } from "@/types";
 import { INSTRUMENT_EMOJIS, INSTRUMENT_LABELS } from "@/types/ranking";
 import { fetchTodayRankings, fetchMyRanking } from "@/lib/ranking-queries";
+import { mockRankingUsers, currentUserRanking } from "@/data/mock-rankings";
 import { getUserId } from "@/lib/user-id";
 import { cn } from "@/lib/utils";
 import dynamic from "next/dynamic";
@@ -262,18 +263,25 @@ export default function RankingPage() {
   const [myRanking, setMyRanking] = useState<RankingUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Supabase에서 랭킹 데이터 조회
+  // Supabase에서 랭킹 데이터 조회 (빈 결과 시 mock fallback)
   const loadRankings = async () => {
     try {
       const [rankings, my] = await Promise.all([
         fetchTodayRankings(),
         fetchMyRanking(getUserId()),
       ]);
-      setRankers(rankings);
-      setMyRanking(my);
+      if (rankings.length > 0) {
+        setRankers(rankings);
+        setMyRanking(my);
+      } else {
+        setRankers(mockRankingUsers);
+        setMyRanking(currentUserRanking);
+      }
       setElapsedSeconds(0);
     } catch (err) {
       console.error("Failed to load rankings:", err);
+      setRankers(mockRankingUsers);
+      setMyRanking(currentUserRanking);
     } finally {
       setIsLoading(false);
     }

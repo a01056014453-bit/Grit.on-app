@@ -1021,6 +1021,7 @@ export default function PracticePage() {
   const planProgress = totalPlanMinutes > 0 ? (completedMinutes / totalPlanMinutes) * 100 : 0;
 
   return (
+    <>
     <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-violet">
       <div className="bg-blob-extra" />
       {/* Header */}
@@ -1339,7 +1340,9 @@ export default function PracticePage() {
 
         </div>
 
-      {/* Modals */}
+    </div>
+
+      {/* Modals - bg-blob-violet 바깥에 렌더링 (position: relative 간섭 방지) */}
       <SongSelectionModal
         isOpen={isSongModalOpen}
         onClose={() => setIsSongModalOpen(false)}
@@ -1804,6 +1807,6 @@ export default function PracticePage() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

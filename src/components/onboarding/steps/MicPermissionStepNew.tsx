@@ -5,11 +5,6 @@ import { motion } from "framer-motion";
 import { Mic, MicOff, ChevronRight } from "lucide-react";
 import dynamic from "next/dynamic";
 
-const CircularText = dynamic(
-  () => import("@/components/ui/circular-text").then((mod) => mod.CircularText),
-  { ssr: false }
-);
-
 const BlurText = dynamic(() => import("@/components/reactbits/BlurText"), {
   ssr: false,
 });
@@ -84,9 +79,6 @@ export function MicPermissionStepNew({ onNext }: MicPermissionStepNewProps) {
     }
   };
 
-  // Orbital ring scale reacts to audio
-  const orbitScale = micState === "granted" ? 1 + audioLevel * 0.15 : 1;
-
   return (
     <div className="flex flex-col items-center justify-center h-full px-6 text-center">
       {/* Title */}
@@ -119,62 +111,18 @@ export function MicPermissionStepNew({ onNext }: MicPermissionStepNewProps) {
         마이크 권한이 필요합니다.
       </motion.p>
 
-      {/* Circular Logo with Orbital Rings */}
+      {/* Logo */}
       <motion.div
         className="relative mb-10"
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.3, duration: 0.6, ease: "easeOut" }}
       >
-        {/* Orbital Ring 1 - slowest */}
-        <motion.div
-          className="absolute inset-[-20px] rounded-full border border-violet-400/20"
-          animate={{
-            rotate: 360,
-            scale: orbitScale,
-          }}
-          transition={{
-            rotate: { duration: 16, repeat: Infinity, ease: "linear" },
-            scale: { duration: 0.15 },
-          }}
+        <img
+          src="/sempre-logo.png"
+          alt="Sempre"
+          className="w-24 h-24 object-contain brightness-0 invert"
         />
-
-        {/* Orbital Ring 2 - medium */}
-        <motion.div
-          className="absolute inset-[-35px] rounded-full border border-violet-400/15"
-          animate={{
-            rotate: -360,
-            scale: orbitScale,
-          }}
-          transition={{
-            rotate: { duration: 12, repeat: Infinity, ease: "linear" },
-            scale: { duration: 0.15 },
-          }}
-        />
-
-        {/* Orbital Ring 3 - fastest */}
-        <motion.div
-          className="absolute inset-[-50px] rounded-full border border-violet-400/10"
-          animate={{
-            rotate: 360,
-            scale: orbitScale,
-          }}
-          transition={{
-            rotate: { duration: 8, repeat: Infinity, ease: "linear" },
-            scale: { duration: 0.15 },
-          }}
-        />
-
-        <div className="rounded-full">
-          <CircularText
-            text="SEMPRE · CLASSICAL · PRACTICE · COACH ·"
-            radius={75}
-            fontSize={10}
-            duration={12}
-            textClassName="text-violet-300/70 font-semibold tracking-[0.15em] uppercase"
-            direction="clockwise"
-          />
-        </div>
 
         {/* Pulse rings when sound detected */}
         {micState === "granted" && audioLevel > 0.1 && (

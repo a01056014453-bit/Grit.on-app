@@ -33,6 +33,7 @@ import { motion, Variants } from "framer-motion";
 import { Modal } from "@/components/ui/modal";
 import { getAllSessions, getPracticeStats } from "@/lib/db";
 import { useTeacherMode } from "@/hooks/useTeacherMode";
+import { updateTeacherProfile } from "@/lib/teacher-store";
 import { TeacherVerificationStatus } from "@/types";
 import BlurText from "@/components/reactbits/BlurText";
 import GradientText from "@/components/reactbits/GradientText";
@@ -599,7 +600,39 @@ export default function ProfilePage() {
             선생님
           </span>
         </div>
-        {isTeacher ? (
+
+        {/* 선생님 모드 토글 - 항상 표시 */}
+        <button
+          onClick={() => {
+            if (!isTeacher) {
+              // 선생님이 아직 아니면 바로 활성화
+              updateTeacherProfile({ isTeacher: true, teacherProfileId: "t8" });
+              reloadTeacher();
+            }
+            toggleMode();
+            reloadTeacher();
+          }}
+          className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-white/30 transition-colors border-b border-white/30"
+        >
+          <div className="flex items-center gap-3">
+            {teacherMode ? (
+              <ToggleRight className="w-5 h-5 text-violet-600" />
+            ) : (
+              <ToggleLeft className="w-5 h-5 text-gray-400" />
+            )}
+            <div>
+              <span className="text-sm text-gray-700">선생님 모드</span>
+              {!isTeacher && (
+                <p className="text-[11px] text-gray-400 mt-0.5">켜면 학생에게 피드백을 제공할 수 있어요</p>
+              )}
+            </div>
+          </div>
+          <div className={`w-11 h-6 rounded-full relative transition-colors ${teacherMode ? "bg-violet-600" : "bg-gray-300"}`}>
+            <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${teacherMode ? "translate-x-5" : "translate-x-0.5"}`} />
+          </div>
+        </button>
+
+        {isTeacher && (
           <>
             <div className="flex items-center justify-between px-4 py-3.5 border-b border-white/30">
               <div className="flex items-center gap-3">
@@ -612,25 +645,6 @@ export default function ProfilePage() {
                 </div>
               </div>
             </div>
-            <button
-              onClick={() => {
-                toggleMode();
-                reloadTeacher();
-              }}
-              className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-white/30 transition-colors border-b border-white/30"
-            >
-              <div className="flex items-center gap-3">
-                {teacherMode ? (
-                  <ToggleRight className="w-5 h-5 text-violet-600" />
-                ) : (
-                  <ToggleLeft className="w-5 h-5 text-gray-400" />
-                )}
-                <span className="text-sm text-gray-700">선생님 모드</span>
-              </div>
-              <div className={`w-11 h-6 rounded-full relative transition-colors ${teacherMode ? "bg-violet-600" : "bg-gray-300"}`}>
-                <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${teacherMode ? "translate-x-5" : "translate-x-0.5"}`} />
-              </div>
-            </button>
             <Link
               href="/profile/teacher-profile"
               className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-white/30 transition-colors"
@@ -642,29 +656,6 @@ export default function ProfilePage() {
               <ChevronRight className="w-4 h-4 text-gray-400" />
             </Link>
           </>
-        ) : (
-          <Link
-            href="/profile/teacher-register"
-            className="flex items-center justify-between px-4 py-3.5 hover:bg-white/30 transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <GraduationCap className="w-5 h-5 text-violet-500" />
-              <div>
-                <span className="text-sm text-gray-700">선생님 등록</span>
-                {verificationStatus === "pending" && (
-                  <span className="ml-2 px-2 py-0.5 bg-amber-100/60 text-amber-700 text-xs font-medium rounded-full">
-                    심사중
-                  </span>
-                )}
-                {verificationStatus === "rejected" && (
-                  <span className="ml-2 px-2 py-0.5 bg-red-100/60 text-red-700 text-xs font-medium rounded-full">
-                    반려됨
-                  </span>
-                )}
-              </div>
-            </div>
-            <ChevronRight className="w-4 h-4 text-gray-400" />
-          </Link>
         )}
       </motion.div>
 

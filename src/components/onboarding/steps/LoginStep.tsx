@@ -162,7 +162,7 @@ export function LoginStep({ onLogin }: LoginStepProps) {
               transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
             />
             <TextType
-              text="Practice always, Grow forever."
+              text="With Sempre, you never practice alone."
               speed={50}
               delay={300}
               className="text-2xl text-white font-bold italic tracking-wide relative z-10"
@@ -269,13 +269,19 @@ export function LoginStep({ onLogin }: LoginStepProps) {
                 initial={{ opacity: 0, y: 20, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ delay: 0.2, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-                className="flex flex-col items-center gap-3 relative z-10"
+                className="flex flex-col items-center gap-4 relative z-10"
               >
                 <img
                   src="/sempre-logo.png"
                   alt="Sempre"
-                  className="w-28 h-28 object-contain brightness-0 invert"
+                  className="w-44 h-44 object-contain brightness-0 invert"
                 />
+                <p
+                  className="text-white/50 text-base tracking-wide"
+                  style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 500 }}
+                >
+                  With Sempre, you never practice alone.
+                </p>
               </motion.div>
             </div>
 

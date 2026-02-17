@@ -45,7 +45,7 @@ export function BentoCard({
       )}
     >
       {/* Background decoration */}
-      <div className="absolute inset-0">{background}</div>
+      <div className="absolute inset-0 pointer-events-none">{background}</div>
 
       {/* Content - pinned to bottom */}
       <div className="relative z-10 p-4 mt-auto">

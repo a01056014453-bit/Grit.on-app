@@ -249,6 +249,77 @@ export async function clearAllSessions(): Promise<void> {
   });
 }
 
+// Seed mock practice sessions (only if DB is empty)
+export async function seedMockSessions(): Promise<void> {
+  const existing = await getAllSessions();
+  if (existing.length > 0) return; // already has data
+
+  const songs = [
+    { id: "1", name: "F. Chopin Ballade Op.23 No.1", composer: "F. Chopin" },
+    { id: "2", name: "L. v. Beethoven Sonata Op.13 No.8", composer: "L. v. Beethoven" },
+    { id: "3", name: "C. Debussy Suite Bergamasque No.3", composer: "C. Debussy" },
+    { id: "4", name: "F. Liszt Etude S.141 No.3", composer: "F. Liszt" },
+    { id: "5", name: "F. Chopin Fantaisie-Impromptu Op.66", composer: "F. Chopin" },
+  ];
+
+  const types: ("partial" | "routine" | "runthrough")[] = ["partial", "routine", "runthrough"];
+  const notes = [
+    "왼손 아르페지오 집중",
+    "코다 구간 템포 조절",
+    "다이내믹 표현 연습",
+    "페달링 개선",
+    "양손 합치기",
+    "느린 템포 정확도",
+    "프레이징 호흡",
+    "",
+  ];
+
+  const now = new Date();
+  const sessions: Omit<PracticeSession, "id">[] = [];
+
+  // 지난 21일간 데이터 생성 (오늘 포함)
+  for (let daysAgo = 0; daysAgo <= 21; daysAgo++) {
+    // 일부 날은 건너뛰기 (연속 아닌 날)
+    if ([4, 8, 13, 17].includes(daysAgo)) continue;
+
+    const day = new Date(now);
+    day.setDate(day.getDate() - daysAgo);
+
+    // 하루 1~3세션
+    const sessionCount = daysAgo === 0 ? 2 : (daysAgo % 3 === 0 ? 3 : daysAgo % 2 === 0 ? 2 : 1);
+
+    for (let s = 0; s < sessionCount; s++) {
+      const song = songs[(daysAgo + s) % songs.length];
+      const hour = 9 + s * 3 + (daysAgo % 3); // 9시, 12시, 15시 등
+      const totalMin = 15 + (daysAgo + s) % 4 * 10; // 15~45분
+      const practiceMin = Math.round(totalMin * (0.65 + Math.random() * 0.2)); // 65~85% 효율
+
+      const start = new Date(day);
+      start.setHours(hour, (daysAgo * 7 + s * 13) % 60, 0, 0);
+      const end = new Date(start);
+      end.setMinutes(end.getMinutes() + totalMin);
+
+      sessions.push({
+        pieceId: song.id,
+        pieceName: song.name,
+        composer: song.composer,
+        startTime: start,
+        endTime: end,
+        totalTime: totalMin * 60,
+        practiceTime: practiceMin * 60,
+        synced: true,
+        practiceType: types[(daysAgo + s) % 3],
+        todoNote: notes[(daysAgo + s) % notes.length] || undefined,
+      });
+    }
+  }
+
+  // IndexedDB에 저장
+  for (const session of sessions) {
+    await savePracticeSession(session);
+  }
+}
+
 // Get practice statistics
 export async function getPracticeStats(): Promise<{
   totalSessions: number;
