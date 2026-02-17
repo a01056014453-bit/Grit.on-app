@@ -2,7 +2,8 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Users, Search, SlidersHorizontal, Star, Clock, Coins, X, ArrowLeft } from "lucide-react";
+import Link from "next/link";
+import { Users, Search, SlidersHorizontal, Star, Clock, Coins, X, ArrowLeft, Inbox, ChevronRight } from "lucide-react";
 import { TeacherCard } from "@/components/feedback/teacher-card";
 import { getTeachers, filterTeachers } from "@/lib/feedback-store";
 
@@ -104,6 +105,21 @@ export default function TeachersPage() {
           <div className="text-[10px] text-gray-500">평균 응답</div>
         </div>
       </div>
+
+      {/* 내 피드백 보관함 */}
+      <Link
+        href="/feedback"
+        className="flex items-center gap-3 mb-6 bg-white/50 backdrop-blur-xl rounded-2xl p-4 border border-white/60 shadow-sm hover:bg-white/70 transition-all active:scale-[0.98]"
+      >
+        <div className="w-10 h-10 rounded-xl bg-violet-100/70 flex items-center justify-center shrink-0">
+          <Inbox className="w-5 h-5 text-violet-600" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-sm font-bold text-gray-900">내 피드백 보관함</h3>
+          <p className="text-[11px] text-gray-500">요청한 피드백 진행 상황 확인</p>
+        </div>
+        <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
+      </Link>
 
       {/* Search */}
       <div className="relative mb-4">

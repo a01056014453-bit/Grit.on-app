@@ -21,26 +21,11 @@ export function AppShell({ children }: AppShellProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    // TODO: 온보딩 테스트 후 아래 3줄 삭제
-    localStorage.removeItem("grit-on-logged-in");
-    localStorage.removeItem("grit-on-onboarding-complete");
-    localStorage.removeItem("grit-on-profile");
-
-    const loggedIn = !!localStorage.getItem("grit-on-logged-in");
-    setIsLoggedIn(loggedIn);
-
-    let onboardingComplete = !!localStorage.getItem("grit-on-onboarding-complete");
-
-    if (loggedIn && !onboardingComplete) {
-      localStorage.setItem("grit-on-onboarding-complete", "true");
-      onboardingComplete = true;
-    }
-
-    if (loggedIn && onboardingComplete) {
-      setAppState("app");
-    } else {
-      setAppState("onboarding");
-    }
+    // 온보딩 스킵 - 바로 앱 진입
+    localStorage.setItem("grit-on-logged-in", "true");
+    localStorage.setItem("grit-on-onboarding-complete", "true");
+    setIsLoggedIn(true);
+    setAppState("app");
   }, []);
 
   if (appState === null) return null;

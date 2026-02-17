@@ -24,7 +24,6 @@ interface BentoCardProps {
   cta: string;
   className?: string;
   background?: ReactNode;
-  subLink?: { label: string; href: string };
 }
 
 export function BentoCard({
@@ -35,7 +34,6 @@ export function BentoCard({
   cta,
   className,
   background,
-  subLink,
 }: BentoCardProps) {
   return (
     <Link
@@ -47,7 +45,7 @@ export function BentoCard({
       )}
     >
       {/* Background decoration */}
-      <div className="absolute inset-0 pointer-events-none">{background}</div>
+      <div className="absolute inset-0">{background}</div>
 
       {/* Content - pinned to bottom */}
       <div className="relative z-10 p-4 mt-auto">
@@ -58,20 +56,9 @@ export function BentoCard({
         <p className="text-[11px] text-gray-500 mt-0.5 leading-snug line-clamp-2">
           {description}
         </p>
-        <div className="flex items-center gap-2 mt-2">
-          <div className="flex items-center gap-1 text-xs font-semibold text-violet-600 opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200">
-            {cta}
-            <ArrowRight className="w-3.5 h-3.5" />
-          </div>
-          {subLink && (
-            <Link
-              href={subLink.href}
-              onClick={(e) => e.stopPropagation()}
-              className="text-xs font-semibold text-violet-400 hover:text-violet-600 transition-colors opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 duration-200 ml-auto"
-            >
-              {subLink.label} →
-            </Link>
-          )}
+        <div className="flex items-center gap-1 mt-2 text-xs font-semibold text-violet-600 opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200">
+          {cta}
+          <ArrowRight className="w-3.5 h-3.5" />
         </div>
       </div>
     </Link>

@@ -104,14 +104,26 @@ ${KOREAN_OUTPUT_RULE}
 
 **곡의 개요 작성 기준 (아래 예시 수준으로 상세히 작성):**
 
-[예시 - 베토벤 소나타 2번의 경우]
+[예시 1 - 베토벤 소나타 2번 (다악장 소나타)]
 - composition_period: "1795년경 빈에서 작곡, 1796년 출판, 스승 요제프 하이든에게 헌정된 세 개의 소나타(Op.2)의 하나."
 - tempo_marking: "1악장 Allegro vivace – A장조, 2/4, 소나타 형식. / 2악장 Largo appassionato – D장조, 3/4, 3부/론도적 구조의 느린 악장. / 3악장 Scherzo. Allegretto – A장조, 3/4, 스케르초 + 트리오의 3부분 형식. / 4악장 Rondo. Grazioso – A장조, 4/4, 소나타-론도 형식."
-- genre: 장르적 성격을 문장으로 서술 (예: "전형적 고전 소나타지만, 규모·대위법·리듬과 화성 감각이 상당히 교향악적이고 야심찬 작품.")
-- musical_features: 곡 전체를 관통하는 한 문장 요약 (예: "전체적으로 밝고 유머러스하지만, 2악장에서는 깊은 정열과 내적 긴장, 3·4악장에서는 재치와 기교를 보여주는 젊은 베토벤의 명함 같은 소나타")
+
+[예시 2 - 슈만 어린이의 정경 Op.15 (소품 모음집 — 소품마다 고유 제목이 있는 경우)]
+- composition_period: "1838년 작곡, 클라라에게 보낸 편지에서 영감받은 13개의 성격소품집."
+- tempo_marking: "No.1 Von fremden Ländern und Menschen (낯선 나라와 사람들) – G장조, 2/4 / No.2 Curiose Geschichte (신기한 이야기) – D장조, 3/4 / No.3 Hasche-Mann (술래잡기) – B단조, 2/4 / ... / No.7 Träumerei (꿈) – F장조, 4/4 / ... / No.13 Der Dichter spricht (시인이 말하다) – G장조, 4/4"
+
+[예시 3 - 슈만 나비 Op.2 (소품 모음집 — 고유 제목 없이 번호만 있는 경우)]
+- composition_period: "1831년경 작곡, 1832년 출판. 장 폴의 소설 '말년의 광란'에서 영감받은 12개의 짧은 성격소품집."
+- tempo_marking: "Introduzione: Moderato – D장조, 3/4 / No.1: Waltz – D장조, 3/4 / No.2: Prestissimo – Eb장조, 2/4 / ... / No.12 (Finale): Allegro – D장조, 2/4"
+
+- genre: 장르적 성격을 문장으로 서술 (예: "전형적 고전 소나타지만..." 또는 "12개의 짧은 성격소품으로 이루어진 피아노 모음곡...")
+- musical_features: 곡 전체를 관통하는 한 문장 요약
 
 **핵심 규칙:**
-- tempo_marking 필드에는 반드시 모든 악장/섹션을 나열할 것 (악장번호 + 빠르기말 + 조성 + 박자 + 형식)
+- tempo_marking 필드에는 반드시 모든 악장/섹션/소품을 나열할 것
+- 🚨 다악장 소나타/협주곡 → "1악장", "2악장" 표기
+- 🚨 소품 모음집 → 각 소품의 **고유 제목이 있으면 반드시 원어 제목 + 한국어 번역을 함께** 표기 (예: "Träumerei (꿈)", "Pierrot (피에로)"). 고유 제목이 없으면 "No.1", "No.2" 사용. 절대 "악장"이라 부르지 말 것!
+- 🚨 변주곡 → "Theme", "Var.1", "Var.2" 표기
 - 단악장 곡이면 전체 구조를 서술
 - genre 필드는 장르 한 단어가 아니라, 이 곡의 장르적 성격을 문장으로 서술
 - musical_features는 곡 전체를 한두 문장으로 압축한 "핵심 요약"
@@ -172,15 +184,20 @@ ${KOREAN_OUTPUT_RULE}
 - contemporary_composers: 동시대 작곡가와의 관계
 - musical_movement: 형식적 실험, 이 곡이 음악사에서 보여주는 혁신/실험적 요소
 
-**4. 곡의 특징 작성 기준 (가장 중요 — 악장별 상세 서술):**
+**4. 곡의 특징 작성 기준 (가장 중요 — 각 구성 단위별 상세 서술):**
+
+🚨 **구성 단위 구분 규칙:**
+- 다악장 소나타/협주곡 → "1악장", "2악장" 단위로 서술
+- 소품 모음집(Papillons, Kinderszenen, Carnaval 등) → 각 소품의 **고유 제목이 있으면 원어 제목(한국어 번역)** 단위로 서술 (예: "Träumerei (꿈)", "Pierrot (피에로)"). 고유 제목이 없으면 "No.1", "No.2" 사용. 각 소품의 고유한 성격·분위기를 개별적으로 다룰 것. 절대 "악장"이라 부르지 말 것!
+- 변주곡 → "주제(Theme)", "변주 1", "변주 2" 단위로 서술
+
 - composition_background (4-1. 작곡 배경 및 예술적 맥락): 작곡 동기, 헌정, 출판 경위, 예술적 위치
-- form_and_structure (4-2. 음악 형식·구조적 특징): 반드시 악장별로 서술할 것!
-  예: "1악장 Allegro vivace – 소나타 형식. 경쾌한 동기, 삼도·육도 도약... / 2악장 Largo appassionato – D장조, 3/4... / 3악장..."
-  각 악장의 주제 성격, 전개 방식, 구조적 특징을 개별 서술
-- technique (4-3. 기교적 특징): 악장별 핵심 기교를 서술. 절대 손가락 번호 금지!
-  예: "1악장: 빠른 2/4 박 속에서 스케일·삼화음 처리 / 2악장: 보이싱·호흡·다이내믹이 핵심 / 3악장: 손의 탄력, 스타카토·레가토 대비..."
-- literary_dramatic (4-4. 문학적·극적 특징): 악장별 문학적/극적 성격을 서술
-  예: "1악장: 밝고 에너지 넘치지만 중간중간 긴장·대비 / 2악장: 오페라 아리아 같은 장중함 / 3악장: 장난기 있는 농담..."
+- form_and_structure (4-2. 음악 형식·구조적 특징): 반드시 각 구성 단위별로 서술할 것!
+  다악장 예: "1악장 Allegro vivace – 소나타 형식. 경쾌한 동기... / 2악장 Largo appassionato..."
+  소품집 예: "No.1 Moderato – D장조, 왈츠 형식. 가면무도회 개시를 암시... / No.2 Prestissimo – Eb장조, 격렬한 아르페지오..."
+  각 단위의 주제 성격, 전개 방식, 구조적 특징을 개별 서술
+- technique (4-3. 기교적 특징): 각 구성 단위별 핵심 기교를 서술. 절대 손가락 번호 금지!
+- literary_dramatic (4-4. 문학적·극적 특징): 각 구성 단위별 문학적/극적 성격을 서술
 - conclusion: 이 곡의 음악사적 의의
 
 ${SELF_VERIFICATION_PROTOCOL}
@@ -203,9 +220,9 @@ JSON만 출력:
   },
   "song_characteristics": {
     "composition_background": "한국어 5-8문장 — 4-1. 작곡 배경 및 예술적 맥락",
-    "form_and_structure": "한국어 15-25문장 — 4-2. 악장별 음악 형식·구조 상세 서술 (모든 악장을 각각 서술)",
-    "technique": "한국어 10-15문장 — 4-3. 악장별 기교적 특징 (손가락 번호 절대 금지! 터치/동작/호흡 중심)",
-    "literary_dramatic": "한국어 10-15문장 — 4-4. 악장별 문학적·극적 특징",
+    "form_and_structure": "한국어 15-25문장 — 4-2. 각 구성 단위별 음악 형식·구조 상세 서술 (소나타→악장별, 소품집→각 소품별, 변주곡→각 변주별)",
+    "technique": "한국어 10-15문장 — 4-3. 각 구성 단위별 기교적 특징 (손가락 번호 절대 금지! 터치/동작/호흡 중심)",
+    "literary_dramatic": "한국어 10-15문장 — 4-4. 각 구성 단위별 문학적·극적 특징",
     "conclusion": "한국어 3-5문장 — 이 곡의 음악사적 의의와 현대적 가치"
   }
 }
@@ -238,13 +255,22 @@ ${KOREAN_OUTPUT_RULE}
 
 **🚨 핵심 원칙: 마디 번호 대신 "구간 이름 + 역할" 중심으로 분석할 것!**
 
-각 악장/섹션 내부를 구간별로 나누어, 다음 4가지 관점을 서술하십시오:
-1. 구간 이름 (section 필드): "1악장: 도입·제1주제 영역", "1악장: 전이부", "2악장: A 주제 (첫 등장)" 등
+각 구성 단위의 내부를 구간별로 나누어, 다음 4가지 관점을 서술하십시오:
+1. 구간 이름 (section 필드): 구성 단위 + 구간명
 2. 역할 (measures 필드): 이 구간의 형식적 역할을 서술 (예: "주제 제시, 성격 규정", "조성 이동, 긴장 형성", "회귀·강화")
 3. 조성·화성 이미지 (key_signature 필드): 조성과 화성 진행의 핵심 (예: "A장조, 명료한 I–V 진행, 하행 삼화음·스케일")
 4. 분위기·표현 (mood 필드 + description 필드)
 
-**예시 (베토벤 소나타 1악장):**
+🚨 **구성 단위 구분 — 반드시 따를 것:**
+- 다악장 소나타/협주곡 → section에 "1악장:", "2악장:" 접두어 사용
+  예: "1악장: 도입·제1주제 영역", "2악장: A 주제 (첫 등장)"
+- 소품 모음집(Papillons, Kinderszenen, Carnaval, Waldszenen 등) → 각 소품의 **고유 제목이 있으면 원어 제목(한국어 번역)을 section 접두어로 사용**. 고유 제목이 없으면 "No.N:" 사용. 절대 "악장"이라 부르지 말 것!
+  고유 제목 있는 예: "Träumerei (꿈): 주제 제시", "Pierrot (피에로): A 주제 영역"
+  고유 제목 없는 예: "No.1: A 주제 영역", "No.2: 도입부"
+  각 소품은 독립된 성격소품이며, 소품별 고유한 성격·조성·분위기를 개별적으로 분석할 것
+- 변주곡 → "주제:", "Var.1:", "Var.2:" 접두어 사용
+
+**예시 1 (베토벤 소나타 1악장):**
 - section: "1악장: 도입·제1주제 영역"
 - measures: "주제 제시, 성격 규정"
 - key_signature: "A장조, 명료한 I–V 진행, 하행 삼화음·스케일"
@@ -253,13 +279,31 @@ ${KOREAN_OUTPUT_RULE}
 - mood: "명랑·유쾌, 구조적으로 치밀한 활력"
 - description: "경쾌한 동기, 삼도·육도 도약, 스케일 진행이 결합된 활달한 제1주제."
 
+**예시 2 (슈만 어린이의 정경 — 고유 제목이 있는 소품집):**
+- section: "Träumerei (꿈): 주제 제시"
+- measures: "서정적 주제 제시, 몽환적 성격 규정"
+- key_signature: "F장조, 부드러운 I-IV-V 진행"
+- time_signature: "4/4"
+- tempo: "Langsam"
+- mood: "몽환적이고 서정적인 꿈결, 순수한 동심"
+- description: "넓은 아치형 선율이 부드럽게 펼쳐지며, 어린 시절의 꿈을 그리는 가장 유명한 성격소품."
+
+**예시 3 (슈만 나비 — 고유 제목 없이 번호만 있는 소품집):**
+- section: "No.1: A 주제 영역"
+- measures: "왈츠 주제 제시, 무도회 성격 규정"
+- key_signature: "D장조, 명료한 I-V-I 순환"
+- time_signature: "3/4"
+- tempo: "Waltz"
+- mood: "우아하고 경쾌한 왈츠, 나비의 가벼운 날갯짓"
+- description: "왈츠 리듬의 주제 동기 반복, 나비의 날갯짓 같은 가벼운 텍스처."
+
 **🚨 절대 규칙:**
-- 모든 악장의 내부 구간을 빠짐없이 나열할 것 (악장당 4-8개 구간)
+- 모든 구성 단위의 내부 구간을 빠짐없이 나열할 것 (단위당 2-8개 구간)
 - 소나타 형식: 도입·제1주제, 전이부, 제2주제, 종결부, 전개부, 재현부·코다
 - 론도 형식: A 주제, B 에피소드, A' 회귀, C 에피소드, A'' + 코다
 - 스케르초: 스케르초 주제, 트리오, 스케르초 회귀
 - 변주곡: 주제 + 각 변주
-- section 필드에는 반드시 "N악장:" 접두어를 붙여 어느 악장인지 명확히 할 것
+- 짧은 소품(성격소품): A 주제, 대비부/중간부, 재현/코다 (소품 길이에 맞게 2-4개 구간)
 - measures 필드에는 마디 번호가 아닌 "역할/기능"을 서술할 것
 - 하나라도 누락하면 분석 실패
 
@@ -270,7 +314,7 @@ JSON만 출력:
   "structure_analysis_v2": {
     "sections": [
       {
-        "section": "N악장: 구간 이름 (예: 1악장: 도입·제1주제 영역)",
+        "section": "구성단위: 구간 이름 (소나타 예: '1악장: 도입·제1주제', 소품집 예: 'Träumerei (꿈): 주제 제시' 또는 'No.1: A 주제 영역')",
         "measures": "이 구간의 역할 (예: 주제 제시, 성격 규정)",
         "key_signature": "조성·화성 이미지 (예: A장조, 명료한 I–V 진행)",
         "time_signature": "박자 (예: 2/4)",
@@ -281,7 +325,7 @@ JSON만 출력:
     ],
     "harmony_table": [
       {
-        "measure": "구간명 (예: 1악장 제시부 도입)",
+        "measure": "구간명 (소나타 예: '1악장 제시부 도입', 소품집 예: 'No.3 A 주제')",
         "beat": "위치 설명",
         "chord": "코드명 (예: Gm, D7, Eb+)",
         "roman_numeral": "로마숫자 분석 (예: i, V7, bVI)",
@@ -444,6 +488,28 @@ JSON만 출력하십시오.`;
 
 // ── 기존 호환 프롬프트 (route.ts에서 이전) ──
 
+/** 소품집/모음곡 형태 감지 (악장이 아닌 개별 소품으로 구성된 작품) */
+export function isCharacterPieceCollection(title: string): boolean {
+  const lower = title.toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const collectionKeywords = [
+    "papillons", "kinderszenen", "scenes from childhood",
+    "carnaval", "kreisleriana", "waldszenen",
+    "novelletten", "albumblatter", "bunte blatter",
+    "phantasiestucke", "fantasiestucke", "nachtstucke",
+    "pictures at an exhibition", "전람회의 그림",
+    "goyescas", "iberia",
+    "annees de pelerinage", "순례의 해",
+    "preludes op.28", "preludes, op.28",
+    "etudes-tableaux", "études-tableaux",
+    "well-tempered", "평균율", "wohltemperierte",
+    "songs without words", "무언가",
+    "moments musicaux", "impromptus",
+    "consolations", "liebestraume",
+  ];
+  return collectionKeywords.some((k) => lower.includes(k));
+}
+
 /** 대형 작품 감지 */
 export function isLargeWork(title: string): boolean {
   const lower = title.toLowerCase()
@@ -473,15 +539,15 @@ export function createStructureOnlyPrompt(composer: string, title: string): stri
 
 ${KOREAN_OUTPUT_RULE}
 
-이 곡의 **모든 섹션/악장/변주/소품**을 빠짐없이 분석하십시오.
+이 곡의 **모든 구성 단위**를 빠짐없이 분석하십시오.
 
 🚨 **절대 규칙**: 하나라도 누락하면 분석 실패로 간주합니다.
-- 변주곡 → Theme + 모든 Variation
-- 모음곡/다곡 구성 → 모든 곡을 개별 항목으로
-- 소나타 다악장 → 각 악장 내부 구조까지
+- 변주곡 → Theme + 모든 Variation (Var.1, Var.2, ...)
+- 소품 모음집(Papillons, Kinderszenen, Carnaval 등) → 각 소품의 **고유 제목이 있으면 원어 제목(한국어 번역)으로** 표기 (예: "Träumerei (꿈)", "Pierrot (피에로)"). 고유 제목이 없으면 "No.1", "No.2" 사용. 절대 "악장"이라 부르지 말 것! 각 소품의 고유한 성격을 개별 분석
+- 소나타 다악장 → 각 악장 내부 구조까지 (1악장, 2악장, ...)
 
 각 항목에 포함할 내용:
-- section: 형식에 맞는 섹션명
+- section: 형식에 맞는 섹션명 (소나타: "1악장: ...", 소품집 고유제목: "Träumerei (꿈): ...", 소품집 번호: "No.1: ...", 변주곡: "Var.1: ...")
 - measures: 마디 범위
 - key_tempo: 조성, 박자, 템포 지시
 - character: 한 문장 성격 묘사

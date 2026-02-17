@@ -299,12 +299,11 @@ export default function HomePage() {
           description="전문가의 시선으로 막힌 구간의 해법을 제시합니다"
           href="/teachers"
           cta="선생님 찾기"
-          subLink={{ label: "내 피드백", href: "/feedback" }}
           className="col-span-2 min-h-[160px]"
           background={
-            <div className="absolute inset-0 pointer-events-none select-none">
+            <div className="absolute inset-0 select-none">
               {/* 악보 오선지 배경 */}
-              <div className="absolute top-4 left-3 right-3 flex flex-col gap-[6px] opacity-[0.06]">
+              <div className="absolute top-4 left-3 right-3 flex flex-col gap-[6px] opacity-[0.06] pointer-events-none">
                 {[0, 1, 2, 3].map((row) => (
                   <div key={row} className="flex flex-col gap-[2px]">
                     {[0, 1, 2, 3, 4].map((line) => (
@@ -314,7 +313,7 @@ export default function HomePage() {
                 ))}
               </div>
               {/* 선생님 이모지 아바타 */}
-              <div className="absolute top-3 right-3 flex -space-x-1.5 opacity-30 group-hover:opacity-40 transition-opacity">
+              <div className="absolute top-3 right-3 flex -space-x-1.5 opacity-30 group-hover:opacity-40 transition-opacity pointer-events-none">
                 {["👩‍🏫", "👨‍🎓", "🧑‍🎤", "👩‍🎨"].map((emoji, i) => (
                   <div key={i} className="w-9 h-9 rounded-full bg-white/80 border-2 border-white/60 flex items-center justify-center text-base shadow-sm">
                     {emoji}
