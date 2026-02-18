@@ -51,7 +51,7 @@ export function BentoCard({
       {/* Content - pinned to bottom */}
       <div className="relative z-10 px-4 pt-3 pb-2.5 mt-auto">
         <Icon className="w-5 h-5 text-violet-600 mb-1.5" />
-        <h3 className="text-sm font-bold text-gray-900 leading-tight">
+        <h3 className="text-[13px] font-bold text-gray-900 leading-tight">
           {name}
         </h3>
         <p className="text-[11px] text-gray-500 mt-0.5 leading-snug line-clamp-2">

@@ -12,7 +12,7 @@ interface DailyGoalProps {
   onTargetChange?: (newTarget: number) => void;
 }
 
-const GOAL_OPTIONS = [30, 45, 60, 90, 120];
+const GOAL_OPTIONS = [60, 90, 120, 180, 240, 300, 360, 420];
 
 const quotes = [
   { text: "음악가에게 휴식은 없다. 쉬는 날도 연습하는 날이다.", author: "Pablo Casals" },

@@ -206,7 +206,7 @@ export default function HomePage() {
       </div>
 
       {/* Stats Grid */}
-      <div className="bg-white/40 backdrop-blur-xl rounded-3xl mb-6 divide-x divide-white/30 grid grid-cols-3 shadow-sm border border-white/50">
+      <div className="bg-white/40 backdrop-blur-xl rounded-3xl mb-6 divide-x divide-gray-200/50 grid grid-cols-3 shadow-sm border border-white/50">
         <StatsCard
           value={isLoading ? 0 : totalHours}
           unit="시간"
