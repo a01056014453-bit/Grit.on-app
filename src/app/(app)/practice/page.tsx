@@ -11,7 +11,7 @@ import { formatTime } from "@/lib/format";
 import { mockSongs as initialSongs, mockDrillCards, hasAIAnalysis, groupDrillsBySong, composerList } from "@/data";
 import type { PracticeType, Song, PracticeTodo } from "@/types";
 import Link from "next/link";
-import { Music2, ChevronRight, ChevronLeft, Plus, Check, X, Clock, RotateCcw, Repeat, ArrowRight, Trash2, Calendar, Mic } from "lucide-react";
+import { Music2, ChevronRight, ChevronLeft, Plus, Check, X, Clock, RotateCcw, Repeat, ArrowRight, Trash2, Calendar, Mic, CheckCircle2, Circle, ChevronDown, ChevronUp, Music } from "lucide-react";
 import {
   PracticeTimer,
   SongSelectionModal,
@@ -58,6 +58,88 @@ interface DailyCompletion {
   date: string; // YYYY-MM-DD
   completedDrillIds: string[];
 }
+
+// ─── Records Mock Data (연습 기록 페이지와 동일) ─────────────────────────────
+interface RecTask {
+  id: number;
+  text: string;
+  tempo: number | null;
+  reps: number;
+  time: string | null;
+  done: boolean;
+  hasRecording?: boolean;
+}
+interface RecPiece {
+  id: number;
+  title: string;
+  completed: number;
+  total: number;
+  recordingOnly?: boolean;
+  tasks: RecTask[];
+}
+interface RecSession {
+  id: number;
+  time: string;
+  piece: string;
+  detail: string;
+  duration: string;
+  hasRecording?: boolean;
+}
+
+const recPiecesData: Record<string, RecPiece[]> = {
+  "2026-2-17": [
+    {
+      id: 1, title: "F. Chopin Ballade Op.23 No.1", completed: 2, total: 3,
+      tasks: [
+        { id: 1, text: "mm.23-28 왼손 아르페지오 정확성", tempo: 60, reps: 4, time: "12:13", done: true },
+        { id: 2, text: "mm.88-92 Presto 과속 방지", tempo: 168, reps: 3, time: "12:25", done: true },
+        { id: 3, text: "mm.1-22 도입부 레가토 연결", tempo: 52, reps: 0, time: null, done: false },
+      ],
+    },
+    {
+      id: 2, title: "L. v. Beethoven Sonata Op.13 No.8", completed: 1, total: 2,
+      tasks: [
+        { id: 4, text: "Mvt.1 mm.1-16 그라베 다이나믹 표현", tempo: 52, reps: 2, time: "12:30", done: true },
+        { id: 5, text: "코다 구간 템포 조절", tempo: null, reps: 0, time: null, done: false },
+      ],
+    },
+    {
+      id: 3, title: "C. Debussy Suite Bergamasque No.3", completed: 0, total: 0, recordingOnly: true,
+      tasks: [
+        { id: 6, text: "전곡 녹음", tempo: null, reps: 0, time: "12:11", done: false, hasRecording: true },
+      ],
+    },
+  ],
+  "2026-2-18": [
+    {
+      id: 4, title: "F. Chopin Ballade Op.23 No.1", completed: 1, total: 2,
+      tasks: [
+        { id: 7, text: "mm.1-22 도입부 레가토 연결", tempo: 54, reps: 5, time: "09:15", done: true },
+        { id: 8, text: "mm.45-60 중간부 루바토", tempo: null, reps: 0, time: null, done: false },
+      ],
+    },
+    {
+      id: 5, title: "F. Liszt La Campanella", completed: 2, total: 2,
+      tasks: [
+        { id: 9, text: "mm.1-8 주제 도약 정확성", tempo: 80, reps: 6, time: "10:02", done: true },
+        { id: 10, text: "mm.32-48 트릴 구간", tempo: 72, reps: 4, time: "10:18", done: true },
+      ],
+    },
+  ],
+};
+
+const recSessionsData: Record<string, RecSession[]> = {
+  "2026-2-17": [
+    { id: 1, time: "12:05", piece: "F. Chopin Ballade Op.23 No.1", detail: "mm.23-28 아르페지오", duration: "18분", hasRecording: false },
+    { id: 2, time: "12:11", piece: "C. Debussy Suite Bergamasque No.3", detail: "전곡 녹음", duration: "6분", hasRecording: true },
+    { id: 3, time: "12:25", piece: "F. Chopin Ballade Op.23 No.1", detail: "mm.88-92 Presto", duration: "12분", hasRecording: false },
+    { id: 4, time: "12:30", piece: "L. v. Beethoven Sonata Op.13 No.8", detail: "Mvt.1 그라베", duration: "15분", hasRecording: false },
+  ],
+  "2026-2-18": [
+    { id: 5, time: "09:10", piece: "F. Chopin Ballade Op.23 No.1", detail: "mm.1-22 도입부", duration: "22분", hasRecording: false },
+    { id: 6, time: "10:00", piece: "F. Liszt La Campanella", detail: "주제 도약 + 트릴", duration: "25분", hasRecording: true },
+  ],
+};
 
 export default function PracticePage() {
   return (
@@ -1000,6 +1082,26 @@ function PracticePageContent() {
   const calIsSelectedToday = calSelectedDate.getFullYear() === calToday.getFullYear() && calSelectedDate.getMonth() === calToday.getMonth() && calSelectedDate.getDate() === calToday.getDate();
   const totalDrillCount = mockDrillCards.length + customDrills.length;
 
+  // Records-style to-do accordion states
+  const [expandedPieces, setExpandedPieces] = useState<Set<number>>(new Set());
+  const [showTimeline, setShowTimeline] = useState(false);
+
+  const togglePiece = (id: number) => {
+    setExpandedPieces((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const recDateKey = `${calSelectedDate.getFullYear()}-${calSelectedDate.getMonth() + 1}-${calSelectedDate.getDate()}`;
+  const recPieces = recPiecesData[recDateKey] || [];
+  const recSessions = recSessionsData[recDateKey] || [];
+  const recTotalCompleted = recPieces.reduce((s, p) => s + p.completed, 0);
+  const recTotalTasks = recPieces.reduce((s, p) => s + p.total, 0);
+  const recTotalRecordings = recSessions.filter((s) => s.hasRecording).length;
+
   const navigateCalMonth = (dir: number) => {
     let m = calMonth + dir, y = calYear;
     if (m < 0) { m = 11; y--; }
@@ -1156,43 +1258,45 @@ function PracticePageContent() {
       {/* Practice Plan & Calendar Combined */}
       <div className="mt-8 space-y-4">
           {/* 연습 기록 - Calendar */}
-          <div>
+          <div id="practice-records">
             <span className="inline-block font-bold text-sm text-violet-700 bg-violet-100 px-3.5 py-1 rounded-full mb-3">연습 기록</span>
-            <div className="bg-white/40 backdrop-blur-xl rounded-3xl border border-white/50 p-4 shadow-sm">
-              <div className="flex items-center justify-between mb-3">
+            <div className="rounded-[20px] p-5" style={{ background: "rgba(255,255,255,0.55)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", border: "1px solid rgba(255,255,255,0.6)", boxShadow: "0 8px 32px rgba(124,58,237,0.08)" }}>
+              <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-gray-900">{calYear}년 {calMonth + 1}월</span>
+                  <span className="text-xl font-bold text-gray-900">{calYear}년 {calMonth + 1}월</span>
                   {calPracticeDays > 0 && (
-                    <span className="flex items-center gap-1 text-sm text-violet-600 font-medium">
-                      <Check className="w-3.5 h-3.5" />{calPracticeDays}
+                    <span className="flex items-center gap-1 text-sm text-violet-600 font-bold">
+                      <Check className="w-4 h-4" />{calPracticeDays}
                     </span>
                   )}
                 </div>
                 <div className="flex items-center gap-1">
-                  <button onClick={() => navigateCalMonth(-1)} className="p-1.5 hover:bg-gray-100 rounded-full"><ChevronLeft className="w-4 h-4 text-gray-500" /></button>
-                  <button onClick={() => navigateCalMonth(1)} className="p-1.5 hover:bg-gray-100 rounded-full"><ChevronRight className="w-4 h-4 text-gray-500" /></button>
+                  <button onClick={() => navigateCalMonth(-1)} className="p-1.5 rounded-full hover:bg-white/30 transition-colors"><ChevronLeft className="w-4 h-4 text-gray-400" /></button>
+                  <button onClick={() => navigateCalMonth(1)} className="p-1.5 rounded-full hover:bg-white/30 transition-colors"><ChevronRight className="w-4 h-4 text-gray-400" /></button>
                 </div>
               </div>
               <div className="grid grid-cols-7 gap-1 mb-1">
                 {calDayNames.map((day, i) => (
-                  <div key={day} className={`text-center text-xs font-medium py-1 ${i === 0 ? "text-red-400" : i === 6 ? "text-blue-400" : "text-gray-400"}`}>{day}</div>
+                  <div key={day} className={`text-center text-sm font-medium py-1 ${i === 0 ? "text-red-400" : i === 6 ? "text-blue-400" : "text-gray-400"}`}>{day}</div>
                 ))}
               </div>
               <div className="grid grid-cols-7 gap-1">
                 {Array(calFirstDay).fill(null).map((_, i) => (
-                  <div key={`e-${i}`} className="flex flex-col items-center py-0.5"><div className="w-8 h-8" /><span className="text-[10px] h-4" /></div>
+                  <div key={`e-${i}`} className="flex flex-col items-center py-1"><div className="w-8 h-8" /><span className="text-[10px] h-4" /></div>
                 ))}
                 {Array(calDaysInMonth).fill(null).map((_, i) => {
                   const day = i + 1;
                   const key = `${calYear}-${calMonth}-${day}`;
                   const count = calSessionsByDate[key]?.length || 0;
                   const isToday = day === calToday.getDate() && calMonth === calToday.getMonth() && calYear === calToday.getFullYear();
+                  const isFuture = calYear > calToday.getFullYear() || (calYear === calToday.getFullYear() && calMonth > calToday.getMonth()) || (calYear === calToday.getFullYear() && calMonth === calToday.getMonth() && day > calToday.getDate());
                   const isSelected = day === calSelectedDate.getDate() && calMonth === calSelectedDate.getMonth() && calYear === calSelectedDate.getFullYear();
                   const dow = (calFirstDay + i) % 7;
+                  const countStyle = isFuture ? "bg-white/10 opacity-30" : isToday ? "bg-violet-600 text-white shadow-lg shadow-violet-500/30" : count >= 7 ? "bg-violet-500/70 text-white font-bold" : count >= 5 ? "bg-violet-400/60 text-violet-700 font-bold" : count >= 3 ? "bg-violet-300/50 text-violet-600" : count >= 1 ? "bg-violet-200/40 text-violet-500" : "bg-white/20 backdrop-blur-sm";
                   return (
-                    <button key={day} onClick={() => setCalSelectedDate(new Date(calYear, calMonth, day))} className="flex flex-col items-center py-0.5">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-colors ${isToday ? "bg-violet-700 text-white" : count > 0 ? "bg-violet-500 text-white" : "bg-white/40"} ${isSelected && !isToday ? "ring-2 ring-violet-400" : ""}`}>
-                        {count > 0 ? count : ""}
+                    <button key={day} onClick={() => { setCalSelectedDate(new Date(calYear, calMonth, day)); setExpandedPieces(new Set()); setShowTimeline(false); }} className="flex flex-col items-center py-1">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${countStyle} ${isSelected && !isToday ? "ring-2 ring-violet-400 ring-offset-1 ring-offset-transparent" : ""}`}>
+                        {!isFuture && count > 0 ? count : ""}
                       </div>
                       <span className={`text-[10px] mt-0.5 ${dow === 0 ? "text-red-400" : dow === 6 ? "text-blue-400" : "text-gray-500"}`}>{day}</span>
                     </button>
@@ -1200,59 +1304,274 @@ function PracticePageContent() {
                 })}
               </div>
 
-              {/* 선택된 날짜 상세 - 캘린더 안에 포함 */}
-              <div className="mt-8 pt-5 border-t border-white/40">
-                <h4 className="text-base font-bold text-gray-900">{calSelectedDate.getMonth() + 1}월 {calSelectedDate.getDate()}일 {calWeekdayNames[calSelectedDate.getDay()]}</h4>
-                {calIsSelectedToday ? (
-                  <p className="text-sm text-gray-500 mt-0.5">{totalDrillCount}개 연습 · {calSelectedSessions.length}개 녹음</p>
-                ) : calSelectedSessions.length > 0 ? (
-                  <p className="text-sm text-gray-500 mt-0.5">{calSelectedSessions.length}개 녹음</p>
-                ) : (
-                  <p className="text-sm text-gray-400 mt-0.5">연습 기록이 없습니다</p>
-                )}
+              {/* Legend */}
+              <div className="flex items-center justify-end gap-1.5 mt-3">
+                <span className="text-[10px] text-gray-400 mr-1">적음</span>
+                {["bg-violet-200/40","bg-violet-300/50","bg-violet-400/60","bg-violet-500/70","bg-violet-600"].map((cls, i) => (
+                  <div key={i} className={`w-3 h-3 rounded-full ${cls}`} />
+                ))}
+                <span className="text-[10px] text-gray-400 ml-1">많음</span>
+              </div>
 
-                {/* 드릴 완료 기록 */}
-                <div className="mt-3">
-                  <TodayDrillList showPlayButton={false} date={calSelectedDate} completedOnly />
-                </div>
-
-                {/* 연습 세션 */}
-                {calSelectedSessions.length > 0 && (
-                  <p className="text-xs text-gray-500 font-medium mt-3 mb-2">연습 세션</p>
-                )}
-                {calSelectedSessions.length === 0 && !calIsSelectedToday ? (
-                  <div className="text-center py-6 bg-white/30 backdrop-blur-sm rounded-2xl mt-3 border border-white/40">
-                    <div className="w-10 h-10 bg-white/40 rounded-full flex items-center justify-center mx-auto mb-2"><Mic className="w-5 h-5 text-violet-300" /></div>
-                    <p className="text-sm text-gray-500">이 날은 연습 기록이 없습니다</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2 mt-2">
-                    {calSelectedSessions.map((session) => {
-                      const d = new Date(session.startTime);
-                      const h = d.getHours();
-                      const ampm = h < 12 ? "오전" : "오후";
-                      const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-                      const timeStr = `${ampm} ${h12.toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
-                      return (
-                        <Link key={session.id} href={`/recordings/${session.id}`} className="flex items-center gap-3 bg-white/30 backdrop-blur-sm rounded-2xl p-3 hover:bg-white/50 transition-all active:scale-[0.99] border border-white/40">
-                          <div className="w-9 h-9 bg-violet-100/60 backdrop-blur-sm rounded-xl flex items-center justify-center shrink-0"><Music2 className="w-4 h-4 text-violet-600" /></div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="text-sm font-semibold text-gray-900 truncate">{session.pieceName}</h4>
-                            {session.todoNote && <p className="text-xs text-gray-500 truncate mt-0.5">{session.todoNote}</p>}
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span className="flex items-center gap-1 text-xs text-gray-500"><Clock className="w-3 h-3" />{formatTime(session.practiceTime)}</span>
-                              {session.audioBlob && <span className="text-xs text-green-600 font-medium">녹음</span>}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1 text-xs text-gray-400 shrink-0"><Calendar className="w-3 h-3" />{timeStr}</div>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                )}
+              {/* Selected Date Summary */}
+              <div className="mt-4 pt-4" style={{ borderTop: "1px solid rgba(255,255,255,0.3)" }}>
+                <h3 className="text-lg font-bold text-gray-900">{calSelectedDate.getMonth() + 1}월 {calSelectedDate.getDate()}일 {calWeekdayNames[calSelectedDate.getDay()]}</h3>
+                <p className="text-sm text-gray-400/80 mt-0.5">
+                  {recPieces.length > 0
+                    ? `${recPieces.reduce((s, p) => s + p.tasks.length, 0)}개 연습 · ${recTotalRecordings}개 녹음`
+                    : "연습 기록이 없습니다"}
+                </p>
               </div>
             </div>
           </div>
+
+          {/* 연습 상세 To-do 리스트 (연습 기록 페이지와 동일) */}
+          {recPieces.length > 0 && (
+            <div
+              className="rounded-[20px] p-5"
+              style={{
+                background: "rgba(255,255,255,0.55)",
+                backdropFilter: "blur(16px)",
+                WebkitBackdropFilter: "blur(16px)",
+                border: "1px solid rgba(255,255,255,0.6)",
+                boxShadow: "0 8px 32px rgba(124,58,237,0.08)",
+              }}
+            >
+              {/* Progress Header */}
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-base font-bold text-gray-900">
+                    완료한 연습 {recTotalCompleted}/{recTotalTasks}
+                  </span>
+                </div>
+                <div className="h-1.5 rounded-full bg-white/30 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-violet-500/80 transition-all duration-500 ease-out"
+                    style={{ width: recTotalTasks > 0 ? `${(recTotalCompleted / recTotalTasks) * 100}%` : "0%" }}
+                  />
+                </div>
+              </div>
+
+              {/* Piece List */}
+              <div>
+                {recPieces.map((piece, pieceIdx) => {
+                  const isExpanded = expandedPieces.has(piece.id);
+                  const allDone = piece.total > 0 && piece.completed === piece.total;
+                  const partialDone = piece.completed > 0 && piece.completed < piece.total;
+                  const isLast = pieceIdx === recPieces.length - 1;
+
+                  return (
+                    <div key={piece.id}>
+                      {/* Collapsed Row */}
+                      <button
+                        onClick={() => togglePiece(piece.id)}
+                        className="w-full flex items-center gap-3 py-3.5 text-left active:bg-white/10 transition-colors rounded-lg"
+                      >
+                        {/* Status Icon */}
+                        <div className="shrink-0">
+                          {piece.recordingOnly ? (
+                            <div className="w-6 h-6 rounded-full bg-green-500/15 flex items-center justify-center">
+                              <Music className="w-3.5 h-3.5 text-green-500" />
+                            </div>
+                          ) : allDone ? (
+                            <CheckCircle2 className="w-6 h-6 text-violet-600" />
+                          ) : partialDone ? (
+                            <div className="w-6 h-6 rounded-full border-2 border-violet-400 flex items-center justify-center">
+                              <div className="w-2 h-0.5 bg-violet-400 rounded-full" />
+                            </div>
+                          ) : (
+                            <Circle className="w-6 h-6 text-gray-300/60" />
+                          )}
+                        </div>
+
+                        {/* Piece Title */}
+                        <span className="flex-1 text-[15px] font-medium text-gray-800 truncate">
+                          {piece.title}
+                        </span>
+
+                        {/* Status + Chevron */}
+                        <div className="flex items-center gap-2 shrink-0">
+                          {piece.recordingOnly ? (
+                            <span className="text-[13px] text-green-500 font-medium">녹음</span>
+                          ) : (
+                            <span className="text-[13px] text-violet-500/80 font-medium">
+                              {piece.completed}/{piece.total}
+                            </span>
+                          )}
+                          {isExpanded ? (
+                            <ChevronUp className="w-4 h-4 text-gray-400" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4 text-gray-400" />
+                          )}
+                        </div>
+                      </button>
+
+                      {/* Expanded Detail */}
+                      <div
+                        className="overflow-hidden transition-all duration-300 ease-out"
+                        style={{
+                          maxHeight: isExpanded ? `${piece.tasks.length * 64 + 24}px` : "0px",
+                          opacity: isExpanded ? 1 : 0,
+                        }}
+                      >
+                        <div
+                          className="mx-2 my-1.5 rounded-xl overflow-hidden"
+                          style={{
+                            background: "rgba(255,255,255,0.35)",
+                            backdropFilter: "blur(8px)",
+                            WebkitBackdropFilter: "blur(8px)",
+                            border: "1px solid rgba(255,255,255,0.4)",
+                          }}
+                        >
+                          {piece.tasks.map((task, taskIdx) => (
+                            <div
+                              key={task.id}
+                              className="flex items-center gap-3 px-3.5 py-3"
+                              style={
+                                taskIdx < piece.tasks.length - 1
+                                  ? { borderBottom: "1px solid rgba(255,255,255,0.2)" }
+                                  : undefined
+                              }
+                            >
+                              {/* Check */}
+                              <div className="shrink-0">
+                                {task.hasRecording ? (
+                                  <Mic className="w-4 h-4 text-green-500/80" />
+                                ) : task.done ? (
+                                  <Check className="w-4 h-4 text-green-500/80" />
+                                ) : (
+                                  <div className="w-4 h-4 rounded border border-gray-300/60" />
+                                )}
+                              </div>
+
+                              {/* Task detail */}
+                              <div className={`flex-1 min-w-0 ${task.done && !task.hasRecording ? "line-through text-gray-400/60" : "text-gray-700"}`}>
+                                <span className="text-[13px] leading-tight block truncate">
+                                  {task.text}
+                                  {task.tempo && (
+                                    <span className="text-gray-400/80"> · 템포 {task.tempo}</span>
+                                  )}
+                                  {task.reps > 0 && (
+                                    <span className="text-gray-400/80"> · {task.reps}회</span>
+                                  )}
+                                </span>
+                              </div>
+
+                              {/* Time */}
+                              <span className="text-[13px] text-gray-300/80 shrink-0">
+                                {task.time || "미완료"}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Divider */}
+                      {!isLast && (
+                        <div style={{ borderBottom: "1px solid rgba(255,255,255,0.3)" }} />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Session Timeline Toggle */}
+              {recSessions.length > 0 && (
+                <div className="mt-4">
+                  <button
+                    onClick={() => setShowTimeline(!showTimeline)}
+                    className="text-sm text-violet-500 font-medium hover:text-violet-700 transition-colors"
+                  >
+                    {showTimeline ? "연습 타임라인 숨기기" : "연습 타임라인 보기"}
+                  </button>
+
+                  <div
+                    className="overflow-hidden transition-all duration-300 ease-out"
+                    style={{
+                      maxHeight: showTimeline ? `${recSessions.length * 80 + 32}px` : "0px",
+                      opacity: showTimeline ? 1 : 0,
+                    }}
+                  >
+                    <div className="mt-3 ml-2 relative">
+                      {/* Vertical line */}
+                      <div
+                        className="absolute left-[3px] top-2 bottom-2"
+                        style={{ borderLeft: "2px solid rgba(167,139,250,0.3)" }}
+                      />
+
+                      {recSessions.map((session) => (
+                        <div key={session.id} className="flex items-start gap-3 mb-3 relative">
+                          {/* Dot */}
+                          <div className="w-2 h-2 rounded-full bg-violet-400/60 mt-2.5 shrink-0 relative z-10" />
+
+                          {/* Session Card */}
+                          <div
+                            className="flex-1 rounded-xl px-3.5 py-2.5"
+                            style={{
+                              background: "rgba(255,255,255,0.35)",
+                              backdropFilter: "blur(8px)",
+                              WebkitBackdropFilter: "blur(8px)",
+                              border: "1px solid rgba(255,255,255,0.4)",
+                            }}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="text-[13px] font-medium text-gray-800 truncate">
+                                {session.piece}
+                              </span>
+                              <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                                {session.hasRecording && (
+                                  <span
+                                    className="text-[11px] font-medium text-green-600 px-1.5 py-0.5 rounded-md"
+                                    style={{
+                                      background: "rgba(34,197,94,0.15)",
+                                      backdropFilter: "blur(4px)",
+                                    }}
+                                  >
+                                    녹음
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-[12px] text-gray-400">{session.detail}</span>
+                              <span className="text-[12px] text-gray-400">·</span>
+                              <span className="text-[12px] text-gray-400 flex items-center gap-0.5">
+                                <Clock className="w-3 h-3" />
+                                {session.duration}
+                              </span>
+                            </div>
+                            <span className="text-[11px] text-violet-400 mt-1 block">{session.time}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Empty state */}
+          {recPieces.length === 0 && (
+            <div
+              className="rounded-[20px] p-8 text-center"
+              style={{
+                background: "rgba(255,255,255,0.55)",
+                backdropFilter: "blur(16px)",
+                WebkitBackdropFilter: "blur(16px)",
+                border: "1px solid rgba(255,255,255,0.6)",
+                boxShadow: "0 8px 32px rgba(124,58,237,0.08)",
+              }}
+            >
+              <div
+                className="w-12 h-12 rounded-full mx-auto mb-3 flex items-center justify-center"
+                style={{ background: "rgba(255,255,255,0.35)" }}
+              >
+                <Music className="w-5 h-5 text-violet-300" />
+              </div>
+              <p className="text-sm text-gray-400">이 날은 연습 기록이 없습니다</p>
+            </div>
+          )}
 
           {/* Carry-over Drills from Yesterday */}
           {carryOverDrills.length > 0 && showCarryOver && (

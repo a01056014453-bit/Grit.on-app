@@ -283,11 +283,55 @@ export function classifyAudio(
     };
   }
 
-  // 3. Check for voice
+  // 3. Check for piano FIRST (before voice)
+  // Piano through phone mic may lack high frequencies but has:
+  // - High harmonic ratio (clean tonal sound with overtones)
+  // - Higher total energy than voice
+  // - Even energy spread across bands
+  // - Lower spectral flatness (more tonal)
+
+  // Primary piano path: clear harmonic content with decent energy
+  const hasPianoCharacteristics =
+    harmonicRatio > 0.3 &&
+    totalEnergy > 60 &&
+    spectralFlatness < 0.7;
+
+  // Strong piano path: high harmonic ratio indicates tonal instrument
+  const isStrongPiano =
+    harmonicRatio > 0.4 &&
+    totalEnergy > 80 &&
+    spectralFlatness < 0.6;
+
+  // High-frequency piano path (original - good speakers/mics)
+  const hasHighFreqPiano =
+    highFreqRatio > 0.2 &&
+    veryHighRatio > 0.05 &&
+    harmonicRatio > 0.25;
+
+  // Check for even energy spread (piano has wide distribution)
+  const energyValues = [veryLowEnergy, lowEnergy, midEnergy, highEnergy, veryHighEnergy];
+  const maxEnergy = Math.max(...energyValues);
+  const minEnergy = Math.min(...energyValues.filter((e) => e > 10));
+  const spreadRatio = minEnergy > 0 ? minEnergy / maxEnergy : 0;
+  const hasEvenSpread = spreadRatio > 0.15 && totalEnergy > 50;
+
+  if (isStrongPiano || hasHighFreqPiano || (hasPianoCharacteristics && hasEvenSpread)) {
+    const pianoConfidence = Math.min(
+      0.95,
+      0.5 + harmonicRatio * 0.4 + highFreqRatio * 0.3 + (1 - spectralFlatness) * 0.2
+    );
+    return {
+      label: "PIANO_PLAYING",
+      confidence: pianoConfidence,
+      features,
+    };
+  }
+
+  // 4. Check for voice
   // Voice characteristics:
   // - Energy concentrated in 100-2000Hz
   // - Weak high frequencies
-  // - Moderate harmonic ratio (formants)
+  // - Lower harmonic ratio than piano (formants, not pure harmonics)
   // - Spectral centroid typically 200-2500Hz
   // Primary voice path: strict conditions
   const isVoiceLikePrimary =
@@ -295,10 +339,10 @@ export function classifyAudio(
     highFreqRatio < 0.3 &&
     spectralCentroid < 2500 &&
     spectralCentroid > 150 &&
-    harmonicRatio > 0.15;
+    harmonicRatio > 0.15 &&
+    harmonicRatio < 0.45; // Exclude piano (piano has higher harmonic ratio)
 
   // Secondary voice path: quieter speech (totalEnergy 25-120)
-  // Relaxed conditions for low-energy speech
   const isVoiceLikeQuiet =
     totalEnergy < 120 &&
     totalEnergy >= 25 &&
@@ -306,7 +350,8 @@ export function classifyAudio(
     highFreqRatio < 0.35 &&
     spectralCentroid > 100 &&
     spectralCentroid < 3000 &&
-    spectralFlatness < 0.85;
+    spectralFlatness < 0.85 &&
+    harmonicRatio < 0.40; // Exclude piano
 
   if (isVoiceLikePrimary || isVoiceLikeQuiet) {
     const voiceConfidence = isVoiceLikePrimary
@@ -319,29 +364,11 @@ export function classifyAudio(
     };
   }
 
-  // 4. Check for piano
-  // Piano characteristics:
-  // - Wide frequency distribution
-  // - Strong high-frequency content (highFreqRatio > 0.25)
-  // - Very high frequency presence (veryHighRatio > 0.08) - piano harmonics
-  // - High harmonic ratio (clean tonal sound)
-  // - Higher spectral centroid
-  const hasPianoCharacteristics =
-    highFreqRatio > 0.25 &&
-    veryHighRatio > 0.08 &&
-    harmonicRatio > 0.3;
-
-  // Check for even energy spread (piano has wide distribution)
-  const energyValues = [veryLowEnergy, lowEnergy, midEnergy, highEnergy, veryHighEnergy];
-  const maxEnergy = Math.max(...energyValues);
-  const minEnergy = Math.min(...energyValues.filter((e) => e > 10));
-  const spreadRatio = minEnergy / maxEnergy;
-  const hasEvenSpread = spreadRatio > 0.15;
-
-  if ((hasPianoCharacteristics || hasEvenSpread) && !isVoiceLikePrimary) {
+  // 5. Fallback piano check — anything with decent harmonic content
+  if (hasPianoCharacteristics) {
     const pianoConfidence = Math.min(
-      0.95,
-      0.5 + highFreqRatio * 0.5 + veryHighRatio * 1.0 + harmonicRatio * 0.3
+      0.85,
+      0.4 + harmonicRatio * 0.4 + (1 - spectralFlatness) * 0.2
     );
     return {
       label: "PIANO_PLAYING",
@@ -350,7 +377,7 @@ export function classifyAudio(
     };
   }
 
-  // 5. Low energy but not silence — likely quiet voice or ambient
+  // 6. Low energy but not silence — likely quiet voice or ambient
   if (totalEnergy < 60) {
     return {
       label: "SILENCE",
@@ -359,7 +386,7 @@ export function classifyAudio(
     };
   }
 
-  // 6. Default to noise if nothing else matches
+  // 7. Default to noise if nothing else matches
   return {
     label: "NOISE",
     confidence: 0.6,

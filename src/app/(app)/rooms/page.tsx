@@ -247,11 +247,11 @@ export default function RoomsPage() {
               >
                 <Link
                   href={`/rooms/${room.school.id}`}
-                  className="shrink-0 w-44 block bg-white/60 backdrop-blur-lg rounded-2xl border border-white/50 p-3.5 hover:bg-white/80 transition-all shadow-sm"
+                  className="shrink-0 w-[150px] block bg-white/60 backdrop-blur-lg rounded-2xl border border-white/50 p-3 hover:bg-white/80 transition-all shadow-sm"
                 >
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-8 h-8 rounded-lg bg-violet-100/70 flex items-center justify-center">
-                      <Music className="w-4 h-4 text-violet-600" />
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <div className="w-7 h-7 rounded-lg bg-violet-100/70 flex items-center justify-center">
+                      <Music className="w-3.5 h-3.5 text-violet-600" />
                     </div>
                     {room.hasUploaded ? (
                       <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100/80 text-green-700 font-medium">
@@ -263,10 +263,10 @@ export default function RoomsPage() {
                       </span>
                     )}
                   </div>
-                  <p className="text-sm font-semibold text-gray-900 line-clamp-1">
+                  <p className="text-xs font-semibold text-gray-900 line-clamp-1">
                     {room.school.name} {room.school.year}
                   </p>
-                  <div className="flex items-center gap-2 mt-1.5">
+                  <div className="flex items-center gap-1.5 mt-1">
                     <span
                       className={cn(
                         "text-[10px] px-1.5 py-0.5 rounded font-medium",

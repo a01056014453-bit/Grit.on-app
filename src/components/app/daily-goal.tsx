@@ -140,7 +140,7 @@ export function DailyGoal({ completed, target, onTargetChange }: DailyGoalProps)
 
         <div className="flex-1 flex flex-col justify-center gap-3">
           <div className="flex flex-col">
-            <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">Current</span>
+            <span className="text-xs font-medium text-gray-400">현재 연습</span>
             <div className="flex items-baseline gap-1">
               <motion.span
                 className="text-3xl font-bold bg-gradient-to-r from-violet-700 to-violet-400 bg-clip-text text-transparent"
@@ -169,7 +169,7 @@ export function DailyGoal({ completed, target, onTargetChange }: DailyGoalProps)
       </div>
 
       {/* 오늘의 명언 */}
-      <div className="mt-4 pt-4 border-t border-white/40">
+      <div className="mt-5 pt-4 border-t border-violet-200/60">
         <p className="text-xs text-gray-400 mb-1">오늘의 명언</p>
         <p className="text-sm text-gray-600 italic">&quot;{quote.text}&quot;</p>
         <p className="text-xs text-gray-400 mt-1">— {quote.author}</p>

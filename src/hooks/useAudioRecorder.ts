@@ -115,6 +115,11 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
   const lastPianoDetectedTimeRef = useRef<number>(0);
   const lastSilenceDetectedTimeRef = useRef<number>(0);
   const debugCounterRef = useRef<number>(0);
+  const consecutiveSoundFramesRef = useRef<number>(0);
+  const consecutiveSilenceFramesRef = useRef<number>(0);
+  const isPianoActiveRef = useRef<boolean>(false);
+  const SUSTAINED_FRAMES = 10; // ~330ms - piano note sustains at least this long
+  const GAP_TOLERANCE_FRAMES = 60; // ~2 seconds gap tolerance between phrases
   const PIANO_ON_DELAY_MS = 30;
   const PIANO_OFF_DELAY_MS = 1000;
 
@@ -202,15 +207,17 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
     if (!isCalibrationCompleteRef.current) {
       calibrationSamplesRef.current.push(decibel);
 
-      if (calibrationSamplesRef.current.length >= 60) {
-        const sortedSamples = [...calibrationSamplesRef.current].sort((a, b) => a - b);
-        // Use median (50th percentile) instead of 90th to avoid inflating noise floor
-        // Phone AGC compresses dynamic range, so we need a tighter baseline
-        const medianIndex = Math.floor(sortedSamples.length * 0.5);
-        noiseFloorDecibelRef.current = sortedSamples[medianIndex] + 2;
+      if (calibrationSamplesRef.current.length >= 90) {
+        // Discard first 30 frames (mic initialization), use remaining 60
+        const stableSamples = calibrationSamplesRef.current.slice(30);
+        const sortedSamples = [...stableSamples].sort((a, b) => a - b);
+        const p75Index = Math.floor(sortedSamples.length * 0.75);
+        const calibrated = sortedSamples[p75Index] + 3;
+        // Minimum noise floor of 40 dB (real rooms are at least this noisy)
+        noiseFloorDecibelRef.current = Math.max(40, calibrated);
         console.log('[AudioClassifier] Calibration complete:', {
-          median: sortedSamples[medianIndex],
-          p90: sortedSamples[Math.floor(sortedSamples.length * 0.9)],
+          p75: sortedSamples[p75Index],
+          calibrated,
           noiseFloor: noiseFloorDecibelRef.current,
           samples: sortedSamples.slice(0, 5).concat(['...'] as any, sortedSamples.slice(-5)),
         });
@@ -304,77 +311,81 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
     let label: AudioLabel = "SILENCE";
     let confidence = 0.5;
 
-    // Debug: log every 30 frames (~1 per second)
+    // Debug counter
     if (!debugCounterRef.current) debugCounterRef.current = 0;
     debugCounterRef.current++;
-    const shouldLog = debugCounterRef.current % 30 === 0;
 
-    if (!isCalibrationCompleteRef.current || decibel <= noiseFloorDb + silenceMargin) {
-      // Below or near noise floor → silence
-      label = "SILENCE";
-      confidence = 0.95;
-    } else if (metronomeActiveRef.current && isNearBeat && decibel < noiseFloorDb + soundMargin) {
-      label = "METRONOME_ONLY";
-      confidence = 0.85;
-    } else if (decibel < noiseFloorDb + soundMargin) {
-      // Slightly above noise floor — check if it looks like quiet speech
-      // Quiet speech still has energy concentrated in voice range
-      if (voiceRatio > 0.45 && pianoHighRatio < 0.30 && spectralCentroid < 2500) {
-        label = "VOICE";
-        confidence = 0.65;
-      } else {
-        label = "NOISE";
-        confidence = 0.6;
-      }
+    const delta = decibel - noiseFloorDb;
+
+    // ===== SUSTAINED-SOUND CLASSIFICATION =====
+    // Only sustained sound counts as piano. Impulse sounds (knocks, coughs) are filtered.
+    // Piano note sustains ~330ms+, knock/cough is ~50-100ms.
+    //
+    // Real data:  Ambient noise: ~45-50dB | Voice: ~50-55dB | Piano: ~55-75dB
+    // Use BOTH relative delta AND absolute dB to be robust against bad calibration
+    const SOUND_DELTA_THRESHOLD = 6;
+    const ABSOLUTE_DB_THRESHOLD = 55; // Piano through phone mic is at least 55 dB
+    const soundThreshold = Math.max(noiseFloorDb + SOUND_DELTA_THRESHOLD, ABSOLUTE_DB_THRESHOLD);
+    const isSoundAboveThreshold = decibel >= soundThreshold;
+
+    // Count consecutive frames above/below threshold
+    if (isSoundAboveThreshold) {
+      consecutiveSoundFramesRef.current++;
+      consecutiveSilenceFramesRef.current = 0;
     } else {
-      // Clearly above noise floor → classify based on spectral features
-      // Voice detection (relaxed):
-      // - Energy concentrated in voice range (300-2500 Hz)
-      // - Limited but not zero high frequency energy (speech has sibilants)
-      // - Spectral centroid typically 300-2500 Hz
-      const isVoiceLike = voiceRatio > 0.45 && pianoHighRatio < 0.30 && spectralCentroid < 2500;
-
-      // Piano detection:
-      // - Significant high frequency content
-      // - Broader spectral spread (higher centroid)
-      // - Requires substantial energy above noise floor
-      const isLoud = decibel > noiseFloorDb + 15;
-      const isPianoLike = isLoud && (
-        (pianoHighRatio > 0.22 && spectralCentroid > 1800) ||
-        (hasSubBass && hasBrightness && totalEnergy > 500) ||
-        (spectralCentroid > 3000 && totalEnergy > 300)
-      );
-
-      if (isVoiceLike && !isPianoLike) {
-        label = "VOICE";
-        confidence = 0.80;
-      } else if (isPianoLike && !isVoiceLike) {
-        label = "PIANO_PLAYING";
-        confidence = 0.85;
-      } else if (isPianoLike && isVoiceLike) {
-        // Ambiguous - use spectral centroid as tiebreaker
-        if (spectralCentroid > 2200 || pianoHighRatio > 0.28) {
-          label = "PIANO_PLAYING";
-          confidence = 0.65;
-        } else {
-          label = "VOICE";
-          confidence = 0.65;
-        }
-      } else {
-        // Neither clearly voice nor piano
-        label = "NOISE";
-        confidence = 0.6;
+      consecutiveSilenceFramesRef.current++;
+      // Reset sound counter after a gap (sound was not sustained)
+      if (consecutiveSilenceFramesRef.current > 5) {
+        consecutiveSoundFramesRef.current = 0;
       }
     }
 
-    if (shouldLog) {
-      console.log('[AudioClassifier]', {
-        label, confidence: confidence.toFixed(2),
-        dB: decibel.toFixed(1), noiseFloor: noiseFloorDb.toFixed(1),
-        delta: (decibel - noiseFloorDb).toFixed(1),
-        voiceRatio: voiceRatio.toFixed(2), pianoHighRatio: pianoHighRatio.toFixed(2),
-        centroid: spectralCentroid.toFixed(0), totalEnergy: totalEnergy.toFixed(0),
-      });
+    if (!isCalibrationCompleteRef.current) {
+      label = "SILENCE";
+      confidence = 0.95;
+    } else if (!isPianoActiveRef.current) {
+      // Not currently counting as piano
+      if (consecutiveSoundFramesRef.current >= SUSTAINED_FRAMES) {
+        // Sustained sound (~330ms+) → piano note detected
+        isPianoActiveRef.current = true;
+        label = "PIANO_PLAYING";
+        confidence = 0.90;
+      } else {
+        // Impulse or quiet → not piano
+        label = "SILENCE";
+        confidence = 0.80;
+      }
+    } else {
+      // Currently counting as piano
+      if (consecutiveSilenceFramesRef.current >= GAP_TOLERANCE_FRAMES) {
+        // 2+ seconds of quiet → stop counting as piano
+        isPianoActiveRef.current = false;
+        consecutiveSoundFramesRef.current = 0;
+        label = "SILENCE";
+        confidence = 0.90;
+      } else {
+        // Still in piano session (playing or short gap between notes)
+        label = "PIANO_PLAYING";
+        confidence = isSoundAboveThreshold ? 0.90 : 0.50;
+      }
+    }
+
+    // Debug: log every 15 frames (~0.5초)
+    const shouldLogDebug = debugCounterRef.current % 15 === 0;
+    if (shouldLogDebug && label !== "SILENCE") {
+      console.log(
+        `%c[Audio] ${label} (${(confidence * 100).toFixed(0)}%)`,
+        label === "PIANO_PLAYING" ? "color: #7C3AED; font-weight: bold" :
+        label === "VOICE" ? "color: #2563EB; font-weight: bold" :
+        "color: #6B7280",
+        {
+          dB: decibel.toFixed(1),
+          threshold: soundThreshold.toFixed(1),
+          above: isSoundAboveThreshold,
+          soundFrames: consecutiveSoundFramesRef.current,
+          pianoActive: isPianoActiveRef.current,
+        }
+      );
     }
 
     // Update piano detection state based on classification
@@ -384,8 +395,6 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
     if (isPianoSound) {
       lastPianoDetectedTimeRef.current = currentTime;
       cumulativePianoMsRef.current += 16; // Approximate frame time
-    } else if (label === "VOICE" && confidence >= MIN_CONFIDENCE) {
-      lastVoiceTimeRef.current = currentTime;
     }
 
     const timeSinceLastPiano = currentTime - lastPianoDetectedTimeRef.current;
@@ -402,8 +411,7 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
       // 1. No piano for too long
       // 2. Voice detected for too long
       const shouldTurnOff =
-        (!isPianoSound && timeSinceLastPiano >= PIANO_OFF_DELAY_MS) ||
-        (label === "VOICE" && currentTime - lastPianoDetectedTimeRef.current > VOICE_STOP_THRESHOLD_MS);
+        !isPianoSound && timeSinceLastPiano >= PIANO_OFF_DELAY_MS;
 
       if (shouldTurnOff) {
         isActuallyPlayingRef.current = false;
@@ -499,6 +507,9 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
       lastSoundTimeRef.current = 0;
       cumulativePianoMsRef.current = 0;
       lastVoiceTimeRef.current = 0;
+      consecutiveSoundFramesRef.current = 0;
+      consecutiveSilenceFramesRef.current = 0;
+      isPianoActiveRef.current = false;
 
       // Reset calibration
       noiseFloorRef.current = 0;
@@ -579,6 +590,9 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
       lastSilenceDetectedTimeRef.current = Date.now();
       lastPianoDetectedTimeRef.current = 0;
       cumulativePianoMsRef.current = 0;
+      consecutiveSoundFramesRef.current = 0;
+      consecutiveSilenceFramesRef.current = 0;
+      isPianoActiveRef.current = false;
 
       setState((prev) => {
         const resumeTime = Date.now();

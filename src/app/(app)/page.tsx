@@ -1,16 +1,14 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Play, ChevronRight, ChevronLeft, Search, Users, GraduationCap, Music, Clock, Calendar, Mic, Check, Bell, BookOpen } from "lucide-react";
+import { Play, Search, Users, GraduationCap, Check, Bell, BookOpen } from "lucide-react";
 import { BentoGrid, BentoCard } from "@/components/ui/bento-grid";
 import { StatsCard, DailyGoal } from "@/components/app";
-import { TodayDrillList } from "@/components/practice";
-import { mockUser, mockStats, getGreeting, mockDrillCards } from "@/data";
-import { getTodayPracticeTime, getPracticeStats, seedMockSessions, type PracticeSession } from "@/lib/db";
+import { mockUser, mockStats, getGreeting } from "@/data";
+import { getTodayPracticeTime, getPracticeStats, seedMockSessions } from "@/lib/db";
 import { syncPracticeSessions } from "@/lib/sync-practice";
 import { usePracticeSessions } from "@/hooks/usePracticeSessions";
-import { formatTime } from "@/lib/format";
 import { useTeacherMode } from "@/hooks/useTeacherMode";
 import { getUnreadCount } from "@/lib/notification-store";
 import { TeacherDashboard } from "@/components/teacher";
@@ -87,7 +85,7 @@ export default function HomePage() {
   });
 
   // 공유 훅으로 세션 데이터 로드 (연습 페이지와 동일 데이터 소스)
-  const { sessions: allSessions, sessionsByDate, isLoading: sessionsLoading, reload: reloadSessions } = usePracticeSessions();
+  const { sessions: allSessions, isLoading: sessionsLoading } = usePracticeSessions();
 
   const [todayMinutes, setTodayMinutes] = useState(0);
   const [dailyGoal, setDailyGoal] = useState(60);
@@ -96,9 +94,6 @@ export default function HomePage() {
   const [streakDays, setStreakDays] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [notifCount, setNotifCount] = useState(0);
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth());
-  const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
 
   useEffect(() => {
     setNotifCount(getUnreadCount());
@@ -164,42 +159,6 @@ export default function HomePage() {
     }
     return streak;
   }
-
-  const selectedDateSessions = useMemo(() => {
-    const key = `${selectedDate.getFullYear()}-${selectedDate.getMonth()}-${selectedDate.getDate()}`;
-    return (sessionsByDate[key] || []).sort(
-      (a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
-    );
-  }, [selectedDate, sessionsByDate]);
-
-  const practiceDaysInMonth = useMemo(() => {
-    const days = new Set<number>();
-    allSessions.forEach(s => {
-      const d = new Date(s.startTime);
-      if (d.getFullYear() === calendarYear && d.getMonth() === calendarMonth) {
-        days.add(d.getDate());
-      }
-    });
-    return days.size;
-  }, [allSessions, calendarMonth, calendarYear]);
-
-  const daysInMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate();
-  const firstDayOfMonth = new Date(calendarYear, calendarMonth, 1).getDay();
-  const today = new Date();
-
-  const navigateMonth = (direction: number) => {
-    let newMonth = calendarMonth + direction;
-    let newYear = calendarYear;
-    if (newMonth < 0) { newMonth = 11; newYear--; }
-    if (newMonth > 11) { newMonth = 0; newYear++; }
-    setCalendarMonth(newMonth);
-    setCalendarYear(newYear);
-  };
-
-  const dayNames = ["일", "월", "화", "수", "목", "금", "토"];
-  const weekdayNames = ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"];
-  const calIsSelectedToday = selectedDate.getFullYear() === today.getFullYear() && selectedDate.getMonth() === today.getMonth() && selectedDate.getDate() === today.getDate();
-  const totalDrillCount = mockDrillCards.length;
 
   // 선생님 모드일 때 대시보드 렌더링
   if (isTeacher && teacherMode) {
@@ -325,9 +284,9 @@ export default function HomePage() {
         />
         <BentoCard
           Icon={BookOpen}
-          name="연습 캘린더"
+          name="연습 기록"
           description="나의 연습 기록을 한눈에"
-          href="#calendar"
+          href="/practice#practice-records"
           cta="기록 보기"
           className="col-span-3 min-h-[130px]"
           background={
@@ -374,156 +333,7 @@ export default function HomePage() {
         />
       </BentoGrid>
 
-      {/* Practice Records - Calendar + List */}
-      <div className="mb-8">
-        <span className="inline-block font-bold text-sm text-violet-700 bg-violet-100 px-3.5 py-1 rounded-full mb-3">연습 기록</span>
 
-        {/* Calendar */}
-        <div className="bg-white/40 backdrop-blur-xl rounded-3xl border border-white/50 p-4 shadow-sm">
-          {/* Calendar Header */}
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-gray-900">
-                {calendarYear}년 {calendarMonth + 1}월
-              </span>
-              {practiceDaysInMonth > 0 && (
-                <span className="flex items-center gap-1 text-sm text-violet-600 font-medium">
-                  <Check className="w-3.5 h-3.5" />
-                  {practiceDaysInMonth}
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => navigateMonth(-1)}
-                className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <ChevronLeft className="w-4 h-4 text-gray-500" />
-              </button>
-              <button
-                onClick={() => navigateMonth(1)}
-                className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <ChevronRight className="w-4 h-4 text-gray-500" />
-              </button>
-            </div>
-          </div>
-
-          {/* Day Headers */}
-          <div className="grid grid-cols-7 gap-1 mb-1">
-            {dayNames.map((day, i) => (
-              <div
-                key={day}
-                className={`text-center text-xs font-medium py-1 ${
-                  i === 0 ? "text-red-400" : i === 6 ? "text-blue-400" : "text-gray-400"
-                }`}
-              >
-                {day}
-              </div>
-            ))}
-          </div>
-
-          {/* Calendar Grid */}
-          <div className="grid grid-cols-7 gap-1">
-            {Array(firstDayOfMonth).fill(null).map((_, i) => (
-              <div key={`empty-${i}`} className="flex flex-col items-center py-0.5">
-                <div className="w-8 h-8" />
-                <span className="text-[10px] h-4" />
-              </div>
-            ))}
-
-            {Array(daysInMonth).fill(null).map((_, i) => {
-              const day = i + 1;
-              const key = `${calendarYear}-${calendarMonth}-${day}`;
-              const count = sessionsByDate[key]?.length || 0;
-              const isToday = day === today.getDate() && calendarMonth === today.getMonth() && calendarYear === today.getFullYear();
-              const isSelected = day === selectedDate.getDate() && calendarMonth === selectedDate.getMonth() && calendarYear === selectedDate.getFullYear();
-              const dayOfWeek = (firstDayOfMonth + i) % 7;
-
-              return (
-                <button
-                  key={day}
-                  onClick={() => setSelectedDate(new Date(calendarYear, calendarMonth, day))}
-                  className="flex flex-col items-center py-0.5"
-                >
-                  <div
-                    className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-colors ${
-                      isToday
-                        ? "bg-violet-700 text-white"
-                        : count > 0
-                        ? "bg-violet-200 text-violet-700"
-                        : "bg-violet-100"
-                    } ${isSelected && !isToday ? "ring-2 ring-violet-400" : ""}`}
-                  >
-                    {count > 0 ? count : ""}
-                  </div>
-                  <span className={`text-[10px] mt-0.5 ${
-                    dayOfWeek === 0 ? "text-red-400" : dayOfWeek === 6 ? "text-blue-400" : "text-gray-500"
-                  }`}>
-                    {day}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* 선택된 날짜 상세 - 캘린더 안에 포함 */}
-          <div className="mt-8 pt-5 border-t border-white/40">
-            <h4 className="text-base font-bold text-gray-900">{selectedDate.getMonth() + 1}월 {selectedDate.getDate()}일 {weekdayNames[selectedDate.getDay()]}</h4>
-            {calIsSelectedToday ? (
-              <p className="text-sm text-gray-500 mt-0.5">{totalDrillCount}개 연습 · {selectedDateSessions.length}개 녹음</p>
-            ) : selectedDateSessions.length > 0 ? (
-              <p className="text-sm text-gray-500 mt-0.5">{selectedDateSessions.length}개 녹음</p>
-            ) : (
-              <p className="text-sm text-gray-400 mt-0.5">연습 기록이 없습니다</p>
-            )}
-
-            {/* 드릴 완료 기록 */}
-            <div className="mt-3">
-              <TodayDrillList showPlayButton={false} date={selectedDate} completedOnly onSessionSaved={reloadSessions} />
-            </div>
-
-            {/* 연습 세션 */}
-            {selectedDateSessions.length > 0 && (
-              <p className="text-xs text-gray-500 font-medium mt-3 mb-2">연습 세션</p>
-            )}
-            {selectedDateSessions.length === 0 && !calIsSelectedToday ? (
-              <div className="text-center py-6 bg-white/30 backdrop-blur-sm rounded-2xl mt-3 border border-white/40">
-                <div className="w-10 h-10 bg-white/40 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <Mic className="w-5 h-5 text-violet-300" />
-                </div>
-                <p className="text-sm text-gray-500">이 날은 연습 기록이 없습니다</p>
-              </div>
-            ) : (
-              <div className="space-y-2 mt-2">
-                {selectedDateSessions.map((session) => {
-                  const d = new Date(session.startTime);
-                  const h = d.getHours();
-                  const ampm = h < 12 ? "오전" : "오후";
-                  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-                  const timeStr = `${ampm} ${h12.toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
-                  return (
-                    <Link key={session.id} href={`/recordings/${session.id}`} className="flex items-center gap-3 bg-white/30 backdrop-blur-sm rounded-2xl p-3 hover:bg-white/50 transition-all active:scale-[0.99] border border-white/40">
-                      <div className="w-9 h-9 bg-violet-100/60 backdrop-blur-sm rounded-xl flex items-center justify-center shrink-0">
-                        <Music className="w-4 h-4 text-violet-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-sm font-semibold text-gray-900 truncate">{session.pieceName}</h4>
-                        {session.todoNote && <p className="text-xs text-gray-500 truncate mt-0.5">{session.todoNote}</p>}
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="flex items-center gap-1 text-xs text-gray-500"><Clock className="w-3 h-3" />{formatTime(session.practiceTime)}</span>
-                          {session.audioBlob && <span className="text-xs text-green-600 font-medium">녹음</span>}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1 text-xs text-gray-400 shrink-0"><Calendar className="w-3 h-3" />{timeStr}</div>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
 
     </div>
   );

@@ -24,6 +24,7 @@ interface BentoCardProps {
   cta: string;
   className?: string;
   background?: ReactNode;
+  subLink?: { label: string; href: string };
 }
 
 export function BentoCard({
@@ -34,6 +35,7 @@ export function BentoCard({
   cta,
   className,
   background,
+  subLink,
 }: BentoCardProps) {
   return (
     <Link
@@ -56,9 +58,23 @@ export function BentoCard({
         <p className="text-[11px] text-gray-500 mt-0.5 leading-snug line-clamp-2">
           {description}
         </p>
-        <div className="flex items-center gap-1 mt-2 text-xs font-semibold text-violet-600">
-          {cta}
-          <ArrowRight className="w-3.5 h-3.5" />
+        <div className="flex items-center gap-1 mt-2">
+          <span className="flex items-center gap-1 text-xs font-semibold text-violet-600">
+            {cta}
+            <ArrowRight className="w-3.5 h-3.5" />
+          </span>
+          {subLink && (
+            <span
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                window.location.href = subLink.href;
+              }}
+              className="ml-auto text-[11px] font-medium text-gray-400 hover:text-violet-500 transition-colors"
+            >
+              {subLink.label} →
+            </span>
+          )}
         </div>
       </div>
     </Link>

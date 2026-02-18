@@ -1,84 +1,31 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Loader2, Music, Target, Play, Pause, SkipForward, Lightbulb, TrendingUp, Volume2, PieChart } from "lucide-react";
+import { Loader2, Music, Target, Play, Pause, SkipForward, Lightbulb, TrendingUp, Volume2, Activity } from "lucide-react";
 import type { AnalysisResult, PracticeSegment } from "@/app/api/analyze-practice/route";
 
-// SVG 파이 차트 컴포넌트
-function PieChartVisual({ summary }: { summary: AnalysisResult["summary"] }) {
-  const data = [
-    { label: "연주", value: summary.instrumentPercent, color: "#8b5cf6" }, // violet-500
-    { label: "대화", value: summary.voicePercent, color: "#60a5fa" }, // blue-400
-    { label: "무음", value: summary.silencePercent, color: "#d1d5db" }, // gray-300
-    { label: "잡음", value: summary.noisePercent, color: "#fbbf24" }, // yellow-400
-  ];
-
-  // 메트로놈 퍼센트가 있으면 추가
-  if (summary.metronomePercent && summary.metronomePercent > 0) {
-    data.push({ label: "메트로놈", value: summary.metronomePercent, color: "#f472b6" }); // pink-400
-  }
-
-  // 0보다 큰 값만 필터링
-  const filteredData = data.filter(d => d.value > 0);
-  const total = filteredData.reduce((sum, d) => sum + d.value, 0);
-
-  // 차트 계산
-  let currentAngle = -90; // 12시 방향부터 시작
-  const radius = 40;
-  const centerX = 50;
-  const centerY = 50;
-
-  const paths = filteredData.map((item, index) => {
-    const angle = (item.value / total) * 360;
-    const startAngle = currentAngle;
-    const endAngle = currentAngle + angle;
-    currentAngle = endAngle;
-
-    const startRad = (startAngle * Math.PI) / 180;
-    const endRad = (endAngle * Math.PI) / 180;
-
-    const x1 = centerX + radius * Math.cos(startRad);
-    const y1 = centerY + radius * Math.sin(startRad);
-    const x2 = centerX + radius * Math.cos(endRad);
-    const y2 = centerY + radius * Math.sin(endRad);
-
-    const largeArcFlag = angle > 180 ? 1 : 0;
-
-    const pathD = `M ${centerX} ${centerY} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2} Z`;
-
-    return (
-      <path
-        key={index}
-        d={pathD}
-        fill={item.color}
-        className="transition-all duration-300"
-      />
-    );
-  });
+// 순 연습시간 게이지 컴포넌트
+function PracticeGauge({ percent }: { percent: number }) {
+  const clampedPercent = Math.min(100, Math.max(0, percent));
+  // 색상: 80%+ 초록, 60%+ 보라, 그 이하 주황
+  const gaugeColor =
+    clampedPercent >= 80
+      ? "from-green-400 to-emerald-500"
+      : clampedPercent >= 60
+      ? "from-violet-500 to-purple-600"
+      : "from-amber-400 to-orange-500";
 
   return (
-    <div className="flex items-center justify-center gap-6">
-      <svg viewBox="0 0 100 100" className="w-28 h-28">
-        {paths.length > 0 ? paths : (
-          <circle cx="50" cy="50" r="40" fill="#e5e7eb" />
-        )}
-        {/* 중앙 원 (도넛 형태) */}
-        <circle cx="50" cy="50" r="20" fill="white" />
-        <text x="50" y="48" textAnchor="middle" className="text-[8px] font-bold fill-gray-900">
-          {summary.instrumentPercent}%
-        </text>
-        <text x="50" y="58" textAnchor="middle" className="text-[5px] fill-gray-500">
-          연주
-        </text>
-      </svg>
-      <div className="space-y-1.5">
-        {data.filter(d => d.value > 0).map((item, idx) => (
-          <div key={idx} className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-            <span className="text-xs text-gray-600">{item.label}</span>
-            <span className="text-xs font-semibold text-gray-900 ml-auto">{item.value}%</span>
-          </div>
-        ))}
+    <div className="text-center">
+      <p className="text-3xl font-bold text-gray-900 mb-1">
+        {clampedPercent}%
+      </p>
+      <p className="text-xs text-gray-500 mb-3">순 연습시간</p>
+      <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
+        <div
+          className={`h-full bg-gradient-to-r ${gaugeColor} rounded-full transition-all duration-700 ease-out`}
+          style={{ width: `${clampedPercent}%` }}
+        />
       </div>
     </div>
   );
@@ -114,14 +61,12 @@ function generateCoachingFeedback(result: AnalysisResult): string[] {
     feedbacks.push("연습보다 휴식이 더 많았어요. 타이머를 설정해 집중 시간을 늘려보세요.");
   }
 
-  // 대화 시간 피드백
-  if (summary.voicePercent > 30) {
-    feedbacks.push("대화 시간이 많았습니다. 혼자 연습하거나 레슨 후 복습 시간을 가져보세요.");
-  }
-
-  // 환경음 피드백
-  if (summary.noisePercent > 20) {
-    feedbacks.push("주변 소음이 감지되었습니다. 더 조용한 환경에서 연습하면 집중력이 높아져요.");
+  // 휴식 시간 피드백
+  const restPercent = 100 - summary.instrumentPercent;
+  if (restPercent > 50) {
+    feedbacks.push("휴식이 많았습니다. 짧은 구간을 정해 집중 연습해보세요.");
+  } else if (restPercent > 30) {
+    feedbacks.push("적절한 휴식과 연주를 반복했네요. 좋은 연습 패턴입니다.");
   }
 
   // 연습 시간에 따른 피드백
@@ -256,7 +201,7 @@ export function PracticeAnalysisModal({
             </div>
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-              잡담 / 무음 구간 분리 중
+              휴식 구간 분리 중
             </div>
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse" />
@@ -275,16 +220,9 @@ export function PracticeAnalysisModal({
   const goalProgress = Math.min((netPracticeTime / 60 / dailyGoal) * 100, 100);
   const coachingFeedbacks = generateCoachingFeedback(analysisResult);
 
-  // 타임라인 세그먼트 색상
+  // 타임라인 세그먼트 색상 (연주 vs 휴식)
   const getSegmentColor = (type: string) => {
-    switch (type) {
-      case "instrument": return "bg-violet-500";
-      case "voice": return "bg-blue-400";
-      case "silence": return "bg-gray-300";
-      case "noise": return "bg-yellow-400";
-      case "metronome": return "bg-pink-400";
-      default: return "bg-gray-200";
-    }
+    return type === "instrument" ? "bg-violet-500" : "bg-gray-300";
   };
 
   return (
@@ -340,13 +278,13 @@ export function PracticeAnalysisModal({
             </p>
           </div>
 
-          {/* AI 분석 차트 */}
+          {/* 순 연습시간 게이지 */}
           <div className="bg-gray-50 rounded-xl p-4">
             <div className="flex items-center gap-2 mb-4">
-              <PieChart className="w-4 h-4 text-violet-500" />
+              <Activity className="w-4 h-4 text-violet-500" />
               <span className="text-sm font-medium text-gray-700">AI 분석 결과</span>
             </div>
-            <PieChartVisual summary={summary} />
+            <PracticeGauge percent={summary.instrumentPercent} />
           </div>
 
           {/* 타임라인 시각화 */}
@@ -376,23 +314,11 @@ export function PracticeAnalysisModal({
                   );
                 })
               ) : (
-                // 세그먼트가 없을 때 summary 기반으로 표시
+                // 세그먼트가 없을 때 summary 기반으로 표시 (연주/휴식)
                 <>
                   <div
                     className="absolute top-0 h-full bg-violet-500"
                     style={{ left: 0, width: `${summary.instrumentPercent}%` }}
-                  />
-                  <div
-                    className="absolute top-0 h-full bg-blue-400"
-                    style={{ left: `${summary.instrumentPercent}%`, width: `${summary.voicePercent}%` }}
-                  />
-                  <div
-                    className="absolute top-0 h-full bg-gray-300"
-                    style={{ left: `${summary.instrumentPercent + summary.voicePercent}%`, width: `${summary.silencePercent}%` }}
-                  />
-                  <div
-                    className="absolute top-0 h-full bg-yellow-400"
-                    style={{ left: `${summary.instrumentPercent + summary.voicePercent + summary.silencePercent}%`, width: `${summary.noisePercent}%` }}
                   />
                 </>
               )}
@@ -413,19 +339,9 @@ export function PracticeAnalysisModal({
                 <span className="text-gray-600">연주 {summary.instrumentPercent}%</span>
               </div>
               <div className="flex items-center gap-1">
-                <div className="w-2 h-2 rounded-full bg-blue-400" />
-                <span className="text-gray-600">대화 {summary.voicePercent}%</span>
-              </div>
-              <div className="flex items-center gap-1">
                 <div className="w-2 h-2 rounded-full bg-gray-300" />
-                <span className="text-gray-600">무음 {summary.silencePercent}%</span>
+                <span className="text-gray-600">휴식 {100 - summary.instrumentPercent}%</span>
               </div>
-              {summary.metronomePercent && summary.metronomePercent > 0 && (
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 rounded-full bg-pink-400" />
-                  <span className="text-gray-600">메트로놈 {summary.metronomePercent}%</span>
-                </div>
-              )}
             </div>
           </div>
 
