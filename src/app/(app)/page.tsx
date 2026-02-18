@@ -170,10 +170,9 @@ export default function HomePage() {
       <div className="bg-blob-extra" />
       {/* Header */}
       <div className="flex items-center justify-between mb-8 pt-2">
-        <div className="flex items-center gap-3">
-          <img src="/sempre-logo.png" alt="Sempre" className="w-9 h-9 object-contain shrink-0" />
+        <div>
           <div>
-            <h1 className="text-xl font-bold text-gray-900 leading-tight">
+            <h1 className="text-[22px] font-bold text-gray-900 leading-tight">
               {greeting} <span className="bg-gradient-to-r from-violet-700 to-violet-400 bg-clip-text text-transparent">{userName}</span>님 {(() => {
                 const h = new Date().getHours();
                 if (h < 7) return "🌙";
@@ -242,7 +241,7 @@ export default function HomePage() {
           description="악보 기호와 용어 뜻 알아보기"
           href="/music-terms"
           cta="검색하기"
-          className="col-span-2 min-h-[130px]"
+          className="col-span-2 min-h-[110px]"
           background={
             <div className="absolute top-3 right-2 opacity-30 select-none pointer-events-none">
               <div className="bg-violet-200 rounded-lg px-2.5 py-1.5">
@@ -258,7 +257,7 @@ export default function HomePage() {
           description="전문가의 시선으로 막힌 구간의 해법을 제시합니다"
           href="/teachers"
           cta="선생님 찾기"
-          className="col-span-3 min-h-[130px]"
+          className="col-span-3 min-h-[110px]"
           background={
             <div className="absolute inset-0 select-none">
               {/* 악보 오선지 배경 */}
@@ -288,7 +287,7 @@ export default function HomePage() {
           description="나의 연습 기록을 한눈에"
           href="/practice#practice-records"
           cta="기록 보기"
-          className="col-span-3 min-h-[130px]"
+          className="col-span-3 min-h-[110px]"
           background={
             <div className="absolute top-2 right-2 opacity-20 group-hover:opacity-30 transition-opacity select-none pointer-events-none">
               <div className="bg-white/60 rounded-lg p-2 shadow-sm border border-white/40">
@@ -322,7 +321,7 @@ export default function HomePage() {
           description="다른 학생들의 연습을 참고하세요"
           href="/rooms"
           cta="입장하기"
-          className="col-span-2 min-h-[130px]"
+          className="col-span-2 min-h-[110px]"
           background={
             <div className="absolute top-3 right-3 opacity-15 group-hover:opacity-25 transition-opacity select-none pointer-events-none">
               <div className="w-12 h-12 rounded-xl bg-violet-200 flex items-center justify-center">

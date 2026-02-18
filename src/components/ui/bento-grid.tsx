@@ -2,7 +2,6 @@
 
 import { ReactNode } from "react";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface BentoGridProps {
@@ -50,7 +49,7 @@ export function BentoCard({
       <div className="absolute inset-0 pointer-events-none">{background}</div>
 
       {/* Content - pinned to bottom */}
-      <div className="relative z-10 px-4 pt-3 pb-3 mt-auto">
+      <div className="relative z-10 px-4 pt-3 pb-2.5 mt-auto">
         <Icon className="w-5 h-5 text-violet-600 mb-1.5" />
         <h3 className="text-sm font-bold text-gray-900 leading-tight">
           {name}
@@ -58,24 +57,6 @@ export function BentoCard({
         <p className="text-[11px] text-gray-500 mt-0.5 leading-snug line-clamp-2">
           {description}
         </p>
-        <div className="flex items-center gap-1 mt-2">
-          <span className="flex items-center gap-1 text-xs font-semibold text-violet-600">
-            {cta}
-            <ArrowRight className="w-3.5 h-3.5" />
-          </span>
-          {subLink && (
-            <span
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                window.location.href = subLink.href;
-              }}
-              className="ml-auto text-[11px] font-medium text-gray-400 hover:text-violet-500 transition-colors"
-            >
-              {subLink.label} →
-            </span>
-          )}
-        </div>
       </div>
     </Link>
   );
