@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Circle, CheckCircle2, Plus, Repeat, Play, Trash2, X } from "lucide-react";
-import { mockDrillCards, groupDrillsBySong, type GroupedDrills } from "@/data";
+import { CheckCircle2, Plus, Repeat, Play, Trash2 } from "lucide-react";
+import { mockDrillCards, groupDrillsBySong } from "@/data";
 import { savePracticeSession, getAllSessions, deleteSession } from "@/lib/db";
 import type { DrillCard } from "@/types";
 
@@ -107,8 +107,8 @@ function SwipeableDrillItem({
 
   return (
     <div className="relative overflow-hidden">
-      {/* 삭제 버튼 (뒤에 숨겨져 있다가 스와이프하면 보임) */}
-      {isCustom && isToday && (
+      {/* 삭제 버튼 (스와이프 중일 때만 렌더링) */}
+      {isCustom && isToday && offsetX < 0 && (
         <div className="absolute inset-y-0 right-0 flex items-center">
           <button
             onClick={handleDelete}
@@ -119,7 +119,7 @@ function SwipeableDrillItem({
         </div>
       )}
 
-      {/* 드릴 아이템 */}
+      {/* 드릴 아이템: [체크박스] [내용] [미니재생] */}
       <div
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -129,44 +129,11 @@ function SwipeableDrillItem({
           transform: `translateX(${offsetX}px)`,
           transition: isSwiping ? "none" : "transform 0.2s ease-out",
         }}
-        className={`px-4 py-2.5 flex items-center gap-3 relative ${
-          isCompleted ? "bg-gray-50" : "bg-white"
-        } ${isSelected ? "bg-violet-50" : ""} ${
-          isToday && !isCompleted ? "cursor-pointer hover:bg-gray-50" : ""
-        }`}
+        className={`px-4 py-2.5 flex items-center gap-2.5 relative ${
+          isSelected ? "bg-violet-50/30" : ""
+        } ${isToday && !isCompleted ? "cursor-pointer" : ""}`}
       >
-        {/* 플레이 버튼 - 왼쪽 (오늘만) */}
-        {isToday && showPlayButton && !isCompleted && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onStartPractice(drill);
-            }}
-            className="shrink-0 w-6 h-6 bg-gradient-to-r from-violet-600 to-primary rounded-full flex items-center justify-center hover:opacity-90 transition-opacity shadow-sm"
-          >
-            <Play className="w-3 h-3 text-white fill-white ml-0.5" />
-          </button>
-        )}
-        <div className={`flex-1 min-w-0 ${isCompleted ? "opacity-50" : ""}`}>
-          <span className={`text-sm ${isCompleted ? "line-through text-gray-400" : "text-gray-700"}`}>
-            {drill.measures} · {drill.title}
-            {drill.tempo > 0 && ` 템포 ${drill.tempo}`}
-            {drill.recurrence > 0 && ` ${drill.recurrence}회`}
-          </span>
-        </div>
-        {/* 삭제 버튼 */}
-        {isToday && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(drill.id);
-            }}
-            className="shrink-0 p-1 rounded-full hover:bg-red-50 text-gray-300 hover:text-red-400 transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        )}
-        {/* 체크 버튼 - 오른쪽 */}
+        {/* 체크박스 - 왼쪽 */}
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -176,11 +143,42 @@ function SwipeableDrillItem({
           disabled={!isToday}
         >
           {isCompleted ? (
-            <CheckCircle2 className="w-5 h-5 text-green-500" />
+            <div className="w-[18px] h-[18px] rounded-md bg-violet-500 flex items-center justify-center">
+              <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+            </div>
           ) : (
-            <Circle className={`w-5 h-5 ${isToday ? "text-gray-300 hover:text-violet-500" : "text-gray-200"} transition-colors`} />
+            <div className={`w-[18px] h-[18px] rounded-md border-[1.5px] ${
+              isToday ? "border-gray-300 hover:border-violet-400" : "border-gray-200"
+            } transition-colors`} />
           )}
         </button>
+
+        {/* 내용 */}
+        <div className={`flex-1 min-w-0 ${isCompleted ? "opacity-50" : ""}`}>
+          <p className={`text-[12px] leading-tight truncate ${isCompleted ? "line-through text-gray-400" : "text-gray-700"}`}>
+            {drill.measures} · {drill.title}
+          </p>
+          {(drill.tempo > 0 || drill.recurrence > 0) && (
+            <p className="text-[11px] text-gray-400 mt-0.5">
+              {drill.tempo > 0 && `템포 ${drill.tempo}`}
+              {drill.tempo > 0 && drill.recurrence > 0 && " · "}
+              {drill.recurrence > 0 && `${drill.recurrence}회`}
+            </p>
+          )}
+        </div>
+
+        {/* 미니 재생 버튼 - 우측 (오늘만, 미완료만) */}
+        {isToday && showPlayButton && !isCompleted && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onStartPractice(drill);
+            }}
+            className="shrink-0 w-6 h-6 rounded-full bg-violet-100/50 flex items-center justify-center hover:bg-violet-200/60 transition-colors"
+          >
+            <Play className="w-3 h-3 text-violet-500 fill-violet-500 ml-0.5" />
+          </button>
+        )}
       </div>
     </div>
   );
@@ -309,7 +307,6 @@ export function TodayDrillList({ onDrillSelect, selectedDrillId, showPlayButton 
           label: "드릴 완료",
           todoNote: `${drill.measures} · ${drill.title}`,
         });
-        onSessionSaved?.();
       } catch (err) {
         console.error("Failed to save drill session:", err);
       }
@@ -333,13 +330,13 @@ export function TodayDrillList({ onDrillSelect, selectedDrillId, showPlayButton 
             await deleteSession(session.id);
           }
         }
-        if (matchingSessions.length > 0) {
-          onSessionSaved?.();
-        }
       } catch (err) {
         console.error("Failed to delete drill session:", err);
       }
     }
+
+    // 항상 부모에게 데이터 갱신 알림 (IndexedDB 성공/실패 무관)
+    onSessionSaved?.();
   };
 
   // 커스텀 드릴 ID 목록
@@ -362,7 +359,7 @@ export function TodayDrillList({ onDrillSelect, selectedDrillId, showPlayButton 
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className="font-bold text-sm text-violet-700 bg-violet-100 px-3.5 py-1 rounded-full">
-            {completedOnly ? "완료한 연습" : isToday ? "오늘의 연습" : "연습 드릴"}
+            {completedOnly ? "완료한 연습" : isToday ? "오늘의 To do list" : "연습 드릴"}
           </span>
           <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
             {completedCount}/{totalCount}
@@ -387,46 +384,62 @@ export function TodayDrillList({ onDrillSelect, selectedDrillId, showPlayButton 
         )}
       </div>
 
-      {/* 곡별 그룹 리스트 */}
-      <div className="space-y-3">
-        {groupedDrills.map((group) => {
+      {/* 단일 글래스카드 플랫 리스트 */}
+      <div
+        className="rounded-2xl overflow-hidden"
+        style={{
+          background: "rgba(255,255,255,0.55)",
+          backdropFilter: "blur(16px)",
+          WebkitBackdropFilter: "blur(16px)",
+          border: "1px solid rgba(255,255,255,0.6)",
+          boxShadow: "0 8px 32px rgba(124,58,237,0.08)",
+        }}
+      >
+        {groupedDrills.map((group, groupIdx) => {
           // completedOnly 또는 과거 날짜: 완료된 드릴만 표시
           const visibleDrills = (completedOnly || !isToday)
             ? group.drills.filter(d => completedDrills.has(d.id))
             : group.drills;
           if (visibleDrills.length === 0) return null;
 
+          const groupCompletedCount = visibleDrills.filter(d => completedDrills.has(d.id)).length;
+          const isLast = groupIdx === groupedDrills.length - 1;
+
           return (
-            <div key={group.song} className="border border-gray-200 rounded-xl overflow-hidden">
-              {/* Song Header */}
-              <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
-                <p className="text-sm font-semibold text-black">{group.song}</p>
+            <div
+              key={group.song}
+              style={!isLast ? { borderBottom: "1px solid rgba(124,58,237,0.06)" } : undefined}
+            >
+              {/* 곡 헤더 */}
+              <div className="px-4 py-2 flex items-center justify-between" style={{ background: "rgba(0,0,0,0.015)" }}>
+                <p className="font-semibold text-[13px] text-gray-800">{group.song}</p>
+                <span className="text-[11px] text-gray-300">
+                  {groupCompletedCount}/{visibleDrills.length}
+                </span>
               </div>
 
-              {/* Drills under this song */}
-              <div className="divide-y divide-gray-100">
-                {visibleDrills.map((drill) => {
-                  const isCompleted = completedDrills.has(drill.id);
-                  const isSelected = selectedDrillId === drill.id;
-                  const isCustom = customDrillIds.has(drill.id);
+              {/* 곡 내 드릴 리스트 */}
+              {visibleDrills.map((drill) => {
+                const isCompleted = completedDrills.has(drill.id);
+                const isSelected = selectedDrillId === drill.id;
+                const isCustom = customDrillIds.has(drill.id);
 
-                  return (
-                    <SwipeableDrillItem
-                      key={drill.id}
-                      drill={drill}
-                      isCompleted={isCompleted}
-                      isSelected={isSelected}
-                      isToday={isToday}
-                      showPlayButton={showPlayButton}
-                      onDrillSelect={onDrillSelect}
-                      onStartPractice={handleStartPractice}
-                      onToggle={handleToggle}
-                      onDelete={handleDeleteDrill}
-                      isCustom={isCustom}
-                    />
-                  );
-                })}
-              </div>
+                return (
+                  <SwipeableDrillItem
+                    key={drill.id}
+                    drill={drill}
+                    isCompleted={isCompleted}
+                    isSelected={isSelected}
+                    isToday={isToday}
+                    showPlayButton={showPlayButton}
+                    onDrillSelect={onDrillSelect}
+                    onStartPractice={handleStartPractice}
+                    onToggle={handleToggle}
+                    onDelete={handleDeleteDrill}
+                    isCustom={isCustom}
+                  />
+                );
+              })}
             </div>
           );
         })}

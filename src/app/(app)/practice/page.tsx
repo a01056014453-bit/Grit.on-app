@@ -4,11 +4,21 @@ import { Suspense, useState, useEffect, useCallback, useRef, useMemo } from "rea
 import { useRouter, useSearchParams } from "next/navigation";
 import type { DrillCard } from "@/types";
 import { useAudioRecorder, usePracticeSessions } from "@/hooks";
-import { savePracticeSession, type PracticeSession } from "@/lib/db";
+import { savePracticeSession, getAllSessions, deleteSession, type PracticeSession } from "@/lib/db";
 import { syncPracticeSessions } from "@/lib/sync-practice";
 import { completePracticeTodo } from "@/lib/practice-todo-store";
 import { formatTime } from "@/lib/format";
 import { mockSongs as initialSongs, mockDrillCards, hasAIAnalysis, groupDrillsBySong, composerList } from "@/data";
+import {
+  buildPiecesForDate,
+  buildSessionsForDate,
+  buildCalendarData,
+  buildScheduledDays,
+  formatDateStr as drillFormatDateStr,
+  saveScheduledDrillIds,
+  loadCompletedDrills,
+  getAllAvailableDrills,
+} from "@/lib/drill-records";
 import type { PracticeType, Song, PracticeTodo } from "@/types";
 import Link from "next/link";
 import { Music2, ChevronRight, ChevronLeft, Plus, Check, X, Clock, RotateCcw, Repeat, ArrowRight, Trash2, Calendar, Mic, CheckCircle2, Circle, ChevronDown, ChevronUp, Music } from "lucide-react";
@@ -18,6 +28,7 @@ import {
   AddSongModal,
   PracticeAnalysisModal,
   TodayDrillList,
+  ScheduleModal,
 } from "@/components/practice";
 import { AlertCircle, MonitorOff } from "lucide-react";
 import { type MetronomeState } from "@/components/practice/metronome-control";
@@ -59,87 +70,6 @@ interface DailyCompletion {
   completedDrillIds: string[];
 }
 
-// ─── Records Mock Data (연습 기록 페이지와 동일) ─────────────────────────────
-interface RecTask {
-  id: number;
-  text: string;
-  tempo: number | null;
-  reps: number;
-  time: string | null;
-  done: boolean;
-  hasRecording?: boolean;
-}
-interface RecPiece {
-  id: number;
-  title: string;
-  completed: number;
-  total: number;
-  recordingOnly?: boolean;
-  tasks: RecTask[];
-}
-interface RecSession {
-  id: number;
-  time: string;
-  piece: string;
-  detail: string;
-  duration: string;
-  hasRecording?: boolean;
-}
-
-const recPiecesData: Record<string, RecPiece[]> = {
-  "2026-2-17": [
-    {
-      id: 1, title: "F. Chopin Ballade Op.23 No.1", completed: 2, total: 3,
-      tasks: [
-        { id: 1, text: "mm.23-28 왼손 아르페지오 정확성", tempo: 60, reps: 4, time: "12:13", done: true },
-        { id: 2, text: "mm.88-92 Presto 과속 방지", tempo: 168, reps: 3, time: "12:25", done: true },
-        { id: 3, text: "mm.1-22 도입부 레가토 연결", tempo: 52, reps: 0, time: null, done: false },
-      ],
-    },
-    {
-      id: 2, title: "L. v. Beethoven Sonata Op.13 No.8", completed: 1, total: 2,
-      tasks: [
-        { id: 4, text: "Mvt.1 mm.1-16 그라베 다이나믹 표현", tempo: 52, reps: 2, time: "12:30", done: true },
-        { id: 5, text: "코다 구간 템포 조절", tempo: null, reps: 0, time: null, done: false },
-      ],
-    },
-    {
-      id: 3, title: "C. Debussy Suite Bergamasque No.3", completed: 0, total: 0, recordingOnly: true,
-      tasks: [
-        { id: 6, text: "전곡 녹음", tempo: null, reps: 0, time: "12:11", done: false, hasRecording: true },
-      ],
-    },
-  ],
-  "2026-2-18": [
-    {
-      id: 4, title: "F. Chopin Ballade Op.23 No.1", completed: 1, total: 2,
-      tasks: [
-        { id: 7, text: "mm.1-22 도입부 레가토 연결", tempo: 54, reps: 5, time: "09:15", done: true },
-        { id: 8, text: "mm.45-60 중간부 루바토", tempo: null, reps: 0, time: null, done: false },
-      ],
-    },
-    {
-      id: 5, title: "F. Liszt La Campanella", completed: 2, total: 2,
-      tasks: [
-        { id: 9, text: "mm.1-8 주제 도약 정확성", tempo: 80, reps: 6, time: "10:02", done: true },
-        { id: 10, text: "mm.32-48 트릴 구간", tempo: 72, reps: 4, time: "10:18", done: true },
-      ],
-    },
-  ],
-};
-
-const recSessionsData: Record<string, RecSession[]> = {
-  "2026-2-17": [
-    { id: 1, time: "12:05", piece: "F. Chopin Ballade Op.23 No.1", detail: "mm.23-28 아르페지오", duration: "18분", hasRecording: false },
-    { id: 2, time: "12:11", piece: "C. Debussy Suite Bergamasque No.3", detail: "전곡 녹음", duration: "6분", hasRecording: true },
-    { id: 3, time: "12:25", piece: "F. Chopin Ballade Op.23 No.1", detail: "mm.88-92 Presto", duration: "12분", hasRecording: false },
-    { id: 4, time: "12:30", piece: "L. v. Beethoven Sonata Op.13 No.8", detail: "Mvt.1 그라베", duration: "15분", hasRecording: false },
-  ],
-  "2026-2-18": [
-    { id: 5, time: "09:10", piece: "F. Chopin Ballade Op.23 No.1", detail: "mm.1-22 도입부", duration: "22분", hasRecording: false },
-    { id: 6, time: "10:00", piece: "F. Liszt La Campanella", detail: "주제 도약 + 트릴", duration: "25분", hasRecording: true },
-  ],
-};
 
 export default function PracticePage() {
   return (
@@ -1085,6 +1015,8 @@ function PracticePageContent() {
   // Records-style to-do accordion states
   const [expandedPieces, setExpandedPieces] = useState<Set<number>>(new Set());
   const [showTimeline, setShowTimeline] = useState(false);
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const togglePiece = (id: number) => {
     setExpandedPieces((prev) => {
@@ -1095,9 +1027,10 @@ function PracticePageContent() {
     });
   };
 
-  const recDateKey = `${calSelectedDate.getFullYear()}-${calSelectedDate.getMonth() + 1}-${calSelectedDate.getDate()}`;
-  const recPieces = recPiecesData[recDateKey] || [];
-  const recSessions = recSessionsData[recDateKey] || [];
+  const recDateStr = drillFormatDateStr(calSelectedDate);
+  const recPieces = useMemo(() => buildPiecesForDate(recDateStr, recentSessions), [recDateStr, recentSessions, refreshKey]);
+  const recSessions = useMemo(() => buildSessionsForDate(recDateStr, recentSessions), [recDateStr, recentSessions]);
+  const scheduledDays = useMemo(() => buildScheduledDays(calYear, calMonth), [calYear, calMonth, refreshKey]);
   const recTotalCompleted = recPieces.reduce((s, p) => s + p.completed, 0);
   const recTotalTasks = recPieces.reduce((s, p) => s + p.total, 0);
   const recTotalRecordings = recSessions.filter((s) => s.hasRecording).length;
@@ -1109,6 +1042,84 @@ function PracticePageContent() {
     setCalMonth(m);
     setCalYear(y);
   };
+
+  // 스케줄 저장
+  const handleSaveSchedule = useCallback(
+    (ids: string[]) => {
+      saveScheduledDrillIds(recDateStr, ids);
+      setIsScheduleModalOpen(false);
+      setRefreshKey((k) => k + 1);
+    },
+    [recDateStr]
+  );
+
+  // 드릴 완료 토글 (오늘만)
+  const handleToggleComplete = useCallback(
+    async (drillId: string) => {
+      if (!calIsSelectedToday) return;
+
+      const completedIds = loadCompletedDrills(recDateStr);
+      const wasDone = completedIds.has(drillId);
+
+      if (wasDone) {
+        completedIds.delete(drillId);
+      } else {
+        completedIds.add(drillId);
+      }
+      localStorage.setItem(
+        `grit-on-completed-${recDateStr}`,
+        JSON.stringify({ date: recDateStr, completedDrillIds: Array.from(completedIds) })
+      );
+
+      const availDrills = getAllAvailableDrills();
+      const drill = availDrills.find((d) => d.id === drillId);
+
+      if (!wasDone && drill) {
+        try {
+          const now = new Date();
+          const durationSec = (drill.duration || 3) * 60;
+          const startTime = new Date(now.getTime() - durationSec * 1000);
+          await savePracticeSession({
+            pieceId: `drill-${drill.id}`,
+            pieceName: drill.song,
+            startTime,
+            endTime: now,
+            totalTime: durationSec,
+            practiceTime: durationSec,
+            synced: false,
+            practiceType: "partial",
+            label: "드릴 완료",
+            todoNote: `${drill.measures} · ${drill.title}`,
+          });
+        } catch (err) {
+          console.error("Failed to save drill session:", err);
+        }
+      }
+
+      if (wasDone && drill) {
+        try {
+          const allSess = await getAllSessions();
+          const todayStart = new Date();
+          todayStart.setHours(0, 0, 0, 0);
+          const matching = allSess.filter((s) => {
+            if (s.pieceId !== `drill-${drill.id}`) return false;
+            const sd = new Date(s.startTime);
+            sd.setHours(0, 0, 0, 0);
+            return sd.getTime() === todayStart.getTime();
+          });
+          for (const s of matching) {
+            if (s.id != null) await deleteSession(s.id);
+          }
+        } catch (err) {
+          console.error("Failed to delete drill session:", err);
+        }
+      }
+
+      await reloadSessions();
+      setRefreshKey((k) => k + 1);
+    },
+    [calIsSelectedToday, recDateStr, reloadSessions]
+  );
 
   // 오늘 연습한 시간 계산 (분)
   const todayPracticed = Math.floor(
@@ -1292,11 +1303,12 @@ function PracticePageContent() {
                   const isFuture = calYear > calToday.getFullYear() || (calYear === calToday.getFullYear() && calMonth > calToday.getMonth()) || (calYear === calToday.getFullYear() && calMonth === calToday.getMonth() && day > calToday.getDate());
                   const isSelected = day === calSelectedDate.getDate() && calMonth === calSelectedDate.getMonth() && calYear === calSelectedDate.getFullYear();
                   const dow = (calFirstDay + i) % 7;
-                  const countStyle = isFuture ? "bg-white/10 opacity-30" : isToday ? "bg-violet-600 text-white shadow-lg shadow-violet-500/30" : count >= 7 ? "bg-violet-500/70 text-white font-bold" : count >= 5 ? "bg-violet-400/60 text-violet-700 font-bold" : count >= 3 ? "bg-violet-300/50 text-violet-600" : count >= 1 ? "bg-violet-200/40 text-violet-500" : "bg-white/20 backdrop-blur-sm";
+                  const hasSchedule = scheduledDays.has(day);
+                  const countStyle = isFuture && hasSchedule ? "bg-violet-100/60 text-violet-400" : isFuture ? "bg-white/10 opacity-30" : isToday ? "bg-violet-600 text-white shadow-lg shadow-violet-500/30" : count >= 1 ? "bg-violet-200/40 text-violet-500" : "bg-white/20 backdrop-blur-sm";
                   return (
                     <button key={day} onClick={() => { setCalSelectedDate(new Date(calYear, calMonth, day)); setExpandedPieces(new Set()); setShowTimeline(false); }} className="flex flex-col items-center py-1">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${countStyle} ${isSelected && !isToday ? "ring-2 ring-violet-400 ring-offset-1 ring-offset-transparent" : ""}`}>
-                        {!isFuture && count > 0 ? count : ""}
+                        {!isFuture && count > 0 ? count : isFuture && hasSchedule ? "·" : ""}
                       </div>
                       <span className={`text-[10px] mt-0.5 ${dow === 0 ? "text-red-400" : dow === 6 ? "text-blue-400" : "text-gray-500"}`}>{day}</span>
                     </button>
@@ -1305,44 +1317,55 @@ function PracticePageContent() {
               </div>
 
               {/* Legend */}
-              <div className="flex items-center justify-end gap-1.5 mt-3">
-                <span className="text-[10px] text-gray-400 mr-1">적음</span>
-                {["bg-violet-200/40","bg-violet-300/50","bg-violet-400/60","bg-violet-500/70","bg-violet-600"].map((cls, i) => (
-                  <div key={i} className={`w-3 h-3 rounded-full ${cls}`} />
-                ))}
-                <span className="text-[10px] text-gray-400 ml-1">많음</span>
+              <div className="flex items-center justify-end gap-2 mt-3">
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded-full bg-violet-100/60 border border-violet-200" />
+                  <span className="text-[10px] text-gray-400">일정</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded-full bg-violet-200/40" />
+                  <span className="text-[10px] text-gray-400">연습</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded-full bg-violet-600" />
+                  <span className="text-[10px] text-gray-400">오늘</span>
+                </div>
               </div>
 
               {/* Selected Date Summary */}
-              <div className="mt-4 pt-4" style={{ borderTop: "1px solid rgba(255,255,255,0.3)" }}>
-                <h3 className="text-lg font-bold text-gray-900">{calSelectedDate.getMonth() + 1}월 {calSelectedDate.getDate()}일 {calWeekdayNames[calSelectedDate.getDay()]}</h3>
-                <p className="text-sm text-gray-400/80 mt-0.5">
-                  {recPieces.length > 0
-                    ? `${recPieces.reduce((s, p) => s + p.tasks.length, 0)}개 연습 · ${recTotalRecordings}개 녹음`
-                    : "연습 기록이 없습니다"}
-                </p>
+              <div className="pt-3 mt-3" style={{ borderTop: "1px solid rgba(255,255,255,0.3)" }}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-[14px] font-bold text-gray-900">{calSelectedDate.getMonth() + 1}월 {calSelectedDate.getDate()}일 {calWeekdayNames[calSelectedDate.getDay()]}</h3>
+                    <p className="text-[11px] text-gray-400/80 mt-0.5">
+                      {recPieces.length > 0
+                        ? `${recPieces.reduce((s, p) => s + p.tasks.length, 0)}개 연습 · ${recTotalRecordings}개 녹음`
+                        : "연습 일정이 없습니다"}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setIsScheduleModalOpen(true)}
+                    className="w-8 h-8 rounded-full bg-violet-600 flex items-center justify-center hover:bg-violet-700 transition-colors shadow-sm"
+                  >
+                    <Plus className="w-4 h-4 text-white" />
+                  </button>
+                </div>
               </div>
-            </div>
-          </div>
 
-          {/* 연습 상세 To-do 리스트 (연습 기록 페이지와 동일) */}
+          {/* ─── PRACTICE TO-DO LIST (같은 카드 내부) ─── */}
           {recPieces.length > 0 && (
-            <div
-              className="rounded-[20px] p-5"
-              style={{
-                background: "rgba(255,255,255,0.55)",
-                backdropFilter: "blur(16px)",
-                WebkitBackdropFilter: "blur(16px)",
-                border: "1px solid rgba(255,255,255,0.6)",
-                boxShadow: "0 8px 32px rgba(124,58,237,0.08)",
-              }}
-            >
+            <div className="mt-3 pt-3" style={{ borderTop: "1px solid rgba(255,255,255,0.3)" }}>
               {/* Progress Header */}
-              <div className="mb-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-base font-bold text-gray-900">
-                    완료한 연습 {recTotalCompleted}/{recTotalTasks}
+              <div className="mb-3">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[13px] font-bold text-gray-900">
+                    {calIsSelectedToday ? "오늘의 연습" : "연습 일정"} {recTotalCompleted}/{recTotalTasks}
                   </span>
+                  {!calIsSelectedToday && (
+                    <span className="text-[10px] text-gray-400">
+                      {calSelectedDate > calToday ? "예정" : "완료 기록"}
+                    </span>
+                  )}
                 </div>
                 <div className="h-1.5 rounded-full bg-white/30 overflow-hidden">
                   <div
@@ -1385,16 +1408,16 @@ function PracticePageContent() {
                         </div>
 
                         {/* Piece Title */}
-                        <span className="flex-1 text-[15px] font-medium text-gray-800 truncate">
+                        <span className="flex-1 text-[12px] font-medium text-gray-800 truncate">
                           {piece.title}
                         </span>
 
                         {/* Status + Chevron */}
                         <div className="flex items-center gap-2 shrink-0">
                           {piece.recordingOnly ? (
-                            <span className="text-[13px] text-green-500 font-medium">녹음</span>
+                            <span className="text-[10px] text-green-500 font-medium">녹음</span>
                           ) : (
-                            <span className="text-[13px] text-violet-500/80 font-medium">
+                            <span className="text-[10px] text-violet-500/80 font-medium">
                               {piece.completed}/{piece.total}
                             </span>
                           )}
@@ -1433,20 +1456,26 @@ function PracticePageContent() {
                                   : undefined
                               }
                             >
-                              {/* Check */}
-                              <div className="shrink-0">
-                                {task.hasRecording ? (
-                                  <Mic className="w-4 h-4 text-green-500/80" />
-                                ) : task.done ? (
-                                  <Check className="w-4 h-4 text-green-500/80" />
+                              {/* Completion toggle */}
+                              <button
+                                className="shrink-0"
+                                disabled={!calIsSelectedToday}
+                                onClick={() => handleToggleComplete(task.drillId)}
+                              >
+                                {task.done ? (
+                                  <div className="w-[18px] h-[18px] rounded-md bg-violet-500 flex items-center justify-center">
+                                    <Check className="w-3.5 h-3.5 text-white" />
+                                  </div>
+                                ) : calIsSelectedToday ? (
+                                  <div className="w-[18px] h-[18px] rounded-md border-[1.5px] border-gray-300 hover:border-violet-400 transition-colors" />
                                 ) : (
-                                  <div className="w-4 h-4 rounded border border-gray-300/60" />
+                                  <div className="w-[18px] h-[18px] rounded-md border-[1.5px] border-gray-200/60" />
                                 )}
-                              </div>
+                              </button>
 
                               {/* Task detail */}
-                              <div className={`flex-1 min-w-0 ${task.done && !task.hasRecording ? "line-through text-gray-400/60" : "text-gray-700"}`}>
-                                <span className="text-[13px] leading-tight block truncate">
+                              <div className={`flex-1 min-w-0 ${task.done ? "line-through text-gray-400/60" : "text-gray-700"}`}>
+                                <span className="text-[10px] leading-tight block truncate">
                                   {task.text}
                                   {task.tempo && (
                                     <span className="text-gray-400/80"> · 템포 {task.tempo}</span>
@@ -1457,9 +1486,9 @@ function PracticePageContent() {
                                 </span>
                               </div>
 
-                              {/* Time */}
-                              <span className="text-[13px] text-gray-300/80 shrink-0">
-                                {task.time || "미완료"}
+                              {/* Time / status */}
+                              <span className="text-[10px] text-gray-300/80 shrink-0">
+                                {task.time || (task.done ? "" : calIsSelectedToday ? "미완료" : "예정")}
                               </span>
                             </div>
                           ))}
@@ -1553,25 +1582,19 @@ function PracticePageContent() {
 
           {/* Empty state */}
           {recPieces.length === 0 && (
-            <div
-              className="rounded-[20px] p-8 text-center"
-              style={{
-                background: "rgba(255,255,255,0.55)",
-                backdropFilter: "blur(16px)",
-                WebkitBackdropFilter: "blur(16px)",
-                border: "1px solid rgba(255,255,255,0.6)",
-                boxShadow: "0 8px 32px rgba(124,58,237,0.08)",
-              }}
-            >
-              <div
-                className="w-12 h-12 rounded-full mx-auto mb-3 flex items-center justify-center"
-                style={{ background: "rgba(255,255,255,0.35)" }}
+            <div className="mt-4 text-center py-4">
+              <p className="text-[12px] text-gray-400 mb-2">이 날은 연습 일정이 없습니다</p>
+              <button
+                onClick={() => setIsScheduleModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-violet-600 text-white text-[13px] font-medium hover:bg-violet-700 transition-colors"
               >
-                <Music className="w-5 h-5 text-violet-300" />
-              </div>
-              <p className="text-sm text-gray-400">이 날은 연습 기록이 없습니다</p>
+                <Plus className="w-4 h-4" />
+                연습 일정 추가
+              </button>
             </div>
           )}
+        </div>
+        </div>
 
           {/* Carry-over Drills from Yesterday */}
           {carryOverDrills.length > 0 && showCarryOver && (
@@ -2140,6 +2163,16 @@ function PracticePageContent() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Schedule Modal */}
+      {isScheduleModalOpen && (
+        <ScheduleModal
+          dateStr={recDateStr}
+          dateLabel={`${calSelectedDate.getMonth() + 1}월 ${calSelectedDate.getDate()}일 ${calWeekdayNames[calSelectedDate.getDay()]}`}
+          onClose={() => setIsScheduleModalOpen(false)}
+          onSave={handleSaveSchedule}
+        />
       )}
     </>
   );
