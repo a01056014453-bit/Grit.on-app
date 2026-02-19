@@ -2,7 +2,9 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 
-// Types for audio classification (inline to avoid import issues)
+// ─────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────
 export type AudioLabel =
   | "PIANO_PLAYING"
   | "VOICE"
@@ -31,10 +33,8 @@ export interface AudioRecorderState {
   audioUrl: string | null;
   noiseFloor: number;
   isCalibrating: boolean;
-  // New: Audio classification label
   audioLabel: AudioLabel | null;
   classificationConfidence: number;
-  // Frequency band levels for waveform visualization (0-100)
   frequencyBands: number[];
 }
 
@@ -42,16 +42,26 @@ interface UseAudioRecorderOptions {
   decibelThreshold?: number;
   minSoundDuration?: number;
   calibrationDuration?: number;
-  // New: Metronome integration options
   metronomeActive?: boolean;
   getBeatTimestamps?: () => BeatTimestamp[];
 }
 
+// ─────────────────────────────────────────────
+// 상수
+// ─────────────────────────────────────────────
+const CLASSIFY_INTERVAL_MS = 3000;       // 3초마다 서버 분류
+const CALIBRATION_SAMPLES = 300;         // ~5초 (60fps × 5)
+const CALIBRATION_SKIP = 60;             // 첫 1초 스킵 (마이크 초기화)
+const PIANO_ON_THRESHOLD_MS = 800;       // 피아노 0.8초 이상 → 카운팅 시작
+const PIANO_OFF_DELAY_MS = 1500;         // 피아노 안 들린 후 1.5초 → 중단
+const VOICE_SUPPRESS_MS = 2500;          // 목소리 감지 후 2.5초간 카운팅 중단
+const MIN_CONFIDENCE = 0.55;
+
+// ─────────────────────────────────────────────
+// 메인 훅
+// ─────────────────────────────────────────────
 export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
   const {
-    decibelThreshold = 50,
-    minSoundDuration = 200,
-    calibrationDuration = 1000,
     metronomeActive = false,
     getBeatTimestamps = () => [],
   } = options;
@@ -76,86 +86,56 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
     frequencyBands: Array(20).fill(0),
   });
 
-  // Store metronome options in refs to avoid closure issues
+  // ── Metronome refs ──
   const metronomeActiveRef = useRef(metronomeActive);
   const getBeatTimestampsRef = useRef(getBeatTimestamps);
-
-  // Update refs when options change
   useEffect(() => {
     metronomeActiveRef.current = metronomeActive;
     getBeatTimestampsRef.current = getBeatTimestamps;
   }, [metronomeActive, getBeatTimestamps]);
 
-  // Refs for audio handling
+  // ── Audio refs ──
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
-  // Refs for state tracking
+  // ── 분류용 별도 MediaRecorder (3초 클립 캡처) ──
+  const classifyRecorderRef = useRef<MediaRecorder | null>(null);
+  const classifyChunksRef = useRef<Blob[]>([]);
+  const classifyIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const isClassifyingRef = useRef<boolean>(false);
+
+  // ── 3초 클립 동안 dB 샘플 수집 (100ms마다) ──
+  const clipDbSamplesRef = useRef<number[]>([]);
+  const clipDbIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // ── State tracking refs ──
   const isRecordingRef = useRef(false);
   const isPausedRef = useRef(false);
 
-  // Refs for time tracking
+  // ── Time tracking refs ──
   const totalTimeIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const practiceTimeIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const animationFrameRef = useRef<number | null>(null);
-  const soundStartTimeRef = useRef<number | null>(null);
-  const lastSoundTimeRef = useRef<number>(0);
   const isActuallyPlayingRef = useRef<boolean>(false);
+  const pausedTotalTimeRef = useRef<number>(0);
+  const pausedPracticeTimeRef = useRef<number>(0);
 
-  // Noise floor calibration refs
-  const noiseFloorRef = useRef<number>(0);
+  // ── Calibration refs ──
   const noiseFloorDecibelRef = useRef<number>(0);
   const calibrationSamplesRef = useRef<number[]>([]);
   const isCalibrationCompleteRef = useRef<boolean>(false);
 
-  // Time-based hysteresis refs
+  // ── Piano detection hysteresis refs ──
   const lastPianoDetectedTimeRef = useRef<number>(0);
-  const lastSilenceDetectedTimeRef = useRef<number>(0);
-  const debugCounterRef = useRef<number>(0);
-  const consecutiveSoundFramesRef = useRef<number>(0);
-  const consecutiveSilenceFramesRef = useRef<number>(0);
-  const isPianoActiveRef = useRef<boolean>(false);
-  const SUSTAINED_FRAMES = 10; // ~330ms - piano note sustains at least this long
-  const GAP_TOLERANCE_FRAMES = 60; // ~2 seconds gap tolerance between phrases
-  const PIANO_ON_DELAY_MS = 30;
-  const PIANO_OFF_DELAY_MS = 1000;
+  const lastVoiceDetectedTimeRef = useRef<number>(0);
+  const cumulativePianoMsRef = useRef<number>(0);
 
-  // Practice time tracking with hysteresis
-  const cumulativePianoMsRef = useRef(0);
-  const lastVoiceTimeRef = useRef(0);
-  const PIANO_ON_THRESHOLD_MS = 1500; // 1.5s of piano to start counting
-  const VOICE_STOP_THRESHOLD_MS = 2000; // 2s of voice stops counting
-  const MIN_CONFIDENCE = 0.70;
-
-  // Request microphone permission
-  const requestPermission = useCallback(async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false,
-        },
-      });
-      mediaStreamRef.current = stream;
-      setState((prev) => ({ ...prev, hasPermission: true, error: null }));
-      return true;
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "마이크 접근 권한이 필요합니다";
-      setState((prev) => ({
-        ...prev,
-        hasPermission: false,
-        error: errorMessage,
-      }));
-      return false;
-    }
-  }, []);
-
-  // Calculate RMS and convert to decibel
+  // ─────────────────────────────────────────────
+  // 데시벨 계산
+  // ─────────────────────────────────────────────
   const calculateDecibel = useCallback((dataArray: Uint8Array): number => {
     let sumSquares = 0;
     for (let i = 0; i < dataArray.length; i++) {
@@ -163,13 +143,181 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
       sumSquares += amplitude * amplitude;
     }
     const rms = Math.sqrt(sumSquares / dataArray.length);
-
     if (rms === 0) return 0;
-    const decibel = 20 * Math.log10(rms) + 90;
-    return Math.max(0, Math.min(120, decibel));
+    return Math.max(0, Math.min(120, 20 * Math.log10(rms) + 90));
   }, []);
 
-  // Analyze audio with metronome-aware classification
+  // ─────────────────────────────────────────────
+  // 연습 시간 상태 업데이트
+  // ─────────────────────────────────────────────
+  const updatePracticeState = useCallback(
+    (label: AudioLabel, confidence: number) => {
+      const currentTime = Date.now();
+      const isPianoSound = label === "PIANO_PLAYING" && confidence >= MIN_CONFIDENCE;
+      const isVoiceSound = label === "VOICE" && confidence >= MIN_CONFIDENCE;
+
+      if (isVoiceSound) {
+        lastVoiceDetectedTimeRef.current = currentTime;
+        cumulativePianoMsRef.current = Math.max(0, cumulativePianoMsRef.current - 500);
+      }
+
+      if (isPianoSound) {
+        lastPianoDetectedTimeRef.current = currentTime;
+        // 3초 인터벌이므로 3000ms 누적
+        cumulativePianoMsRef.current += CLASSIFY_INTERVAL_MS;
+      }
+
+      const timeSinceLastPiano = currentTime - lastPianoDetectedTimeRef.current;
+      const timeSinceVoice = currentTime - lastVoiceDetectedTimeRef.current;
+      const voiceRecentlyDetected = timeSinceVoice < VOICE_SUPPRESS_MS;
+
+      if (!isActuallyPlayingRef.current) {
+        if (
+          isPianoSound &&
+          cumulativePianoMsRef.current >= PIANO_ON_THRESHOLD_MS &&
+          !voiceRecentlyDetected
+        ) {
+          isActuallyPlayingRef.current = true;
+          console.log("[Practice] 피아노 감지 → 카운팅 시작 ▶");
+        }
+      } else {
+        const shouldTurnOff =
+          timeSinceLastPiano >= PIANO_OFF_DELAY_MS || voiceRecentlyDetected;
+
+        if (shouldTurnOff) {
+          isActuallyPlayingRef.current = false;
+          cumulativePianoMsRef.current = 0;
+          console.log(
+            voiceRecentlyDetected
+              ? "[Practice] 목소리 감지 → 카운팅 중단 ⏸"
+              : "[Practice] 피아노 종료 → 카운팅 중단 ⏸"
+          );
+        }
+      }
+    },
+    []
+  );
+
+  // ─────────────────────────────────────────────
+  // 서버 API로 오디오 분류 요청 (dB 정보 포함)
+  // ─────────────────────────────────────────────
+  const classifyAudioClip = useCallback(
+    async (audioBlob: Blob, dbSamples: number[]) => {
+      if (isClassifyingRef.current) return;
+      isClassifyingRef.current = true;
+
+      try {
+        // 평균 dB 계산
+        const avgDb = dbSamples.length > 0
+          ? dbSamples.reduce((a, b) => a + b, 0) / dbSamples.length
+          : 0;
+        const noiseFloor = noiseFloorDecibelRef.current;
+
+        const formData = new FormData();
+        formData.append("audio", audioBlob);
+        formData.append("avgDecibel", avgDb.toFixed(1));
+        formData.append("noiseFloor", noiseFloor.toFixed(1));
+
+        const res = await fetch("/api/classify-audio", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!res.ok) {
+          console.warn("[Classify] API 오류:", res.status);
+          return;
+        }
+
+        const data = await res.json();
+        const label = data.label as AudioLabel;
+        const confidence = data.confidence as number;
+
+        console.log(
+          `[Classify] ${label} (${(confidence * 100).toFixed(0)}%) avgDb=${avgDb.toFixed(1)} floor=${noiseFloor.toFixed(1)} ${data.reason ?? ""}`
+        );
+
+        updatePracticeState(label, confidence);
+
+        setState((prev) => ({
+          ...prev,
+          audioLabel: label,
+          classificationConfidence: confidence,
+          isPianoDetected: isActuallyPlayingRef.current,
+        }));
+      } catch (err) {
+        console.error("[Classify] 요청 실패:", err);
+      } finally {
+        isClassifyingRef.current = false;
+      }
+    },
+    [updatePracticeState]
+  );
+
+  // ─────────────────────────────────────────────
+  // 3초마다 오디오 클립 캡처 + dB 수집 → 서버 분류
+  // ─────────────────────────────────────────────
+  const startClassifyLoop = useCallback(
+    (stream: MediaStream) => {
+      if (classifyIntervalRef.current) clearInterval(classifyIntervalRef.current);
+
+      const startClipCapture = () => {
+        if (!isRecordingRef.current || isPausedRef.current) return;
+        if (!isCalibrationCompleteRef.current) return;
+
+        const mimeType = MediaRecorder.isTypeSupported("audio/webm")
+          ? "audio/webm"
+          : "audio/mp4";
+
+        classifyChunksRef.current = [];
+        clipDbSamplesRef.current = [];
+        const recorder = new MediaRecorder(stream, { mimeType });
+
+        recorder.ondataavailable = (e) => {
+          if (e.data.size > 0) classifyChunksRef.current.push(e.data);
+        };
+
+        recorder.onstop = () => {
+          // dB 수집 중지
+          if (clipDbIntervalRef.current) {
+            clearInterval(clipDbIntervalRef.current);
+            clipDbIntervalRef.current = null;
+          }
+
+          if (classifyChunksRef.current.length > 0) {
+            const blob = new Blob(classifyChunksRef.current, { type: mimeType });
+            const samples = [...clipDbSamplesRef.current];
+            classifyAudioClip(blob, samples);
+          }
+        };
+
+        classifyRecorderRef.current = recorder;
+        recorder.start();
+
+        // 100ms마다 현재 dB 샘플 수집
+        clipDbIntervalRef.current = setInterval(() => {
+          if (!analyserRef.current) return;
+          const timeData = new Uint8Array(analyserRef.current.frequencyBinCount);
+          analyserRef.current.getByteTimeDomainData(timeData);
+          const db = calculateDecibel(timeData);
+          clipDbSamplesRef.current.push(db);
+        }, 100);
+
+        // 3초 후 중지 → onstop에서 분류 호출
+        setTimeout(() => {
+          if (recorder.state === "recording") {
+            recorder.stop();
+          }
+        }, CLASSIFY_INTERVAL_MS);
+      };
+
+      classifyIntervalRef.current = setInterval(startClipCapture, CLASSIFY_INTERVAL_MS);
+    },
+    [classifyAudioClip, calculateDecibel]
+  );
+
+  // ─────────────────────────────────────────────
+  // 오디오 분석 루프 (시각화 + 캘리브레이션)
+  // ─────────────────────────────────────────────
   const analyzeAudio = useCallback(() => {
     if (!analyserRef.current || !isRecordingRef.current || isPausedRef.current) {
       if (isRecordingRef.current && !isPausedRef.current) {
@@ -179,51 +327,33 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
     }
 
     const analyser = analyserRef.current;
-    const sampleRate = audioContextRef.current?.sampleRate || 44100;
+    const sampleRate = audioContextRef.current?.sampleRate ?? 44100;
 
-    // Get audio data
     const timeData = new Uint8Array(analyser.frequencyBinCount);
     analyser.getByteTimeDomainData(timeData);
 
     const frequencyData = new Uint8Array(analyser.frequencyBinCount);
     analyser.getByteFrequencyData(frequencyData);
 
-    // Calculate decibel
     const decibel = calculateDecibel(timeData);
 
-    // Calculate peak volume for visual display
     let maxAmplitude = 0;
     for (let i = 0; i < timeData.length; i++) {
       const amplitude = Math.abs(timeData[i] - 128);
-      if (amplitude > maxAmplitude) {
-        maxAmplitude = amplitude;
-      }
+      if (amplitude > maxAmplitude) maxAmplitude = amplitude;
     }
     const peakVolume = Math.min(100, (maxAmplitude / 128) * 100 * 4);
 
-    const currentTime = Date.now();
-
-    // Noise floor calibration phase
+    // ── 5초 캘리브레이션 ──
     if (!isCalibrationCompleteRef.current) {
       calibrationSamplesRef.current.push(decibel);
-
-      if (calibrationSamplesRef.current.length >= 90) {
-        // Discard first 30 frames (mic initialization), use remaining 60
-        const stableSamples = calibrationSamplesRef.current.slice(30);
-        const sortedSamples = [...stableSamples].sort((a, b) => a - b);
-        const p75Index = Math.floor(sortedSamples.length * 0.75);
-        const calibrated = sortedSamples[p75Index] + 3;
-        // Minimum noise floor of 40 dB (real rooms are at least this noisy)
-        noiseFloorDecibelRef.current = Math.max(40, calibrated);
-        console.log('[AudioClassifier] Calibration complete:', {
-          p75: sortedSamples[p75Index],
-          calibrated,
-          noiseFloor: noiseFloorDecibelRef.current,
-          samples: sortedSamples.slice(0, 5).concat(['...'] as any, sortedSamples.slice(-5)),
-        });
-        noiseFloorRef.current = peakVolume;
+      if (calibrationSamplesRef.current.length >= CALIBRATION_SAMPLES) {
+        const stable = calibrationSamplesRef.current.slice(CALIBRATION_SKIP);
+        const sorted = [...stable].sort((a, b) => a - b);
+        const p75 = sorted[Math.floor(sorted.length * 0.75)];
+        noiseFloorDecibelRef.current = Math.max(42, p75 + 3);
         isCalibrationCompleteRef.current = true;
-
+        console.log("[Calibration] 완료 (5초). 노이즈 플로어:", noiseFloorDecibelRef.current);
         setState((prev) => ({
           ...prev,
           noiseFloor: noiseFloorDecibelRef.current,
@@ -241,190 +371,9 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
       }
     }
 
-    // Get beat timestamps if metronome is active
-    const beatTimestamps = metronomeActiveRef.current
-      ? getBeatTimestampsRef.current()
-      : [];
-
-    // Simple inline audio classification
-    // Check if near a metronome beat (mask it)
-    const isNearBeat = beatTimestamps.some(
-      (bt) => Math.abs(bt.wallTime - currentTime) <= 30
-    );
-
-    // Calculate frequency band energies for classification
-    // Voice: 85-300 Hz fundamental, 300-3400 Hz formants
-    // Piano: Wide range 27-4200 Hz with strong harmonics extending higher
+    // ── 시각화 밴드 계산 ──
     const binCount = frequencyData.length;
-    const nyquist = sampleRate / 2;
-    const binWidth = nyquist / binCount;
-
-    let subBassEnergy = 0;    // < 100 Hz (piano low notes)
-    let bassEnergy = 0;       // 100-300 Hz (voice fundamental, piano)
-    let lowMidEnergy = 0;     // 300-1000 Hz (voice formants)
-    let midEnergy = 0;        // 1000-2500 Hz (voice clarity, piano harmonics)
-    let highMidEnergy = 0;    // 2500-4000 Hz (piano brightness)
-    let highEnergy = 0;       // 4000-8000 Hz (piano attack, overtones)
-    let veryHighEnergy = 0;   // > 8000 Hz (piano shimmer)
-
-    for (let i = 0; i < binCount; i++) {
-      const freq = i * binWidth;
-      const val = frequencyData[i];
-      if (freq < 100) subBassEnergy += val;
-      else if (freq < 300) bassEnergy += val;
-      else if (freq < 1000) lowMidEnergy += val;
-      else if (freq < 2500) midEnergy += val;
-      else if (freq < 4000) highMidEnergy += val;
-      else if (freq < 8000) highEnergy += val;
-      else veryHighEnergy += val;
-    }
-
-    const totalEnergy = subBassEnergy + bassEnergy + lowMidEnergy + midEnergy + highMidEnergy + highEnergy + veryHighEnergy;
-
-    // Voice characteristics:
-    // - Most energy in 300-3400 Hz range (formants)
-    // - Less energy in very high frequencies (>4000 Hz)
-    const voiceRange = lowMidEnergy + midEnergy;
-    const voiceRatio = totalEnergy > 0 ? voiceRange / totalEnergy : 0;
-
-    // Piano characteristics:
-    // - Significant energy in higher frequencies (>2500 Hz)
-    // - Broader spectral distribution
-    // - More energy in sub-bass and very high simultaneously
-    const pianoHighRange = highMidEnergy + highEnergy + veryHighEnergy;
-    const pianoHighRatio = totalEnergy > 0 ? pianoHighRange / totalEnergy : 0;
-    const hasSubBass = subBassEnergy > 30;
-    const hasBrightness = (highEnergy + veryHighEnergy) > 50;
-
-    // Spectral spread (piano has wider spread)
-    const spectralCentroid = totalEnergy > 0
-      ? (subBassEnergy * 50 + bassEnergy * 200 + lowMidEnergy * 650 + midEnergy * 1750 +
-         highMidEnergy * 3250 + highEnergy * 6000 + veryHighEnergy * 10000) / totalEnergy
-      : 0;
-
-    // Classify based on features
-    // Use calibrated noise floor for silence detection (decibel-based, not raw energy)
-    const noiseFloorDb = noiseFloorDecibelRef.current;
-    const silenceMargin = 1; // dB above noise floor still counts as silence
-    const soundMargin = 4;   // dB above noise floor needed for confident classification
-
-    let label: AudioLabel = "SILENCE";
-    let confidence = 0.5;
-
-    // Debug counter
-    if (!debugCounterRef.current) debugCounterRef.current = 0;
-    debugCounterRef.current++;
-
-    const delta = decibel - noiseFloorDb;
-
-    // ===== SUSTAINED-SOUND CLASSIFICATION =====
-    // Only sustained sound counts as piano. Impulse sounds (knocks, coughs) are filtered.
-    // Piano note sustains ~330ms+, knock/cough is ~50-100ms.
-    //
-    // Real data:  Ambient noise: ~45-50dB | Voice: ~50-55dB | Piano: ~55-75dB
-    // Use BOTH relative delta AND absolute dB to be robust against bad calibration
-    const SOUND_DELTA_THRESHOLD = 6;
-    const ABSOLUTE_DB_THRESHOLD = 55; // Piano through phone mic is at least 55 dB
-    const soundThreshold = Math.max(noiseFloorDb + SOUND_DELTA_THRESHOLD, ABSOLUTE_DB_THRESHOLD);
-    const isSoundAboveThreshold = decibel >= soundThreshold;
-
-    // Count consecutive frames above/below threshold
-    if (isSoundAboveThreshold) {
-      consecutiveSoundFramesRef.current++;
-      consecutiveSilenceFramesRef.current = 0;
-    } else {
-      consecutiveSilenceFramesRef.current++;
-      // Reset sound counter after a gap (sound was not sustained)
-      if (consecutiveSilenceFramesRef.current > 5) {
-        consecutiveSoundFramesRef.current = 0;
-      }
-    }
-
-    if (!isCalibrationCompleteRef.current) {
-      label = "SILENCE";
-      confidence = 0.95;
-    } else if (!isPianoActiveRef.current) {
-      // Not currently counting as piano
-      if (consecutiveSoundFramesRef.current >= SUSTAINED_FRAMES) {
-        // Sustained sound (~330ms+) → piano note detected
-        isPianoActiveRef.current = true;
-        label = "PIANO_PLAYING";
-        confidence = 0.90;
-      } else {
-        // Impulse or quiet → not piano
-        label = "SILENCE";
-        confidence = 0.80;
-      }
-    } else {
-      // Currently counting as piano
-      if (consecutiveSilenceFramesRef.current >= GAP_TOLERANCE_FRAMES) {
-        // 2+ seconds of quiet → stop counting as piano
-        isPianoActiveRef.current = false;
-        consecutiveSoundFramesRef.current = 0;
-        label = "SILENCE";
-        confidence = 0.90;
-      } else {
-        // Still in piano session (playing or short gap between notes)
-        label = "PIANO_PLAYING";
-        confidence = isSoundAboveThreshold ? 0.90 : 0.50;
-      }
-    }
-
-    // Debug: log every 15 frames (~0.5초)
-    const shouldLogDebug = debugCounterRef.current % 15 === 0;
-    if (shouldLogDebug && label !== "SILENCE") {
-      console.log(
-        `%c[Audio] ${label} (${(confidence * 100).toFixed(0)}%)`,
-        label === "PIANO_PLAYING" ? "color: #7C3AED; font-weight: bold" :
-        label === "VOICE" ? "color: #2563EB; font-weight: bold" :
-        "color: #6B7280",
-        {
-          dB: decibel.toFixed(1),
-          threshold: soundThreshold.toFixed(1),
-          above: isSoundAboveThreshold,
-          soundFrames: consecutiveSoundFramesRef.current,
-          pianoActive: isPianoActiveRef.current,
-        }
-      );
-    }
-
-    // Update piano detection state based on classification
-    const isPianoSound = label === "PIANO_PLAYING" && confidence >= MIN_CONFIDENCE;
-
-    // Time-based hysteresis for smooth transitions
-    if (isPianoSound) {
-      lastPianoDetectedTimeRef.current = currentTime;
-      cumulativePianoMsRef.current += 16; // Approximate frame time
-    }
-
-    const timeSinceLastPiano = currentTime - lastPianoDetectedTimeRef.current;
-
-    // State machine for piano detection
-    if (!isActuallyPlayingRef.current) {
-      // Turn ON after sufficient cumulative piano time
-      if (isPianoSound && cumulativePianoMsRef.current >= PIANO_ON_THRESHOLD_MS) {
-        isActuallyPlayingRef.current = true;
-        soundStartTimeRef.current = currentTime;
-      }
-    } else {
-      // Turn OFF conditions:
-      // 1. No piano for too long
-      // 2. Voice detected for too long
-      const shouldTurnOff =
-        !isPianoSound && timeSinceLastPiano >= PIANO_OFF_DELAY_MS;
-
-      if (shouldTurnOff) {
-        isActuallyPlayingRef.current = false;
-        soundStartTimeRef.current = null;
-        cumulativePianoMsRef.current = 0;
-      }
-    }
-
-    // Determine if sound is detected (for UI)
-    const isSoundDetected = decibel > noiseFloorDecibelRef.current;
-    const isPianoPlaying = isActuallyPlayingRef.current;
-
-    // Calculate frequency bands for waveform visualization (20 bands)
+    const binWidth = (sampleRate / 2) / binCount;
     const bands: number[] = [];
     const bandCount = 20;
     const usableBins = Math.min(binCount, Math.floor(8000 / binWidth));
@@ -435,40 +384,63 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
       for (let j = start; j < start + binsPerBand && j < binCount; j++) {
         sum += frequencyData[j];
       }
-      const avg = sum / binsPerBand;
-      bands.push(Math.min(100, (avg / 255) * 150));
+      bands.push(Math.min(100, (sum / binsPerBand / 255) * 150));
     }
+
+    const isSoundDetected = decibel > noiseFloorDecibelRef.current + 3;
 
     setState((prev) => ({
       ...prev,
       currentVolume: peakVolume,
       currentDecibel: Math.round(decibel),
       isSoundDetected,
-      isPianoDetected: isPianoPlaying,
-      audioLabel: label,
-      classificationConfidence: confidence,
+      isPianoDetected: isActuallyPlayingRef.current,
       frequencyBands: bands,
     }));
 
     animationFrameRef.current = requestAnimationFrame(analyzeAudio);
   }, [calculateDecibel]);
 
-  // Start recording
+  // ─────────────────────────────────────────────
+  // 마이크 권한 요청
+  // ─────────────────────────────────────────────
+  const requestPermission = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+          sampleRate: 44100,
+        },
+      });
+      mediaStreamRef.current = stream;
+      setState((prev) => ({ ...prev, hasPermission: true, error: null }));
+      return true;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "마이크 접근 권한이 필요합니다";
+      setState((prev) => ({ ...prev, hasPermission: false, error: msg }));
+      return false;
+    }
+  }, []);
+
+  // ─────────────────────────────────────────────
+  // 녹음 시작
+  // ─────────────────────────────────────────────
   const startRecording = useCallback(async () => {
     if (!mediaStreamRef.current) {
-      const hasPermission = await requestPermission();
-      if (!hasPermission) return;
+      const ok = await requestPermission();
+      if (!ok) return;
     }
 
     const stream = mediaStreamRef.current;
     if (!stream) return;
 
     try {
-      // Set up AudioContext and Analyser
       const audioContext = new AudioContext();
       const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 2048;
-      analyser.smoothingTimeConstant = 0.3;
+      analyser.fftSize = 4096;
+      analyser.smoothingTimeConstant = 0.5;
 
       const source = audioContext.createMediaStreamSource(stream);
       source.connect(analyser);
@@ -476,20 +448,16 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
       audioContextRef.current = audioContext;
       analyserRef.current = analyser;
 
-      // Set up MediaRecorder
+      // MediaRecorder 설정 (전체 녹음용)
       const mimeType = MediaRecorder.isTypeSupported("audio/webm")
         ? "audio/webm"
         : "audio/mp4";
       const mediaRecorder = new MediaRecorder(stream, { mimeType });
-
       chunksRef.current = [];
 
       mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          chunksRef.current.push(e.data);
-        }
+        if (e.data.size > 0) chunksRef.current.push(e.data);
       };
-
       mediaRecorder.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: mimeType });
         const url = URL.createObjectURL(blob);
@@ -499,26 +467,19 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
       mediaRecorderRef.current = mediaRecorder;
       mediaRecorder.start(1000);
 
-      // Reset state
+      // ── 상태 초기화 ──
       isRecordingRef.current = true;
       isPausedRef.current = false;
       isActuallyPlayingRef.current = false;
-      soundStartTimeRef.current = null;
-      lastSoundTimeRef.current = 0;
       cumulativePianoMsRef.current = 0;
-      lastVoiceTimeRef.current = 0;
-      consecutiveSoundFramesRef.current = 0;
-      consecutiveSilenceFramesRef.current = 0;
-      isPianoActiveRef.current = false;
-
-      // Reset calibration
-      noiseFloorRef.current = 0;
+      lastPianoDetectedTimeRef.current = 0;
+      lastVoiceDetectedTimeRef.current = 0;
+      noiseFloorDecibelRef.current = 0;
       calibrationSamplesRef.current = [];
       isCalibrationCompleteRef.current = false;
-      lastPianoDetectedTimeRef.current = 0;
-      lastSilenceDetectedTimeRef.current = Date.now();
+      isClassifyingRef.current = false;
 
-      // Start time tracking
+      // ── 타이머 시작 ──
       const startTime = Date.now();
       let accumulatedPracticeTime = 0;
 
@@ -530,7 +491,6 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
       }, 1000);
 
       practiceTimeIntervalRef.current = setInterval(() => {
-        // Only count time when actually playing
         if (isActuallyPlayingRef.current) {
           accumulatedPracticeTime += 0.1;
           setState((prev) => ({
@@ -557,16 +517,20 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
         classificationConfidence: 0,
       }));
 
-      // Start audio analysis
+      // ── 분석 루프 시작 (시각화 + 캘리브레이션) ──
       animationFrameRef.current = requestAnimationFrame(analyzeAudio);
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "녹음을 시작할 수 없습니다";
-      setState((prev) => ({ ...prev, error: errorMessage }));
-    }
-  }, [requestPermission, analyzeAudio]);
 
-  // Pause recording
+      // ── 3초마다 서버 분류 시작 ──
+      startClassifyLoop(stream);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "녹음을 시작할 수 없습니다";
+      setState((prev) => ({ ...prev, error: msg }));
+    }
+  }, [requestPermission, analyzeAudio, startClassifyLoop]);
+
+  // ─────────────────────────────────────────────
+  // 일시정지
+  // ─────────────────────────────────────────────
   const pauseRecording = useCallback(() => {
     if (mediaRecorderRef.current && isRecordingRef.current && !isPausedRef.current) {
       mediaRecorderRef.current.pause();
@@ -575,55 +539,74 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
       if (totalTimeIntervalRef.current) clearInterval(totalTimeIntervalRef.current);
       if (practiceTimeIntervalRef.current) clearInterval(practiceTimeIntervalRef.current);
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+      if (classifyIntervalRef.current) clearInterval(classifyIntervalRef.current);
+      if (clipDbIntervalRef.current) clearInterval(clipDbIntervalRef.current);
+      if (classifyRecorderRef.current?.state === "recording") {
+        classifyRecorderRef.current.stop();
+      }
 
-      setState((prev) => ({ ...prev, isPaused: true }));
+      // 현재 시간 값 ref에 저장 (resume에서 사용)
+      setState((prev) => {
+        pausedTotalTimeRef.current = prev.totalTime;
+        pausedPracticeTimeRef.current = prev.practiceTime;
+        return { ...prev, isPaused: true };
+      });
     }
   }, []);
 
-  // Resume recording
+  // ─────────────────────────────────────────────
+  // 재개
+  // ─────────────────────────────────────────────
   const resumeRecording = useCallback(() => {
     if (mediaRecorderRef.current && isRecordingRef.current && isPausedRef.current) {
       mediaRecorderRef.current.resume();
       isPausedRef.current = false;
 
-      // Reset hysteresis refs
-      lastSilenceDetectedTimeRef.current = Date.now();
+      // 하이스테리시스 초기화
       lastPianoDetectedTimeRef.current = 0;
+      lastVoiceDetectedTimeRef.current = 0;
       cumulativePianoMsRef.current = 0;
-      consecutiveSoundFramesRef.current = 0;
-      consecutiveSilenceFramesRef.current = 0;
-      isPianoActiveRef.current = false;
 
-      setState((prev) => {
-        const resumeTime = Date.now();
-        const previousTotal = prev.totalTime;
-        let accumulatedPracticeTime = prev.practiceTime;
+      // 기존 인터벌 확실히 정리
+      if (totalTimeIntervalRef.current) clearInterval(totalTimeIntervalRef.current);
+      if (practiceTimeIntervalRef.current) clearInterval(practiceTimeIntervalRef.current);
 
-        totalTimeIntervalRef.current = setInterval(() => {
+      // setState 밖에서 인터벌 생성 (Strict Mode 중복 방지)
+      const resumeTime = Date.now();
+      const previousTotal = pausedTotalTimeRef.current;
+      let accumulatedPracticeTime = pausedPracticeTimeRef.current;
+
+      totalTimeIntervalRef.current = setInterval(() => {
+        setState((p) => ({
+          ...p,
+          totalTime: previousTotal + Math.floor((Date.now() - resumeTime) / 1000),
+        }));
+      }, 1000);
+
+      practiceTimeIntervalRef.current = setInterval(() => {
+        if (isActuallyPlayingRef.current) {
+          accumulatedPracticeTime += 0.1;
           setState((p) => ({
             ...p,
-            totalTime: previousTotal + Math.floor((Date.now() - resumeTime) / 1000),
+            practiceTime: Math.floor(accumulatedPracticeTime),
           }));
-        }, 1000);
+        }
+      }, 100);
 
-        practiceTimeIntervalRef.current = setInterval(() => {
-          if (isActuallyPlayingRef.current) {
-            accumulatedPracticeTime += 0.1;
-            setState((p) => ({
-              ...p,
-              practiceTime: Math.floor(accumulatedPracticeTime),
-            }));
-          }
-        }, 100);
-
-        return { ...prev, isPaused: false };
-      });
+      setState((prev) => ({ ...prev, isPaused: false }));
 
       animationFrameRef.current = requestAnimationFrame(analyzeAudio);
-    }
-  }, [analyzeAudio]);
 
-  // Stop recording
+      // 분류 루프 재개
+      if (mediaStreamRef.current) {
+        startClassifyLoop(mediaStreamRef.current);
+      }
+    }
+  }, [analyzeAudio, startClassifyLoop]);
+
+  // ─────────────────────────────────────────────
+  // 중지
+  // ─────────────────────────────────────────────
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && isRecordingRef.current) {
       mediaRecorderRef.current.stop();
@@ -633,8 +616,14 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
       if (totalTimeIntervalRef.current) clearInterval(totalTimeIntervalRef.current);
       if (practiceTimeIntervalRef.current) clearInterval(practiceTimeIntervalRef.current);
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-      if (audioContextRef.current && audioContextRef.current.state !== "closed") {
-        audioContextRef.current.close();
+      if (classifyIntervalRef.current) clearInterval(classifyIntervalRef.current);
+      if (clipDbIntervalRef.current) clearInterval(clipDbIntervalRef.current);
+      if (classifyRecorderRef.current?.state === "recording") {
+        classifyRecorderRef.current.stop();
+      }
+
+      if (audioContextRef.current?.state !== "closed") {
+        audioContextRef.current?.close();
       }
       audioContextRef.current = null;
 
@@ -650,7 +639,9 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
     }
   }, []);
 
-  // Reset state
+  // ─────────────────────────────────────────────
+  // 리셋
+  // ─────────────────────────────────────────────
   const reset = useCallback(() => {
     setState((prev) => {
       if (prev.audioUrl) URL.revokeObjectURL(prev.audioUrl);
@@ -674,17 +665,24 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
     cumulativePianoMsRef.current = 0;
   }, []);
 
-  // Cleanup on unmount
+  // ─────────────────────────────────────────────
+  // 언마운트 클린업
+  // ─────────────────────────────────────────────
   useEffect(() => {
     return () => {
       if (mediaStreamRef.current) {
-        mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+        mediaStreamRef.current.getTracks().forEach((t) => t.stop());
       }
       if (totalTimeIntervalRef.current) clearInterval(totalTimeIntervalRef.current);
       if (practiceTimeIntervalRef.current) clearInterval(practiceTimeIntervalRef.current);
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-      if (audioContextRef.current && audioContextRef.current.state !== "closed") {
-        audioContextRef.current.close();
+      if (classifyIntervalRef.current) clearInterval(classifyIntervalRef.current);
+      if (clipDbIntervalRef.current) clearInterval(clipDbIntervalRef.current);
+      if (classifyRecorderRef.current?.state === "recording") {
+        classifyRecorderRef.current.stop();
+      }
+      if (audioContextRef.current?.state !== "closed") {
+        audioContextRef.current?.close();
       }
       audioContextRef.current = null;
     };

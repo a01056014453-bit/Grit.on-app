@@ -16,6 +16,7 @@ import {
   buildScheduledDays,
   formatDateStr as drillFormatDateStr,
   saveScheduledDrillIds,
+  loadScheduledDrillIds,
   loadCompletedDrills,
   getAllAvailableDrills,
 } from "@/lib/drill-records";
@@ -1027,10 +1028,14 @@ function PracticePageContent() {
     });
   };
 
+  // 클라이언트 마운트 후 localStorage 의존 데이터 렌더링 (hydration 불일치 방지)
+  const [calMounted, setCalMounted] = useState(false);
+  useEffect(() => setCalMounted(true), []);
+
   const recDateStr = drillFormatDateStr(calSelectedDate);
-  const recPieces = useMemo(() => buildPiecesForDate(recDateStr, recentSessions), [recDateStr, recentSessions, refreshKey]);
-  const recSessions = useMemo(() => buildSessionsForDate(recDateStr, recentSessions), [recDateStr, recentSessions]);
-  const scheduledDays = useMemo(() => buildScheduledDays(calYear, calMonth), [calYear, calMonth, refreshKey]);
+  const recPieces = useMemo(() => calMounted ? buildPiecesForDate(recDateStr, recentSessions) : [], [recDateStr, recentSessions, refreshKey, calMounted]);
+  const recSessions = useMemo(() => calMounted ? buildSessionsForDate(recDateStr, recentSessions) : [], [recDateStr, recentSessions, calMounted]);
+  const scheduledDays = useMemo(() => calMounted ? buildScheduledDays(calYear, calMonth) : new Set<number>(), [calYear, calMonth, refreshKey, calMounted]);
   const recTotalCompleted = recPieces.reduce((s, p) => s + p.completed, 0);
   const recTotalTasks = recPieces.reduce((s, p) => s + p.total, 0);
   const recTotalRecordings = recSessions.filter((s) => s.hasRecording).length;
@@ -1304,11 +1309,36 @@ function PracticePageContent() {
                   const isSelected = day === calSelectedDate.getDate() && calMonth === calSelectedDate.getMonth() && calYear === calSelectedDate.getFullYear();
                   const dow = (calFirstDay + i) % 7;
                   const hasSchedule = scheduledDays.has(day);
-                  const countStyle = isFuture && hasSchedule ? "bg-violet-100/60 text-violet-400" : isFuture ? "bg-white/10 opacity-30" : isToday ? "bg-violet-600 text-white shadow-lg shadow-violet-500/30" : count >= 1 ? "bg-violet-200/40 text-violet-500" : "bg-white/20 backdrop-blur-sm";
+
+                  // 완료/미완료 판별
+                  let dayStatus: "none" | "complete" | "incomplete" = "none";
+                  if (calMounted && !isFuture) {
+                    const dayDateStr = drillFormatDateStr(new Date(calYear, calMonth, day));
+                    const dayScheduled = loadScheduledDrillIds(dayDateStr);
+                    const dayCompleted = loadCompletedDrills(dayDateStr);
+                    const hasDrills = dayScheduled.size > 0 || count > 0;
+                    if (hasDrills) {
+                      const allDone = dayScheduled.size > 0 && dayScheduled.size === dayCompleted.size && [...dayScheduled].every(id => dayCompleted.has(id));
+                      dayStatus = allDone ? "complete" : "incomplete";
+                    }
+                  }
+
+                  const countStyle = isFuture && hasSchedule
+                    ? "bg-violet-100/60 text-violet-400"
+                    : isFuture
+                    ? "bg-white/10 opacity-30"
+                    : isToday
+                    ? "bg-violet-600 text-white shadow-lg shadow-violet-500/30"
+                    : dayStatus === "complete"
+                    ? "bg-green-200/50 text-green-600"
+                    : dayStatus === "incomplete"
+                    ? "bg-amber-200/50 text-amber-600"
+                    : "bg-white/20 backdrop-blur-sm";
+
                   return (
                     <button key={day} onClick={() => { setCalSelectedDate(new Date(calYear, calMonth, day)); setExpandedPieces(new Set()); setShowTimeline(false); }} className="flex flex-col items-center py-1">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${countStyle} ${isSelected && !isToday ? "ring-2 ring-violet-400 ring-offset-1 ring-offset-transparent" : ""}`}>
-                        {!isFuture && count > 0 ? count : isFuture && hasSchedule ? "·" : ""}
+                        {dayStatus === "complete" ? "✓" : dayStatus === "incomplete" && !isToday ? count > 0 ? count : "·" : !isFuture && count > 0 ? count : isFuture && hasSchedule ? "·" : ""}
                       </div>
                       <span className={`text-[10px] mt-0.5 ${dow === 0 ? "text-red-400" : dow === 6 ? "text-blue-400" : "text-gray-500"}`}>{day}</span>
                     </button>
@@ -1319,12 +1349,12 @@ function PracticePageContent() {
               {/* Legend */}
               <div className="flex items-center justify-end gap-2 mt-3">
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded-full bg-violet-100/60 border border-violet-200" />
-                  <span className="text-[10px] text-gray-400">일정</span>
+                  <div className="w-3 h-3 rounded-full bg-green-200/50" />
+                  <span className="text-[10px] text-gray-400">완료</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded-full bg-violet-200/40" />
-                  <span className="text-[10px] text-gray-400">연습</span>
+                  <div className="w-3 h-3 rounded-full bg-amber-200/50" />
+                  <span className="text-[10px] text-gray-400">미완료</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 rounded-full bg-violet-600" />
@@ -1334,21 +1364,13 @@ function PracticePageContent() {
 
               {/* Selected Date Summary */}
               <div className="pt-3 mt-3" style={{ borderTop: "1px solid rgba(255,255,255,0.3)" }}>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-[14px] font-bold text-gray-900">{calSelectedDate.getMonth() + 1}월 {calSelectedDate.getDate()}일 {calWeekdayNames[calSelectedDate.getDay()]}</h3>
-                    <p className="text-[11px] text-gray-400/80 mt-0.5">
-                      {recPieces.length > 0
-                        ? `${recPieces.reduce((s, p) => s + p.tasks.length, 0)}개 연습 · ${recTotalRecordings}개 녹음`
-                        : "연습 일정이 없습니다"}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setIsScheduleModalOpen(true)}
-                    className="w-8 h-8 rounded-full bg-violet-600 flex items-center justify-center hover:bg-violet-700 transition-colors shadow-sm"
-                  >
-                    <Plus className="w-4 h-4 text-white" />
-                  </button>
+                <div>
+                  <h3 className="text-[14px] font-bold text-gray-900">{calSelectedDate.getMonth() + 1}월 {calSelectedDate.getDate()}일 {calWeekdayNames[calSelectedDate.getDay()]}</h3>
+                  <p className="text-[11px] text-gray-400/80 mt-0.5">
+                    {recPieces.length > 0
+                      ? `${recPieces.reduce((s, p) => s + p.tasks.length, 0)}개 연습 · ${recTotalRecordings}개 녹음`
+                      : "연습 일정이 없습니다"}
+                  </p>
                 </div>
               </div>
 
