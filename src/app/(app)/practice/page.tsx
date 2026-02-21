@@ -19,6 +19,7 @@ import {
   loadScheduledDrillIds,
   loadCompletedDrills,
   getAllAvailableDrills,
+  loadCustomDrills,
 } from "@/lib/drill-records";
 import type { PracticeType, Song, PracticeTodo } from "@/types";
 import Link from "next/link";
@@ -990,7 +991,7 @@ function PracticePageContent() {
   // calSessionsByDate is now from usePracticeSessions hook
 
   const calSelectedSessions = useMemo(() => {
-    const key = `${calSelectedDate.getFullYear()}-${calSelectedDate.getMonth()}-${calSelectedDate.getDate()}`;
+    const key = `${calSelectedDate.getFullYear()}-${String(calSelectedDate.getMonth() + 1).padStart(2, "0")}-${String(calSelectedDate.getDate()).padStart(2, "0")}`;
     return (calSessionsByDate[key] || []).sort(
       (a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
     );
@@ -1034,7 +1035,7 @@ function PracticePageContent() {
 
   const recDateStr = drillFormatDateStr(calSelectedDate);
   const recPieces = useMemo(() => calMounted ? buildPiecesForDate(recDateStr, recentSessions) : [], [recDateStr, recentSessions, refreshKey, calMounted]);
-  const recSessions = useMemo(() => calMounted ? buildSessionsForDate(recDateStr, recentSessions) : [], [recDateStr, recentSessions, calMounted]);
+  const recSessions = useMemo(() => calMounted ? buildSessionsForDate(recDateStr, recentSessions) : [], [recDateStr, recentSessions, refreshKey, calMounted]);
   const scheduledDays = useMemo(() => calMounted ? buildScheduledDays(calYear, calMonth) : new Set<number>(), [calYear, calMonth, refreshKey, calMounted]);
   const recTotalCompleted = recPieces.reduce((s, p) => s + p.completed, 0);
   const recTotalTasks = recPieces.reduce((s, p) => s + p.total, 0);
@@ -1052,6 +1053,25 @@ function PracticePageContent() {
   const handleSaveSchedule = useCallback(
     (ids: string[]) => {
       saveScheduledDrillIds(recDateStr, ids);
+
+      // 캐리오버를 위해 스케줄된 드릴 정보를 날짜별 키에도 저장
+      const allDrills = [...mockDrillCards, ...loadCustomDrills()];
+      const drillsToSave = ids
+        .map(id => allDrills.find(d => d.id === id))
+        .filter(Boolean)
+        .map(d => ({
+          id: d!.id,
+          song: d!.song,
+          measures: d!.measures,
+          title: d!.title,
+          mode: "duration",
+          duration: d!.duration || 0,
+          recurrence: d!.recurrence || 0,
+        }));
+      if (drillsToSave.length > 0) {
+        localStorage.setItem(`grit-on-drills-${recDateStr}`, JSON.stringify(drillsToSave));
+      }
+
       setIsScheduleModalOpen(false);
       setRefreshKey((k) => k + 1);
     },
@@ -1302,7 +1322,7 @@ function PracticePageContent() {
                 ))}
                 {Array(calDaysInMonth).fill(null).map((_, i) => {
                   const day = i + 1;
-                  const key = `${calYear}-${calMonth}-${day}`;
+                  const key = `${calYear}-${String(calMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
                   const count = calSessionsByDate[key]?.length || 0;
                   const isToday = day === calToday.getDate() && calMonth === calToday.getMonth() && calYear === calToday.getFullYear();
                   const isFuture = calYear > calToday.getFullYear() || (calYear === calToday.getFullYear() && calMonth > calToday.getMonth()) || (calYear === calToday.getFullYear() && calMonth === calToday.getMonth() && day > calToday.getDate());
@@ -1327,12 +1347,16 @@ function PracticePageContent() {
                     ? "bg-violet-100/60 text-violet-400"
                     : isFuture
                     ? "bg-white/10 opacity-30"
+                    : isToday && dayStatus === "complete"
+                    ? "bg-violet-300 text-violet-700 shadow-lg shadow-violet-300/30"
+                    : isToday && dayStatus === "incomplete"
+                    ? "bg-violet-600 text-white shadow-lg shadow-violet-500/30"
                     : isToday
                     ? "bg-violet-600 text-white shadow-lg shadow-violet-500/30"
                     : dayStatus === "complete"
-                    ? "bg-green-200/50 text-green-600"
+                    ? "bg-violet-200/60 text-violet-500"
                     : dayStatus === "incomplete"
-                    ? "bg-amber-200/50 text-amber-600"
+                    ? "bg-violet-500/80 text-white"
                     : "bg-white/20 backdrop-blur-sm";
 
                   return (
@@ -1347,18 +1371,14 @@ function PracticePageContent() {
               </div>
 
               {/* Legend */}
-              <div className="flex items-center justify-end gap-2 mt-3">
+              <div className="flex items-center justify-end gap-3 mt-3">
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded-full bg-green-200/50" />
+                  <div className="w-3 h-3 rounded-full bg-violet-200/60" />
                   <span className="text-[10px] text-gray-400">완료</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded-full bg-amber-200/50" />
+                  <div className="w-3 h-3 rounded-full bg-violet-500/80" />
                   <span className="text-[10px] text-gray-400">미완료</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded-full bg-violet-600" />
-                  <span className="text-[10px] text-gray-400">오늘</span>
                 </div>
               </div>
 

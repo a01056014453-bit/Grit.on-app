@@ -60,7 +60,7 @@ export function usePracticeSessions(): UsePracticeSessionsReturn {
     const map: Record<string, PracticeSession[]> = {};
     sessions.forEach((s) => {
       const d = new Date(s.startTime);
-      const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
       if (!map[key]) map[key] = [];
       map[key].push(s);
     });
