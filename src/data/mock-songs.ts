@@ -454,6 +454,13 @@ const composerDatabase: Record<string, ComposerData> = {
     background: "요한 프리드리히 프란츠 부르크뮐러는 1806년 독일 레겐스부르크에서 태어났습니다. 피아노 교육용 작품으로 유명하며, 특히 '25개의 쉬운 연습곡 Op.100'은 전 세계 피아노 입문자들에게 사랑받는 교재입니다.",
     historicalContext: "19세기 중반 파리의 살롱 문화와 시민 음악 교육의 확대 시기에 활동했습니다.",
   },
+  kapustin: {
+    composerFull: "Nikolai Girshevich Kapustin (1937-2020)",
+    composerImage: "https://schott-production.s3.eu-central-1.amazonaws.com/public_content/contributor/64082/portrait_l/Kapustin150.jpg",
+    period: "현대 / 재즈 클래식",
+    background: "니콜라이 카푸스틴은 1937년 우크라이나 호를리우카에서 태어났습니다. 모스크바 음악원에서 알렉산더 골덴바이저에게 사사했으며, 재즈 빅밴드에서의 연주 경험을 바탕으로 재즈 관용구를 클래식 형식에 완벽히 융합한 독자적 양식을 구축했습니다. 8개의 콘서트 에튀드 Op.40, 20곡의 피아노 소나타, 6곡의 피아노 협주곡 등 대부분의 작품이 피아노를 위해 쓰여졌습니다. 즉흥 연주처럼 들리지만 모두 기보된 작품이라는 점이 특징입니다.",
+    historicalContext: "소비에트 시대 공식적 음악 체계 밖에서 재즈와 클래식의 경계를 허문 독보적 작곡가입니다. 생전에는 서방에 잘 알려지지 않았으나, 2000년대 이후 마르크-앙드레 아믈랭 등의 연주를 통해 세계적으로 재평가되고 있습니다.",
+  },
   // Baroque Era (1600-1750)
   handel: {
     composerFull: "George Frideric Handel (1685-1759)",
@@ -1387,6 +1394,14 @@ export const pieceDatabase: { composer: string; pieces: string[] }[] = [
     composer: "kapustin",
     pieces: [
       "8 Concert Etudes Op.40",
+      "Concert Etude Op.40 No.1 'Prelude' – Allegro assai",
+      "Concert Etude Op.40 No.2 'Reverie' – Moderato",
+      "Concert Etude Op.40 No.3 'Toccatina' – Allegro",
+      "Concert Etude Op.40 No.4 'Remembrance' – Larghetto",
+      "Concert Etude Op.40 No.5 'Raillery' – Vivace",
+      "Concert Etude Op.40 No.6 'Pastorale' – Allegro moderato",
+      "Concert Etude Op.40 No.7 'Intermezzo' – Allegretto",
+      "Concert Etude Op.40 No.8 'Finale' – Prestissimo",
       "Variations Op.41",
       "Piano Sonata No.1 Op.39",
       "Piano Sonata No.2 Op.54",

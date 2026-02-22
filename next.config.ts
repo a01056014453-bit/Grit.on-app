@@ -16,6 +16,11 @@ const nextConfig: NextConfig = {
         hostname: "upload.wikimedia.org",
         pathname: "/wikipedia/**",
       },
+      {
+        protocol: "https",
+        hostname: "schott-production.s3.eu-central-1.amazonaws.com",
+        pathname: "/public_content/**",
+      },
     ],
   },
 };

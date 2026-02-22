@@ -30,6 +30,8 @@ Title: ${title}
 
 Search IMSLP, Wikipedia, Henle Verlag, and music theory databases for the following FACTUAL information.
 
+**CRITICAL: If the title contains "No.X" (e.g., "Op.40 No.6"), search for information about THAT SPECIFIC piece only, NOT the entire collection.**
+
 **Required output format — fill in every field for EVERY movement:**
 
 PIECE INFO:
@@ -120,10 +122,12 @@ ${KOREAN_OUTPUT_RULE}
 - musical_features: 곡 전체를 관통하는 한 문장 요약
 
 **핵심 규칙:**
-- tempo_marking 필드에는 반드시 모든 악장/섹션/소품을 나열할 것
-- 🚨 다악장 소나타/협주곡 → "1악장", "2악장" 표기
-- 🚨 소품 모음집 → 각 소품의 **고유 제목이 있으면 반드시 원어 제목 + 한국어 번역을 함께** 표기 (예: "Träumerei (꿈)", "Pierrot (피에로)"). 고유 제목이 없으면 "No.1", "No.2" 사용. 절대 "악장"이라 부르지 말 것!
-- 🚨 변주곡 → "Theme", "Var.1", "Var.2" 표기
+- 🚨🚨 **최우선 규칙**: 곡 제목에 "No.X" 등 개별 번호가 명시되어 있으면, 그 **해당 곡 하나만** 분석하십시오. 모음집 전체를 분석하지 마십시오! 예: "Eight Concert Etudes Op.40 No.6" → No.6만 분석. "Kinderszenen Op.15 No.7 Träumerei" → No.7만 분석. tempo_marking에도 해당 곡의 빠르기만 기재하십시오.
+- 모음집 전체를 분석하는 경우(제목에 개별 번호가 없는 경우)에만 아래 규칙을 적용:
+  - tempo_marking 필드에는 반드시 모든 악장/섹션/소품을 나열할 것
+  - 🚨 다악장 소나타/협주곡 → "1악장", "2악장" 표기
+  - 🚨 소품 모음집 → 각 소품의 **고유 제목이 있으면 반드시 원어 제목 + 한국어 번역을 함께** 표기 (예: "Träumerei (꿈)", "Pierrot (피에로)"). 고유 제목이 없으면 "No.1", "No.2" 사용. 절대 "악장"이라 부르지 말 것!
+  - 🚨 변주곡 → "Theme", "Var.1", "Var.2" 표기
 - 단악장 곡이면 전체 구조를 서술
 - genre 필드는 장르 한 단어가 아니라, 이 곡의 장르적 성격을 문장으로 서술
 - musical_features는 곡 전체를 한두 문장으로 압축한 "핵심 요약"
@@ -165,6 +169,8 @@ export function createPhase2Prompt(composer: string, title: string, opus: string
 ${KOREAN_OUTPUT_RULE}
 
 **[Phase 2 임무: 인문학적 배경 — 작곡가 생애, 시대적 배경, 곡의 특징]**
+
+🚨🚨 **최우선 규칙**: 곡 제목에 "No.X" 등 개별 번호가 명시되어 있으면, 그 **해당 곡 하나만** 분석하십시오. 모음집 전체를 분석하지 마십시오! 예: "Eight Concert Etudes Op.40 No.6" → No.6 Pastorale만 분석.
 
 **참조 문헌:**
 - Grove Dictionary of Music and Musicians
@@ -252,6 +258,8 @@ ${refSection}
 ${KOREAN_OUTPUT_RULE}
 
 **[Phase 3 임무: 구조 분석 및 분위기 분석]**
+
+🚨🚨 **최우선 규칙**: 곡 제목에 "No.X" 등 개별 번호가 명시되어 있으면, 그 **해당 곡 하나만** 분석하십시오. 모음집 전체를 분석하지 마십시오!
 
 **🚨 핵심 원칙: 마디 번호 대신 "구간 이름 + 역할" 중심으로 분석할 것!**
 
@@ -365,6 +373,8 @@ ${sectionNames.map((s, i) => `${i + 1}. ${s}`).join('\n')}
 ${KOREAN_OUTPUT_RULE}
 
 **[Phase 4 임무: 연습법 + 4주(28일) 루틴 + 추천 연주]**
+
+🚨🚨 **최우선 규칙**: 곡 제목에 "No.X" 등 개별 번호가 명시되어 있으면, 그 **해당 곡 하나만** 분석하십시오. 모음집 전체를 분석하지 마십시오!
 
 **절대 금지:**
 - "느리게 연습하세요", "반복 연습하세요" 등 일반론

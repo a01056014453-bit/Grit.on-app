@@ -61,6 +61,7 @@ const COMPOSER_PORTRAITS: Record<string, string> = {
   barber: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Samuel_Barber.jpg/250px-Samuel_Barber.jpg",
   copland: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Aaron_Copland_1970.JPG/250px-Aaron_Copland_1970.JPG",
   messiaen: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0a/Messiaen_Harcourt_1937_2.jpg/250px-Messiaen_Harcourt_1937_2.jpg",
+  kapustin: "https://schott-production.s3.eu-central-1.amazonaws.com/public_content/contributor/64082/portrait_l/Kapustin150.jpg",
 };
 
 function getComposerPortrait(composerName: string): string | null {
