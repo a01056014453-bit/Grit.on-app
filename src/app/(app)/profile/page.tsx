@@ -445,7 +445,7 @@ export default function ProfilePage() {
   const handleLogout = () => {
     if (confirm("정말 로그아웃 하시겠습니까?")) {
       localStorage.removeItem("grit-on-logged-in");
-      window.location.href = "/";
+      router.push("/");
     }
   };
 
