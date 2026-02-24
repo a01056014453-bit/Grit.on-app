@@ -136,6 +136,6 @@ function mapToAudioLabel(raw: string): string {
 }
 
 // ─── YAMNet 클래스명 → AudioLabel (클라이언트 사이드 YAMNet 응답 처리용) ──
-export function yamnetClassToLabel(className: string): string {
+function yamnetClassToLabel(className: string): string {
   return YAMNET_TARGETS[className] ?? "SILENCE";
 }
