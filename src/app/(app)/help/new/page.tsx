@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { safeBack } from "@/lib/navigation";
+import { ComposerAutocomplete, TitleAutocomplete } from "@/components/ui/composer-autocomplete";
 import {
   ArrowLeft,
   Upload,
@@ -123,26 +124,19 @@ export default function NewHelpRequestPage() {
               곡 정보
             </h2>
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">작곡가</label>
-                <input
-                  type="text"
-                  placeholder="F. Chopin"
-                  value={composer}
-                  onChange={(e) => setComposer(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">곡 제목</label>
-                <input
-                  type="text"
-                  placeholder="Ballade No.1"
-                  value={piece}
-                  onChange={(e) => setPiece(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
+              <ComposerAutocomplete
+                value={composer}
+                onChange={setComposer}
+                label="작곡가"
+                placeholder="F. Chopin"
+              />
+              <TitleAutocomplete
+                value={piece}
+                onChange={setPiece}
+                composer={composer}
+                label="곡 제목"
+                placeholder="Ballade No.1"
+              />
             </div>
           </div>
 

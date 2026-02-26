@@ -1,6 +1,7 @@
 "use client";
 
 import { Modal } from "@/components/ui/modal";
+import { ComposerAutocomplete, TitleAutocomplete } from "@/components/ui/composer-autocomplete";
 
 interface NewSongData {
   composer: string;
@@ -32,33 +33,22 @@ export function AddSongModal({
     >
       <div className="p-4 space-y-4">
         {/* Composer */}
-        <div>
-          <label className="text-sm font-medium text-foreground mb-1.5 block">
-            작곡가
-          </label>
-          <input
-            type="text"
-            placeholder="예: F. Chopin"
-            value={newSong.composer}
-            onChange={(e) => onNewSongChange({ ...newSong, composer: e.target.value })}
-            className="w-full px-4 py-3 rounded-xl border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-            autoFocus
-          />
-        </div>
+        <ComposerAutocomplete
+          value={newSong.composer}
+          onChange={(v) => onNewSongChange({ ...newSong, composer: v })}
+          label="작곡가"
+          placeholder="예: F. Chopin"
+          autoFocus
+        />
 
         {/* Song Title */}
-        <div>
-          <label className="text-sm font-medium text-foreground mb-1.5 block">
-            곡 이름
-          </label>
-          <input
-            type="text"
-            placeholder="예: Ballade Op.23 No.1"
-            value={newSong.title}
-            onChange={(e) => onNewSongChange({ ...newSong, title: e.target.value })}
-            className="w-full px-4 py-3 rounded-xl border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-          />
-        </div>
+        <TitleAutocomplete
+          value={newSong.title}
+          onChange={(v) => onNewSongChange({ ...newSong, title: v })}
+          composer={newSong.composer}
+          label="곡 이름"
+          placeholder="예: Ballade Op.23 No.1"
+        />
 
         {/* Preview */}
         {isValid && (

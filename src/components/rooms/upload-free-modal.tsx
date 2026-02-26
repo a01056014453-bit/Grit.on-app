@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { Modal } from "@/components/ui/modal";
+import { ComposerAutocomplete, TitleAutocomplete } from "@/components/ui/composer-autocomplete";
 import { Users, Music, Upload, AlertCircle, Video } from "lucide-react";
 import type { School, FreePiece, RoomVideo } from "@/types";
 import { findSimilarPieces, type SimilarPiece } from "@/lib/room-access";
@@ -78,32 +79,23 @@ export function UploadFreeModal({
       {step === "input" ? (
         <div className="p-5">
           {/* 작곡가 입력 */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-foreground mb-2">
-              작곡가
-            </label>
-            <input
-              type="text"
-              placeholder="예: F. Chopin"
-              value={composer}
-              onChange={(e) => setComposer(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl bg-secondary border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-            />
-          </div>
+          <ComposerAutocomplete
+            value={composer}
+            onChange={setComposer}
+            label="작곡가"
+            placeholder="예: F. Chopin"
+            className="mb-4"
+          />
 
           {/* 곡명 입력 */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-foreground mb-2">
-              곡명
-            </label>
-            <input
-              type="text"
-              placeholder="예: Ballade No.1 Op.23"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl bg-secondary border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-            />
-          </div>
+          <TitleAutocomplete
+            value={title}
+            onChange={setTitle}
+            composer={composer}
+            label="곡명"
+            placeholder="예: Ballade No.1 Op.23"
+            className="mb-4"
+          />
 
           {/* 유사곡 추천 */}
           {similarPieces.length > 0 && (

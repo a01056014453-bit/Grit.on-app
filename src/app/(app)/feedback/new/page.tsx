@@ -24,6 +24,7 @@ import { getTeacherById, createFeedbackRequest, updateFeedbackRequestStatus } fr
 import { addNotification } from "@/lib/notification-store";
 import { getUserId } from "@/lib/user-id";
 import { Teacher, ProblemType, PROBLEM_TYPE_LABELS } from "@/types";
+import { ComposerAutocomplete, TitleAutocomplete } from "@/components/ui/composer-autocomplete";
 
 const problemTypes: { value: ProblemType; label: string; description: string }[] = [
   { value: "rhythm", label: "리듬", description: "박자, 점음표, 싱코페이션 등" },
@@ -267,26 +268,19 @@ function NewFeedbackRequestContent() {
               곡 정보
             </h2>
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">작곡가</label>
-                <input
-                  type="text"
-                  placeholder="F. Chopin"
-                  value={composer}
-                  onChange={(e) => setComposer(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">곡 제목</label>
-                <input
-                  type="text"
-                  placeholder="Ballade No.1"
-                  value={piece}
-                  onChange={(e) => setPiece(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
+              <ComposerAutocomplete
+                value={composer}
+                onChange={setComposer}
+                label="작곡가"
+                placeholder="F. Chopin"
+              />
+              <TitleAutocomplete
+                value={piece}
+                onChange={setPiece}
+                composer={composer}
+                label="곡 제목"
+                placeholder="Ballade No.1"
+              />
             </div>
           </div>
 

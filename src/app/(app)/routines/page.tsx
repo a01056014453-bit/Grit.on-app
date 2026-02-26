@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { safeBack } from "@/lib/navigation";
+import { ComposerAutocomplete, TitleAutocomplete } from "@/components/ui/composer-autocomplete";
 import { ChevronLeft, Plus, X, Repeat, Trash2, Check } from "lucide-react";
 import { getDrillCards, getUserSongs } from "@/lib/queries";
 import { groupDrillsBySong } from "@/lib/utils-practice";
@@ -496,29 +497,16 @@ export default function RoutinesPage() {
                           취소
                         </button>
                       </div>
-                      <input
-                        type="text"
+                      <ComposerAutocomplete
                         value={routineDrill.composer}
-                        onChange={(e) =>
-                          setRoutineDrill({
-                            ...routineDrill,
-                            composer: e.target.value,
-                          })
-                        }
+                        onChange={(v) => setRoutineDrill({ ...routineDrill, composer: v })}
                         placeholder="작곡가"
-                        className="w-full px-3 py-2 bg-white rounded-lg text-xs border border-gray-200"
                       />
-                      <input
-                        type="text"
+                      <TitleAutocomplete
                         value={routineDrill.songTitle}
-                        onChange={(e) =>
-                          setRoutineDrill({
-                            ...routineDrill,
-                            songTitle: e.target.value,
-                          })
-                        }
+                        onChange={(v) => setRoutineDrill({ ...routineDrill, songTitle: v })}
+                        composer={routineDrill.composer}
                         placeholder="곡명"
-                        className="w-full px-3 py-2 bg-white rounded-lg text-xs border border-gray-200"
                       />
                     </div>
                   )}

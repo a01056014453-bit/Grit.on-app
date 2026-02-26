@@ -10,6 +10,7 @@ import { completePracticeTodo } from "@/lib/practice-todo-store";
 import { addNotification } from "@/lib/notification-store";
 import { formatTime } from "@/lib/format";
 import { getUserSongs, getDrillCards, getComposerList } from "@/lib/queries";
+import { ComposerAutocomplete, TitleAutocomplete } from "@/components/ui/composer-autocomplete";
 import { groupDrillsBySong } from "@/lib/utils-practice";
 import { getUserId } from "@/lib/user-id";
 import {
@@ -2159,19 +2160,16 @@ function PracticePageContent() {
                           취소
                         </button>
                       </div>
-                      <input
-                        type="text"
+                      <ComposerAutocomplete
                         value={routineDrill.composer}
-                        onChange={(e) => setRoutineDrill({ ...routineDrill, composer: e.target.value })}
+                        onChange={(v) => setRoutineDrill({ ...routineDrill, composer: v })}
                         placeholder="작곡가"
-                        className="w-full px-3 py-2 bg-white rounded-lg text-xs border border-gray-200"
                       />
-                      <input
-                        type="text"
+                      <TitleAutocomplete
                         value={routineDrill.songTitle}
-                        onChange={(e) => setRoutineDrill({ ...routineDrill, songTitle: e.target.value })}
+                        onChange={(v) => setRoutineDrill({ ...routineDrill, songTitle: v })}
+                        composer={routineDrill.composer}
                         placeholder="곡명"
-                        className="w-full px-3 py-2 bg-white rounded-lg text-xs border border-gray-200"
                       />
                     </div>
                   )}
