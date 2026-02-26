@@ -4,6 +4,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { safeBack } from "@/lib/navigation";
 import { ArrowLeft, Music, Sparkles, Loader2, AlertTriangle, CheckCircle, Shield } from "lucide-react";
 import { saveAnalyzedSong } from "@/lib/analyzed-songs-store";
+import { addNotification } from "@/lib/notification-store";
 import { getUserSongs } from "@/lib/queries/songs";
 import { getUserId } from "@/lib/user-id";
 import type { Song } from "@/types";
@@ -158,6 +159,16 @@ function SongDetailContent() {
           setIsCached(data.cached || false);
           // 사용자 보관함에 추가
           addToLibrary(data.data.meta.composer, data.data.meta.title);
+          // 새 분석일 때만 알림 생성 (캐시된 결과는 제외)
+          if (!data.cached) {
+            addNotification({
+              type: "analysis_complete",
+              title: `${data.data.meta.composer} ${data.data.meta.title} 분석 완료`,
+              description: "AI가 곡 분석을 완료했습니다. 작품 배경과 연습 포인트를 확인해 보세요.",
+              icon: "Brain",
+              actionUrl: `/songs/${songId}?composer=${encodeURIComponent(finalComposer)}&title=${encodeURIComponent(finalTitle)}`,
+            });
+          }
         } else {
           setError(data.error || "분석에 실패했습니다.");
         }

@@ -14,6 +14,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { getFeedbackRequestById, getFeedback, updateFeedbackRequestStatus } from "@/lib/queries";
+import { addNotification } from "@/lib/notification-store";
 import { FeedbackRequest, Feedback } from "@/types";
 
 export default function FeedbackViewPage() {
@@ -49,6 +50,13 @@ export default function FeedbackViewPage() {
     setIsCompleting(true);
     try {
       await updateFeedbackRequestStatus(requestId, "COMPLETED");
+      addNotification({
+        type: "feedback_status",
+        title: "피드백 확인 완료",
+        description: "피드백을 확인했습니다. 연습 처방전을 참고해서 연습해보세요!",
+        icon: "CheckCircle",
+        actionUrl: "/feedback",
+      });
       router.push("/feedback");
     } catch (err) {
       console.error("Failed to complete feedback:", err);

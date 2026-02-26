@@ -15,6 +15,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { getFeedbackRequestById, saveFeedback } from "@/lib/queries";
+import { addNotification } from "@/lib/notification-store";
 import { getRemainingTime } from "@/lib/time-utils";
 import { FeedbackRequest, FeedbackComment, PracticeCard } from "@/types";
 
@@ -171,6 +172,13 @@ export default function SubmitFeedbackPage() {
         comments: feedbackComments,
         demoVideoUrl: demoVideo ? "/videos/demo.mp4" : undefined,
         practiceCard,
+      });
+      addNotification({
+        type: "feedback_received",
+        title: "피드백 작성 완료",
+        description: `${request.piece ?? "곡"}에 대한 피드백을 성공적으로 제출했습니다.`,
+        icon: "MessageSquare",
+        actionUrl: "/inbox",
       });
       router.push("/inbox");
     } catch (err) {

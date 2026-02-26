@@ -21,6 +21,7 @@ import {
   Lock,
 } from "lucide-react";
 import { getTeacherById, createFeedbackRequest, updateFeedbackRequestStatus } from "@/lib/queries";
+import { addNotification } from "@/lib/notification-store";
 import { getUserId } from "@/lib/user-id";
 import { Teacher, ProblemType, PROBLEM_TYPE_LABELS } from "@/types";
 
@@ -108,6 +109,13 @@ function NewFeedbackRequestContent() {
 
       if (request) {
         await updateFeedbackRequestStatus(request.id, "SENT");
+        addNotification({
+          type: "feedback_status",
+          title: "피드백 요청 전송 완료",
+          description: `${teacher?.name ?? "선생님"}에게 피드백 요청을 보냈습니다. 12시간 내 수락 여부가 결정됩니다.`,
+          icon: "CheckCircle",
+          actionUrl: `/feedback/${request.id}`,
+        });
         router.push(`/feedback/${request.id}`);
       }
     } catch (err) {

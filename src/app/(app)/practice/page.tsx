@@ -7,6 +7,7 @@ import { useAudioRecorder, usePracticeSessions } from "@/hooks";
 import { savePracticeSession, getAllSessions, deleteSession, type PracticeSession } from "@/lib/db";
 import { syncPracticeSessions } from "@/lib/sync-practice";
 import { completePracticeTodo } from "@/lib/practice-todo-store";
+import { addNotification } from "@/lib/notification-store";
 import { formatTime } from "@/lib/format";
 import { getUserSongs, getDrillCards, getComposerList } from "@/lib/queries";
 import { groupDrillsBySong } from "@/lib/utils-practice";
@@ -627,6 +628,18 @@ function PracticePageContent() {
         // Sync to Supabase (non-blocking, failure won't affect local save)
         syncPracticeSessions().catch(console.error);
         await loadRecentSessions();
+
+        // 연습 마일스톤 알림 (30분 이상 연습 시)
+        const practiceMinutes = Math.round(session.practiceTime / 60);
+        if (practiceMinutes >= 30) {
+          addNotification({
+            type: "practice_milestone",
+            title: `${practiceMinutes}분 연습 완료!`,
+            description: `${session.pieceName} 연습을 마쳤습니다. 꾸준한 연습이 실력을 만들어요!`,
+            icon: "Trophy",
+            actionUrl: "/stats",
+          });
+        }
 
         // 선택된 To-do가 있으면 완료 처리
         if (selectedTodo) {

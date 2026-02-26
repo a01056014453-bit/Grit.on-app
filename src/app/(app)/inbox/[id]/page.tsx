@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { RequestStatusChip } from "@/components/feedback/request-status-chip";
 import { getFeedbackRequestById, updateFeedbackRequestStatus } from "@/lib/queries";
+import { addNotification } from "@/lib/notification-store";
 import { getRemainingTime } from "@/lib/time-utils";
 import { FeedbackRequest, PROBLEM_TYPE_LABELS } from "@/types";
 
@@ -95,6 +96,13 @@ export default function InboxDetailPage() {
     setIsProcessing(true);
     try {
       await updateFeedbackRequestStatus(requestId, "ACCEPTED");
+      addNotification({
+        type: "feedback_status",
+        title: "피드백 요청 수락",
+        description: `${request.piece} 피드백 요청을 수락했습니다. 48시간 내 피드백을 작성해주세요.`,
+        icon: "CheckCircle",
+        actionUrl: `/inbox/${requestId}/submit`,
+      });
       router.push(`/inbox/${requestId}/submit`);
     } catch (err) {
       console.error("Failed to accept request:", err);
