@@ -136,52 +136,157 @@ function FeedbackVisual() {
   );
 }
 
-function DashboardVisual() {
-  const days = ["월", "화", "수", "목", "금", "토", "일"];
-  const heights = [60, 85, 40, 95, 70, 30, 55];
+function TodoFlowVisual() {
   return (
     <div className="w-full max-w-xs mx-auto">
-      <div className="bg-white rounded-2xl p-4 shadow-sm border border-green-100">
-        <p className="text-xs font-semibold text-gray-500 mb-3">
-          이번 주 연습 시간
-        </p>
-        <div className="flex items-end justify-between gap-1 h-14 mb-2">
-          {heights.map((h, i) => (
-            <div
-              key={i}
-              className="flex-1 rounded-md"
-              style={{
-                height: `${h}%`,
-                background: h > 80 ? "#10B981" : "#D1FAE5",
-              }}
-            />
-          ))}
-        </div>
-        <div className="flex justify-between mb-3">
-          {days.map((d) => (
-            <p
-              key={d}
-              className="text-[10px] text-gray-400 flex-1 text-center"
-            >
-              {d}
-            </p>
-          ))}
-        </div>
-        <div className="pt-3 border-t border-gray-100 flex justify-between">
-          <div>
-            <p className="text-xs text-gray-400">총 연습</p>
-            <p className="text-sm font-bold text-gray-800">12h 30m</p>
+      <div className="bg-white rounded-2xl p-4 shadow-sm border border-green-100 overflow-hidden">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs font-semibold text-gray-500">오늘의 연습</p>
+          <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center todo-add-btn">
+            <span className="text-white text-sm font-bold leading-none">+</span>
           </div>
-          <div>
-            <p className="text-xs text-gray-400">달성률</p>
-            <p className="text-sm font-bold text-green-500">87%</p>
+        </div>
+
+        {/* Todo Item 1 - slides in, then gets checked */}
+        <div className="todo-item-1 mb-2">
+          <div className="flex items-center gap-3 bg-green-50 rounded-xl p-3 border border-green-100">
+            <div className="todo-checkbox-1 w-5 h-5 rounded-full border-2 border-green-300 flex items-center justify-center flex-shrink-0">
+              <svg className="w-3 h-3 text-white todo-check-icon-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-gray-800 todo-text-1">쇼팽 에튀드 Op.10 No.1</p>
+              <p className="text-[10px] text-gray-400 mt-0.5">느린 템포 연습 · 20분</p>
+            </div>
           </div>
-          <div>
-            <p className="text-xs text-gray-400">연속</p>
-            <p className="text-sm font-bold text-gray-800">5일</p>
+        </div>
+
+        {/* Todo Item 2 - slides in after item 1 */}
+        <div className="todo-item-2 mb-2">
+          <div className="flex items-center gap-3 bg-gray-50 rounded-xl p-3 border border-gray-100">
+            <div className="w-5 h-5 rounded-full border-2 border-gray-300 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-gray-800">바흐 인벤션 No.8</p>
+              <p className="text-[10px] text-gray-400 mt-0.5">양손 합치기 · 15분</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Todo Item 3 - slides in last */}
+        <div className="todo-item-3">
+          <div className="flex items-center gap-3 bg-gray-50 rounded-xl p-3 border border-gray-100">
+            <div className="w-5 h-5 rounded-full border-2 border-gray-300 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-gray-800">스케일 연습</p>
+              <p className="text-[10px] text-gray-400 mt-0.5">C장조 · 10분</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        <div className="mt-3 pt-3 border-t border-gray-100">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[10px] text-gray-400">오늘 진행률</span>
+            <span className="text-[10px] font-bold text-green-500 todo-progress-text">33%</span>
+          </div>
+          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div className="h-full bg-green-500 rounded-full todo-progress-bar" />
           </div>
         </div>
       </div>
+
+      <style>{`
+        /* + 버튼 펄스 */
+        .todo-add-btn {
+          animation: addPulse 6s ease-in-out infinite;
+        }
+        @keyframes addPulse {
+          0%, 8% { transform: scale(1); }
+          4% { transform: scale(1.3); }
+          100% { transform: scale(1); }
+        }
+
+        /* 아이템 1: 슬라이드 인 */
+        .todo-item-1 {
+          animation: slideIn 6s ease-out infinite;
+        }
+        @keyframes slideIn {
+          0%, 5% { opacity: 0; transform: translateY(-10px); }
+          12% { opacity: 1; transform: translateY(0); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 아이템 2: 딜레이 슬라이드 인 */
+        .todo-item-2 {
+          animation: slideIn2 6s ease-out infinite;
+        }
+        @keyframes slideIn2 {
+          0%, 18% { opacity: 0; transform: translateY(-10px); }
+          25% { opacity: 1; transform: translateY(0); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 아이템 3: 더 딜레이 */
+        .todo-item-3 {
+          animation: slideIn3 6s ease-out infinite;
+        }
+        @keyframes slideIn3 {
+          0%, 30% { opacity: 0; transform: translateY(-10px); }
+          37% { opacity: 1; transform: translateY(0); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 체크박스: 아이템1 완료 */
+        .todo-checkbox-1 {
+          animation: checkBox 6s ease-in-out infinite;
+        }
+        @keyframes checkBox {
+          0%, 55% { background: transparent; border-color: #86EFAC; }
+          60%, 95% { background: #10B981; border-color: #10B981; }
+          100% { background: transparent; border-color: #86EFAC; }
+        }
+
+        .todo-check-icon-1 {
+          animation: checkIcon 6s ease-in-out infinite;
+        }
+        @keyframes checkIcon {
+          0%, 55% { opacity: 0; transform: scale(0); }
+          62% { opacity: 1; transform: scale(1.2); }
+          65%, 95% { opacity: 1; transform: scale(1); }
+          100% { opacity: 0; transform: scale(0); }
+        }
+
+        /* 텍스트 취소선 */
+        .todo-text-1 {
+          animation: strikeThrough 6s ease-in-out infinite;
+        }
+        @keyframes strikeThrough {
+          0%, 55% { text-decoration: none; color: #1f2937; }
+          60%, 95% { text-decoration: line-through; color: #9ca3af; }
+          100% { text-decoration: none; color: #1f2937; }
+        }
+
+        /* 프로그레스 바 */
+        .todo-progress-bar {
+          animation: progressGrow 6s ease-in-out infinite;
+        }
+        @keyframes progressGrow {
+          0%, 37% { width: 0%; }
+          45%, 55% { width: 0%; }
+          65%, 95% { width: 33%; }
+          100% { width: 0%; }
+        }
+
+        .todo-progress-text {
+          animation: progressText 6s ease-in-out infinite;
+        }
+        @keyframes progressText {
+          0%, 55% { opacity: 0.4; }
+          65%, 95% { opacity: 1; }
+          100% { opacity: 0.4; }
+        }
+      `}</style>
     </div>
   );
 }
@@ -215,7 +320,7 @@ function MicVisual() {
 const VISUAL_MAP: Record<FeatureSlide["visual"], React.FC> = {
   waveform: WaveformVisual,
   feedback: FeedbackVisual,
-  dashboard: DashboardVisual,
+  dashboard: TodoFlowVisual,
   mic: MicVisual,
 };
 
