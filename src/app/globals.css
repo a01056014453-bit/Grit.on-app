@@ -299,6 +299,7 @@ p, span, li, blockquote {
 .bg-blob-violet {
   position: relative;
   background: #faf8ff;
+  isolation: isolate; /* 자식에 z-index 강제 부여 없이 blob을 뒤로 */
 }
 
 .bg-blob-violet::before,
@@ -307,7 +308,7 @@ p, span, li, blockquote {
   position: fixed;
   border-radius: 50%;
   pointer-events: none;
-  z-index: 0;
+  z-index: -1;
 }
 
 /* 왼쪽 상단 blob */
@@ -328,12 +329,6 @@ p, span, li, blockquote {
   background: radial-gradient(circle, rgba(183, 148, 255, 0.35) 0%, rgba(210, 185, 255, 0.18) 50%, transparent 70%);
 }
 
-/* blob 위에 콘텐츠가 보이도록 */
-.bg-blob-violet > * {
-  position: relative;
-  z-index: 1;
-}
-
 /* 세 번째 blob */
 .bg-blob-extra {
   position: fixed;
@@ -344,7 +339,7 @@ p, span, li, blockquote {
   border-radius: 50%;
   background: radial-gradient(circle, rgba(206, 180, 255, 0.30) 0%, rgba(228, 210, 255, 0.15) 50%, transparent 70%);
   pointer-events: none;
-  z-index: 0 !important;
+  z-index: -1;
 }
 
 /* Slow spin */
@@ -369,6 +364,7 @@ p, span, li, blockquote {
 .bg-blob-orange {
   position: relative;
   background: #fffaf5;
+  isolation: isolate;
 }
 
 .bg-blob-orange::before,
@@ -377,7 +373,7 @@ p, span, li, blockquote {
   position: fixed;
   border-radius: 50%;
   pointer-events: none;
-  z-index: 0;
+  z-index: -1;
 }
 
 .bg-blob-orange::before {
@@ -396,11 +392,6 @@ p, span, li, blockquote {
   background: radial-gradient(circle, rgba(255, 165, 90, 0.30) 0%, rgba(255, 200, 150, 0.15) 50%, transparent 70%);
 }
 
-.bg-blob-orange > * {
-  position: relative;
-  z-index: 1;
-}
-
 .bg-blob-orange-extra {
   position: fixed;
   width: 50vw;
@@ -410,6 +401,7 @@ p, span, li, blockquote {
   border-radius: 50%;
   background: radial-gradient(circle, rgba(255, 195, 140, 0.25) 0%, rgba(255, 215, 175, 0.12) 50%, transparent 70%);
   pointer-events: none;
+  z-index: -1;
   z-index: 0 !important;
 }
 
