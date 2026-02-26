@@ -9,7 +9,7 @@ import { syncPracticeSessions } from "@/lib/sync-practice";
 import { completePracticeTodo } from "@/lib/practice-todo-store";
 import { addNotification } from "@/lib/notification-store";
 import { formatTime } from "@/lib/format";
-import { getUserSongs, getDrillCards, getComposerList } from "@/lib/queries";
+import { getUserSongs, getDrillCards } from "@/lib/queries";
 import { ComposerAutocomplete, TitleAutocomplete } from "@/components/ui/composer-autocomplete";
 import { groupDrillsBySong } from "@/lib/utils-practice";
 import { getUserId } from "@/lib/user-id";
@@ -903,28 +903,6 @@ function PracticePageContent() {
     );
   };
 
-  // Composer autocomplete (Supabase)
-  const [composerList, setComposerList] = useState<{ key: string; label: string }[]>([]);
-  useEffect(() => {
-    getComposerList().then(setComposerList);
-  }, []);
-  const filteredComposers = newDrill.composer.length >= 2
-    ? composerList.filter((c) =>
-        c.label.toLowerCase().includes(newDrill.composer.toLowerCase()) ||
-        c.key.includes(newDrill.composer.toLowerCase())
-      )
-    : [];
-
-  // Song title autocomplete - filter by selected composer or show all matching songs
-  const filteredSongSuggestions = newDrill.songTitle.length >= 2
-    ? songs.filter((s) => {
-        const matchesTitle = s.title.toLowerCase().includes(newDrill.songTitle.toLowerCase());
-        const matchesComposer = newDrill.composer
-          ? s.title.toLowerCase().includes(newDrill.composer.toLowerCase())
-          : true;
-        return matchesTitle && matchesComposer;
-      })
-    : [];
 
   // Add new drill
   const handleAddDrill = () => {
@@ -1880,56 +1858,18 @@ function PracticePageContent() {
                         취소
                       </button>
                     </div>
-                    <input
-                      type="text"
+                    <ComposerAutocomplete
                       value={newDrill.composer}
-                      onChange={(e) => setNewDrill({ ...newDrill, composer: e.target.value })}
+                      onChange={(v) => setNewDrill({ ...newDrill, composer: v })}
                       placeholder="작곡가 (2글자 이상)"
-                      className="w-full px-3 py-2 bg-white rounded-lg text-sm border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black"
                       autoFocus
                     />
-                    {filteredComposers.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {filteredComposers.slice(0, 4).map((c) => (
-                          <button
-                            key={c.key}
-                            onClick={() => setNewDrill({ ...newDrill, composer: c.label })}
-                            className={`text-xs px-2 py-1 rounded-full transition-colors ${
-                              newDrill.composer === c.label
-                                ? "bg-black text-white"
-                                : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-100"
-                            }`}
-                          >
-                            {c.label}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                    <input
-                      type="text"
+                    <TitleAutocomplete
                       value={newDrill.songTitle}
-                      onChange={(e) => setNewDrill({ ...newDrill, songTitle: e.target.value })}
+                      onChange={(v) => setNewDrill({ ...newDrill, songTitle: v })}
+                      composer={newDrill.composer}
                       placeholder="곡 이름 (2글자 이상)"
-                      className="w-full px-3 py-2 bg-white rounded-lg text-sm border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black"
                     />
-                    {filteredSongSuggestions.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {filteredSongSuggestions.slice(0, 3).map((s) => {
-                          const parts = s.title.split(" ");
-                          const songOnly = parts.slice(2).join(" ") || s.title;
-                          const composerOnly = parts.slice(0, 2).join(" ");
-                          return (
-                            <button
-                              key={s.id}
-                              onClick={() => setNewDrill({ ...newDrill, composer: composerOnly, songTitle: songOnly })}
-                              className="text-xs px-2 py-1 rounded-full bg-white border border-gray-200 text-gray-600 hover:bg-gray-100 truncate max-w-[150px]"
-                            >
-                              {s.title}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
