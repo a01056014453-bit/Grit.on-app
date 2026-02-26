@@ -111,25 +111,28 @@ const ThreeEighthsRestMiddleIcon = ({ className = "" }: { className?: string }) 
   </svg>
 );
 
-// Time signatures - compound meters: beats = 8분음표 개수
+// ─── Time Signatures (numerator/denominator 기반) ────────────────────────────
 const TIME_SIGNATURES = [
-  { name: "1/4", beats: 1, compound: false },
-  { name: "2/4", beats: 2, compound: false },
-  { name: "3/4", beats: 3, compound: false },
-  { name: "4/4", beats: 4, compound: false },
-  { name: "3/8", beats: 3, compound: true },
-  { name: "6/8", beats: 6, compound: true },
-  { name: "9/8", beats: 9, compound: true },
-  { name: "12/8", beats: 12, compound: true },
+  { numerator: 1, denominator: 4, label: "1/4", accentBeats: [0], isCompound: false },
+  { numerator: 2, denominator: 4, label: "2/4", accentBeats: [0], isCompound: false },
+  { numerator: 3, denominator: 4, label: "3/4", accentBeats: [0], isCompound: false },
+  { numerator: 4, denominator: 4, label: "4/4", accentBeats: [0], isCompound: false },
+  { numerator: 3, denominator: 8, label: "3/8", accentBeats: [0], isCompound: true },
+  { numerator: 6, denominator: 8, label: "6/8", accentBeats: [0, 3], isCompound: true },
+  { numerator: 9, denominator: 8, label: "9/8", accentBeats: [0, 3, 6], isCompound: true },
+  { numerator: 12, denominator: 8, label: "12/8", accentBeats: [0, 3, 6, 9], isCompound: true },
 ];
+type TimeSignature = typeof TIME_SIGNATURES[number];
 
-// 복합박자 강박 위치 (3개씩 묶음)
-const COMPOUND_ACCENT: Record<number, number[]> = {
-  3:  [0],
-  6:  [0, 3],
-  9:  [0, 3, 6],
-  12: [0, 3, 6, 9],
+// 한 박 간격: (60/BPM) × (4/분모)
+// 분모 4 → ratio 1.0 → 4분음표 그대로
+// 분모 8 → ratio 0.5 → 8분음표 = 4분음표의 절반
+const getBeatInterval = (bpm: number, denominator: number): number => {
+  return (60.0 / bpm) * (4 / denominator);
 };
+
+// 기준음표 기호
+const BEAT_SYMBOL: Record<number, string> = { 2: "𝅗𝅥", 4: "♩", 8: "♪" };
 
 // Subdivision pattern type
 interface SubdivisionPattern {
@@ -164,27 +167,17 @@ const COMPOUND_SUBDIVISIONS: SubdivisionPattern[] = [
 ];
 
 // Get subdivisions based on time signature
-const getSubdivisionsForTimeSig = (timeSigName: string): SubdivisionPattern[] => {
-  if (timeSigName === "3/8" || timeSigName === "6/8" || timeSigName === "9/8" || timeSigName === "12/8") {
-    return COMPOUND_SUBDIVISIONS;
-  }
-  return SUBDIVISIONS;
-};
-
-// Check if time signature is compound
-const isCompoundMeter = (timeSigName: string): boolean => {
-  return ["3/8", "6/8", "9/8", "12/8"].includes(timeSigName);
+const getSubdivisionsForTimeSig = (ts: TimeSignature): SubdivisionPattern[] => {
+  return ts.isCompound ? COMPOUND_SUBDIVISIONS : SUBDIVISIONS;
 };
 
 // Get main beat indices (compound c1: 강박만, 나머지: 전부)
-const getMainBeatIndices = (timeSig: { name: string; beats: number; compound: boolean }, subdivId: string): Set<number> => {
+const getMainBeatIndices = (ts: TimeSignature, subdivId: string): Set<number> => {
   const mainBeats = new Set<number>();
-  if (timeSig.compound && subdivId === "c1") {
-    // 점4분: 강박 위치만 소리
-    const accentPos = COMPOUND_ACCENT[timeSig.beats] || [0];
-    accentPos.forEach(i => mainBeats.add(i));
+  if (ts.isCompound && subdivId === "c1") {
+    ts.accentBeats.forEach(i => mainBeats.add(i));
   } else {
-    for (let i = 0; i < timeSig.beats; i++) {
+    for (let i = 0; i < ts.numerator; i++) {
       mainBeats.add(i);
     }
   }
@@ -192,14 +185,9 @@ const getMainBeatIndices = (timeSig: { name: string; beats: number; compound: bo
 };
 
 // Get auto-accents based on time signature
-const getAutoAccents = (timeSig: { name: string; beats: number; compound: boolean }): boolean[] => {
-  const accents = Array(timeSig.beats).fill(false);
-  if (timeSig.compound) {
-    const accentPos = COMPOUND_ACCENT[timeSig.beats] || [0];
-    accentPos.forEach(i => { accents[i] = true; });
-  } else {
-    accents[0] = true;
-  }
+const getAutoAccents = (ts: TimeSignature): boolean[] => {
+  const accents = Array(ts.numerator).fill(false);
+  ts.accentBeats.forEach(i => { accents[i] = true; });
   return accents;
 };
 
@@ -327,7 +315,7 @@ export function MetronomeControl({
     onStateChange?.({
       isPlaying,
       tempo: bpm,
-      timeSignature: timeSig.name,
+      timeSignature: timeSig.label,
       subdivision: subdiv.id,
     });
   }, [isPlaying, bpm, timeSig, subdiv, onStateChange]);
@@ -403,7 +391,7 @@ export function MetronomeControl({
     if (!audioCtxRef.current || !isPlayingRef.current) return;
 
     const scheduleAheadTime = 0.1; // Schedule 100ms ahead
-    const beats = timeSigRef.current.beats; // Use total beats for cycling
+    const beats = timeSigRef.current.numerator;
     const pattern = subdivRef.current.pattern;
 
     while (nextNoteTimeRef.current < audioCtxRef.current.currentTime + scheduleAheadTime) {
@@ -413,10 +401,8 @@ export function MetronomeControl({
         currentSubIndexRef.current
       );
 
-      // 복합박자: 8분음표 간격 = (60/bpm)/2, 단순박: 4분음표 간격 = 60/bpm
-      const secondsPerBeat = timeSigRef.current.compound
-        ? (60.0 / bpmRef.current) / 2
-        : 60.0 / bpmRef.current;
+      // 한 박 간격: (60/BPM) × (4/분모)
+      const secondsPerBeat = getBeatInterval(bpmRef.current, timeSigRef.current.denominator);
       const currentRatio = pattern[currentSubIndexRef.current];
       const noteLength = secondsPerBeat * currentRatio;
       nextNoteTimeRef.current += noteLength;
@@ -602,7 +588,7 @@ export function MetronomeControl({
             <div className="text-left">
               <span className="font-semibold text-sm text-black">메트로놈</span>
               <p className={`text-[11px] ${isPlaying ? "text-black" : "text-gray-400"}`}>
-                {isPlaying ? `${bpm} BPM · ${timeSig.name}` : "OFF"}
+                {isPlaying ? `${BEAT_SYMBOL[timeSig.denominator] || "♩"}=${bpm} · ${timeSig.label}` : "OFF"}
               </p>
             </div>
           </button>
@@ -652,17 +638,15 @@ export function MetronomeControl({
             const isActive = isPlaying && currentBeat === i;
             const hasAccent = accents[i] || false;
             const isSoundBeat = willBeatSound(i);
-            // 강박: 크고 밝게, 약박: 작고 어둡게
-            const isAccentPos = hasAccent;
-            const dotSize = isAccentPos ? "w-10 h-10" : "w-7 h-7";
+            const dotSize = hasAccent ? "w-10 h-10" : "w-7 h-7";
 
             return (
               <button
                 key={i}
                 onClick={() => toggleAccent(i)}
-                className={`rounded-full flex items-center justify-center transition-all duration-50 ${dotSize} ${
+                className={`rounded-full flex items-center justify-center transition-all duration-75 ${dotSize} ${
                   isActive
-                    ? isAccentPos ? "bg-white scale-125 shadow-lg" : "bg-white/90 scale-110"
+                    ? hasAccent ? "bg-white scale-125 shadow-lg" : "bg-white/90 scale-110"
                     : hasAccent
                     ? "bg-violet-500"
                     : isSoundBeat
@@ -679,16 +663,15 @@ export function MetronomeControl({
             );
           };
 
-          if (timeSig.beats > 6) {
-            // Two rows: 9/8 → 6+3, 12/8 → 6+6
-            const firstRowCount = timeSig.name === "9/8" ? 6 : Math.ceil(timeSig.beats / 2);
+          if (timeSig.numerator > 6) {
+            const firstRowCount = timeSig.numerator === 9 ? 6 : Math.ceil(timeSig.numerator / 2);
             return (
               <div className="flex flex-col items-center gap-2">
                 <div className="flex justify-center gap-1.5">
                   {[...Array(firstRowCount)].map((_, i) => renderDot(i))}
                 </div>
                 <div className="flex justify-center gap-1.5">
-                  {[...Array(timeSig.beats - firstRowCount)].map((_, i) => renderDot(firstRowCount + i))}
+                  {[...Array(timeSig.numerator - firstRowCount)].map((_, i) => renderDot(firstRowCount + i))}
                 </div>
               </div>
             );
@@ -696,13 +679,13 @@ export function MetronomeControl({
 
           return (
             <div className="flex justify-center gap-2">
-              {[...Array(timeSig.beats)].map((_, i) => renderDot(i))}
+              {[...Array(timeSig.numerator)].map((_, i) => renderDot(i))}
             </div>
           );
         })()}
-        {timeSig.compound && (
-          <p className="text-[10px] text-violet-400 text-center mt-1.5">♩. = {bpm} BPM</p>
-        )}
+        <p className="text-[10px] text-violet-400 text-center mt-1.5">
+          {BEAT_SYMBOL[timeSig.denominator] || "♩"} = {bpm} BPM
+        </p>
         <p className="text-[10px] text-gray-400 text-center mt-1">
           터치하여 악센트 설정
         </p>
@@ -798,12 +781,12 @@ export function MetronomeControl({
           {/* Time Signature */}
           <div className="text-center">
             <select
-              value={timeSig.name}
+              value={timeSig.label}
               onChange={(e) => {
-                const found = TIME_SIGNATURES.find(s => s.name === e.target.value);
+                const found = TIME_SIGNATURES.find(s => s.label === e.target.value);
                 if (found) {
                   setTimeSig(found);
-                  const newSubdivs = getSubdivisionsForTimeSig(found.name);
+                  const newSubdivs = getSubdivisionsForTimeSig(found);
                   setSubdiv(newSubdivs[0]);
                 }
               }}
@@ -811,7 +794,7 @@ export function MetronomeControl({
               className="text-base font-light text-black bg-transparent border-none focus:outline-none cursor-pointer"
             >
               {TIME_SIGNATURES.map((ts) => (
-                <option key={ts.name} value={ts.name}>{ts.name}</option>
+                <option key={ts.label} value={ts.label}>{ts.label}</option>
               ))}
             </select>
           </div>
@@ -866,7 +849,7 @@ export function MetronomeControl({
                 <div className="absolute bottom-full right-0 mb-2 bg-white rounded-xl shadow-lg border border-gray-200 p-2 z-20 min-w-[200px]">
                   <p className="text-[10px] text-gray-400 px-2 mb-2">세분 (Subdivision)</p>
                   <div className="grid grid-cols-4 gap-1">
-                    {getSubdivisionsForTimeSig(timeSig.name).map((item) => (
+                    {getSubdivisionsForTimeSig(timeSig).map((item) => (
                       <button
                         key={item.id}
                         onClick={() => {

@@ -28,20 +28,20 @@ const TEMPO_PRESETS = [
 // ─── Time Signatures ─────────────────────────────────────────────────────────
 
 const TIME_SIGNATURES = [
-  { label: "2/4",  beats: 2, compound: false },
-  { label: "3/4",  beats: 3, compound: false },
-  { label: "4/4",  beats: 4, compound: false },
-  { label: "6/8",  beats: 6, compound: true },
-  { label: "9/8",  beats: 9, compound: true },
-  { label: "12/8", beats: 12, compound: true },
+  { numerator: 2,  denominator: 4, label: "2/4",  accentBeats: [0], isCompound: false },
+  { numerator: 3,  denominator: 4, label: "3/4",  accentBeats: [0], isCompound: false },
+  { numerator: 4,  denominator: 4, label: "4/4",  accentBeats: [0], isCompound: false },
+  { numerator: 6,  denominator: 8, label: "6/8",  accentBeats: [0, 3], isCompound: true },
+  { numerator: 9,  denominator: 8, label: "9/8",  accentBeats: [0, 3, 6], isCompound: true },
+  { numerator: 12, denominator: 8, label: "12/8", accentBeats: [0, 3, 6, 9], isCompound: true },
 ];
 
-// 복합박자 강박 위치
-const COMPOUND_ACCENT: Record<number, number[]> = {
-  6:  [0, 3],
-  9:  [0, 3, 6],
-  12: [0, 3, 6, 9],
+// 한 박 간격: (60/BPM) × (4/분모)
+const getBeatInterval = (bpm: number, denominator: number): number => {
+  return (60.0 / bpm) * (4 / denominator);
 };
+
+const BEAT_SYMBOL: Record<number, string> = { 2: "𝅗𝅥", 4: "♩", 8: "♪" };
 
 // ─── Subdivision Patterns ────────────────────────────────────────────────────
 
@@ -159,7 +159,7 @@ export default function MetronomePage() {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const timeSig = TIME_SIGNATURES[timeSigIndex];
-  const isCompound = timeSig.compound;
+  const isCompound = timeSig.isCompound;
   const subdivisions = isCompound ? COMPOUND_SUBDIVISIONS : SIMPLE_SUBDIVISIONS;
   const pattern = subdivisions.find((p) => p.id === patternId) || subdivisions[0];
 
@@ -209,21 +209,18 @@ export default function MetronomePage() {
     []
   );
 
-  // 복합박자 강박 여부 판단
+  // 강박 여부 판단
   const isAccentBeat = useCallback((beatIndex: number) => {
-    if (isCompound) {
-      return (COMPOUND_ACCENT[timeSig.beats] || [0]).includes(beatIndex);
-    }
-    return beatIndex === 0;
-  }, [isCompound, timeSig.beats]);
+    return timeSig.accentBeats.includes(beatIndex);
+  }, [timeSig.accentBeats]);
 
   // playBeat을 ref로 관리 → 볼륨/음소거 변경 시 재시작 없이 즉시 반영
   const playBeat = useCallback(
     (beatIndex: number) => {
       if (!audioContextRef.current || isMuted) return;
       const ctx = audioContextRef.current;
-      // 복합박자: 8분음표 간격 = (60/bpm)/2, 단순박: 4분음표 간격
-      const beatDur = isCompound ? (60 / bpm) / 2 : 60 / bpm;
+      // 한 박 간격: (60/BPM) × (4/분모)
+      const beatDur = getBeatInterval(bpm, timeSig.denominator);
 
       pattern.subdivisions.forEach((sub) => {
         const noteTime = ctx.currentTime + sub.offset * beatDur;
@@ -235,7 +232,7 @@ export default function MetronomePage() {
         }
       });
     },
-    [bpm, isMuted, volume, pattern, isCompound, createClick, isAccentBeat]
+    [bpm, isMuted, volume, pattern, timeSig.denominator, createClick, isAccentBeat]
   );
 
   const playBeatRef = useRef(playBeat);
@@ -256,14 +253,14 @@ export default function MetronomePage() {
     setCurrentBeat(1);
     playBeatRef.current(0);
 
-    // 복합박자: 8분음표 간격 = (60/bpm)/2
-    const ms = isCompound ? ((60 / bpm) / 2) * 1000 : (60 / bpm) * 1000;
+    // 한 박 간격: (60/BPM) × (4/분모)
+    const ms = getBeatInterval(bpm, timeSig.denominator) * 1000;
     intervalRef.current = setInterval(() => {
-      beat = (beat + 1) % timeSig.beats;
+      beat = (beat + 1) % timeSig.numerator;
       setCurrentBeat(beat + 1);
       playBeatRef.current(beat);
     }, ms);
-  }, [bpm, timeSig.beats, isCompound]);
+  }, [bpm, timeSig.numerator, timeSig.denominator]);
 
   const stopMetronome = useCallback(() => {
     setIsPlaying(false);
@@ -338,32 +335,31 @@ export default function MetronomePage() {
       <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-6 mb-6">
         {/* Beat Indicators */}
         {(() => {
-          const accentPositions = isCompound ? (COMPOUND_ACCENT[timeSig.beats] || [0]) : [0];
           const renderDot = (i: number) => {
             const isActive = currentBeat === i + 1;
-            const isAccent = accentPositions.includes(i);
+            const isAccent = timeSig.accentBeats.includes(i);
             const dotSize = isAccent ? "w-5 h-5" : "w-3 h-3";
             return (
               <div
                 key={i}
-                className={`rounded-full transition-all duration-100 ${dotSize} ${
+                className={`rounded-full transition-all duration-75 ${dotSize} ${
                   isActive
                     ? isAccent ? "bg-green-500 scale-125" : "bg-emerald-400 scale-110"
-                    : isAccent ? "bg-gray-300" : "bg-gray-200"
+                    : isAccent ? "bg-gray-400" : "bg-gray-200"
                 }`}
               />
             );
           };
 
-          if (timeSig.beats > 6) {
-            const firstRow = timeSig.beats === 9 ? 6 : Math.ceil(timeSig.beats / 2);
+          if (timeSig.numerator > 6) {
+            const firstRow = timeSig.numerator === 9 ? 6 : Math.ceil(timeSig.numerator / 2);
             return (
               <div className="flex flex-col items-center gap-1.5 mb-6">
                 <div className="flex justify-center items-center gap-1.5">
                   {Array.from({ length: firstRow }, (_, i) => renderDot(i))}
                 </div>
                 <div className="flex justify-center items-center gap-1.5">
-                  {Array.from({ length: timeSig.beats - firstRow }, (_, i) => renderDot(firstRow + i))}
+                  {Array.from({ length: timeSig.numerator - firstRow }, (_, i) => renderDot(firstRow + i))}
                 </div>
               </div>
             );
@@ -371,7 +367,7 @@ export default function MetronomePage() {
 
           return (
             <div className="flex justify-center items-center gap-2 mb-6">
-              {Array.from({ length: timeSig.beats }, (_, i) => renderDot(i))}
+              {Array.from({ length: timeSig.numerator }, (_, i) => renderDot(i))}
             </div>
           );
         })()}
@@ -379,7 +375,7 @@ export default function MetronomePage() {
         {/* BPM Display */}
         <div className="text-center mb-6">
           <div className="text-sm text-muted-foreground mb-1">
-            {isCompound ? "♩." : "♩"} =
+            {BEAT_SYMBOL[timeSig.denominator] || "♩"} =
           </div>
           <div className="text-6xl font-bold text-foreground mb-1">{bpm}</div>
           <div className="text-sm text-muted-foreground italic">{getTempoLabel(bpm)}</div>
@@ -474,7 +470,7 @@ export default function MetronomePage() {
           <div className="flex gap-2">
             <span className="text-[10px] text-muted-foreground self-center w-8 shrink-0">단순</span>
             {TIME_SIGNATURES.map((sig, idx) =>
-              sig.compound ? null : (
+              sig.isCompound ? null : (
                 <button
                   key={sig.label}
                   onClick={() => setTimeSigIndex(idx)}
@@ -492,7 +488,7 @@ export default function MetronomePage() {
           <div className="flex gap-2">
             <span className="text-[10px] text-muted-foreground self-center w-8 shrink-0">복합</span>
             {TIME_SIGNATURES.map((sig, idx) =>
-              !sig.compound ? null : (
+              !sig.isCompound ? null : (
                 <button
                   key={sig.label}
                   onClick={() => setTimeSigIndex(idx)}
