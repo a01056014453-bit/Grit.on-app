@@ -168,6 +168,40 @@ export default function MetronomePage() {
     };
   }, []);
 
+  // 음색으로 강박/약박/세분화 구분
+  const createClick = useCallback(
+    (ctx: AudioContext, time: number, type: "accent" | "beat" | "sub", vol: number) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      if (type === "accent") {
+        // 강박: 높고 짧고 날카로운 목재 소리
+        osc.type = "triangle";
+        osc.frequency.value = 1500;
+        gain.gain.setValueAtTime(vol, time);
+        gain.gain.exponentialRampToValueAtTime(0.001, time + 0.03);
+      } else if (type === "beat") {
+        // 약박: 중간 높이, 둥근 소리
+        osc.type = "sine";
+        osc.frequency.value = 900;
+        gain.gain.setValueAtTime(vol * 0.9, time);
+        gain.gain.exponentialRampToValueAtTime(0.001, time + 0.04);
+      } else {
+        // 세분화(sub): 낮고 부드러운 소리
+        osc.type = "sine";
+        osc.frequency.value = 600;
+        gain.gain.setValueAtTime(vol * 0.6, time);
+        gain.gain.exponentialRampToValueAtTime(0.001, time + 0.025);
+      }
+
+      osc.start(time);
+      osc.stop(time + 0.08);
+    },
+    []
+  );
+
   // playBeat을 ref로 관리 → 볼륨/음소거 변경 시 재시작 없이 즉시 반영
   const playBeat = useCallback(
     (beatIndex: number) => {
@@ -175,26 +209,20 @@ export default function MetronomePage() {
       const ctx = audioContextRef.current;
       // 복합박자: 점4분음표 = 4분음표 × 1.5
       const beatDur = isCompound ? (60 / bpm) * 1.5 : 60 / bpm;
-      const isAccent = beatIndex === 0;
 
       pattern.subdivisions.forEach((sub) => {
-        const delay = sub.offset * beatDur;
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
+        const noteTime = ctx.currentTime + sub.offset * beatDur;
 
-        osc.frequency.value = isAccent && sub.offset === 0 ? 1200 : sub.pitch;
-        osc.type = "sine";
-
-        const now = ctx.currentTime;
-        gain.gain.setValueAtTime(sub.volume * volume, now + delay);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + delay + 0.05);
-        osc.start(now + delay);
-        osc.stop(now + delay + 0.05);
+        if (sub.offset === 0) {
+          // 첫 오프셋 = 메인 박자
+          createClick(ctx, noteTime, beatIndex === 0 ? "accent" : "beat", volume);
+        } else {
+          // 나머지 = 세분화 소리
+          createClick(ctx, noteTime, "sub", volume);
+        }
       });
     },
-    [bpm, isMuted, volume, pattern, isCompound]
+    [bpm, isMuted, volume, pattern, isCompound, createClick]
   );
 
   const playBeatRef = useRef(playBeat);
