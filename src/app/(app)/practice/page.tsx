@@ -1056,6 +1056,29 @@ function PracticePageContent() {
   const recTotalTasks = recPieces.reduce((s, p) => s + p.total, 0);
   const recTotalRecordings = recSessions.filter((s) => s.hasRecording).length;
 
+  // 캘린더 날짜별 완료 상태 미리 계산 (렌더 중 localStorage 호출 방지)
+  const calDayStatuses = useMemo(() => {
+    if (!calMounted) return new Map<number, "none" | "complete" | "incomplete">();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const statuses = new Map<number, "none" | "complete" | "incomplete">();
+    for (let day = 1; day <= calDaysInMonth; day++) {
+      const d = new Date(calYear, calMonth, day);
+      const isFuture = d > today;
+      if (isFuture) { statuses.set(day, "none"); continue; }
+      const dayDateStr = drillFormatDateStr(d);
+      const dayScheduled = loadScheduledDrillIds(dayDateStr);
+      const dayCompleted = loadCompletedDrills(dayDateStr);
+      const dayKey = `${calYear}-${String(calMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      const count = calSessionsByDate[dayKey]?.length || 0;
+      const hasDrills = dayScheduled.size > 0 || count > 0;
+      if (!hasDrills) { statuses.set(day, "none"); continue; }
+      const allDone = dayScheduled.size > 0 && dayScheduled.size === dayCompleted.size && [...dayScheduled].every(id => dayCompleted.has(id));
+      statuses.set(day, allDone ? "complete" : "incomplete");
+    }
+    return statuses;
+  }, [calYear, calMonth, calDaysInMonth, calSessionsByDate, refreshKey, calMounted]);
+
   const navigateCalMonth = (dir: number) => {
     let m = calMonth + dir, y = calYear;
     if (m < 0) { m = 11; y--; }
@@ -1358,19 +1381,7 @@ function PracticePageContent() {
                   const isSelected = day === calSelectedDate.getDate() && calMonth === calSelectedDate.getMonth() && calYear === calSelectedDate.getFullYear();
                   const dow = (calFirstDay + i) % 7;
                   const hasSchedule = scheduledDays.has(day);
-
-                  // 완료/미완료 판별
-                  let dayStatus: "none" | "complete" | "incomplete" = "none";
-                  if (calMounted && !isFuture) {
-                    const dayDateStr = drillFormatDateStr(new Date(calYear, calMonth, day));
-                    const dayScheduled = loadScheduledDrillIds(dayDateStr);
-                    const dayCompleted = loadCompletedDrills(dayDateStr);
-                    const hasDrills = dayScheduled.size > 0 || count > 0;
-                    if (hasDrills) {
-                      const allDone = dayScheduled.size > 0 && dayScheduled.size === dayCompleted.size && [...dayScheduled].every(id => dayCompleted.has(id));
-                      dayStatus = allDone ? "complete" : "incomplete";
-                    }
-                  }
+                  const dayStatus = calDayStatuses.get(day) || "none";
 
                   const countStyle = isFuture && hasSchedule
                     ? "bg-violet-100/60 text-violet-400"
