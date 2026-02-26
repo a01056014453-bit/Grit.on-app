@@ -9,8 +9,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { safeBack } from "@/lib/navigation";
 import { motion, Variants } from "framer-motion";
-import { getAllSessions, savePracticeSession, clearAllSessions, type PracticeSession } from "@/lib/db";
-import { RefreshCw } from "lucide-react";
+import { getAllSessions, type PracticeSession } from "@/lib/db";
 
 type TabType = "weekly" | "monthly";
 
@@ -23,54 +22,6 @@ const charVariants: Variants = {
     transition: { delay: i * 0.04, duration: 0.4, ease: "easeOut" },
   }),
 };
-
-// 샘플 데이터 생성 함수
-async function generateSampleData(): Promise<void> {
-  const pieces = [
-    { name: "F. Chopin Ballade Op.23 No.1", composer: "Chopin" },
-    { name: "L.v. Beethoven Sonata Op.13 Pathétique", composer: "Beethoven" },
-    { name: "C. Debussy Clair de Lune", composer: "Debussy" },
-    { name: "F. Liszt La Campanella", composer: "Liszt" },
-    { name: "J.S. Bach Invention No.1", composer: "Bach" },
-  ];
-
-  const today = new Date();
-
-  for (let daysAgo = 0; daysAgo < 45; daysAgo++) {
-    if (Math.random() > 0.3) {
-      const date = new Date(today);
-      date.setDate(today.getDate() - daysAgo);
-
-      const sessionsCount = Math.floor(Math.random() * 3) + 1;
-
-      for (let s = 0; s < sessionsCount; s++) {
-        const piece = pieces[Math.floor(Math.random() * pieces.length)];
-        const startHour = 9 + Math.floor(Math.random() * 12);
-
-        const startTime = new Date(date);
-        startTime.setHours(startHour, Math.floor(Math.random() * 60), 0, 0);
-
-        const totalMinutes = 15 + Math.floor(Math.random() * 60);
-        const concentration = 0.5 + Math.random() * 0.4;
-
-        const endTime = new Date(startTime);
-        endTime.setMinutes(endTime.getMinutes() + totalMinutes);
-
-        await savePracticeSession({
-          pieceId: piece.name.toLowerCase().replace(/\s/g, "-"),
-          pieceName: piece.name,
-          composer: piece.composer,
-          startTime,
-          endTime,
-          totalTime: totalMinutes * 60,
-          practiceTime: Math.round(totalMinutes * 60 * concentration),
-          synced: false,
-          practiceType: ["partial", "routine", "runthrough"][Math.floor(Math.random() * 3)] as "partial" | "routine" | "runthrough",
-        });
-      }
-    }
-  }
-}
 
 // 헬퍼 함수들
 function formatMinutes(seconds: number): number {
@@ -122,42 +73,14 @@ export default function StatsPage() {
   const [activeTab, setActiveTab] = useState<TabType>("weekly");
   const [sessions, setSessions] = useState<PracticeSession[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isRegenerating, setIsRegenerating] = useState(false);
   const weeklyGoal = 420; // 주간 목표: 7시간 (420분)
 
-  const loadSessions = async () => {
-    try {
-      let allSessions = await getAllSessions();
-      if (allSessions.length === 0) {
-        await generateSampleData();
-        allSessions = await getAllSessions();
-      }
-      setSessions(allSessions);
-    } catch (error) {
-      console.error("Failed to load sessions:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   useEffect(() => {
-    loadSessions();
+    getAllSessions()
+      .then(setSessions)
+      .catch((error) => console.error("Failed to load sessions:", error))
+      .finally(() => setIsLoading(false));
   }, []);
-
-  // 샘플 데이터 재생성
-  const handleRegenerate = async () => {
-    setIsRegenerating(true);
-    try {
-      await clearAllSessions();
-      await generateSampleData();
-      const allSessions = await getAllSessions();
-      setSessions(allSessions);
-    } catch (error) {
-      console.error("Failed to regenerate:", error);
-    } finally {
-      setIsRegenerating(false);
-    }
-  };
 
   // ============ 주간 데이터 ============
   const weeklyData = useMemo(() => {
@@ -313,13 +236,6 @@ export default function StatsPage() {
             나의 연습 기록을 확인하세요
           </motion.p>
         </div>
-        <button
-          onClick={handleRegenerate}
-          disabled={isRegenerating}
-          className="w-10 h-10 rounded-full bg-white/30 backdrop-blur-sm border border-white/40 flex items-center justify-center hover:bg-white/50 transition-colors disabled:opacity-50"
-        >
-          <RefreshCw className={`w-4 h-4 text-gray-500 ${isRegenerating ? "animate-spin" : ""}`} />
-        </button>
       </div>
 
       {/* Tabs */}
