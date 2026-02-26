@@ -31,10 +31,17 @@ const TIME_SIGNATURES = [
   { label: "2/4",  beats: 2, compound: false },
   { label: "3/4",  beats: 3, compound: false },
   { label: "4/4",  beats: 4, compound: false },
-  { label: "6/8",  beats: 2, compound: true },
-  { label: "9/8",  beats: 3, compound: true },
-  { label: "12/8", beats: 4, compound: true },
+  { label: "6/8",  beats: 6, compound: true },
+  { label: "9/8",  beats: 9, compound: true },
+  { label: "12/8", beats: 12, compound: true },
 ];
+
+// 복합박자 강박 위치
+const COMPOUND_ACCENT: Record<number, number[]> = {
+  6:  [0, 3],
+  9:  [0, 3, 6],
+  12: [0, 3, 6, 9],
+};
 
 // ─── Subdivision Patterns ────────────────────────────────────────────────────
 
@@ -202,27 +209,33 @@ export default function MetronomePage() {
     []
   );
 
+  // 복합박자 강박 여부 판단
+  const isAccentBeat = useCallback((beatIndex: number) => {
+    if (isCompound) {
+      return (COMPOUND_ACCENT[timeSig.beats] || [0]).includes(beatIndex);
+    }
+    return beatIndex === 0;
+  }, [isCompound, timeSig.beats]);
+
   // playBeat을 ref로 관리 → 볼륨/음소거 변경 시 재시작 없이 즉시 반영
   const playBeat = useCallback(
     (beatIndex: number) => {
       if (!audioContextRef.current || isMuted) return;
       const ctx = audioContextRef.current;
-      // BPM = 박 속도 (♩ 또는 ♩.) → 간격 동일: 60/bpm
-      const beatDur = 60 / bpm;
+      // 복합박자: 8분음표 간격 = (60/bpm)/2, 단순박: 4분음표 간격
+      const beatDur = isCompound ? (60 / bpm) / 2 : 60 / bpm;
 
       pattern.subdivisions.forEach((sub) => {
         const noteTime = ctx.currentTime + sub.offset * beatDur;
 
         if (sub.offset === 0) {
-          // 첫 오프셋 = 메인 박자
-          createClick(ctx, noteTime, beatIndex === 0 ? "accent" : "beat", volume);
+          createClick(ctx, noteTime, isAccentBeat(beatIndex) ? "accent" : "beat", volume);
         } else {
-          // 나머지 = 세분화 소리
           createClick(ctx, noteTime, "sub", volume);
         }
       });
     },
-    [bpm, isMuted, volume, pattern, createClick]
+    [bpm, isMuted, volume, pattern, isCompound, createClick, isAccentBeat]
   );
 
   const playBeatRef = useRef(playBeat);
@@ -243,14 +256,14 @@ export default function MetronomePage() {
     setCurrentBeat(1);
     playBeatRef.current(0);
 
-    // BPM = 박 속도 → 간격: 60/bpm
-    const ms = (60 / bpm) * 1000;
+    // 복합박자: 8분음표 간격 = (60/bpm)/2
+    const ms = isCompound ? ((60 / bpm) / 2) * 1000 : (60 / bpm) * 1000;
     intervalRef.current = setInterval(() => {
       beat = (beat + 1) % timeSig.beats;
       setCurrentBeat(beat + 1);
       playBeatRef.current(beat);
     }, ms);
-  }, [bpm, timeSig.beats]);
+  }, [bpm, timeSig.beats, isCompound]);
 
   const stopMetronome = useCallback(() => {
     setIsPlaying(false);
@@ -324,20 +337,44 @@ export default function MetronomePage() {
       {/* ─── Main Display ─── */}
       <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-6 mb-6">
         {/* Beat Indicators */}
-        <div className="flex justify-center gap-2 mb-6">
-          {Array.from({ length: timeSig.beats }, (_, i) => (
-            <div
-              key={i}
-              className={`w-4 h-4 rounded-full transition-all duration-100 ${
-                currentBeat === i + 1
-                  ? i === 0
-                    ? "bg-green-500 scale-125"
-                    : "bg-emerald-400 scale-110"
-                  : "bg-gray-200"
-              }`}
-            />
-          ))}
-        </div>
+        {(() => {
+          const accentPositions = isCompound ? (COMPOUND_ACCENT[timeSig.beats] || [0]) : [0];
+          const renderDot = (i: number) => {
+            const isActive = currentBeat === i + 1;
+            const isAccent = accentPositions.includes(i);
+            const dotSize = isAccent ? "w-5 h-5" : "w-3 h-3";
+            return (
+              <div
+                key={i}
+                className={`rounded-full transition-all duration-100 ${dotSize} ${
+                  isActive
+                    ? isAccent ? "bg-green-500 scale-125" : "bg-emerald-400 scale-110"
+                    : isAccent ? "bg-gray-300" : "bg-gray-200"
+                }`}
+              />
+            );
+          };
+
+          if (timeSig.beats > 6) {
+            const firstRow = timeSig.beats === 9 ? 6 : Math.ceil(timeSig.beats / 2);
+            return (
+              <div className="flex flex-col items-center gap-1.5 mb-6">
+                <div className="flex justify-center items-center gap-1.5">
+                  {Array.from({ length: firstRow }, (_, i) => renderDot(i))}
+                </div>
+                <div className="flex justify-center items-center gap-1.5">
+                  {Array.from({ length: timeSig.beats - firstRow }, (_, i) => renderDot(firstRow + i))}
+                </div>
+              </div>
+            );
+          }
+
+          return (
+            <div className="flex justify-center items-center gap-2 mb-6">
+              {Array.from({ length: timeSig.beats }, (_, i) => renderDot(i))}
+            </div>
+          );
+        })()}
 
         {/* BPM Display */}
         <div className="text-center mb-6">
