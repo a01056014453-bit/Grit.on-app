@@ -626,13 +626,13 @@ export default function ProfilePage() {
           </span>
         </div>
 
-        {/* 선생님 모드 토글 - 항상 표시 */}
+        {/* 선생님 모드 토글 - 인증 완료된 경우에만 토글 가능 */}
         <button
           onClick={() => {
-            if (!isTeacher) {
-              // 선생님이 아직 아니면 바로 활성화
-              updateTeacherProfile({ isTeacher: true, teacherProfileId: "t8" });
-              reloadTeacher();
+            if (verificationStatus !== "approved") {
+              // 인증 안 됐으면 선생님 등록 페이지로 이동
+              router.push("/profile/teacher-register");
+              return;
             }
             toggleMode();
             reloadTeacher();
@@ -647,40 +647,58 @@ export default function ProfilePage() {
             )}
             <div className="text-left">
               <span className="text-sm text-gray-700">선생님 모드</span>
-              {!isTeacher && (
-                <p className="text-[11px] text-gray-400 mt-0.5">켜면 학생에게 피드백을 제공할 수 있어요</p>
+              {verificationStatus !== "approved" && (
+                <p className="text-[11px] text-gray-400 mt-0.5">인증 완료 후 활성화할 수 있어요</p>
               )}
             </div>
           </div>
-          <div className={`w-11 h-6 rounded-full relative transition-colors ${teacherMode ? "bg-violet-600" : "bg-gray-300"}`}>
-            <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${teacherMode ? "translate-x-5" : "translate-x-0.5"}`} />
+          <div className={`w-11 h-6 rounded-full relative transition-colors ${teacherMode && verificationStatus === "approved" ? "bg-violet-600" : "bg-gray-300"}`}>
+            <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${teacherMode && verificationStatus === "approved" ? "translate-x-5" : "translate-x-0.5"}`} />
           </div>
         </button>
 
-        {isTeacher && (
-          <>
-            <div className="flex items-center justify-between px-4 py-3.5 border-b border-white/30">
-              <div className="flex items-center gap-3">
-                <Shield className="w-5 h-5 text-green-500" />
-                <div>
-                  <span className="text-sm text-gray-700">인증 상태</span>
-                  <span className="ml-2 px-2 py-0.5 bg-green-100/60 text-green-700 text-xs font-medium rounded-full">
-                    인증됨
-                  </span>
-                </div>
-              </div>
+        {/* 인증 상태 */}
+        <div className="flex items-center justify-between px-4 py-3.5 border-b border-white/30">
+          <div className="flex items-center gap-3">
+            <Shield className={`w-5 h-5 ${verificationStatus === "approved" ? "text-green-500" : verificationStatus === "pending" ? "text-amber-500" : verificationStatus === "rejected" ? "text-red-500" : "text-gray-400"}`} />
+            <div>
+              <span className="text-sm text-gray-700">인증 상태</span>
+              <span className={`ml-2 px-2 py-0.5 text-xs font-medium rounded-full ${
+                verificationStatus === "approved"
+                  ? "bg-green-100/60 text-green-700"
+                  : verificationStatus === "pending"
+                  ? "bg-amber-100/60 text-amber-700"
+                  : verificationStatus === "rejected"
+                  ? "bg-red-100/60 text-red-700"
+                  : "bg-gray-100/60 text-gray-500"
+              }`}>
+                {verificationStatus === "approved" ? "인증됨" : verificationStatus === "pending" ? "심사중" : verificationStatus === "rejected" ? "반려됨" : "미인증"}
+              </span>
             </div>
-            <Link
-              href="/profile/teacher-profile"
-              className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-white/30 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <Pencil className="w-5 h-5 text-violet-500" />
-                <span className="text-sm text-gray-700">프로필 관리</span>
-              </div>
-              <ChevronRight className="w-4 h-4 text-gray-400" />
+          </div>
+          {verificationStatus === "none" && (
+            <Link href="/profile/teacher-register" className="text-xs text-violet-600 font-medium">
+              인증 신청 &rarr;
             </Link>
-          </>
+          )}
+          {verificationStatus === "rejected" && (
+            <Link href="/profile/teacher-register" className="text-xs text-violet-600 font-medium">
+              재신청 &rarr;
+            </Link>
+          )}
+        </div>
+
+        {verificationStatus === "approved" && (
+          <Link
+            href="/profile/teacher-profile"
+            className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-white/30 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <Pencil className="w-5 h-5 text-violet-500" />
+              <span className="text-sm text-gray-700">프로필 관리</span>
+            </div>
+            <ChevronRight className="w-4 h-4 text-gray-400" />
+          </Link>
         )}
       </motion.div>
 

@@ -110,6 +110,20 @@ export default function TeachersPage() {
 
   const hasActiveFilters = minRating || maxPrice || selectedSpecialty !== "전체";
 
+  // 실제 통계 계산
+  const avgRating = useMemo(() => {
+    if (allTeachers.length === 0) return 0;
+    const sum = allTeachers.reduce((s, t) => s + t.rating, 0);
+    return Math.round((sum / allTeachers.length) * 10) / 10;
+  }, [allTeachers]);
+
+  const avgResponseTime = useMemo(() => {
+    if (allTeachers.length === 0) return "-";
+    const sum = allTeachers.reduce((s, t) => s + t.avgResponseTime, 0);
+    const avgHours = Math.round((sum / allTeachers.length) * 10) / 10;
+    return `${avgHours}h`;
+  }, [allTeachers]);
+
   return (
     <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
       <div className="bg-blob-extra" />
@@ -137,12 +151,12 @@ export default function TeachersPage() {
         </div>
         <div className="bg-white/50 backdrop-blur-xl rounded-2xl p-3 border border-white/60 shadow-sm text-center">
           <Star className="w-5 h-5 text-amber-500 mx-auto mb-1" />
-          <div className="text-lg font-bold text-gray-900">4.7</div>
+          <div className="text-lg font-bold text-gray-900">{allTeachers.length > 0 ? avgRating : "-"}</div>
           <div className="text-[10px] text-gray-500">평균 평점</div>
         </div>
         <div className="bg-white/50 backdrop-blur-xl rounded-2xl p-3 border border-white/60 shadow-sm text-center">
           <Clock className="w-5 h-5 text-blue-500 mx-auto mb-1" />
-          <div className="text-lg font-bold text-gray-900">3.2h</div>
+          <div className="text-lg font-bold text-gray-900">{avgResponseTime}</div>
           <div className="text-[10px] text-gray-500">평균 응답</div>
         </div>
       </div>
