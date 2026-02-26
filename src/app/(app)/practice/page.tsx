@@ -1893,7 +1893,7 @@ function PracticePageContent() {
                   type="text"
                   value={newDrill.title}
                   onChange={(e) => setNewDrill({ ...newDrill, title: e.target.value })}
-                  placeholder="예: 양손 어긋남"
+                  placeholder="예: 왼손만 따로 tempo 120"
                   className="w-full px-3 py-2.5 bg-gray-50 rounded-lg text-sm border-0 focus:outline-none focus:ring-2 focus:ring-black"
                 />
               </div>
