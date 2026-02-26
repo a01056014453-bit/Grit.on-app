@@ -35,6 +35,31 @@ export async function upsertProfile(
   return data;
 }
 
+/** 닉네임 중복 체크 (자기 자신은 제외) */
+export async function isNicknameAvailable(
+  nickname: string,
+  excludeUserId?: string
+): Promise<boolean> {
+  const trimmed = nickname.trim();
+  if (trimmed.length < 2) return false;
+
+  let query = supabase
+    .from("profiles")
+    .select("id", { count: "exact", head: true })
+    .eq("nickname", trimmed);
+
+  if (excludeUserId) {
+    query = query.neq("id", excludeUserId);
+  }
+
+  const { count, error } = await query;
+  if (error) {
+    console.error("[isNicknameAvailable]", error.message);
+    return true; // 에러 시 허용 (UX 우선)
+  }
+  return (count ?? 0) === 0;
+}
+
 /** Profile → User 타입 변환 */
 export function profileToUser(profile: Profile | null): User {
   if (!profile) {

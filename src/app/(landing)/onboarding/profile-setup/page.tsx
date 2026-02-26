@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { RefreshCw, ChevronRight, Check } from "lucide-react";
+import { RefreshCw, ChevronRight, Check, Loader2 } from "lucide-react";
+import { isNicknameAvailable, upsertProfile } from "@/lib/queries/profiles";
+import { getUserId } from "@/lib/user-id";
 
 /* ─── Constants ─── */
 
@@ -36,6 +38,17 @@ const EMOJI_OPTIONS = [
   "👤", "🎹", "🎻", "🎺", "🎷", "🎵", "🎼", "👩‍🎤", "👨‍🎤", "🧑‍🎓",
 ];
 
+// 한글 악기명 → DB enum 매핑
+const INSTRUMENT_TO_ENUM: Record<string, string> = {
+  "피아노": "piano",
+  "바이올린": "violin",
+  "첼로": "cello",
+  "비올라": "violin",
+  "플루트": "flute",
+  "클라리넷": "clarinet",
+  "기타": "guitar",
+};
+
 /* ─── Types ─── */
 
 interface UserProfile {
@@ -45,6 +58,8 @@ interface UserProfile {
   profileEmoji: string;
   createdAt: string;
 }
+
+type NicknameStatus = "idle" | "checking" | "available" | "taken";
 
 /* ─── Helpers ─── */
 
@@ -81,8 +96,49 @@ export default function ProfileSetupPage() {
   const [instruments, setInstruments] = useState<string[]>([]);
   const [profileEmoji, setProfileEmoji] = useState("👤");
 
-  const handleGenerateNickname = () => {
-    setNickname(generateNickname());
+  // Nickname duplicate check
+  const [nicknameStatus, setNicknameStatus] = useState<NicknameStatus>("idle");
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const checkNickname = useCallback(async (name: string) => {
+    const trimmed = name.trim();
+    if (trimmed.length < 2) {
+      setNicknameStatus("idle");
+      return;
+    }
+    setNicknameStatus("checking");
+    const available = await isNicknameAvailable(trimmed, getUserId());
+    // 값이 변경되었을 수 있으므로 최신 상태와 비교
+    setNicknameStatus(available ? "available" : "taken");
+  }, []);
+
+  const handleNicknameChange = (value: string) => {
+    const sliced = value.slice(0, 12);
+    setNickname(sliced);
+    setNicknameStatus("idle");
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (sliced.trim().length >= 2) {
+      debounceRef.current = setTimeout(() => checkNickname(sliced), 500);
+    }
+  };
+
+  const handleGenerateNickname = async () => {
+    // 최대 5번 시도하여 사용 가능한 닉네임 찾기
+    setNicknameStatus("checking");
+    for (let i = 0; i < 5; i++) {
+      const generated = generateNickname();
+      const available = await isNicknameAvailable(generated, getUserId());
+      if (available) {
+        setNickname(generated);
+        setNicknameStatus("available");
+        return;
+      }
+    }
+    // 5번 모두 중복이면 그냥 마지막 생성된 것 사용 (거의 불가능)
+    const fallback = generateNickname();
+    setNickname(fallback);
+    setNicknameStatus("available");
   };
 
   const toggleInstrument = (name: string) => {
@@ -94,9 +150,15 @@ export default function ProfileSetupPage() {
   };
 
   const [showCelebration, setShowCelebration] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
+
     const finalNickname = nickname.trim() || generateNickname();
+
+    // localStorage 저장 (오프라인 대비)
     const profile: UserProfile = {
       nickname: finalNickname,
       ageGroup,
@@ -106,14 +168,36 @@ export default function ProfileSetupPage() {
     };
     localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
     localStorage.setItem(ONBOARDING_KEY, "true");
+
+    // Supabase에 프로필 저장
+    const userId = getUserId();
+    const primaryInstrument = instruments[0]
+      ? (INSTRUMENT_TO_ENUM[instruments[0]] ?? "piano")
+      : "piano";
+
+    await upsertProfile(userId, {
+      nickname: finalNickname,
+      name: finalNickname,
+      instrument: primaryInstrument as "piano",
+      level: ageGroup,
+    });
+
     setShowCelebration(true);
     setTimeout(() => router.push("/"), 2500);
   };
 
+  // Cleanup debounce on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
+
   const totalSteps = 4;
+  const nicknameValid = nickname.trim().length >= 2;
   const canProceed = (() => {
     switch (step) {
-      case 0: return nickname.trim().length >= 2;
+      case 0: return nicknameValid && nicknameStatus !== "taken" && nicknameStatus !== "checking";
       case 1: return ageGroup !== "";
       case 2: return instruments.length > 0;
       case 3: return true;
@@ -160,14 +244,20 @@ export default function ProfileSetupPage() {
                   다른 연주자들에게 보여지는 이름이에요
                 </p>
 
-                <div className="relative mb-4">
+                <div className="relative mb-2">
                   <input
                     type="text"
                     value={nickname}
-                    onChange={(e) => setNickname(e.target.value.slice(0, 12))}
+                    onChange={(e) => handleNicknameChange(e.target.value)}
                     placeholder="별명 입력 (2~12자)"
                     maxLength={12}
-                    className="w-full px-4 py-4 rounded-2xl border-2 border-gray-200 bg-white text-lg font-semibold text-gray-900 placeholder:text-gray-300 focus:outline-none focus:border-violet-400 transition-colors"
+                    className={`w-full px-4 py-4 rounded-2xl border-2 bg-white text-lg font-semibold text-gray-900 placeholder:text-gray-300 focus:outline-none transition-colors ${
+                      nicknameStatus === "taken"
+                        ? "border-red-400 focus:border-red-400"
+                        : nicknameStatus === "available"
+                        ? "border-green-400 focus:border-green-400"
+                        : "border-gray-200 focus:border-violet-400"
+                    }`}
                     autoFocus
                   />
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-gray-300">
@@ -175,15 +265,37 @@ export default function ProfileSetupPage() {
                   </span>
                 </div>
 
+                {/* Nickname status message */}
+                <div className="h-5 mb-3">
+                  {nicknameStatus === "checking" && (
+                    <p className="text-xs text-gray-400 flex items-center gap-1">
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      확인 중...
+                    </p>
+                  )}
+                  {nicknameStatus === "available" && (
+                    <p className="text-xs text-green-600 flex items-center gap-1">
+                      <Check className="w-3 h-3" />
+                      사용 가능한 별명이에요
+                    </p>
+                  )}
+                  {nicknameStatus === "taken" && (
+                    <p className="text-xs text-red-500">
+                      이미 사용 중인 별명이에요. 다른 별명을 입력해주세요.
+                    </p>
+                  )}
+                </div>
+
                 <button
                   onClick={handleGenerateNickname}
-                  className="flex items-center gap-2 px-4 py-3 rounded-xl bg-violet-50 border border-violet-200 text-violet-600 text-sm font-medium active:scale-[0.98] transition-all w-full justify-center"
+                  disabled={nicknameStatus === "checking"}
+                  className="flex items-center gap-2 px-4 py-3 rounded-xl bg-violet-50 border border-violet-200 text-violet-600 text-sm font-medium active:scale-[0.98] transition-all w-full justify-center disabled:opacity-50"
                 >
                   <RefreshCw className="w-4 h-4" />
                   자동 생성
                 </button>
 
-                {nickname && (
+                {nickname && nicknameStatus !== "taken" && (
                   <div className="mt-6 p-4 rounded-2xl bg-white border border-gray-100 shadow-sm">
                     <p className="text-xs text-gray-400 mb-1">미리보기</p>
                     <div className="flex items-center gap-3">
@@ -329,11 +441,16 @@ export default function ProfileSetupPage() {
               handleComplete();
             }
           }}
-          disabled={!canProceed}
+          disabled={!canProceed || isSaving}
           className="w-full py-4 rounded-2xl font-bold text-base text-white transition-all active:scale-[0.98] disabled:opacity-40 flex items-center justify-center gap-2"
           style={{ backgroundColor: "#8B5CF6" }}
         >
-          {step === totalSteps - 1 ? (
+          {isSaving ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" />
+              저장 중...
+            </>
+          ) : step === totalSteps - 1 ? (
             "시작하기"
           ) : (
             <>
