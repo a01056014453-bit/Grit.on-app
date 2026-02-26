@@ -329,9 +329,9 @@ export default function OnboardingPage() {
 
           {/* Feature Slides */}
           {slide.type === "feature" && (
-            <div className="flex-1 flex flex-col">
+            <div className="flex-1 flex flex-col justify-center">
               <div
-                className="flex items-center justify-center pt-20 pb-12 px-8"
+                className="flex items-center justify-center py-10 px-8"
                 style={{ backgroundColor: slide.bgLight }}
               >
                 {(() => {
@@ -339,7 +339,7 @@ export default function OnboardingPage() {
                   return <VisualComponent />;
                 })()}
               </div>
-              <div className="flex-1 px-8 pt-8">
+              <div className="px-8 pt-6">
                 {slide.badge && (
                   <span
                     className="inline-block text-xs font-semibold px-3 py-1 rounded-full mb-4"
