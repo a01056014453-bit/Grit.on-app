@@ -124,11 +124,25 @@ const TIME_SIGNATURES = [
 ];
 type TimeSignature = typeof TIME_SIGNATURES[number];
 
-// 한 박 간격: (60/BPM) × (4/분모)
-// 분모 4 → ratio 1.0 → 4분음표 그대로
-// 분모 8 → ratio 0.5 → 8분음표 = 4분음표의 절반
-const getBeatInterval = (bpm: number, denominator: number): number => {
-  return (60.0 / bpm) * (4 / denominator);
+// 복합박자: 패턴별 간격 계산 / 단순박자: (60/BPM) × (4/분모)
+const getBeatInterval = (bpm: number, ts: TimeSignature, patternId: string): number => {
+  const quarterNote = 60.0 / bpm;
+  if (ts.isCompound) {
+    const dottedQuarter = quarterNote * 1.5;
+    switch (patternId) {
+      case "c1": return dottedQuarter;       // ♩. 기본박
+      case "c2": return dottedQuarter / 3;   // ♪♪♪ 8분음표
+      case "c3": return dottedQuarter / 3;   // ♪𝄾♪ 붓점 변형
+      default: return dottedQuarter;
+    }
+  }
+  return quarterNote * (4 / ts.denominator);
+};
+
+// 복합박자 c1(♩. 기본박): 점4분음표 단위 = accentBeats 개수
+const getEffectiveBeatCount = (ts: TimeSignature, patternId: string): number => {
+  if (ts.isCompound && patternId === "c1") return ts.accentBeats.length;
+  return ts.numerator;
 };
 
 // 기준음표 기호
@@ -171,23 +185,25 @@ const getSubdivisionsForTimeSig = (ts: TimeSignature): SubdivisionPattern[] => {
   return ts.isCompound ? COMPOUND_SUBDIVISIONS : SUBDIVISIONS;
 };
 
-// Get main beat indices (compound c1: 강박만, 나머지: 전부)
-const getMainBeatIndices = (ts: TimeSignature, subdivId: string): Set<number> => {
+// Get main beat indices (effective beats 전체가 메인)
+const getMainBeatIndices = (ts: TimeSignature, patternId: string): Set<number> => {
   const mainBeats = new Set<number>();
-  if (ts.isCompound && subdivId === "c1") {
-    ts.accentBeats.forEach(i => mainBeats.add(i));
-  } else {
-    for (let i = 0; i < ts.numerator; i++) {
-      mainBeats.add(i);
-    }
+  const beatCount = getEffectiveBeatCount(ts, patternId);
+  for (let i = 0; i < beatCount; i++) {
+    mainBeats.add(i);
   }
   return mainBeats;
 };
 
-// Get auto-accents based on time signature
-const getAutoAccents = (ts: TimeSignature): boolean[] => {
-  const accents = Array(ts.numerator).fill(false);
-  ts.accentBeats.forEach(i => { accents[i] = true; });
+// Get auto-accents based on time signature and pattern
+const getAutoAccents = (ts: TimeSignature, patternId: string): boolean[] => {
+  const beatCount = getEffectiveBeatCount(ts, patternId);
+  const accents = Array(beatCount).fill(false) as boolean[];
+  if (ts.isCompound && patternId === "c1") {
+    accents[0] = true; // c1: 첫 박만 강박
+  } else {
+    ts.accentBeats.forEach(i => { if (i < beatCount) accents[i] = true; });
+  }
   return accents;
 };
 
@@ -297,7 +313,7 @@ export function MetronomeControl({
 
   // 박자 또는 세분 변경 시 악센트 자동 설정
   useEffect(() => {
-    const newAccents = getAutoAccents(timeSig);
+    const newAccents = getAutoAccents(timeSig, subdiv.id);
     setAccents(newAccents);
   }, [timeSig, subdiv.id]);
 
@@ -391,7 +407,7 @@ export function MetronomeControl({
     if (!audioCtxRef.current || !isPlayingRef.current) return;
 
     const scheduleAheadTime = 0.1; // Schedule 100ms ahead
-    const beats = timeSigRef.current.numerator;
+    const beats = getEffectiveBeatCount(timeSigRef.current, subdivRef.current.id);
     const pattern = subdivRef.current.pattern;
 
     while (nextNoteTimeRef.current < audioCtxRef.current.currentTime + scheduleAheadTime) {
@@ -401,8 +417,7 @@ export function MetronomeControl({
         currentSubIndexRef.current
       );
 
-      // 한 박 간격: (60/BPM) × (4/분모)
-      const secondsPerBeat = getBeatInterval(bpmRef.current, timeSigRef.current.denominator);
+      const secondsPerBeat = getBeatInterval(bpmRef.current, timeSigRef.current, subdivRef.current.id);
       const currentRatio = pattern[currentSubIndexRef.current];
       const noteLength = secondsPerBeat * currentRatio;
       nextNoteTimeRef.current += noteLength;
@@ -634,6 +649,7 @@ export function MetronomeControl({
       {/* Beat Visualization - 터치하여 악센트 설정 */}
       <div className="px-3 py-3 mx-4">
         {(() => {
+          const visualBeats = getEffectiveBeatCount(timeSig, subdiv.id);
           const renderDot = (i: number) => {
             const isActive = isPlaying && currentBeat === i;
             const hasAccent = accents[i] || false;
@@ -663,15 +679,15 @@ export function MetronomeControl({
             );
           };
 
-          if (timeSig.numerator > 6) {
-            const firstRowCount = timeSig.numerator === 9 ? 6 : Math.ceil(timeSig.numerator / 2);
+          if (visualBeats > 6) {
+            const firstRowCount = visualBeats === 9 ? 6 : Math.ceil(visualBeats / 2);
             return (
               <div className="flex flex-col items-center gap-2">
                 <div className="flex justify-center gap-1.5">
                   {[...Array(firstRowCount)].map((_, i) => renderDot(i))}
                 </div>
                 <div className="flex justify-center gap-1.5">
-                  {[...Array(timeSig.numerator - firstRowCount)].map((_, i) => renderDot(firstRowCount + i))}
+                  {[...Array(visualBeats - firstRowCount)].map((_, i) => renderDot(firstRowCount + i))}
                 </div>
               </div>
             );
@@ -679,7 +695,7 @@ export function MetronomeControl({
 
           return (
             <div className="flex justify-center gap-2">
-              {[...Array(timeSig.numerator)].map((_, i) => renderDot(i))}
+              {[...Array(visualBeats)].map((_, i) => renderDot(i))}
             </div>
           );
         })()}

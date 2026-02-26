@@ -36,9 +36,19 @@ const TIME_SIGNATURES = [
   { numerator: 12, denominator: 8, label: "12/8", accentBeats: [0, 3, 6, 9], isCompound: true },
 ];
 
-// 한 박 간격: (60/BPM) × (4/분모)
-const getBeatInterval = (bpm: number, denominator: number): number => {
-  return (60.0 / bpm) * (4 / denominator);
+// 복합박자: 패턴별 간격 계산 / 단순박자: (60/BPM) × (4/분모)
+const getBeatInterval = (bpm: number, ts: typeof TIME_SIGNATURES[number], patternId: string): number => {
+  const quarterNote = 60.0 / bpm;
+  if (ts.isCompound) {
+    const dottedQuarter = quarterNote * 1.5;
+    switch (patternId) {
+      case "compound_basic": return dottedQuarter;       // ♩. 기본박
+      case "compound_eighth": return dottedQuarter / 3;  // ♪♪♪ 8분음표
+      case "compound_dotted": return dottedQuarter / 3;  // ♪𝄾♪ 붓점 변형
+      default: return dottedQuarter;
+    }
+  }
+  return quarterNote * (4 / ts.denominator);
 };
 
 const BEAT_SYMBOL: Record<number, string> = { 2: "𝅗𝅥", 4: "♩", 8: "♪" };
@@ -126,20 +136,13 @@ const COMPOUND_SUBDIVISIONS: SubPattern[] = [
     id: "compound_eighth",
     symbol: "♪♪♪",
     label: "8분음표",
-    subdivisions: [
-      { offset: 0, volume: 1.0, pitch: 1000 },
-      { offset: 0.333, volume: 0.5, pitch: 680 },
-      { offset: 0.667, volume: 0.5, pitch: 680 },
-    ],
+    subdivisions: [{ offset: 0, volume: 1.0, pitch: 1000 }],
   },
   {
     id: "compound_dotted",
     symbol: "♪𝄾♪",
     label: "붓점 변형",
-    subdivisions: [
-      { offset: 0, volume: 1.0, pitch: 1000 },
-      { offset: 0.667, volume: 0.6, pitch: 720 },
-    ],
+    subdivisions: [{ offset: 0, volume: 1.0, pitch: 1000 }],
   },
 ];
 
@@ -162,6 +165,11 @@ export default function MetronomePage() {
   const isCompound = timeSig.isCompound;
   const subdivisions = isCompound ? COMPOUND_SUBDIVISIONS : SIMPLE_SUBDIVISIONS;
   const pattern = subdivisions.find((p) => p.id === patternId) || subdivisions[0];
+
+  // 복합박자 c1(♩.): 점4분음표 단위 = accentBeats 개수
+  const visualBeatCount = (isCompound && patternId === "compound_basic")
+    ? timeSig.accentBeats.length
+    : timeSig.numerator;
 
   // 박자 타입 변경 시 세분화 리셋
   useEffect(() => {
@@ -211,16 +219,18 @@ export default function MetronomePage() {
 
   // 강박 여부 판단
   const isAccentBeat = useCallback((beatIndex: number) => {
+    if (isCompound && patternId === "compound_basic") return beatIndex === 0;
     return timeSig.accentBeats.includes(beatIndex);
-  }, [timeSig.accentBeats]);
+  }, [timeSig.accentBeats, isCompound, patternId]);
 
   // playBeat을 ref로 관리 → 볼륨/음소거 변경 시 재시작 없이 즉시 반영
   const playBeat = useCallback(
     (beatIndex: number) => {
       if (!audioContextRef.current || isMuted) return;
+      // compound_dotted: 가운데 쉼표 (beatIndex % 3 === 1 → 소리 없음)
+      if (patternId === "compound_dotted" && beatIndex % 3 === 1) return;
       const ctx = audioContextRef.current;
-      // 한 박 간격: (60/BPM) × (4/분모)
-      const beatDur = getBeatInterval(bpm, timeSig.denominator);
+      const beatDur = getBeatInterval(bpm, timeSig, patternId);
 
       pattern.subdivisions.forEach((sub) => {
         const noteTime = ctx.currentTime + sub.offset * beatDur;
@@ -232,7 +242,7 @@ export default function MetronomePage() {
         }
       });
     },
-    [bpm, isMuted, volume, pattern, timeSig.denominator, createClick, isAccentBeat]
+    [bpm, isMuted, volume, pattern, timeSig, patternId, createClick, isAccentBeat]
   );
 
   const playBeatRef = useRef(playBeat);
@@ -253,14 +263,13 @@ export default function MetronomePage() {
     setCurrentBeat(1);
     playBeatRef.current(0);
 
-    // 한 박 간격: (60/BPM) × (4/분모)
-    const ms = getBeatInterval(bpm, timeSig.denominator) * 1000;
+    const ms = getBeatInterval(bpm, timeSig, patternId) * 1000;
     intervalRef.current = setInterval(() => {
-      beat = (beat + 1) % timeSig.numerator;
+      beat = (beat + 1) % visualBeatCount;
       setCurrentBeat(beat + 1);
       playBeatRef.current(beat);
     }, ms);
-  }, [bpm, timeSig.numerator, timeSig.denominator]);
+  }, [bpm, timeSig, patternId, visualBeatCount]);
 
   const stopMetronome = useCallback(() => {
     setIsPlaying(false);
@@ -337,7 +346,9 @@ export default function MetronomePage() {
         {(() => {
           const renderDot = (i: number) => {
             const isActive = currentBeat === i + 1;
-            const isAccent = timeSig.accentBeats.includes(i);
+            const isAccent = isCompound && patternId === "compound_basic"
+              ? i === 0
+              : timeSig.accentBeats.includes(i);
             const dotSize = isAccent ? "w-5 h-5" : "w-3 h-3";
             return (
               <div
@@ -351,15 +362,15 @@ export default function MetronomePage() {
             );
           };
 
-          if (timeSig.numerator > 6) {
-            const firstRow = timeSig.numerator === 9 ? 6 : Math.ceil(timeSig.numerator / 2);
+          if (visualBeatCount > 6) {
+            const firstRow = visualBeatCount === 9 ? 6 : Math.ceil(visualBeatCount / 2);
             return (
               <div className="flex flex-col items-center gap-1.5 mb-6">
                 <div className="flex justify-center items-center gap-1.5">
                   {Array.from({ length: firstRow }, (_, i) => renderDot(i))}
                 </div>
                 <div className="flex justify-center items-center gap-1.5">
-                  {Array.from({ length: timeSig.numerator - firstRow }, (_, i) => renderDot(firstRow + i))}
+                  {Array.from({ length: visualBeatCount - firstRow }, (_, i) => renderDot(firstRow + i))}
                 </div>
               </div>
             );
@@ -367,7 +378,7 @@ export default function MetronomePage() {
 
           return (
             <div className="flex justify-center items-center gap-2 mb-6">
-              {Array.from({ length: timeSig.numerator }, (_, i) => renderDot(i))}
+              {Array.from({ length: visualBeatCount }, (_, i) => renderDot(i))}
             </div>
           );
         })()}
