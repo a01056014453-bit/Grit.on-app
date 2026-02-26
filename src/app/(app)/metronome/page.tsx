@@ -36,14 +36,13 @@ const TIME_SIGNATURES = [
   { numerator: 12, denominator: 8, label: "12/8", accentBeats: [0, 3, 6, 9], isCompound: true },
 ];
 
-// 복합박자: 항상 8분음표 간격 = (60/BPM × 1.5) / 3
-// 단순박자: (60/BPM) × (4/분모)
+// 복합박자: BPM = 점4분음표 기준 → 8분음표 간격 = (60/BPM) / 3
+// 단순박자: BPM = 4분음표 기준 → (60/BPM) × (4/분모)
 const getBeatInterval = (bpm: number, ts: typeof TIME_SIGNATURES[number]): number => {
-  const quarterNote = 60.0 / bpm;
   if (ts.isCompound) {
-    return (quarterNote * 1.5) / 3; // dottedQuarter / 3
+    return (60.0 / bpm) / 3; // 점4분음표 BPM → 8분음표 간격
   }
-  return quarterNote * (4 / ts.denominator);
+  return (60.0 / bpm) * (4 / ts.denominator);
 };
 
 const BEAT_SYMBOL: Record<number, string> = { 2: "𝅗𝅥", 4: "♩", 8: "♪" };
