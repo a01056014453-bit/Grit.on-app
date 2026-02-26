@@ -209,7 +209,7 @@ export default function HomePage() {
             <h1 className="text-[22px] font-bold text-gray-900 leading-tight">
               {greeting} <span className="bg-gradient-to-r from-violet-700 to-violet-400 bg-clip-text text-transparent">{userName}</span>님 {(() => {
                 const h = new Date().getHours();
-                if (h < 7) return "🌙";
+                if (h < 6) return "🌙";
                 if (h < 12) return "☀️";
                 if (h < 18) return "🌤️";
                 return "🌙";

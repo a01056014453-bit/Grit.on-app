@@ -27,6 +27,7 @@ export function getRandomTip(): string {
 /** 인사말 가져오기 */
 export function getGreeting(): string {
   const hour = new Date().getHours();
+  if (hour < 6) return "좋은 새벽이에요";
   if (hour < 12) return "좋은 아침이에요";
   if (hour < 18) return "좋은 오후에요";
   return "좋은 저녁이에요";
