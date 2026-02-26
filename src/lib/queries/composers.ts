@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { FALLBACK_COMPOSERS } from "@/lib/data/composers-fallback";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;
 
@@ -15,25 +16,29 @@ let cachedComposers: Composer[] | null = null;
 export async function getComposers(): Promise<Composer[]> {
   if (cachedComposers) return cachedComposers;
 
-  const { data, error } = await db
-    .from("composers")
-    .select("*")
-    .order("short_name");
+  try {
+    const { data, error } = await db
+      .from("composers")
+      .select("*")
+      .order("short_name");
 
-  if (error) {
-    console.error("[getComposers]", error.message);
-    return [];
+    if (!error && data && data.length > 0) {
+      const result: Composer[] = data.map((row: any) => ({
+        id: row.id,
+        shortName: row.short_name,
+        fullName: row.full_name,
+        works: row.works ?? [],
+      }));
+      cachedComposers = result;
+      return result;
+    }
+  } catch {
+    // DB 접근 실패 시 fallback 사용
   }
 
-  const result: Composer[] = (data ?? []).map((row: any) => ({
-    id: row.id,
-    shortName: row.short_name,
-    fullName: row.full_name,
-    works: row.works ?? [],
-  }));
-  cachedComposers = result;
-
-  return result;
+  // Supabase 테이블 없거나 비었을 때 로컬 fallback
+  cachedComposers = FALLBACK_COMPOSERS;
+  return FALLBACK_COMPOSERS;
 }
 
 /** 자동완성용 { key, label } 리스트 */
