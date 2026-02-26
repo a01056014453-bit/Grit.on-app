@@ -2,80 +2,209 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Play, Pause, Minus, Plus, Timer, Volume2, VolumeX } from "lucide-react";
+import { ArrowLeft, Play, Pause, Minus, Plus, Volume2, VolumeX } from "lucide-react";
 import { safeBack } from "@/lib/navigation";
 
+// ─── Tempo Presets ───────────────────────────────────────────────────────────
+
 const TEMPO_PRESETS = [
-  { label: "Largo", bpm: 50 },
-  { label: "Adagio", bpm: 70 },
-  { label: "Andante", bpm: 92 },
-  { label: "Moderato", bpm: 114 },
-  { label: "Allegro", bpm: 138 },
-  { label: "Vivace", bpm: 168 },
-  { label: "Presto", bpm: 188 },
+  { label: "Larghissimo", bpm: 20,  range: "~24",     symbol: "𝅜" },
+  { label: "Grave",       bpm: 35,  range: "25~45",   symbol: "𝅗𝅥" },
+  { label: "Largo",       bpm: 50,  range: "40~60",   symbol: "𝅗𝅥" },
+  { label: "Larghetto",   bpm: 58,  range: "52~60",   symbol: "𝅗𝅥" },
+  { label: "Adagio",      bpm: 66,  range: "56~76",   symbol: "♩" },
+  { label: "Adagietto",   bpm: 74,  range: "70~80",   symbol: "♩" },
+  { label: "Andante",     bpm: 92,  range: "76~108",  symbol: "♩" },
+  { label: "Andantino",   bpm: 100, range: "80~108",  symbol: "♩" },
+  { label: "Moderato",    bpm: 114, range: "98~120",  symbol: "♩" },
+  { label: "Allegretto",  bpm: 116, range: "112~120", symbol: "♩" },
+  { label: "Allegro",     bpm: 144, range: "120~168", symbol: "♩♩" },
+  { label: "Vivace",      bpm: 164, range: "156~176", symbol: "♩♩" },
+  { label: "Vivacissimo", bpm: 174, range: "172~176", symbol: "♩♩" },
+  { label: "Presto",      bpm: 184, range: "168~200", symbol: "♩♩♩" },
+  { label: "Prestissimo", bpm: 210, range: "200~",    symbol: "♩♩♩" },
 ];
 
+// ─── Time Signatures ─────────────────────────────────────────────────────────
+
 const TIME_SIGNATURES = [
-  { label: "2/4", beats: 2 },
-  { label: "3/4", beats: 3 },
-  { label: "4/4", beats: 4 },
-  { label: "6/8", beats: 6 },
+  { label: "2/4",  beats: 2, compound: false },
+  { label: "3/4",  beats: 3, compound: false },
+  { label: "4/4",  beats: 4, compound: false },
+  { label: "6/8",  beats: 2, compound: true },
+  { label: "9/8",  beats: 3, compound: true },
+  { label: "12/8", beats: 4, compound: true },
 ];
+
+// ─── Subdivision Patterns ────────────────────────────────────────────────────
+
+interface SubNote {
+  offset: number;
+  volume: number;
+  pitch: number;
+}
+
+interface SubPattern {
+  id: string;
+  symbol: string;
+  label: string;
+  subdivisions: SubNote[];
+}
+
+const SIMPLE_SUBDIVISIONS: SubPattern[] = [
+  {
+    id: "quarter",
+    symbol: "♩",
+    label: "4분음표",
+    subdivisions: [{ offset: 0, volume: 1.0, pitch: 1000 }],
+  },
+  {
+    id: "eighth",
+    symbol: "♪♪",
+    label: "8분음표",
+    subdivisions: [
+      { offset: 0, volume: 1.0, pitch: 1000 },
+      { offset: 0.5, volume: 0.5, pitch: 700 },
+    ],
+  },
+  {
+    id: "sixteenth",
+    symbol: "♬♬",
+    label: "16분음표",
+    subdivisions: [
+      { offset: 0, volume: 1.0, pitch: 1000 },
+      { offset: 0.25, volume: 0.4, pitch: 650 },
+      { offset: 0.5, volume: 0.6, pitch: 750 },
+      { offset: 0.75, volume: 0.4, pitch: 650 },
+    ],
+  },
+  {
+    id: "dotted_long",
+    symbol: "♩.♪",
+    label: "붓점",
+    subdivisions: [
+      { offset: 0, volume: 1.0, pitch: 1000 },
+      { offset: 0.75, volume: 0.6, pitch: 720 },
+    ],
+  },
+  {
+    id: "dotted_short",
+    symbol: "♪♩.",
+    label: "역붓점",
+    subdivisions: [
+      { offset: 0, volume: 0.6, pitch: 720 },
+      { offset: 0.25, volume: 1.0, pitch: 1000 },
+    ],
+  },
+  {
+    id: "triplet",
+    symbol: "³♪",
+    label: "셋잇단",
+    subdivisions: [
+      { offset: 0, volume: 1.0, pitch: 1000 },
+      { offset: 0.333, volume: 0.5, pitch: 680 },
+      { offset: 0.667, volume: 0.5, pitch: 680 },
+    ],
+  },
+];
+
+const COMPOUND_SUBDIVISIONS: SubPattern[] = [
+  {
+    id: "compound_basic",
+    symbol: "♩.",
+    label: "기본박",
+    subdivisions: [{ offset: 0, volume: 1.0, pitch: 1000 }],
+  },
+  {
+    id: "compound_eighth",
+    symbol: "♪♪♪",
+    label: "8분음표",
+    subdivisions: [
+      { offset: 0, volume: 1.0, pitch: 1000 },
+      { offset: 0.333, volume: 0.5, pitch: 680 },
+      { offset: 0.667, volume: 0.5, pitch: 680 },
+    ],
+  },
+  {
+    id: "compound_dotted",
+    symbol: "♪𝄾♪",
+    label: "붓점 변형",
+    subdivisions: [
+      { offset: 0, volume: 1.0, pitch: 1000 },
+      { offset: 0.667, volume: 0.6, pitch: 720 },
+    ],
+  },
+];
+
+// ─── Component ───────────────────────────────────────────────────────────────
 
 export default function MetronomePage() {
   const router = useRouter();
   const [bpm, setBpm] = useState(120);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentBeat, setCurrentBeat] = useState(0);
-  const [timeSignature, setTimeSignature] = useState(4);
+  const [timeSigIndex, setTimeSigIndex] = useState(2); // 4/4
   const [isMuted, setIsMuted] = useState(false);
   const [volume, setVolume] = useState(0.7);
+  const [patternId, setPatternId] = useState("quarter");
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const nextBeatTimeRef = useRef<number>(0);
 
-  // AudioContext는 사용자 터치 시점에 생성 (iOS WebView 호환)
-  // useEffect에서 자동 생성하면 iOS에서 소리가 나지 않음
+  const timeSig = TIME_SIGNATURES[timeSigIndex];
+  const isCompound = timeSig.compound;
+  const subdivisions = isCompound ? COMPOUND_SUBDIVISIONS : SIMPLE_SUBDIVISIONS;
+  const pattern = subdivisions.find((p) => p.id === patternId) || subdivisions[0];
+
+  // 박자 타입 변경 시 세분화 리셋
+  useEffect(() => {
+    setPatternId(isCompound ? "compound_basic" : "quarter");
+  }, [isCompound]);
+
+  // AudioContext cleanup
   useEffect(() => {
     return () => {
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
-      }
+      if (audioContextRef.current) audioContextRef.current.close();
     };
   }, []);
 
-  const playClick = useCallback((isAccent: boolean) => {
-    if (!audioContextRef.current || isMuted) return;
+  // playBeat을 ref로 관리 → 볼륨/음소거 변경 시 재시작 없이 즉시 반영
+  const playBeat = useCallback(
+    (beatIndex: number) => {
+      if (!audioContextRef.current || isMuted) return;
+      const ctx = audioContextRef.current;
+      const beatDur = 60 / bpm;
+      const isAccent = beatIndex === 0;
 
-    const ctx = audioContextRef.current;
-    const oscillator = ctx.createOscillator();
-    const gainNode = ctx.createGain();
+      pattern.subdivisions.forEach((sub) => {
+        const delay = sub.offset * beatDur;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
 
-    oscillator.connect(gainNode);
-    gainNode.connect(ctx.destination);
+        osc.frequency.value = isAccent && sub.offset === 0 ? 1200 : sub.pitch;
+        osc.type = "sine";
 
-    // Accent beat (first beat) is higher pitched
-    oscillator.frequency.value = isAccent ? 1000 : 800;
-    oscillator.type = "sine";
+        const now = ctx.currentTime;
+        gain.gain.setValueAtTime(sub.volume * volume, now + delay);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + delay + 0.05);
+        osc.start(now + delay);
+        osc.stop(now + delay + 0.05);
+      });
+    },
+    [bpm, isMuted, volume, pattern]
+  );
 
-    // Short click sound - volume 적용
-    const now = ctx.currentTime;
-    const baseGain = isAccent ? 0.5 : 0.3;
-    gainNode.gain.setValueAtTime(baseGain * volume, now);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
-
-    oscillator.start(now);
-    oscillator.stop(now + 0.05);
-  }, [isMuted, volume]);
+  const playBeatRef = useRef(playBeat);
+  useEffect(() => {
+    playBeatRef.current = playBeat;
+  }, [playBeat]);
 
   const startMetronome = useCallback(() => {
-    // 사용자 터치 시점에 AudioContext 생성 (iOS WebView 호환)
     if (!audioContextRef.current) {
-      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      audioContextRef.current = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
     }
-
-    // Resume audio context if suspended
     if (audioContextRef.current.state === "suspended") {
       audioContextRef.current.resume();
     }
@@ -83,18 +212,15 @@ export default function MetronomePage() {
     setIsPlaying(true);
     let beat = 0;
     setCurrentBeat(1);
+    playBeatRef.current(0);
 
-    const intervalMs = (60 / bpm) * 1000;
-
-    // Play first beat immediately
-    playClick(true);
-
+    const ms = (60 / bpm) * 1000;
     intervalRef.current = setInterval(() => {
-      beat = (beat + 1) % timeSignature;
+      beat = (beat + 1) % timeSig.beats;
       setCurrentBeat(beat + 1);
-      playClick(beat === 0);
-    }, intervalMs);
-  }, [bpm, timeSignature, playClick]);
+      playBeatRef.current(beat);
+    }, ms);
+  }, [bpm, timeSig.beats]);
 
   const stopMetronome = useCallback(() => {
     setIsPlaying(false);
@@ -105,20 +231,18 @@ export default function MetronomePage() {
     }
   }, []);
 
-  // Restart metronome when BPM or time signature changes while playing
+  // BPM·박자·패턴 변경 시 재시작
   useEffect(() => {
     if (isPlaying) {
       stopMetronome();
       startMetronome();
     }
-  }, [bpm, timeSignature]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bpm, timeSigIndex, patternId]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
+      if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, []);
 
@@ -126,19 +250,25 @@ export default function MetronomePage() {
     setBpm((prev) => Math.max(20, Math.min(300, prev + delta)));
   };
 
-  const getTempoLabel = (bpm: number) => {
-    if (bpm < 60) return "Largo";
-    if (bpm < 80) return "Adagio";
-    if (bpm < 100) return "Andante";
-    if (bpm < 120) return "Moderato";
-    if (bpm < 156) return "Allegro";
-    if (bpm < 176) return "Vivace";
-    return "Presto";
+  const getTempoLabel = (v: number) => {
+    if (v <= 24)  return "Larghissimo";
+    if (v <= 45)  return "Grave";
+    if (v <= 60)  return "Largo";
+    if (v <= 66)  return "Larghetto";
+    if (v <= 76)  return "Adagio";
+    if (v <= 80)  return "Adagietto";
+    if (v <= 108) return "Andante";
+    if (v <= 120) return "Moderato";
+    if (v <= 156) return "Allegro";
+    if (v <= 176) return "Vivace";
+    if (v <= 200) return "Presto";
+    return "Prestissimo";
   };
 
   return (
     <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
       <div className="bg-blob-extra" />
+
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button
@@ -161,11 +291,11 @@ export default function MetronomePage() {
         </button>
       </div>
 
-      {/* Main Display */}
+      {/* ─── Main Display ─── */}
       <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-6 mb-6">
         {/* Beat Indicators */}
         <div className="flex justify-center gap-2 mb-6">
-          {Array.from({ length: timeSignature }, (_, i) => (
+          {Array.from({ length: timeSig.beats }, (_, i) => (
             <div
               key={i}
               className={`w-4 h-4 rounded-full transition-all duration-100 ${
@@ -181,8 +311,11 @@ export default function MetronomePage() {
 
         {/* BPM Display */}
         <div className="text-center mb-6">
+          <div className="text-sm text-muted-foreground mb-1">
+            {isCompound ? "♩." : "♩"} =
+          </div>
           <div className="text-6xl font-bold text-foreground mb-1">{bpm}</div>
-          <div className="text-sm text-muted-foreground">BPM · {getTempoLabel(bpm)}</div>
+          <div className="text-sm text-muted-foreground italic">{getTempoLabel(bpm)}</div>
         </div>
 
         {/* BPM Controls */}
@@ -201,11 +334,7 @@ export default function MetronomePage() {
                 : "bg-gradient-to-br from-green-400 to-emerald-500 hover:from-green-500 hover:to-emerald-600 text-white"
             }`}
           >
-            {isPlaying ? (
-              <Pause className="w-8 h-8" />
-            ) : (
-              <Play className="w-8 h-8 ml-1" />
-            )}
+            {isPlaying ? <Pause className="w-8 h-8" /> : <Play className="w-8 h-8 ml-1" />}
           </button>
           <button
             onClick={() => adjustBpm(5)}
@@ -230,7 +359,7 @@ export default function MetronomePage() {
         </div>
       </div>
 
-      {/* Volume Control */}
+      {/* ─── Volume ─── */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold text-foreground">볼륨</h3>
@@ -250,54 +379,100 @@ export default function MetronomePage() {
         </div>
       </div>
 
-      {/* Time Signature */}
-      <div className="mb-6">
-        <h3 className="text-sm font-semibold text-foreground mb-3">박자</h3>
-        <div className="flex gap-2">
-          {TIME_SIGNATURES.map((sig) => (
+      {/* ─── Subdivision Patterns (dark area) ─── */}
+      <div className="mb-6 bg-[#1a1a1a] rounded-2xl p-4">
+        <h3 className="text-sm font-semibold text-white/80 mb-3">리듬 세분화</h3>
+        <div className="grid grid-cols-3 gap-2">
+          {subdivisions.map((p) => (
             <button
-              key={sig.label}
-              onClick={() => setTimeSignature(sig.beats)}
-              className={`flex-1 py-3 rounded-xl text-sm font-medium transition-colors ${
-                timeSignature === sig.beats
-                  ? "bg-green-500 text-white"
-                  : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+              key={p.id}
+              onClick={() => setPatternId(p.id)}
+              className={`py-3 px-2 rounded-xl text-center transition-all ${
+                patternId === p.id
+                  ? "bg-violet-600 text-white shadow-lg shadow-violet-600/30"
+                  : "bg-white/10 text-white/70 hover:bg-white/15"
               }`}
             >
-              {sig.label}
+              <div className="text-lg font-bold leading-tight">{p.symbol}</div>
+              <div className="text-[10px] mt-1 opacity-70">{p.label}</div>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Tempo Presets */}
-      <div>
+      {/* ─── Time Signature ─── */}
+      <div className="mb-6">
+        <h3 className="text-sm font-semibold text-foreground mb-3">박자</h3>
+        <div className="space-y-2">
+          <div className="flex gap-2">
+            <span className="text-[10px] text-muted-foreground self-center w-8 shrink-0">단순</span>
+            {TIME_SIGNATURES.map((sig, idx) =>
+              sig.compound ? null : (
+                <button
+                  key={sig.label}
+                  onClick={() => setTimeSigIndex(idx)}
+                  className={`flex-1 py-3 rounded-xl text-sm font-medium transition-colors ${
+                    timeSigIndex === idx
+                      ? "bg-green-500 text-white"
+                      : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                  }`}
+                >
+                  {sig.label}
+                </button>
+              )
+            )}
+          </div>
+          <div className="flex gap-2">
+            <span className="text-[10px] text-muted-foreground self-center w-8 shrink-0">복합</span>
+            {TIME_SIGNATURES.map((sig, idx) =>
+              !sig.compound ? null : (
+                <button
+                  key={sig.label}
+                  onClick={() => setTimeSigIndex(idx)}
+                  className={`flex-1 py-3 rounded-xl text-sm font-medium transition-colors ${
+                    timeSigIndex === idx
+                      ? "bg-green-500 text-white"
+                      : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                  }`}
+                >
+                  {sig.label}
+                </button>
+              )
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ─── Tempo Presets ─── */}
+      <div className="mb-6">
         <h3 className="text-sm font-semibold text-foreground mb-3">빠르기 프리셋</h3>
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-5 gap-1.5">
           {TEMPO_PRESETS.map((preset) => (
             <button
               key={preset.label}
               onClick={() => setBpm(preset.bpm)}
-              className={`py-2 px-1 rounded-xl text-xs font-medium transition-colors ${
+              className={`py-2 px-1 rounded-xl text-center transition-colors ${
                 bpm === preset.bpm
                   ? "bg-green-100 text-green-700 border-2 border-green-500"
                   : "bg-secondary text-muted-foreground hover:bg-secondary/80"
               }`}
             >
-              <div className="font-semibold">{preset.label}</div>
-              <div className="text-[10px] opacity-70">{preset.bpm}</div>
+              <div className="text-base leading-tight">{preset.symbol}</div>
+              <div className="text-[9px] font-medium italic leading-tight mt-0.5">{preset.label}</div>
+              <div className="text-[8px] opacity-50 leading-tight">{preset.range}</div>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Tips */}
-      <div className="mt-6 bg-card rounded-xl border border-border p-4">
+      {/* ─── Tips ─── */}
+      <div className="bg-card rounded-xl border border-border p-4">
         <h3 className="text-sm font-semibold text-foreground mb-2">연습 팁</h3>
         <ul className="text-xs text-muted-foreground space-y-1">
           <li>• 새로운 곡은 목표 템포의 50-60%로 시작하세요</li>
           <li>• 5 BPM씩 천천히 올려가며 연습하세요</li>
           <li>• 첫 박자(강박)에 집중하면 리듬감이 좋아집니다</li>
+          <li>• 복합박자(6/8 등)는 큰 박 단위로 세어보세요</li>
         </ul>
       </div>
     </div>
