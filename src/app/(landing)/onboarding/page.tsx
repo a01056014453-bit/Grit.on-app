@@ -95,264 +95,128 @@ const slideTransition = {
 /* ─── Visual Components ─── */
 
 function PracticeFlowVisual() {
-  const bars = [3, 6, 9, 14, 10, 7, 12, 16, 11, 8, 13, 9, 6, 10, 7];
+  const bars = Array.from({ length: 20 }, (_, i) => 15 + Math.sin(i * 0.8) * 35 + Math.random() * 20);
   return (
-    <div className="w-full max-w-xs mx-auto">
+    <div className="w-full max-w-[280px] mx-auto">
       <div className="bg-white rounded-2xl p-4 shadow-sm border border-violet-100 overflow-hidden">
-        {/* Step 1: 연습 시작 버튼 → 누르는 애니메이션 */}
-        <div className="pf-start-btn mb-3">
-          <div className="flex items-center justify-center gap-2 bg-violet-500 rounded-xl py-2.5 text-white">
-            <svg className="w-4 h-4 fill-white" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-            <span className="text-xs font-bold">연습 시작</span>
+        {/* Timer display - like real app */}
+        <div className="text-center mb-3">
+          <div className="font-mono text-4xl font-semibold tracking-tight text-gray-900 pf-timer-display">
+            <span>12</span>
+            <span className="mx-0.5 text-violet-400 animate-pulse">:</span>
+            <span>34</span>
+          </div>
+          <div className="flex items-center justify-center gap-1.5 mt-1 pf-status">
+            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+            <span className="text-[10px] text-gray-500 font-medium">녹음 중</span>
           </div>
         </div>
 
-        {/* Step 2: 감지 상태 */}
-        <div className="pf-detecting">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="pf-detect-dot w-2 h-2 rounded-full bg-green-500" />
-            <span className="text-[10px] font-semibold text-green-600">피아노 감지됨</span>
-            <span className="ml-auto text-[10px] font-mono text-gray-400 pf-timer">00:00</span>
-          </div>
+        {/* Waveform - matches real app: w-[6px], gradient violet */}
+        <div className="flex items-end justify-center gap-[3px] h-12 mb-3 pf-waveform">
+          {bars.map((h, i) => (
+            <div
+              key={i}
+              className="w-[6px] rounded-full"
+              style={{
+                height: `${h}%`,
+                background: "linear-gradient(to top, #7c3aed, #a78bfa)",
+                animation: `wavepulse 1.2s ease-in-out ${i * 0.08}s infinite alternate`,
+              }}
+            />
+          ))}
+        </div>
 
-          {/* Waveform */}
-          <div className="flex items-end justify-center gap-[3px] h-10 pf-waveform">
-            {bars.map((h, i) => (
-              <div
-                key={i}
-                className="w-1.5 rounded-full bg-violet-400"
-                style={{
-                  height: `${h * 2.2}px`,
-                  animation: `wavepulse 1.2s ease-in-out ${i * 0.08}s infinite alternate`,
-                }}
-              />
-            ))}
+        {/* Control buttons - like real app */}
+        <div className="flex items-center justify-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center">
+            <svg className="w-4 h-4 text-gray-800" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+          </div>
+          <div className="w-12 h-12 rounded-full bg-red-500 flex items-center justify-center shadow-lg shadow-red-500/30 pf-stop-btn">
+            <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
           </div>
         </div>
 
-        {/* Step 3: 완료 */}
-        <div className="pf-complete mt-3 pt-3 border-t border-gray-100">
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded-full bg-violet-500 flex items-center justify-center">
-              <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <div>
-              <p className="text-[10px] font-semibold text-gray-700">연습 저장됨</p>
-              <p className="text-[10px] text-gray-400">피아노 · 45분 32초</p>
-            </div>
-          </div>
+        {/* Detection info */}
+        <div className="mt-3 bg-violet-50 rounded-lg p-2 text-center border border-violet-100 pf-info">
+          <p className="text-[10px] text-violet-700 font-medium">피아노 감지됨 · 휴식 시간 자동 제외</p>
         </div>
       </div>
-
-      <style>{`
-        @keyframes wavepulse { from { transform: scaleY(0.5); opacity: 0.4; } to { transform: scaleY(1); opacity: 1; } }
-
-        .pf-start-btn {
-          animation: pfStartBtn 7s ease-in-out infinite;
-        }
-        @keyframes pfStartBtn {
-          0%, 5% { opacity: 1; transform: scale(1); }
-          8% { transform: scale(0.95); }
-          11% { opacity: 1; transform: scale(1); }
-          18% { opacity: 0; height: 0; margin: 0; overflow: hidden; }
-          95% { opacity: 0; height: 0; margin: 0; overflow: hidden; }
-          100% { opacity: 1; height: auto; margin-bottom: 12px; }
-        }
-
-        .pf-detecting {
-          animation: pfDetecting 7s ease-in-out infinite;
-        }
-        @keyframes pfDetecting {
-          0%, 15% { opacity: 0; transform: translateY(8px); }
-          22% { opacity: 1; transform: translateY(0); }
-          70% { opacity: 1; }
-          78% { opacity: 0; }
-          100% { opacity: 0; }
-        }
-
-        .pf-detect-dot {
-          animation: pfDot 7s ease-in-out infinite;
-        }
-        @keyframes pfDot {
-          0%, 22% { opacity: 0; }
-          25%, 35% { opacity: 1; }
-          36%, 39% { opacity: 0.3; }
-          40%, 50% { opacity: 1; }
-          51%, 54% { opacity: 0.3; }
-          55%, 70% { opacity: 1; }
-          78% { opacity: 0; }
-          100% { opacity: 0; }
-        }
-
-        .pf-timer {
-          animation: pfTimer 7s step-end infinite;
-        }
-        @keyframes pfTimer {
-          0%, 22% { }
-          25% { }
-          30% { }
-          100% { }
-        }
-
-        .pf-waveform {
-          animation: pfWaveform 7s ease-in-out infinite;
-        }
-        @keyframes pfWaveform {
-          0%, 22% { opacity: 0; }
-          28% { opacity: 1; }
-          70% { opacity: 1; }
-          78% { opacity: 0; }
-          100% { opacity: 0; }
-        }
-
-        .pf-complete {
-          animation: pfComplete 7s ease-in-out infinite;
-        }
-        @keyframes pfComplete {
-          0%, 72% { opacity: 0; transform: translateY(8px); }
-          80% { opacity: 1; transform: translateY(0); }
-          95% { opacity: 1; }
-          100% { opacity: 0; }
-        }
-      `}</style>
     </div>
   );
 }
 
 function FeedbackFlowVisual() {
   return (
-    <div className="w-full max-w-xs mx-auto">
+    <div className="w-full max-w-[280px] mx-auto">
       <div className="bg-white rounded-2xl p-4 shadow-sm border border-pink-100 overflow-hidden">
-        {/* Step 1: 구간 선택 */}
-        <div className="fb-step-1 mb-3">
-          <p className="text-[10px] text-gray-400 mb-2">문제 구간 선택</p>
-          <div className="flex gap-1">
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((m) => (
-              <div
-                key={m}
-                className={`flex-1 h-7 rounded flex items-center justify-center text-[9px] font-medium transition-all ${
-                  m >= 3 && m <= 5
-                    ? "bg-pink-500 text-white fb-measure-selected"
-                    : "bg-gray-100 text-gray-400"
-                }`}
-              >
-                {m}
+        {/* Header - like real app */}
+        <div className="flex gap-2 mb-3">
+          {[1, 2, 3, 4].map((s) => (
+            <div key={s} className={`flex-1 h-1 rounded-full ${s <= 2 ? "bg-violet-500" : "bg-gray-200"}`} />
+          ))}
+        </div>
+        <p className="text-[9px] text-gray-400 mb-2">단계 2/4</p>
+
+        {/* Song info inputs - like real feedback/new */}
+        <div className="grid grid-cols-2 gap-2 mb-2">
+          <div className="px-2 py-1.5 rounded-lg border border-gray-200 bg-gray-50">
+            <p className="text-[8px] text-gray-400">작곡가</p>
+            <p className="text-[10px] font-semibold text-gray-800">F. Chopin</p>
+          </div>
+          <div className="px-2 py-1.5 rounded-lg border border-gray-200 bg-gray-50">
+            <p className="text-[8px] text-gray-400">곡 제목</p>
+            <p className="text-[10px] font-semibold text-gray-800">Ballade No.1</p>
+          </div>
+        </div>
+
+        {/* Measure range */}
+        <div className="flex items-center gap-2 mb-3">
+          <div className="flex-1 px-2 py-1.5 rounded-lg border border-violet-300 bg-violet-50 text-center">
+            <p className="text-[10px] font-bold text-violet-700">3</p>
+          </div>
+          <span className="text-[10px] text-gray-400">~</span>
+          <div className="flex-1 px-2 py-1.5 rounded-lg border border-violet-300 bg-violet-50 text-center">
+            <p className="text-[10px] font-bold text-violet-700">5</p>
+          </div>
+          <span className="text-[9px] text-gray-400">마디</span>
+        </div>
+
+        {/* Problem type grid - like real app */}
+        <div className="grid grid-cols-2 gap-1.5 mb-3">
+          {["테크닉", "음악성", "리듬/박자", "기타"].map((type, i) => (
+            <div
+              key={type}
+              className={`px-2 py-1.5 rounded-lg border text-[9px] font-medium text-center ${
+                i === 0
+                  ? "border-violet-400 bg-violet-50 text-violet-700"
+                  : "border-gray-200 text-gray-400"
+              }`}
+            >
+              {type}
+            </div>
+          ))}
+        </div>
+
+        {/* Teacher reply card */}
+        <div className="bg-gradient-to-r from-violet-50 to-purple-50 rounded-xl p-2.5 border border-violet-100">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-6 h-6 rounded-full bg-violet-200 flex items-center justify-center text-[10px]">👩‍🏫</div>
+            <div>
+              <p className="text-[9px] font-semibold text-gray-700">김지수 선생님</p>
+              <div className="flex items-center gap-0.5">
+                <span className="text-[8px] text-amber-500">★</span>
+                <span className="text-[8px] text-gray-400">4.9</span>
               </div>
-            ))}
-          </div>
-          <p className="text-[10px] text-pink-500 font-medium mt-1.5 text-center">3 - 5 마디</p>
-        </div>
-
-        {/* Step 2: 영상 녹화 */}
-        <div className="fb-step-2 mb-3">
-          <div className="bg-gray-900 rounded-xl h-20 flex items-center justify-center relative overflow-hidden">
-            <div className="fb-rec-dot absolute top-2 left-2 flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full bg-red-500" />
-              <span className="text-[9px] text-red-400 font-mono">REC</span>
             </div>
-            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-              <Video className="w-5 h-5 text-white" />
+            <div className="ml-auto flex items-center gap-0.5 text-violet-600">
+              <span className="text-[9px] font-bold">3</span>
+              <span className="text-[8px]">크레딧</span>
             </div>
-            <span className="absolute bottom-2 right-2 text-[9px] text-white/60 font-mono fb-rec-timer">0:12</span>
           </div>
-        </div>
-
-        {/* Step 3: 전송 → 피드백 도착 */}
-        <div className="fb-step-3 space-y-2">
-          <div className="flex items-center gap-2 fb-sending">
-            <div className="w-6 h-6 rounded-full bg-pink-100 flex items-center justify-center">
-              <svg className="w-3 h-3 text-pink-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-              </svg>
-            </div>
-            <span className="text-[10px] font-semibold text-pink-600">선생님에게 전송됨</span>
-          </div>
-
-          <div className="fb-reply bg-pink-50 rounded-xl p-3 border border-pink-100">
-            <div className="flex items-center gap-2 mb-1.5">
-              <div className="w-6 h-6 rounded-full bg-pink-200 flex items-center justify-center text-[10px]">👩‍🏫</div>
-              <span className="text-[10px] font-semibold text-gray-700">김지수 선생님</span>
-              <span className="text-[9px] text-gray-400 ml-auto">방금</span>
-            </div>
-            <p className="text-[10px] text-gray-600 leading-relaxed">3마디 왼손 터치를 좀 더 가볍게 해보세요. 손목 힘을 빼고 손가락 끝으로 건반을 눌러보세요.</p>
-          </div>
+          <p className="text-[9px] text-gray-500 leading-relaxed">왼손 터치를 좀 더 가볍게, 손목 힘을 빼보세요</p>
         </div>
       </div>
-
-      <style>{`
-        .fb-step-1 {
-          animation: fbStep1 8s ease-in-out infinite;
-        }
-        .fb-measure-selected {
-          animation: fbMeasure 8s ease-in-out infinite;
-        }
-        @keyframes fbStep1 {
-          0%, 3% { opacity: 0; transform: translateY(8px); }
-          8% { opacity: 1; transform: translateY(0); }
-          30% { opacity: 1; }
-          35% { opacity: 0.3; transform: scale(0.97); }
-          40%, 95% { opacity: 0.3; transform: scale(0.97); }
-          100% { opacity: 0; }
-        }
-        @keyframes fbMeasure {
-          0%, 5% { background: #f3f4f6; color: #9ca3af; }
-          10%, 100% { background: #EC4899; color: white; }
-        }
-
-        .fb-step-2 {
-          animation: fbStep2 8s ease-in-out infinite;
-        }
-        @keyframes fbStep2 {
-          0%, 28% { opacity: 0; height: 0; margin: 0; overflow: hidden; }
-          35% { opacity: 1; height: auto; margin-bottom: 12px; }
-          55% { opacity: 1; }
-          60% { opacity: 0; height: 0; margin: 0; overflow: hidden; }
-          100% { opacity: 0; height: 0; margin: 0; overflow: hidden; }
-        }
-
-        .fb-rec-dot {
-          animation: fbRecDot 8s ease-in-out infinite;
-        }
-        @keyframes fbRecDot {
-          0%, 35% { opacity: 0; }
-          38%, 42% { opacity: 1; }
-          43%, 46% { opacity: 0.3; }
-          47%, 55% { opacity: 1; }
-          60% { opacity: 0; }
-          100% { opacity: 0; }
-        }
-
-        .fb-step-3 {
-          animation: fbStep3 8s ease-in-out infinite;
-        }
-        @keyframes fbStep3 {
-          0%, 58% { opacity: 0; transform: translateY(8px); }
-          65% { opacity: 1; transform: translateY(0); }
-          95% { opacity: 1; }
-          100% { opacity: 0; }
-        }
-
-        .fb-sending {
-          animation: fbSending 8s ease-in-out infinite;
-        }
-        @keyframes fbSending {
-          0%, 58% { opacity: 0; }
-          63% { opacity: 1; }
-          100% { opacity: 1; }
-        }
-
-        .fb-reply {
-          animation: fbReply 8s ease-in-out infinite;
-        }
-        @keyframes fbReply {
-          0%, 68% { opacity: 0; transform: translateY(10px); }
-          75% { opacity: 1; transform: translateY(0); }
-          95% { opacity: 1; }
-          100% { opacity: 0; }
-        }
-      `}</style>
     </div>
   );
 }
@@ -417,97 +281,6 @@ function TodoFlowVisual() {
         </div>
       </div>
 
-      <style>{`
-        /* + 버튼 펄스 */
-        .todo-add-btn {
-          animation: addPulse 6s ease-in-out infinite;
-        }
-        @keyframes addPulse {
-          0%, 8% { transform: scale(1); }
-          4% { transform: scale(1.3); }
-          100% { transform: scale(1); }
-        }
-
-        /* 아이템 1: 슬라이드 인 */
-        .todo-item-1 {
-          animation: slideIn 6s ease-out infinite;
-        }
-        @keyframes slideIn {
-          0%, 5% { opacity: 0; transform: translateY(-10px); }
-          12% { opacity: 1; transform: translateY(0); }
-          100% { opacity: 1; transform: translateY(0); }
-        }
-
-        /* 아이템 2: 딜레이 슬라이드 인 */
-        .todo-item-2 {
-          animation: slideIn2 6s ease-out infinite;
-        }
-        @keyframes slideIn2 {
-          0%, 18% { opacity: 0; transform: translateY(-10px); }
-          25% { opacity: 1; transform: translateY(0); }
-          100% { opacity: 1; transform: translateY(0); }
-        }
-
-        /* 아이템 3: 더 딜레이 */
-        .todo-item-3 {
-          animation: slideIn3 6s ease-out infinite;
-        }
-        @keyframes slideIn3 {
-          0%, 30% { opacity: 0; transform: translateY(-10px); }
-          37% { opacity: 1; transform: translateY(0); }
-          100% { opacity: 1; transform: translateY(0); }
-        }
-
-        /* 체크박스: 아이템1 완료 */
-        .todo-checkbox-1 {
-          animation: checkBox 6s ease-in-out infinite;
-        }
-        @keyframes checkBox {
-          0%, 55% { background: transparent; border-color: #86EFAC; }
-          60%, 95% { background: #10B981; border-color: #10B981; }
-          100% { background: transparent; border-color: #86EFAC; }
-        }
-
-        .todo-check-icon-1 {
-          animation: checkIcon 6s ease-in-out infinite;
-        }
-        @keyframes checkIcon {
-          0%, 55% { opacity: 0; transform: scale(0); }
-          62% { opacity: 1; transform: scale(1.2); }
-          65%, 95% { opacity: 1; transform: scale(1); }
-          100% { opacity: 0; transform: scale(0); }
-        }
-
-        /* 텍스트 취소선 */
-        .todo-text-1 {
-          animation: strikeThrough 6s ease-in-out infinite;
-        }
-        @keyframes strikeThrough {
-          0%, 55% { text-decoration: none; color: #1f2937; }
-          60%, 95% { text-decoration: line-through; color: #9ca3af; }
-          100% { text-decoration: none; color: #1f2937; }
-        }
-
-        /* 프로그레스 바 */
-        .todo-progress-bar {
-          animation: progressGrow 6s ease-in-out infinite;
-        }
-        @keyframes progressGrow {
-          0%, 37% { width: 0%; }
-          45%, 55% { width: 0%; }
-          65%, 95% { width: 33%; }
-          100% { width: 0%; }
-        }
-
-        .todo-progress-text {
-          animation: progressText 6s ease-in-out infinite;
-        }
-        @keyframes progressText {
-          0%, 55% { opacity: 0.4; }
-          65%, 95% { opacity: 1; }
-          100% { opacity: 0.4; }
-        }
-      `}</style>
     </div>
   );
 }
@@ -533,7 +306,6 @@ function MicVisual() {
           />
         ))}
       </div>
-      <style>{`@keyframes ripple { 0% { transform: scale(1); opacity: 0.6; } 100% { transform: scale(2.5); opacity: 0; } }`}</style>
     </div>
   );
 }
@@ -603,7 +375,7 @@ export default function OnboardingPage() {
 
   return (
     <div
-      className="min-h-screen flex flex-col bg-white relative overflow-hidden select-none"
+      className="h-[100dvh] flex flex-col bg-white relative overflow-hidden select-none"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
@@ -689,7 +461,7 @@ export default function OnboardingPage() {
       </AnimatePresence>
 
       {/* Bottom Controls */}
-      <div className="px-8 pb-12 pt-4 relative z-10">
+      <div className="px-6 pb-8 pt-2 relative z-10 shrink-0">
         {/* Dot Indicators */}
         <div className="flex justify-center gap-2 mb-6">
           {SLIDES.map((_, i) => (

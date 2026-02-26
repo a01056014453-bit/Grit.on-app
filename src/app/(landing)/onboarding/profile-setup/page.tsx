@@ -93,6 +93,8 @@ export default function ProfileSetupPage() {
     );
   };
 
+  const [showCelebration, setShowCelebration] = useState(false);
+
   const handleComplete = () => {
     const finalNickname = nickname.trim() || generateNickname();
     const profile: UserProfile = {
@@ -104,7 +106,8 @@ export default function ProfileSetupPage() {
     };
     localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
     localStorage.setItem(ONBOARDING_KEY, "true");
-    router.push("/");
+    setShowCelebration(true);
+    setTimeout(() => router.push("/"), 2500);
   };
 
   const totalSteps = 4;
@@ -339,6 +342,76 @@ export default function ProfileSetupPage() {
           )}
         </button>
       </div>
+
+      {/* Celebration Overlay */}
+      <AnimatePresence>
+        {showCelebration && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white"
+          >
+            {/* Confetti particles */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+              {Array.from({ length: 50 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="confetti-particle absolute"
+                  style={{
+                    left: `${Math.random() * 100}%`,
+                    top: `-5%`,
+                    width: `${6 + Math.random() * 8}px`,
+                    height: `${6 + Math.random() * 8}px`,
+                    backgroundColor: ["#8B5CF6", "#EC4899", "#10B981", "#F59E0B", "#3B82F6", "#EF4444"][i % 6],
+                    borderRadius: Math.random() > 0.5 ? "50%" : "2px",
+                    animationDelay: `${Math.random() * 1}s`,
+                    animationDuration: `${1.5 + Math.random() * 2}s`,
+                  }}
+                />
+              ))}
+            </div>
+
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", damping: 12, delay: 0.2 }}
+              className="text-7xl mb-6"
+            >
+              🎉
+            </motion.div>
+
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="text-3xl font-black text-gray-900 mb-2"
+            >
+              환영합니다!
+            </motion.h1>
+
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+              className="text-gray-500 text-center leading-relaxed"
+            >
+              모든 준비가 완료됐어요<br />
+              이제 연습을 시작해볼까요?
+            </motion.p>
+
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 1.2 }}
+              className="mt-8 flex items-center gap-2 text-sm text-violet-500"
+            >
+              <div className="w-5 h-5 border-2 border-violet-400 border-t-transparent rounded-full animate-spin" />
+              <span>대시보드로 이동 중...</span>
+            </motion.div>
+
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
