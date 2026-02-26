@@ -10,7 +10,7 @@ const SplashScreen = dynamic(() => import("@/components/SplashScreen"), {
 
 const SPLASH_SHOWN_KEY = "sempre-splash-shown";
 const DATA_VERSION_KEY = "sempre-data-version";
-const CURRENT_DATA_VERSION = "3"; // 목업 데이터 제거 마이그레이션 (키 수정)
+const CURRENT_DATA_VERSION = "5"; // 온보딩 키 마이그레이션
 
 function runDataMigration() {
   if (typeof window === "undefined") return;
@@ -18,8 +18,9 @@ function runDataMigration() {
   const version = localStorage.getItem(DATA_VERSION_KEY);
   if (version === CURRENT_DATA_VERSION) return;
 
-  // 목업 알림 데이터 제거
+  // 목업 알림 데이터 + 이전 온보딩 키 제거
   localStorage.removeItem("grit-on-notifications");
+  localStorage.removeItem("grit-on-onboarding-complete");
 
   // 목업 연습 세션 제거 (IndexedDB)
   indexedDB.deleteDatabase("griton_db");

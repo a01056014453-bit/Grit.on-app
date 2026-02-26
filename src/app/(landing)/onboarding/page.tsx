@@ -70,7 +70,7 @@ const SLIDES: Slide[] = [
   },
 ];
 
-const ONBOARDING_KEY = "grit-on-onboarding-complete";
+const ONBOARDING_KEY = "sempre-onboarding-done";
 
 /* ─── Slide Transition Variants ─── */
 
@@ -583,8 +583,7 @@ export default function OnboardingPage() {
   };
 
   const completeOnboarding = () => {
-    localStorage.setItem(ONBOARDING_KEY, "true");
-    router.push("/");
+    router.push("/onboarding/profile-setup");
   };
 
   const handleMicPermission = async () => {

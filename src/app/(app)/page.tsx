@@ -21,7 +21,7 @@ export default function HomePage() {
 
   // 온보딩 미완료 시 리다이렉트
   useEffect(() => {
-    const done = localStorage.getItem("grit-on-onboarding-complete");
+    const done = localStorage.getItem("sempre-onboarding-done");
     if (!done) {
       router.replace("/onboarding");
     }
@@ -104,6 +104,13 @@ export default function HomePage() {
     if (userProfile?.name) return userProfile.name;
     if (typeof window !== "undefined") {
       try {
+        // sempre-user-profile 우선
+        const sempre = localStorage.getItem("sempre-user-profile");
+        if (sempre) {
+          const p = JSON.parse(sempre);
+          if (p.nickname) return p.nickname;
+        }
+        // 기존 grit-on-profile 폴백
         const saved = localStorage.getItem("grit-on-profile");
         if (saved) {
           const profile = JSON.parse(saved);

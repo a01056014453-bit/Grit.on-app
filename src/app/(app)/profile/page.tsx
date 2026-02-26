@@ -92,20 +92,37 @@ function SpotlightCard({
 
 /* ─── Data helpers ─── */
 const defaultUser = {
-  nickname: "지민",
+  nickname: "사용자",
   instrument: "피아노",
-  grade: "고2",
-  type: "전공", // "전공" | "취미"
+  grade: "",
+  type: "취미",
   dailyGoal: 60,
   plan: "free",
-  profileImage: "", // base64 or URL
+  profileImage: "",
+  profileEmoji: "👤",
+  instruments: [] as string[],
 };
 
 const PROFILE_STORAGE_KEY = "grit-on-profile";
+const SEMPRE_PROFILE_KEY = "sempre-user-profile";
 
 function loadProfile() {
   if (typeof window === "undefined") return defaultUser;
   try {
+    // sempre-user-profile에서 온보딩 프로필 먼저 읽기
+    const sempre = localStorage.getItem(SEMPRE_PROFILE_KEY);
+    if (sempre) {
+      const sp = JSON.parse(sempre);
+      return {
+        ...defaultUser,
+        nickname: sp.nickname || defaultUser.nickname,
+        instrument: sp.instruments?.[0] || defaultUser.instrument,
+        grade: sp.ageGroup || defaultUser.grade,
+        profileEmoji: sp.profileEmoji || defaultUser.profileEmoji,
+        instruments: sp.instruments || [],
+      };
+    }
+    // 기존 grit-on-profile 폴백
     const saved = localStorage.getItem(PROFILE_STORAGE_KEY);
     if (saved) return { ...defaultUser, ...JSON.parse(saved) };
   } catch {}
@@ -496,6 +513,10 @@ export default function ProfilePage() {
                 fill
                 className="rounded-full object-cover"
               />
+            ) : profile.profileEmoji && profile.profileEmoji !== "👤" ? (
+              <div className="w-16 h-16 bg-violet-50 rounded-full flex items-center justify-center border-2 border-violet-200">
+                <span className="text-3xl">{profile.profileEmoji}</span>
+              </div>
             ) : (
               <div className="w-16 h-16 bg-white/60 rounded-full flex items-center justify-center">
                 <User className="w-8 h-8 text-gray-400" />
@@ -537,9 +558,15 @@ export default function ProfilePage() {
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-1.5 mt-2">
+            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
               <Music className="w-3.5 h-3.5 text-primary" />
-              <span className="text-sm text-gray-600">{profile.instrument}</span>
+              {profile.instruments && profile.instruments.length > 0 ? (
+                profile.instruments.map((inst: string) => (
+                  <span key={inst} className="text-sm text-gray-600">{inst}</span>
+                ))
+              ) : (
+                <span className="text-sm text-gray-600">{profile.instrument}</span>
+              )}
             </div>
           </div>
 
