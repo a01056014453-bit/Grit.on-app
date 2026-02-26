@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { X, Plus } from "lucide-react";
-import { composerList, mockSongs } from "@/data";
+import { getUserSongs, getDrillCards } from "@/lib/queries";
 import { getAllAvailableDrills } from "@/lib/drill-records";
+import { getUserId } from "@/lib/user-id";
+import type { Song } from "@/types";
 
 interface NewDrillForm {
   isNewSong: boolean;
@@ -41,27 +43,44 @@ export function ScheduleModal({
   onSave: (ids: string[]) => void;
 }) {
   const [form, setForm] = useState<NewDrillForm>(INITIAL_FORM);
+  const [userSongs, setUserSongs] = useState<Song[]>([]);
+  const [dbDrills, setDbDrills] = useState<import("@/types").DrillCard[]>([]);
+
+  useEffect(() => {
+    const userId = getUserId();
+    if (userId) {
+      getUserSongs(userId).then(setUserSongs);
+      getDrillCards(userId).then(setDbDrills);
+    }
+  }, []);
 
   // 기존 곡 목록 추출
   const existingSongs = useMemo(() => {
-    const allDrills = getAllAvailableDrills();
+    const allDrills = getAllAvailableDrills(dbDrills);
     const songs = new Set<string>();
     allDrills.forEach((d) => songs.add(d.song));
     return Array.from(songs);
-  }, []);
+  }, [dbDrills]);
 
-  // 작곡가 자동완성
-  const filteredComposers = form.composer.length >= 2
-    ? composerList.filter(
-        (c) =>
-          c.label.toLowerCase().includes(form.composer.toLowerCase()) ||
-          c.key.includes(form.composer.toLowerCase())
-      )
-    : [];
+  // 작곡가 자동완성 (기존 곡 데이터에서 추출)
+  const filteredComposers = useMemo(() => {
+    if (form.composer.length < 2) return [];
+    const composerSet = new Map<string, string>();
+    userSongs.forEach((s) => {
+      const parts = s.title.split(" ");
+      if (parts.length >= 2) {
+        const composer = parts.slice(0, 2).join(" ");
+        composerSet.set(composer.toLowerCase(), composer);
+      }
+    });
+    return Array.from(composerSet.entries())
+      .filter(([key]) => key.includes(form.composer.toLowerCase()))
+      .map(([key, label]) => ({ key, label }));
+  }, [form.composer, userSongs]);
 
   // 곡 자동완성
   const filteredSongSuggestions = form.songTitle.length >= 2
-    ? mockSongs.filter((s) => {
+    ? userSongs.filter((s) => {
         const matchesTitle = s.title.toLowerCase().includes(form.songTitle.toLowerCase());
         const matchesComposer = form.composer
           ? s.title.toLowerCase().includes(form.composer.toLowerCase())

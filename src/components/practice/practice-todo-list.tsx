@@ -20,7 +20,9 @@ import {
   deletePracticeTodo,
   getTodayCompletedCount,
 } from "@/lib/practice-todo-store";
-import { mockSongs } from "@/data";
+import { getUserSongs } from "@/lib/queries";
+import { getUserId } from "@/lib/user-id";
+import type { Song } from "@/types";
 
 interface PracticeTodoListProps {
   isRecording?: boolean;
@@ -45,17 +47,20 @@ export function PracticeTodoList({
   const [newMeasureEnd, setNewMeasureEnd] = useState("");
   const [newNote, setNewNote] = useState("");
 
+  const [userSongs, setUserSongs] = useState<Song[]>([]);
+
   // 데이터 로드
   useEffect(() => {
-    const loadTodos = () => {
-      setTodos(getTodayTodos());
-      setCompletedCount(getTodayCompletedCount());
-    };
-    loadTodos();
+    setTodos(getTodayTodos());
+    setCompletedCount(getTodayCompletedCount());
+    const userId = getUserId();
+    if (userId) {
+      getUserSongs(userId).then(setUserSongs);
+    }
   }, []);
 
   // 선택된 곡 정보
-  const selectedSong = selectedSongId ? mockSongs.find(s => s.id === selectedSongId) : null;
+  const selectedSong = selectedSongId ? userSongs.find(s => s.id === selectedSongId) : null;
 
   // 완료/미완료 토글
   const handleToggleComplete = (todo: PracticeTodo) => {
@@ -182,7 +187,7 @@ export function PracticeTodoList({
           {!isNewSong && !selectedSongId ? (
             // 곡 선택 목록
             <div className="space-y-2">
-              {mockSongs.slice(0, 4).map((song) => (
+              {userSongs.slice(0, 4).map((song) => (
                 <button
                   key={song.id}
                   onClick={() => handleSelectSong(song.id)}

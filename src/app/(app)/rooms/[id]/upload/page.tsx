@@ -11,7 +11,7 @@ import {
   AlertCircle,
   X,
 } from "lucide-react";
-import { getSchoolById } from "@/data/mock-schools";
+import { getSchoolById } from "@/lib/queries";
 import type { School } from "@/types";
 
 export default function RoomUploadPage() {
@@ -31,12 +31,29 @@ export default function RoomUploadPage() {
   const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
-    const schoolData = getSchoolById(schoolId);
-    if (!schoolData) {
-      router.push("/rooms");
-      return;
+    async function load() {
+      const schoolData = await getSchoolById(schoolId);
+      if (!schoolData) {
+        router.push("/rooms");
+        return;
+      }
+      setSchool({
+        id: schoolData.id,
+        name: schoolData.name,
+        shortName: schoolData.shortName,
+        type: schoolData.type,
+        year: schoolData.year,
+        deadline: schoolData.deadline ?? "",
+        designatedPieces: schoolData.designatedPieces.map((dp) => ({
+          id: dp.id,
+          composer: dp.composer,
+          title: dp.title,
+          fullName: dp.fullName,
+          category: dp.category ?? undefined,
+        })),
+      });
     }
-    setSchool(schoolData);
+    load();
   }, [schoolId, router]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {

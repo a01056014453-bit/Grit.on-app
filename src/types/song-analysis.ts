@@ -1,3 +1,26 @@
+/** 곡 AI 분석 정보 (V1 - analyze-song API) */
+export interface SongAIInfo {
+  id: string;
+  composer: string;
+  composerFull: string;
+  composerImage?: string;
+  title: string;
+  opus: string;
+  year: string;
+  period: string;
+  difficulty: "초급" | "중급" | "고급" | "전문가";
+  keySignature: string;
+  tempo: string;
+  duration: string;
+  composerBackground: string;
+  historicalContext: string;
+  workBackground: string;
+  structure: { section: string; measures: string; description: string }[];
+  technicalTips: string[];
+  musicalTips: string[];
+  famousPerformers: string[];
+}
+
 /** 곡 분석 7가지 항목 타입 정의 */
 
 export type DifficultyLevel = "Beginner" | "Intermediate" | "Advanced" | "Virtuoso";

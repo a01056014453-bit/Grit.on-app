@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef, useCallback } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { safeBack } from "@/lib/navigation";
 import Link from "next/link";
@@ -19,9 +19,10 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { motion, Variants } from "framer-motion";
-import { mockRooms } from "@/data/mock-schools";
-import { isRoomJoined, getUserMembership } from "@/lib/room-store";
+import { getRooms, getSchools, getUserMembership } from "@/lib/queries";
+import { getUserId } from "@/lib/user-id";
 import { SCHOOL_TYPE_LABELS, SCHOOL_TYPE_COLORS } from "@/types";
+import type { Room as QueryRoom, School } from "@/lib/queries/rooms";
 import { cn } from "@/lib/utils";
 import GradientText from "@/components/reactbits/GradientText";
 
@@ -92,28 +93,67 @@ function SpotlightCard({
   );
 }
 
+interface RoomWithStatus {
+  id: string;
+  schoolId: string;
+  school: School;
+  memberCount: number;
+  videoCount: number;
+  isJoined: boolean;
+  hasUploaded: boolean;
+}
+
 export default function RoomsPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("전체");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [roomsWithStatus, setRoomsWithStatus] = useState<RoomWithStatus[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // 참여 중인 룸 확인
-  const roomsWithStatus = useMemo(() => {
-    return mockRooms.map((room) => {
-      const isJoined = isRoomJoined(room.id);
-      const membership = getUserMembership(room.id);
-      const hasUploaded =
-        membership &&
-        (membership.uploadedPieceIds.length > 0 ||
-          membership.uploadedPieces.length > 0);
+  useEffect(() => {
+    async function load() {
+      const userId = getUserId();
+      const [rooms, schools] = await Promise.all([getRooms(), getSchools()]);
 
-      return {
-        ...room,
-        isJoined,
-        hasUploaded,
-      };
-    });
+      const schoolMap = new Map(schools.map((s) => [s.id, s]));
+
+      const withStatus: RoomWithStatus[] = await Promise.all(
+        rooms.map(async (room) => {
+          const school = room.school ?? schoolMap.get(room.schoolId);
+          const membership = userId
+            ? await getUserMembership(userId, room.id)
+            : null;
+          const isJoined = membership !== null;
+          const uploadedPieceIds: string[] = (membership as any)?.uploaded_piece_ids ?? [];
+          const uploadedPieces: { composer: string; title: string }[] = (membership as any)?.uploaded_pieces ?? [];
+          const hasUploaded =
+            uploadedPieceIds.length > 0 || uploadedPieces.length > 0;
+
+          return {
+            id: room.id,
+            schoolId: room.schoolId,
+            school: school ?? {
+              id: room.schoolId,
+              name: "",
+              shortName: "",
+              type: "free" as const,
+              year: 2026,
+              deadline: null,
+              designatedPieces: [],
+            },
+            memberCount: room.memberCount,
+            videoCount: room.videoCount,
+            isJoined,
+            hasUploaded,
+          };
+        })
+      );
+
+      setRoomsWithStatus(withStatus);
+      setLoading(false);
+    }
+    load();
   }, []);
 
   const filteredRooms = roomsWithStatus.filter((room) => {
@@ -131,6 +171,19 @@ export default function RoomsPage() {
   const myRooms = roomsWithStatus.filter((room) => room.isJoined);
 
   const titleText = "입시 룸";
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-blob-violet px-4 py-6 max-w-lg mx-auto pb-24">
+        <div className="bg-blob-extra" />
+        <div className="animate-pulse space-y-4">
+          <div className="h-10 bg-white/20 rounded-xl" />
+          <div className="h-24 bg-white/20 rounded-xl" />
+          <div className="h-48 bg-white/20 rounded-xl" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-blob-violet px-4 py-6 max-w-lg mx-auto pb-24">
@@ -412,7 +465,7 @@ export default function RoomsPage() {
                       </span>
                       <span className="text-violet-500 font-medium">
                         마감{" "}
-                        {new Date(room.school.deadline).toLocaleDateString(
+                        {new Date(room.school.deadline ?? "").toLocaleDateString(
                           "ko-KR",
                           { month: "numeric", day: "numeric" }
                         )}

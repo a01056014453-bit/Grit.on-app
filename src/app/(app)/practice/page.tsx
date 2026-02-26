@@ -8,7 +8,9 @@ import { savePracticeSession, getAllSessions, deleteSession, type PracticeSessio
 import { syncPracticeSessions } from "@/lib/sync-practice";
 import { completePracticeTodo } from "@/lib/practice-todo-store";
 import { formatTime } from "@/lib/format";
-import { mockSongs as initialSongs, mockDrillCards, hasAIAnalysis, groupDrillsBySong, composerList } from "@/data";
+import { getUserSongs, getDrillCards, getComposerList } from "@/lib/queries";
+import { groupDrillsBySong } from "@/lib/utils-practice";
+import { getUserId } from "@/lib/user-id";
 import {
   buildPiecesForDate,
   buildSessionsForDate,
@@ -101,7 +103,8 @@ function PracticePageContent() {
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [isAddSongModalOpen, setIsAddSongModalOpen] = useState(false);
   const [practiceType, setPracticeType] = useState<PracticeType>("runthrough");
-  const [songs, setSongs] = useState<Song[]>(initialSongs);
+  const [songs, setSongs] = useState<Song[]>([]);
+  const [dbDrillCards, setDbDrillCards] = useState<DrillCard[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [newSong, setNewSong] = useState({ composer: "", title: "" });
   const [completedSession, setCompletedSession] = useState<CompletedSession | null>(null);
@@ -177,7 +180,7 @@ function PracticePageContent() {
   });
   const metronomeIsPlaying = metronomeState.isPlaying;
 
-  const groupedDrills = groupDrillsBySong(mockDrillCards);
+  const groupedDrills = groupDrillsBySong(dbDrillCards);
   const dayNames = ["일", "월", "화", "수", "목", "금", "토"];
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -259,24 +262,19 @@ function PracticePageContent() {
   };
 
   useEffect(() => {
-    // Check if Wake Lock API is supported
     setWakeLockSupported("wakeLock" in navigator);
-    // Load recent sessions
     loadRecentSessions();
 
-    // Load custom drills from localStorage
     const savedDrills = localStorage.getItem("grit-on-custom-drills");
     if (savedDrills) {
       setCustomDrills(JSON.parse(savedDrills));
     }
 
-    // Load routines
     const savedRoutines = localStorage.getItem("grit-on-routines");
     if (savedRoutines) {
       setRoutines(JSON.parse(savedRoutines));
     }
 
-    // Load today's completed drills
     const todayStr = getTodayStr();
     const todayCompletion = localStorage.getItem(`grit-on-completed-${todayStr}`);
     if (todayCompletion) {
@@ -284,7 +282,6 @@ function PracticePageContent() {
       setCompletedDrills(new Set(data.completedDrillIds || []));
     }
 
-    // Check for carry-over drills from yesterday
     const yesterdayStr = getYesterdayStr();
     const yesterdayCompletion = localStorage.getItem(`grit-on-completed-${yesterdayStr}`);
     const yesterdayDrills = localStorage.getItem(`grit-on-drills-${yesterdayStr}`);
@@ -297,13 +294,28 @@ function PracticePageContent() {
 
       const incomplete = allYesterdayDrills.filter(d => !completedIds.has(d.id));
       if (incomplete.length > 0) {
-        // Check if user already dismissed carry-over for today
         const dismissedCarryOver = localStorage.getItem(`grit-on-carryover-dismissed-${todayStr}`);
         if (!dismissedCarryOver) {
           setCarryOverDrills(incomplete);
         }
       }
     }
+
+    const loadRemoteData = async () => {
+      const userId = getUserId();
+      if (!userId) return;
+      try {
+        const [fetchedSongs, fetchedCards] = await Promise.all([
+          getUserSongs(userId),
+          getDrillCards(userId),
+        ]);
+        setSongs(fetchedSongs);
+        setDbDrillCards(fetchedCards);
+      } catch (err) {
+        console.error("Failed to load songs / drill cards:", err);
+      }
+    };
+    loadRemoteData();
   }, [loadRecentSessions]);
 
   // URL 파라미터로 전달된 drill 로드
@@ -877,7 +889,11 @@ function PracticePageContent() {
     );
   };
 
-  // Composer autocomplete
+  // Composer autocomplete (Supabase)
+  const [composerList, setComposerList] = useState<{ key: string; label: string }[]>([]);
+  useEffect(() => {
+    getComposerList().then(setComposerList);
+  }, []);
   const filteredComposers = newDrill.composer.length >= 2
     ? composerList.filter((c) =>
         c.label.toLowerCase().includes(newDrill.composer.toLowerCase()) ||
@@ -887,7 +903,7 @@ function PracticePageContent() {
 
   // Song title autocomplete - filter by selected composer or show all matching songs
   const filteredSongSuggestions = newDrill.songTitle.length >= 2
-    ? initialSongs.filter((s) => {
+    ? songs.filter((s) => {
         const matchesTitle = s.title.toLowerCase().includes(newDrill.songTitle.toLowerCase());
         const matchesComposer = newDrill.composer
           ? s.title.toLowerCase().includes(newDrill.composer.toLowerCase())
@@ -997,7 +1013,7 @@ function PracticePageContent() {
   const calDayNames = ["일", "월", "화", "수", "목", "금", "토"];
   const calWeekdayNames = ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"];
   const calIsSelectedToday = calSelectedDate.getFullYear() === calToday.getFullYear() && calSelectedDate.getMonth() === calToday.getMonth() && calSelectedDate.getDate() === calToday.getDate();
-  const totalDrillCount = mockDrillCards.length + customDrills.length;
+  const totalDrillCount = dbDrillCards.length + customDrills.length;
 
   // Records-style to-do accordion states
   const [expandedPieces, setExpandedPieces] = useState<Set<number>>(new Set());
@@ -1040,7 +1056,7 @@ function PracticePageContent() {
       saveScheduledDrillIds(recDateStr, ids);
 
       // 캐리오버를 위해 스케줄된 드릴 정보를 날짜별 키에도 저장
-      const allDrills = [...mockDrillCards, ...loadCustomDrills()];
+      const allDrills = [...dbDrillCards, ...loadCustomDrills()];
       const drillsToSave = ids
         .map(id => allDrills.find(d => d.id === id))
         .filter(Boolean)

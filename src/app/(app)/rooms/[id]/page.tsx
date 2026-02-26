@@ -28,13 +28,13 @@ import { motion, AnimatePresence, Variants } from "framer-motion";
 import { VideoProtection } from "@/components/app/video-protection";
 import {
   getSchoolById,
-  getRoomBySchoolId,
-  getVideosByRoomId,
-} from "@/data/mock-schools";
-import {
+  getRooms,
+  getRoomVideos,
   getUserMembership,
   joinRoom,
-} from "@/lib/room-store";
+} from "@/lib/queries";
+import type { School as QuerySchool, RoomVideo as QueryRoomVideo } from "@/lib/queries/rooms";
+import { getUserId } from "@/lib/user-id";
 import { groupVideosByPiece, type PieceGroup } from "@/lib/room-access";
 import type {
   School,
@@ -108,38 +108,88 @@ export default function RoomDetailPage() {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState<"recent" | "helpful">("recent");
 
-  // 데이터 로드
   useEffect(() => {
-    const loadData = () => {
-      const schoolData = getSchoolById(schoolId);
+    async function loadData() {
+      const userId = getUserId();
+
+      const schoolData = await getSchoolById(schoolId);
       if (!schoolData) {
         router.push("/rooms");
         return;
       }
 
-      const roomData = getRoomBySchoolId(schoolId);
+      const allRooms = await getRooms();
+      const roomData = allRooms.find((r) => r.schoolId === schoolId);
       if (!roomData) {
         router.push("/rooms");
         return;
       }
 
-      setSchool(schoolData);
-      setRoom(roomData);
+      const mappedSchool: School = {
+        id: schoolData.id,
+        name: schoolData.name,
+        shortName: schoolData.shortName,
+        type: schoolData.type,
+        year: schoolData.year,
+        deadline: schoolData.deadline ?? "",
+        designatedPieces: schoolData.designatedPieces.map((dp) => ({
+          id: dp.id,
+          composer: dp.composer,
+          title: dp.title,
+          fullName: dp.fullName,
+          category: dp.category ?? undefined,
+        })),
+      };
 
-      // 룸 참여 처리
-      joinRoom(roomData.id);
+      const mappedRoom: Room = {
+        id: roomData.id,
+        schoolId: roomData.schoolId,
+        school: mappedSchool,
+        memberCount: roomData.memberCount,
+        videoCount: roomData.videoCount,
+        createdAt: "",
+      };
 
-      const videoData = getVideosByRoomId(roomData.id);
+      setSchool(mappedSchool);
+      setRoom(mappedRoom);
+
+      if (userId) {
+        await joinRoom(userId, roomData.id);
+      }
+
+      const queryVideos = await getRoomVideos(roomData.id);
+      const videoData: RoomVideo[] = queryVideos.map((v) => ({
+        id: v.id,
+        roomId: v.roomId,
+        userId: v.userId,
+        userName: v.userName,
+        piece: { composer: v.pieceComposer, title: v.pieceTitle },
+        section: v.section ?? "",
+        duration: v.duration,
+        uploadedAt: v.uploadedAt,
+        helpfulCount: v.helpfulCount,
+        tags: v.tags,
+        faceBlurred: v.faceBlurred,
+      }));
       setVideos(videoData);
 
-      const membershipData = getUserMembership(roomData.id);
+      const membershipRaw = userId
+        ? await getUserMembership(userId, roomData.id)
+        : null;
+      const membershipData: RoomMembership | null = membershipRaw
+        ? {
+            roomId: (membershipRaw as any).room_id ?? roomData.id,
+            userId: (membershipRaw as any).user_id ?? userId,
+            uploadedPieceIds: (membershipRaw as any).uploaded_piece_ids ?? [],
+            uploadedPieces: (membershipRaw as any).uploaded_pieces ?? [],
+            joinedAt: (membershipRaw as any).joined_at ?? "",
+          }
+        : null;
       setMembership(membershipData);
 
-      // 곡별 그룹핑
-      const groups = groupVideosByPiece(videoData, membershipData, schoolData);
+      const groups = groupVideosByPiece(videoData, membershipData, mappedSchool);
       setPieceGroups(groups);
 
-      // 열람 가능한 그룹은 기본 펼침
       const expanded = new Set<string>();
       groups.forEach((g) => {
         if (g.canView) {
@@ -147,7 +197,7 @@ export default function RoomDetailPage() {
         }
       });
       setExpandedGroups(expanded);
-    };
+    }
 
     loadData();
   }, [schoolId, router]);

@@ -3,7 +3,10 @@
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { safeBack } from "@/lib/navigation";
 import { ArrowLeft, Music, Sparkles, Loader2, AlertTriangle, CheckCircle, Shield } from "lucide-react";
-import { mockSongs, saveAnalyzedSong } from "@/data";
+import { saveAnalyzedSong } from "@/lib/analyzed-songs-store";
+import { getUserSongs } from "@/lib/queries/songs";
+import { getUserId } from "@/lib/user-id";
+import type { Song } from "@/types";
 import type { SongAnalysis, AnalyzeSongResponse } from "@/types/song-analysis";
 import { getDifficultyLabel, getVerificationLabel } from "@/types/song-analysis";
 import { useState, useEffect, useCallback, Suspense } from "react";
@@ -80,9 +83,21 @@ function SongDetailContent() {
   const [isCached, setIsCached] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingMessage, setLoadingMessage] = useState<string | null>(null);
+  const [song, setSong] = useState<Song | null>(null);
 
   const songId = params.id as string;
-  const song = mockSongs.find((s) => s.id === songId);
+
+  useEffect(() => {
+    async function loadSong() {
+      const userId = getUserId();
+      if (userId) {
+        const songs = await getUserSongs(userId);
+        const found = songs.find((s) => s.id === songId);
+        if (found) setSong(found);
+      }
+    }
+    loadSong();
+  }, [songId]);
 
   const composerFromQuery = searchParams.get("composer");
   const titleFromQuery = searchParams.get("title");

@@ -18,27 +18,42 @@ import {
   Folder,
   FolderOpen
 } from "lucide-react";
-import { analyzedPieces, getDisplayName } from "@/data/mock-analyzed-pieces";
-import { getPieceAnalysisById, getUserPracticeData } from "@/data/mock-piece-analysis";
-import type { AnalyzedPiece, PieceAnalysis, PiecePracticeData } from "@/types/piece";
+import {
+  getAnalyzedPieces,
+  getPieceAnalysis,
+  getUserPracticeData,
+} from "@/lib/queries/pieces";
+import type { Piece, PieceAnalysis, PiecePracticeData } from "@/lib/queries/pieces";
+import { getUserId } from "@/lib/user-id";
 
-// 난이도 색상
-const difficultyColors = {
+interface SectionData {
+  startMeasure: number;
+  endMeasure: number;
+  sectionName: string;
+  technicalDifficulty: string;
+  dynamics: string;
+}
+
+interface MeasureProgressData {
+  measureStart: number;
+  mastery: string;
+}
+
+const difficultyColors: Record<string, string> = {
   easy: "bg-green-100 text-green-700",
   medium: "bg-yellow-100 text-yellow-700",
   hard: "bg-orange-100 text-orange-700",
   very_hard: "bg-red-100 text-red-700",
 };
 
-const difficultyLabels = {
+const difficultyLabels: Record<string, string> = {
   easy: "쉬움",
   medium: "보통",
   hard: "어려움",
   very_hard: "매우 어려움",
 };
 
-// 마스터리 색상
-const masteryColors = {
+const masteryColors: Record<string, string> = {
   not_started: "bg-gray-200",
   learning: "bg-yellow-400",
   practicing: "bg-blue-400",
@@ -49,34 +64,47 @@ export default function AIAnalysisPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedPieceId, setExpandedPieceId] = useState<string | null>(null);
+  const [pieces, setPieces] = useState<Piece[]>([]);
   const [analysisData, setAnalysisData] = useState<Record<string, PieceAnalysis>>({});
   const [practiceData, setPracticeData] = useState<Record<string, PiecePracticeData>>({});
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 분석 데이터 로드
-    const analyses: Record<string, PieceAnalysis> = {};
-    const practices: Record<string, PiecePracticeData> = {};
+    async function load() {
+      const userId = getUserId();
+      const fetchedPieces = await getAnalyzedPieces();
+      setPieces(fetchedPieces);
 
-    analyzedPieces.forEach((piece) => {
-      const analysis = getPieceAnalysisById(piece.id);
-      if (analysis) {
-        analyses[piece.id] = analysis;
-      }
-      const practice = getUserPracticeData("user_001", piece.id);
-      if (practice) {
-        practices[piece.id] = practice;
-      }
-    });
+      const analyses: Record<string, PieceAnalysis> = {};
+      const practices: Record<string, PiecePracticeData> = {};
 
-    setAnalysisData(analyses);
-    setPracticeData(practices);
+      await Promise.all(
+        fetchedPieces.map(async (piece: Piece) => {
+          const analysis = await getPieceAnalysis(piece.id);
+          if (analysis) {
+            analyses[piece.id] = analysis;
+          }
+          if (userId) {
+            const practice = await getUserPracticeData(userId, piece.id);
+            if (practice) {
+              practices[piece.id] = practice;
+            }
+          }
+        })
+      );
+
+      setAnalysisData(analyses);
+      setPracticeData(practices);
+      setLoading(false);
+    }
+    load();
   }, []);
 
-  const filteredPieces = analyzedPieces.filter(
+  const filteredPieces = pieces.filter(
     (piece) =>
       piece.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      piece.composer.shortName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      piece.composer.fullName.toLowerCase().includes(searchQuery.toLowerCase())
+      piece.composerShortName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      piece.composerFullName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const formatDuration = (seconds: number) => {
@@ -102,6 +130,19 @@ export default function AIAnalysisPage() {
     setExpandedPieceId(expandedPieceId === pieceId ? null : pieceId);
   };
 
+  if (loading) {
+    return (
+      <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
+        <div className="bg-blob-extra" />
+        <div className="animate-pulse space-y-4">
+          <div className="h-10 bg-white/20 rounded-xl" />
+          <div className="h-24 bg-white/20 rounded-xl" />
+          <div className="h-48 bg-white/20 rounded-xl" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
       <div className="bg-blob-extra" />
@@ -115,7 +156,7 @@ export default function AIAnalysisPage() {
         </button>
         <div className="flex-1">
           <h1 className="text-lg font-bold text-black">내 분석 보관함</h1>
-          <p className="text-xs text-gray-500">AI 분석 완료된 곡 {analyzedPieces.length}개</p>
+          <p className="text-xs text-gray-500">AI 분석 완료된 곡 {pieces.length}개</p>
         </div>
         <div className="w-10 h-10 rounded-full bg-violet-100 flex items-center justify-center">
           <Folder className="w-5 h-5 text-violet-600" />
@@ -180,14 +221,14 @@ export default function AIAnalysisPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-black truncate">
-                        {piece.composer.shortName} - {piece.title}
+                        {piece.composerShortName} - {piece.title}
                       </p>
                       <div className="flex items-center gap-2 mt-1">
                         <span className="text-xs text-gray-500">{piece.opus}</span>
                         {piece.key && (
                           <span className="text-xs text-gray-400">• {piece.key}</span>
                         )}
-                        {analysis && (
+                        {analysis && analysis.overallDifficulty && (
                           <span className={`text-xs px-1.5 py-0.5 rounded ${difficultyColors[analysis.overallDifficulty]}`}>
                             {difficultyLabels[analysis.overallDifficulty]}
                           </span>
@@ -208,7 +249,10 @@ export default function AIAnalysisPage() {
                   </button>
 
                   {/* Expanded Content */}
-                  {isExpanded && analysis && (
+                  {isExpanded && analysis && (() => {
+                    const sections = (Array.isArray(analysis.sections) ? analysis.sections : []) as unknown as SectionData[];
+                    const measureProgress = (practice?.measureProgress ? (Array.isArray(practice.measureProgress) ? practice.measureProgress : []) : []) as unknown as MeasureProgressData[];
+                    return (
                     <div className="border-t border-gray-100 bg-gray-50">
                       {/* Quick Stats */}
                       <div className="grid grid-cols-3 gap-2 p-4 border-b border-gray-100">
@@ -217,11 +261,11 @@ export default function AIAnalysisPage() {
                           <p className="text-xs text-gray-500">마디</p>
                         </div>
                         <div className="text-center">
-                          <p className="text-lg font-bold text-black">{formatDuration(analysis.estimatedDuration)}</p>
+                          <p className="text-lg font-bold text-black">{formatDuration(analysis.estimatedDuration ?? 0)}</p>
                           <p className="text-xs text-gray-500">연주시간</p>
                         </div>
                         <div className="text-center">
-                          <p className="text-lg font-bold text-black">{analysis.sections.length}</p>
+                          <p className="text-lg font-bold text-black">{sections.length}</p>
                           <p className="text-xs text-gray-500">섹션</p>
                         </div>
                       </div>
@@ -259,8 +303,8 @@ export default function AIAnalysisPage() {
                           <span className="text-xs font-semibold text-black">마디별 분석</span>
                         </div>
                         <div className="space-y-2">
-                          {analysis.sections.map((section, idx) => {
-                            const sectionPractice = practice?.measureProgress.find(
+                          {sections.map((section, idx) => {
+                            const sectionPractice = measureProgress.find(
                               (p) => p.measureStart === section.startMeasure
                             );
 
@@ -310,7 +354,8 @@ export default function AIAnalysisPage() {
                         </Link>
                       </div>
                     </div>
-                  )}
+                    );
+                  })()}
                 </div>
               );
             })

@@ -1,17 +1,44 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Calendar, Target, CheckCircle, Circle, Sparkles, Plus, X, Check } from "lucide-react";
-import { weekDays, mockWeeklyData, initialTodayPlan, mockAISuggestions, mockSongs } from "@/data";
-import type { TodayPlanItem } from "@/types";
+import { weekDays } from "@/lib/utils-practice";
+import { getWeeklyData, getDailyPlans, getAISuggestions } from "@/lib/queries/plans";
+import { getUserSongs } from "@/lib/queries/songs";
+import { getUserId } from "@/lib/user-id";
+import type { TodayPlanItem, WeeklyData, AISuggestion, Song } from "@/types";
 
 const today = new Date().getDay();
 
 export default function PlansPage() {
-  const [todayPlan, setTodayPlan] = useState<TodayPlanItem[]>(initialTodayPlan);
+  const [todayPlan, setTodayPlan] = useState<TodayPlanItem[]>([]);
+  const [weeklyData, setWeeklyData] = useState<WeeklyData[]>([]);
+  const [aiSuggestions, setAiSuggestions] = useState<AISuggestion[]>([]);
+  const [songs, setSongs] = useState<Song[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
   const [practiceContent, setPracticeContent] = useState("");
+
+  useEffect(() => {
+    async function load() {
+      const userId = getUserId();
+      if (userId) {
+        const [weekly, plans, suggestions, userSongs] = await Promise.all([
+          getWeeklyData(userId),
+          getDailyPlans(userId),
+          getAISuggestions(userId),
+          getUserSongs(userId),
+        ]);
+        setWeeklyData(weekly);
+        setTodayPlan(plans);
+        setAiSuggestions(suggestions);
+        setSongs(userSongs);
+      }
+      setLoading(false);
+    }
+    load();
+  }, []);
 
   const togglePlanComplete = (id: string) => {
     setTodayPlan((prev) =>
@@ -22,7 +49,7 @@ export default function PlansPage() {
   };
 
   const handleAddPlan = () => {
-    const selectedSong = mockSongs.find((s) => s.id === selectedSongId);
+    const selectedSong = songs.find((s) => s.id === selectedSongId);
     if (!selectedSong || !practiceContent) return;
 
     const plan: TodayPlanItem = {
@@ -47,6 +74,19 @@ export default function PlansPage() {
     .filter((p) => p.completed)
     .reduce((acc, p) => acc + p.duration, 0);
 
+  if (loading) {
+    return (
+      <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
+        <div className="bg-blob-extra" />
+        <div className="animate-pulse space-y-4">
+          <div className="h-10 bg-white/20 rounded-xl" />
+          <div className="h-32 bg-white/20 rounded-xl" />
+          <div className="h-48 bg-white/20 rounded-xl" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
       <div className="bg-blob-extra" />
@@ -65,7 +105,7 @@ export default function PlansPage() {
           <Calendar className="w-4 h-4 text-gray-400" />
         </div>
         <div className="grid grid-cols-7 gap-2">
-          {mockWeeklyData.map((data, index) => {
+          {weeklyData.map((data, index) => {
             const isToday = index === today;
             return (
               <div key={index} className="text-center">
@@ -188,7 +228,7 @@ export default function PlansPage() {
       {/* AI Suggestions */}
       <div className="space-y-3">
         <h3 className="font-semibold text-gray-900">AI 분석 및 추천</h3>
-        {mockAISuggestions.map((suggestion) => (
+        {aiSuggestions.map((suggestion) => (
           <div
             key={suggestion.id}
             className={`rounded-xl p-4 border ${
@@ -252,7 +292,7 @@ export default function PlansPage() {
                   곡 선택
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {mockSongs.map((song) => (
+                  {songs.map((song) => (
                     <button
                       key={song.id}
                       onClick={() => setSelectedSongId(song.id)}

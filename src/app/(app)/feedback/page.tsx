@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { safeBack } from "@/lib/navigation";
 import { MessageSquare, Clock, CheckCircle, Plus, ChevronRight, ChevronLeft } from "lucide-react";
 import { RequestStatusChip } from "@/components/feedback/request-status-chip";
-import { getFeedbackRequestsByStudent, getRemainingTime } from "@/lib/feedback-store";
-import { FeedbackRequestStatus } from "@/types";
+import { getFeedbackRequests } from "@/lib/queries";
+import { getRemainingTime } from "@/lib/time-utils";
+import { getUserId } from "@/lib/user-id";
+import { FeedbackRequest, FeedbackRequestStatus } from "@/types";
 
 type TabType = "active" | "completed";
 
@@ -17,7 +19,23 @@ const completedStatuses: FeedbackRequestStatus[] = ["COMPLETED", "DECLINED", "EX
 export default function FeedbackListPage() {
   const router = useRouter();
   const [tab, setTab] = useState<TabType>("active");
-  const requests = getFeedbackRequestsByStudent("student1");
+  const [requests, setRequests] = useState<FeedbackRequest[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      setIsLoading(true);
+      try {
+        const data = await getFeedbackRequests(getUserId());
+        setRequests(data);
+      } catch (err) {
+        console.error("Failed to load feedback requests:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
+  }, []);
 
   const filteredRequests = useMemo(() => {
     const statuses = tab === "active" ? activeStatuses : completedStatuses;
@@ -30,7 +48,6 @@ export default function FeedbackListPage() {
   return (
     <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
       <div className="bg-blob-extra" />
-      {/* Header */}
       <div className="mb-6 flex items-center gap-3">
         <button
           onClick={() => safeBack(router)}
@@ -49,7 +66,6 @@ export default function FeedbackListPage() {
         </div>
       </div>
 
-      {/* New Request Button */}
       <Link
         href="/teachers"
         className="block w-full mb-6 py-4 rounded-2xl bg-gradient-to-r from-violet-500 to-violet-900 text-white font-semibold text-center shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40 transition-shadow"
@@ -58,7 +74,6 @@ export default function FeedbackListPage() {
         새 피드백 요청하기
       </Link>
 
-      {/* Tabs */}
       <div className="flex gap-2 mb-4 bg-white/30 backdrop-blur-sm rounded-2xl p-1.5 border border-white/40">
         <button
           onClick={() => setTab("active")}
@@ -82,9 +97,13 @@ export default function FeedbackListPage() {
         </button>
       </div>
 
-      {/* Request List */}
       <div className="space-y-3">
-        {filteredRequests.length === 0 ? (
+        {isLoading ? (
+          <div className="text-center py-12">
+            <div className="w-8 h-8 border-2 border-violet-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+            <p className="text-sm text-muted-foreground">불러오는 중...</p>
+          </div>
+        ) : filteredRequests.length === 0 ? (
           <div className="text-center py-12 bg-white/40 backdrop-blur-xl rounded-2xl border border-white/50">
             <MessageSquare className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
             <p className="text-muted-foreground">
@@ -118,7 +137,6 @@ export default function FeedbackListPage() {
                 }
                 className="block bg-white/40 backdrop-blur-xl rounded-2xl p-4 border border-white/50 hover:bg-white/60 hover:shadow-sm transition-all"
               >
-                {/* Header */}
                 <div className="flex items-start justify-between mb-2">
                   <RequestStatusChip status={request.status} />
                   {remainingTime && !remainingTime.isExpired && (
@@ -129,7 +147,6 @@ export default function FeedbackListPage() {
                   )}
                 </div>
 
-                {/* Content */}
                 <h3 className="font-semibold text-foreground mb-1">
                   {request.composer} - {request.piece}
                 </h3>
@@ -137,7 +154,6 @@ export default function FeedbackListPage() {
                   {request.measureStart}-{request.measureEnd} 마디
                 </p>
 
-                {/* Teacher Info */}
                 {request.teacher && (
                   <div className="flex items-center gap-2 pt-2 border-t border-white/40">
                     <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary/20 to-violet-200 flex items-center justify-center text-xs font-bold text-primary">
@@ -150,7 +166,6 @@ export default function FeedbackListPage() {
                   </div>
                 )}
 
-                {/* Status-specific messages */}
                 {request.status === "DECLINED" && request.declineReason && (
                   <div className="mt-2 p-2 bg-red-50/80 backdrop-blur-sm rounded-xl">
                     <p className="text-xs text-red-700">{request.declineReason}</p>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { safeBack } from "@/lib/navigation";
 import Link from "next/link";
@@ -22,8 +23,8 @@ import {
   Users,
   Briefcase,
 } from "lucide-react";
-import { getTeacherById } from "@/lib/feedback-store";
-import { BADGE_LABELS, TeacherBadge } from "@/types";
+import { getTeacherById } from "@/lib/queries";
+import { Teacher, BADGE_LABELS, TeacherBadge } from "@/types";
 
 const badgeIcons: Record<TeacherBadge, typeof Zap> = {
   expert: Award,
@@ -37,7 +38,6 @@ const badgeColors: Record<TeacherBadge, string> = {
   top_rated: "bg-amber-100 text-amber-700",
 };
 
-// Sample reviews
 const sampleReviews = [
   {
     id: "r1",
@@ -67,7 +67,6 @@ const sampleReviews = [
   },
 ];
 
-// Sample feedback
 const sampleFeedback = {
   piece: "쇼팽 발라드 1번 32-48마디",
   commentPreview:
@@ -83,7 +82,35 @@ export default function TeacherDetailPage() {
   const router = useRouter();
   const teacherId = params.id as string;
 
-  const teacher = getTeacherById(teacherId);
+  const [teacher, setTeacher] = useState<Teacher | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      setIsLoading(true);
+      try {
+        const data = await getTeacherById(teacherId);
+        setTeacher(data);
+      } catch (err) {
+        console.error("Failed to load teacher:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
+  }, [teacherId]);
+
+  if (isLoading) {
+    return (
+      <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
+        <div className="bg-blob-extra" />
+        <div className="text-center py-12">
+          <div className="w-8 h-8 border-2 border-violet-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm text-muted-foreground">불러오는 중...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!teacher) {
     return (
@@ -106,7 +133,6 @@ export default function TeacherDetailPage() {
   return (
     <div className="px-4 py-6 max-w-lg mx-auto pb-32 min-h-screen bg-blob-violet">
       <div className="bg-blob-extra" />
-      {/* Header */}
       <button
         onClick={() => safeBack(router)}
         className="flex items-center gap-2 text-muted-foreground mb-6"
@@ -115,10 +141,8 @@ export default function TeacherDetailPage() {
         <span>뒤로</span>
       </button>
 
-      {/* Profile Header */}
       <div className="bg-card rounded-xl p-5 border border-border mb-4">
         <div className="flex gap-4 mb-4">
-          {/* Profile Image */}
           <div className="relative w-20 h-20 shrink-0">
             <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-violet-200 flex items-center justify-center text-2xl font-bold text-primary">
               {teacher.name.charAt(0)}
@@ -130,14 +154,12 @@ export default function TeacherDetailPage() {
             )}
           </div>
 
-          {/* Info */}
           <div className="flex-1">
             <h1 className="text-xl font-bold text-foreground mb-1">
               {teacher.name}
             </h1>
             <p className="text-sm text-muted-foreground mb-2">{teacher.title}</p>
 
-            {/* Badges */}
             <div className="flex flex-wrap gap-1.5">
               {teacher.badges.map((badge) => {
                 const Icon = badgeIcons[badge];
@@ -155,7 +177,6 @@ export default function TeacherDetailPage() {
           </div>
         </div>
 
-        {/* Stats Grid */}
         <div className="grid grid-cols-4 gap-2">
           <div className="text-center p-2 bg-secondary/50 rounded-lg">
             <div className="flex items-center justify-center gap-1 text-amber-500 mb-0.5">
@@ -185,7 +206,6 @@ export default function TeacherDetailPage() {
         </div>
       </div>
 
-      {/* Specialties */}
       <div className="bg-card rounded-xl p-4 border border-border mb-4">
         <h2 className="text-sm font-semibold text-foreground mb-3">전문 분야</h2>
         <div className="flex flex-wrap gap-2">
@@ -200,7 +220,6 @@ export default function TeacherDetailPage() {
         </div>
       </div>
 
-      {/* Bio */}
       <div className="bg-card rounded-xl p-4 border border-border mb-4">
         <h2 className="text-sm font-semibold text-foreground mb-3">소개</h2>
         <p className="text-sm text-muted-foreground leading-relaxed">
@@ -208,7 +227,6 @@ export default function TeacherDetailPage() {
         </p>
       </div>
 
-      {/* Career / History */}
       {teacher.career && (
         <div className="bg-card rounded-xl p-4 border border-border mb-4">
           <h2 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
@@ -216,7 +234,6 @@ export default function TeacherDetailPage() {
             이력
           </h2>
 
-          {/* Teaching Stats */}
           <div className="grid grid-cols-2 gap-3 mb-4">
             <div className="bg-gradient-to-br from-primary/5 to-violet-500/5 rounded-lg p-3 text-center">
               <div className="flex items-center justify-center gap-1 text-primary mb-1">
@@ -234,7 +251,6 @@ export default function TeacherDetailPage() {
             </div>
           </div>
 
-          {/* Education */}
           {teacher.career.education.length > 0 && (
             <div className="mb-4">
               <h3 className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
@@ -258,7 +274,6 @@ export default function TeacherDetailPage() {
             </div>
           )}
 
-          {/* Awards */}
           {teacher.career.awards.length > 0 && (
             <div className="mb-4">
               <h3 className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
@@ -280,7 +295,6 @@ export default function TeacherDetailPage() {
             </div>
           )}
 
-          {/* Performances */}
           {teacher.career.performances.length > 0 && (
             <div>
               <h3 className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
@@ -306,7 +320,6 @@ export default function TeacherDetailPage() {
         </div>
       )}
 
-      {/* Sample Feedback */}
       <div className="bg-gradient-to-br from-primary/5 to-violet-500/5 rounded-xl p-4 border border-primary/10 mb-4">
         <h2 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
           <Play className="w-4 h-4 text-primary" />
@@ -335,7 +348,6 @@ export default function TeacherDetailPage() {
         </div>
       </div>
 
-      {/* Reviews */}
       <div className="bg-card rounded-xl p-4 border border-border mb-4">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
@@ -386,7 +398,6 @@ export default function TeacherDetailPage() {
         )}
       </div>
 
-      {/* Fixed CTA */}
       <div className="fixed bottom-20 left-0 right-0 px-4 py-3 bg-background/80 backdrop-blur-lg border-t border-border">
         <div className="max-w-lg mx-auto">
           <div className="flex items-center justify-between mb-2">

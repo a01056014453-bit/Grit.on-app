@@ -3,17 +3,32 @@
 import { useState, useEffect } from "react";
 import { Users } from "lucide-react";
 import { StudentList } from "@/components/teacher";
-import { getManagedStudents, initManagedStudents } from "@/lib/teacher-store";
-import { mockTeacherStudents } from "@/data/mock-teacher-students";
+import { getTeacherStudents } from "@/lib/queries/teacher-students";
+import { useTeacherMode } from "@/hooks/useTeacherMode";
 import { ManagedStudent } from "@/types";
 
 export default function TeacherStudentsPage() {
   const [students, setStudents] = useState<ManagedStudent[]>([]);
+  const { teacherProfileId } = useTeacherMode();
 
   useEffect(() => {
-    initManagedStudents(mockTeacherStudents);
-    setStudents(getManagedStudents());
-  }, []);
+    if (!teacherProfileId) return;
+    getTeacherStudents(teacherProfileId).then((data) => {
+      setStudents(data.map((s) => ({
+        id: s.id,
+        nickname: s.nickname,
+        instrument: s.instrument,
+        grade: s.grade,
+        type: s.type,
+        weeklyPracticeMinutes: s.weeklyPracticeMinutes,
+        currentPieces: s.currentPieces,
+        lastPracticeDate: s.lastPracticeDate,
+        joinedAt: s.joinedAt,
+        totalLessons: s.totalLessons,
+        completedLessons: s.completedLessons,
+      })));
+    });
+  }, [teacherProfileId]);
 
   return (
     <div className="px-4 py-6 max-w-lg mx-auto min-h-screen pb-24 bg-blob-orange">

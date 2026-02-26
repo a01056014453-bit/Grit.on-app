@@ -1,21 +1,52 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { safeBack } from "@/lib/navigation";
 import { Music, Clock, TrendingUp, ChevronRight, ArrowLeft } from "lucide-react";
 import { formatDuration } from "@/lib/format";
-import { mockRecordingsList, getRecordingsStats } from "@/data";
-
-const { totalMinutes, avgScore } = getRecordingsStats(mockRecordingsList);
+import { getRecordings, getRecordingsStats } from "@/lib/queries";
+import { getUserId } from "@/lib/user-id";
+import type { RecordingListItem } from "@/types";
 
 export default function PracticeRecordingsPage() {
   const router = useRouter();
+  const [recordings, setRecordings] = useState<RecordingListItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const userId = getUserId();
+        if (!userId) return;
+        const data = await getRecordings(userId);
+        setRecordings(data);
+      } catch (err) {
+        console.error("Failed to load recordings:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
+  }, []);
+
+  const stats = getRecordingsStats(recordings);
+
+  if (isLoading) {
+    return (
+      <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-violet">
+        <div className="bg-blob-extra" />
+        <div className="flex items-center justify-center py-32">
+          <div className="w-8 h-8 border-2 border-violet-600 border-t-transparent rounded-full animate-spin" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
       <div className="bg-blob-extra" />
-      {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button
           onClick={() => safeBack(router)}
@@ -31,27 +62,25 @@ export default function PracticeRecordingsPage() {
         </div>
       </div>
 
-      {/* Stats Summary */}
       <div className="grid grid-cols-3 gap-3 mb-6">
         <div className="bg-card rounded-xl p-3 border border-border text-center">
           <div className="text-2xl font-bold text-foreground">
-            {mockRecordingsList.length}
+            {stats.totalRecordings}
           </div>
           <div className="text-xs text-muted-foreground">총 녹음</div>
         </div>
         <div className="bg-card rounded-xl p-3 border border-border text-center">
-          <div className="text-2xl font-bold text-primary">{avgScore}</div>
+          <div className="text-2xl font-bold text-primary">{stats.averageScore}</div>
           <div className="text-xs text-muted-foreground">평균 점수</div>
         </div>
         <div className="bg-card rounded-xl p-3 border border-border text-center">
-          <div className="text-2xl font-bold text-foreground">{totalMinutes}</div>
-          <div className="text-xs text-muted-foreground">총 분</div>
+          <div className="text-2xl font-bold text-foreground">{stats.totalDuration}</div>
+          <div className="text-xs text-muted-foreground">총 시간</div>
         </div>
       </div>
 
-      {/* Recordings List */}
       <div className="space-y-3">
-        {mockRecordingsList.map((recording) => (
+        {recordings.map((recording) => (
           <Link
             key={recording.id}
             href={`/practice/recordings/${recording.id}`}

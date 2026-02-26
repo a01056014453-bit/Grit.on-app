@@ -3,13 +3,14 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Trophy, ChevronRight, Flame, Play } from "lucide-react";
-import { getTopRankers, currentUserRanking } from "@/data/mock-rankings";
 import type { RankingUser } from "@/types";
 import {
   INSTRUMENT_EMOJIS,
   getGritLevel,
   GRIT_LEVEL_COLORS,
 } from "@/types/ranking";
+import { fetchTodayRankings, fetchMyRanking } from "@/lib/ranking-queries";
+import { getUserId } from "@/lib/user-id";
 import { cn } from "@/lib/utils";
 
 // 시간을 HH:MM:SS 형식으로 포맷
@@ -92,25 +93,26 @@ function RankerCard({ user, elapsedSeconds }: RankerCardProps) {
 
 export function LiveRankingWidget() {
   const [rankers, setRankers] = useState<RankingUser[]>([]);
+  const [myRanking, setMyRanking] = useState<RankingUser | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [lastFetchTime, setLastFetchTime] = useState(Date.now());
 
-  // 데이터 가져오기
-  const fetchRankers = useCallback(() => {
-    const topRankers = getTopRankers(5);
-    setRankers(topRankers);
-    setLastFetchTime(Date.now());
+  const fetchRankers = useCallback(async () => {
+    try {
+      const [topRankers, myRank] = await Promise.all([
+        fetchTodayRankings(),
+        fetchMyRanking(getUserId()),
+      ]);
+      setRankers(topRankers.slice(0, 5));
+      setMyRanking(myRank);
+    } catch {
+      setRankers([]);
+    }
     setElapsedSeconds(0);
   }, []);
 
-  // 초기 데이터 로드 및 1분마다 폴링
   useEffect(() => {
     fetchRankers();
-
-    const pollInterval = setInterval(() => {
-      fetchRankers();
-    }, 60000); // 1분마다 갱신
-
+    const pollInterval = setInterval(fetchRankers, 60000);
     return () => clearInterval(pollInterval);
   }, [fetchRankers]);
 
@@ -170,15 +172,15 @@ export function LiveRankingWidget() {
             <span
               className={cn(
                 "w-7 h-7 rounded-full text-xs font-bold flex items-center justify-center",
-                getRankColor(currentUserRanking.rank)
+                getRankColor((myRanking ?? { rank: 0, netPracticeTime: 0 } as RankingUser).rank)
               )}
             >
-              {currentUserRanking.rank}
+              {(myRanking ?? { rank: 0, netPracticeTime: 0 } as RankingUser).rank}
             </span>
             <div>
               <p className="text-sm font-medium text-gray-900">내 순위</p>
               <p className="text-xs text-gray-500">
-                {formatTime(currentUserRanking.netPracticeTime)}
+                {formatTime((myRanking ?? { rank: 0, netPracticeTime: 0 } as RankingUser).netPracticeTime)}
               </p>
             </div>
           </div>
@@ -189,7 +191,7 @@ export function LiveRankingWidget() {
                 rankers[0]
                   ? rankers[0].netPracticeTime +
                       (rankers[0].isPracticing ? elapsedSeconds : 0) -
-                      currentUserRanking.netPracticeTime
+                      (myRanking ?? { rank: 0, netPracticeTime: 0 } as RankingUser).netPracticeTime
                   : 0
               )}
             </p>

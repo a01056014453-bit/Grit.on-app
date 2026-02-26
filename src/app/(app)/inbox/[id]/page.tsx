@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { safeBack } from "@/lib/navigation";
 import Link from "next/link";
@@ -16,12 +16,9 @@ import {
   Coins,
 } from "lucide-react";
 import { RequestStatusChip } from "@/components/feedback/request-status-chip";
-import {
-  getFeedbackRequestById,
-  updateRequestStatus,
-  getRemainingTime,
-} from "@/lib/feedback-store";
-import { PROBLEM_TYPE_LABELS } from "@/types";
+import { getFeedbackRequestById, updateFeedbackRequestStatus } from "@/lib/queries";
+import { getRemainingTime } from "@/lib/time-utils";
+import { FeedbackRequest, PROBLEM_TYPE_LABELS } from "@/types";
 
 const declineReasons = [
   "현재 일정이 많아 기한 내 피드백이 어렵습니다",
@@ -39,8 +36,35 @@ export default function InboxDetailPage() {
   const [declineReason, setDeclineReason] = useState("");
   const [customReason, setCustomReason] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [request, setRequest] = useState<FeedbackRequest | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const request = getFeedbackRequestById(requestId);
+  useEffect(() => {
+    const load = async () => {
+      setIsLoading(true);
+      try {
+        const data = await getFeedbackRequestById(requestId);
+        setRequest(data);
+      } catch (err) {
+        console.error("Failed to load feedback request:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
+  }, [requestId]);
+
+  if (isLoading) {
+    return (
+      <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
+        <div className="bg-blob-extra" />
+        <div className="text-center py-12">
+          <div className="w-8 h-8 border-2 border-violet-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm text-muted-foreground">불러오는 중...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!request) {
     return (
@@ -69,24 +93,31 @@ export default function InboxDetailPage() {
 
   const handleAccept = async () => {
     setIsProcessing(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    updateRequestStatus(requestId, "ACCEPTED");
-    router.push(`/inbox/${requestId}/submit`);
+    try {
+      await updateFeedbackRequestStatus(requestId, "ACCEPTED");
+      router.push(`/inbox/${requestId}/submit`);
+    } catch (err) {
+      console.error("Failed to accept request:", err);
+      setIsProcessing(false);
+    }
   };
 
   const handleDecline = async () => {
     if (!declineReason) return;
     setIsProcessing(true);
     const reason = declineReason === "기타 (직접 입력)" ? customReason : declineReason;
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    updateRequestStatus(requestId, "DECLINED", { declineReason: reason });
-    router.push("/inbox");
+    try {
+      await updateFeedbackRequestStatus(requestId, "DECLINED", { decline_reason: reason });
+      router.push("/inbox");
+    } catch (err) {
+      console.error("Failed to decline request:", err);
+      setIsProcessing(false);
+    }
   };
 
   return (
     <div className="px-4 py-6 max-w-lg mx-auto pb-32 min-h-screen bg-blob-violet">
       <div className="bg-blob-extra" />
-      {/* Header */}
       <button
         onClick={() => safeBack(router)}
         className="flex items-center gap-2 text-muted-foreground mb-6"
@@ -95,7 +126,6 @@ export default function InboxDetailPage() {
         <span>뒤로</span>
       </button>
 
-      {/* Status & Title */}
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-3">
           <RequestStatusChip status={request.status} size="md" />
@@ -111,7 +141,6 @@ export default function InboxDetailPage() {
         </p>
       </div>
 
-      {/* SLA Warning */}
       {request.status === "SENT" && acceptDeadline && (
         <div
           className={`rounded-xl p-4 mb-4 ${
@@ -195,7 +224,6 @@ export default function InboxDetailPage() {
         </div>
       )}
 
-      {/* Student Video */}
       <div className="bg-card rounded-xl p-4 border border-border mb-4">
         <h2 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
           <Play className="w-4 h-4 text-primary" />
@@ -216,7 +244,6 @@ export default function InboxDetailPage() {
         )}
       </div>
 
-      {/* Problem Description */}
       <div className="bg-card rounded-xl p-4 border border-border mb-4">
         <h2 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
           <MessageSquare className="w-4 h-4 text-primary" />
@@ -225,7 +252,6 @@ export default function InboxDetailPage() {
         <p className="text-sm text-foreground leading-relaxed">{request.description}</p>
       </div>
 
-      {/* Payment Info */}
       <div className="bg-gradient-to-br from-primary/5 to-violet-500/5 rounded-xl p-4 border border-primary/10 mb-4">
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">피드백 보상</span>
@@ -240,7 +266,6 @@ export default function InboxDetailPage() {
         </p>
       </div>
 
-      {/* Fixed CTAs */}
       {request.status === "SENT" && (
         <div className="fixed bottom-20 left-0 right-0 px-4 py-3 bg-background/80 backdrop-blur-lg border-t border-border">
           <div className="max-w-lg mx-auto flex gap-3">
@@ -283,7 +308,6 @@ export default function InboxDetailPage() {
         </div>
       )}
 
-      {/* Decline Modal */}
       {showDeclineModal && (
         <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50">
           <div className="bg-background w-full max-w-lg rounded-t-2xl p-6 animate-in slide-in-from-bottom">

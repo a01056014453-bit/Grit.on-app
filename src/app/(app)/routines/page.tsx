@@ -4,7 +4,10 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { safeBack } from "@/lib/navigation";
 import { ChevronLeft, Plus, X, Repeat, Trash2, Check } from "lucide-react";
-import { mockDrillCards, groupDrillsBySong, mockSongs as initialSongs, composerList } from "@/data";
+import { getDrillCards, getUserSongs } from "@/lib/queries";
+import { groupDrillsBySong } from "@/lib/utils-practice";
+import { getUserId } from "@/lib/user-id";
+import type { DrillCard, Song } from "@/types";
 
 interface Drill {
   id: string;
@@ -45,14 +48,14 @@ export default function RoutinesPage() {
     recurrence: 3,
   });
   const [appliedRoutineId, setAppliedRoutineId] = useState<string | null>(null);
+  const [dbDrillCards, setDbDrillCards] = useState<DrillCard[]>([]);
+  const [dbSongs, setDbSongs] = useState<Song[]>([]);
 
   const dayNames = ["일", "월", "화", "수", "목", "금", "토"];
 
-  // Build existing songs list from drills
-  const groupedDrills = groupDrillsBySong(mockDrillCards);
-  const mockDrills = groupedDrills.flatMap((g) => g.drills);
+  const groupedDrills = groupDrillsBySong(dbDrillCards);
+  const dbDrills = groupedDrills.flatMap((g) => g.drills);
 
-  // Load custom drills for song list
   const [customDrills, setCustomDrills] = useState<Drill[]>([]);
 
   useEffect(() => {
@@ -64,10 +67,25 @@ export default function RoutinesPage() {
     if (savedCustom) {
       setCustomDrills(JSON.parse(savedCustom));
     }
+    const loadRemoteData = async () => {
+      const userId = getUserId();
+      if (!userId) return;
+      try {
+        const [cards, songs] = await Promise.all([
+          getDrillCards(userId),
+          getUserSongs(userId),
+        ]);
+        setDbDrillCards(cards);
+        setDbSongs(songs);
+      } catch (err) {
+        console.error("Failed to load drill cards / songs:", err);
+      }
+    };
+    loadRemoteData();
   }, []);
 
   const allDrills = [
-    ...mockDrills,
+    ...dbDrills,
     ...customDrills.map((d) => ({
       ...d,
       priority: "normal" as const,

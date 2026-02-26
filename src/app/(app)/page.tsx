@@ -5,8 +5,9 @@ import Link from "next/link";
 import { Play, Search, Users, GraduationCap, Check, Bell, BookOpen } from "lucide-react";
 import { BentoGrid, BentoCard } from "@/components/ui/bento-grid";
 import { StatsCard, DailyGoal } from "@/components/app";
-import { mockUser, getGreeting } from "@/data";
-import { seedMockSessions } from "@/lib/db";
+import { getGreeting } from "@/lib/utils-practice";
+import { getProfile, profileToUser } from "@/lib/queries";
+import { getUserId } from "@/lib/user-id";
 import { syncPracticeSessions } from "@/lib/sync-practice";
 import { usePracticeSessions } from "@/hooks/usePracticeSessions";
 import { useTeacherMode } from "@/hooks/useTeacherMode";
@@ -16,8 +17,26 @@ import { TeacherDashboard } from "@/components/teacher";
 export default function HomePage() {
   const { isTeacher, teacherMode, teacherProfileId, toggleMode } = useTeacherMode();
 
-  // 목데이터 시드 (DB 비어있을 때만)
-  useEffect(() => { seedMockSessions().catch(console.error); }, []);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [userProfile, setUserProfile] = useState<{ name: string } | null>(null);
+
+  useEffect(() => {
+    async function loadProfile() {
+      try {
+        const userId = getUserId();
+        const profile = await getProfile(userId);
+        if (profile) {
+          const user = profileToUser(profile);
+          setUserProfile(user);
+        }
+      } catch (error) {
+        console.error("Failed to load profile:", error);
+      } finally {
+        setProfileLoading(false);
+      }
+    }
+    loadProfile();
+  }, []);
 
   // Sync practice sessions to Supabase on load + tab visibility change
   useEffect(() => {
@@ -71,18 +90,19 @@ export default function HomePage() {
   const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
   const dailyMessage = dailyMessages[dayOfYear % dailyMessages.length];
 
-  // 프로필 닉네임 (localStorage에서 읽기)
-  const [userName, setUserName] = useState(() => {
-    if (typeof window === "undefined") return mockUser.name;
-    try {
-      const saved = localStorage.getItem("grit-on-profile");
-      if (saved) {
-        const profile = JSON.parse(saved);
-        if (profile.nickname) return profile.nickname;
-      }
-    } catch {}
-    return mockUser.name;
-  });
+  const userName = (() => {
+    if (userProfile?.name) return userProfile.name;
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("grit-on-profile");
+        if (saved) {
+          const profile = JSON.parse(saved);
+          if (profile.nickname) return profile.nickname;
+        }
+      } catch {}
+    }
+    return "사용자";
+  })();
 
   // 공유 훅으로 세션 데이터 로드 (연습 페이지와 동일 데이터 소스)
   const { sessions: allSessions, isLoading: sessionsLoading } = usePracticeSessions();
@@ -128,7 +148,7 @@ export default function HomePage() {
 
   const streakDays = useMemo(() => calculateStreak(allSessions), [allSessions]);
 
-  const isLoading = sessionsLoading;
+  const isLoading = sessionsLoading || profileLoading;
 
   // 연속 일수 계산 함수
   function calculateStreak(sessions: { startTime: Date }[]): number {

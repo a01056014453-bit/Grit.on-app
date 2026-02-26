@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Clock, ChevronRight, AlertCircle } from "lucide-react";
 import { FeedbackRequest, PROBLEM_TYPE_LABELS } from "@/types";
-import { getRemainingTime } from "@/lib/feedback-store";
+import { getRemainingTime } from "@/lib/time-utils";
 
 interface LessonRequestCardProps {
   request: FeedbackRequest;

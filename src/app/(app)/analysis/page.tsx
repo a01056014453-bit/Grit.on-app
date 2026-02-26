@@ -7,7 +7,10 @@ import { ArrowLeft, Search, Sparkles, Music, ChevronRight, X, Trash2 } from "luc
 import { useRouter } from "next/navigation";
 import { safeBack } from "@/lib/navigation";
 import { motion, AnimatePresence, Variants } from "framer-motion";
-import { mockSongs, mockSongAIInfo, composerList } from "@/data";
+import { getUserSongs } from "@/lib/queries/songs";
+import { getComposerList } from "@/lib/queries/composers";
+import { getUserId } from "@/lib/user-id";
+import type { Song } from "@/types";
 import type { SongAnalysis } from "@/types/song-analysis";
 import { addToLibrary, removeFromLibrary, filterByLibrary } from "@/lib/user-library";
 import Image from "next/image";
@@ -138,11 +141,23 @@ export default function AnalysisPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [newSong, setNewSong] = useState({ composer: "", title: "" });
   const [savedAnalyses, setSavedAnalyses] = useState<SongAnalysis[]>([]);
+  const [songs, setSongs] = useState<Song[]>([]);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isLoadingSaved, setIsLoadingSaved] = useState(true);
   const [editMode, setEditMode] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<SongAnalysis | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    async function loadSongs() {
+      const userId = getUserId();
+      if (userId) {
+        const data = await getUserSongs(userId);
+        setSongs(data);
+      }
+    }
+    loadSongs();
+  }, []);
 
   const handleDelete = async (item: SongAnalysis) => {
     setIsDeleting(true);
@@ -179,15 +194,14 @@ export default function AnalysisPage() {
     fetchSavedAnalyses();
   }, []);
 
-  // 검색 필터링 (기존 곡 + DB 저장된 곡)
   const filteredSongs = searchQuery.length >= 2
     ? [
-        ...mockSongs.filter((song) =>
+        ...songs.filter((song) =>
           song.title.toLowerCase().includes(searchQuery.toLowerCase())
         ).map((song) => ({
           id: song.id,
           title: song.title,
-          hasAIInfo: !!mockSongAIInfo[song.id] || savedAnalyses.some(
+          hasAIInfo: savedAnalyses.some(
             (a) => song.title.toLowerCase().includes(a.meta.title.toLowerCase())
           ),
           isNew: false,
@@ -195,7 +209,7 @@ export default function AnalysisPage() {
         })),
         ...savedAnalyses.filter((a) =>
           (`${a.meta.composer} ${a.meta.title}`).toLowerCase().includes(searchQuery.toLowerCase()) &&
-          !mockSongs.some((m) => m.title.toLowerCase().includes(a.meta.title.toLowerCase()))
+          !songs.some((m) => m.title.toLowerCase().includes(a.meta.title.toLowerCase()))
         ).map((a) => ({
           id: a.id,
           title: `${a.meta.composer} ${a.meta.title}`,
@@ -206,7 +220,10 @@ export default function AnalysisPage() {
       ]
     : [];
 
-  // 작곡가 자동완성
+  const [composerList, setComposerList] = useState<{ key: string; label: string }[]>([]);
+  useEffect(() => {
+    getComposerList().then(setComposerList);
+  }, []);
   const filteredComposers = newSong.composer.length >= 2
     ? composerList.filter((c) =>
         c.label.toLowerCase().includes(newSong.composer.toLowerCase()) ||

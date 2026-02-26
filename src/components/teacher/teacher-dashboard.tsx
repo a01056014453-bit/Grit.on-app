@@ -13,10 +13,10 @@ import {
 import { TeacherStatsCards } from "./teacher-stats-cards";
 import { LessonRequestCard } from "./lesson-request-card";
 import { TeacherModeToggle } from "./teacher-mode-toggle";
-import { getTeacherDashboardStats, getManagedStudents, initManagedStudents } from "@/lib/teacher-store";
-import { getFeedbackRequestsForTeacher } from "@/lib/feedback-store";
-import { mockTeacherStudents } from "@/data/mock-teacher-students";
-import { FeedbackRequest, TeacherDashboardStats, ManagedStudent } from "@/types";
+import { getTeacherStudents } from "@/lib/queries/teacher-students";
+import { getTeacherFeedbackRequests, type FeedbackRequest } from "@/lib/queries/feedback";
+import { getUserId } from "@/lib/user-id";
+import type { TeacherDashboardStats, ManagedStudent } from "@/types";
 
 interface TeacherDashboardProps {
   teacherProfileId: string;
@@ -29,21 +29,44 @@ export function TeacherDashboard({ teacherProfileId, onToggleMode }: TeacherDash
   const [students, setStudents] = useState<ManagedStudent[]>([]);
 
   useEffect(() => {
-    // Initialize mock students
-    initManagedStudents(mockTeacherStudents);
+    async function loadData() {
+      const [studentsData, requestsData] = await Promise.all([
+        getTeacherStudents(teacherProfileId),
+        getTeacherFeedbackRequests(teacherProfileId),
+      ]);
 
-    const dashStats = getTeacherDashboardStats(teacherProfileId);
-    setStats(dashStats);
+      const active = requestsData
+        .filter((r) => ["SENT", "ACCEPTED"].includes(r.status))
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 3);
+      setRecentRequests(active);
 
-    const requests = getFeedbackRequestsForTeacher(teacherProfileId);
-    // Show pending + active, sorted by newest
-    const active = requests
-      .filter((r) => ["SENT", "ACCEPTED"].includes(r.status))
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .slice(0, 3);
-    setRecentRequests(active);
+      const mapped: ManagedStudent[] = studentsData.map((s) => ({
+        id: s.id,
+        nickname: s.nickname,
+        instrument: s.instrument,
+        grade: s.grade,
+        type: s.type,
+        weeklyPracticeMinutes: s.weeklyPracticeMinutes,
+        currentPieces: s.currentPieces,
+        lastPracticeDate: s.lastPracticeDate,
+        joinedAt: s.joinedAt,
+        totalLessons: s.totalLessons,
+        completedLessons: s.completedLessons,
+      }));
+      setStudents(mapped.slice(0, 4));
 
-    setStudents(getManagedStudents().slice(0, 4));
+      setStats({
+        totalStudents: mapped.length,
+        pendingRequests: requestsData.filter((r) => r.status === "SENT").length,
+        activeRequests: requestsData.filter((r) => ["SENT", "ACCEPTED"].includes(r.status)).length,
+        completedThisMonth: requestsData.filter((r) => r.status === "COMPLETED").length,
+        totalCreditsEarned: 0,
+        avgRating: 4.8,
+        responseRate: 96,
+      });
+    }
+    loadData();
   }, [teacherProfileId]);
 
   // Get profile name

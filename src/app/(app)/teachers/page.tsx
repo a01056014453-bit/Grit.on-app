@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { safeBack } from "@/lib/navigation";
 import Link from "next/link";
 import { Users, Search, SlidersHorizontal, Star, Clock, Coins, X, ArrowLeft, Inbox, ChevronRight } from "lucide-react";
 import { TeacherCard } from "@/components/feedback/teacher-card";
-import { getTeachers, filterTeachers } from "@/lib/feedback-store";
+import { getTeachers } from "@/lib/queries";
+import { Teacher } from "@/types";
 
 type SortOption = "rating" | "price" | "responseTime" | "completedCount";
 
@@ -35,16 +36,42 @@ export default function TeachersPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [minRating, setMinRating] = useState<number | undefined>(undefined);
   const [maxPrice, setMaxPrice] = useState<number | undefined>(undefined);
+  const [allTeachers, setAllTeachers] = useState<Teacher[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const allTeachers = getTeachers();
+  useEffect(() => {
+    const load = async () => {
+      setIsLoading(true);
+      try {
+        const data = await getTeachers();
+        setAllTeachers(data);
+      } catch (err) {
+        console.error("Failed to load teachers:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
+  }, []);
 
   const filteredTeachers = useMemo(() => {
-    let result = filterTeachers({
-      specialty: selectedSpecialty === "전체" ? undefined : selectedSpecialty,
-      minRating,
-      maxPrice,
-      sortBy,
-    });
+    let result = [...allTeachers];
+
+    if (selectedSpecialty !== "전체") {
+      result = result.filter((t) =>
+        t.specialty.some((s) =>
+          s.toLowerCase().includes(selectedSpecialty.toLowerCase())
+        )
+      );
+    }
+
+    if (minRating) {
+      result = result.filter((t) => t.rating >= minRating);
+    }
+
+    if (maxPrice) {
+      result = result.filter((t) => t.priceCredits <= maxPrice);
+    }
 
     if (searchQuery) {
       const lowerQuery = searchQuery.toLowerCase();
@@ -56,8 +83,23 @@ export default function TeachersPage() {
       );
     }
 
+    switch (sortBy) {
+      case "rating":
+        result.sort((a, b) => b.rating - a.rating);
+        break;
+      case "price":
+        result.sort((a, b) => a.priceCredits - b.priceCredits);
+        break;
+      case "responseTime":
+        result.sort((a, b) => a.avgResponseTime - b.avgResponseTime);
+        break;
+      case "completedCount":
+        result.sort((a, b) => b.completedCount - a.completedCount);
+        break;
+    }
+
     return result;
-  }, [selectedSpecialty, sortBy, minRating, maxPrice, searchQuery]);
+  }, [allTeachers, selectedSpecialty, sortBy, minRating, maxPrice, searchQuery]);
 
   const clearFilters = () => {
     setMinRating(undefined);
@@ -71,7 +113,6 @@ export default function TeachersPage() {
   return (
     <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
       <div className="bg-blob-extra" />
-      {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button
           onClick={() => safeBack(router)}
@@ -88,7 +129,6 @@ export default function TeachersPage() {
         </div>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-3 gap-2 mb-6">
         <div className="bg-white/50 backdrop-blur-xl rounded-2xl p-3 border border-white/60 shadow-sm text-center">
           <Users className="w-5 h-5 text-violet-600 mx-auto mb-1" />
@@ -107,7 +147,6 @@ export default function TeachersPage() {
         </div>
       </div>
 
-      {/* 내 피드백 보관함 */}
       <Link
         href="/feedback"
         className="flex items-center gap-3 mb-6 bg-white/50 backdrop-blur-xl rounded-2xl p-4 border border-white/60 shadow-sm hover:bg-white/70 transition-all active:scale-[0.98]"
@@ -122,7 +161,6 @@ export default function TeachersPage() {
         <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
       </Link>
 
-      {/* Search */}
       <div className="relative mb-4">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
         <input
@@ -142,7 +180,6 @@ export default function TeachersPage() {
         </button>
       </div>
 
-      {/* Advanced Filters */}
       {showFilters && (
         <div className="bg-white/50 backdrop-blur-xl rounded-2xl p-4 border border-white/60 shadow-sm mb-4 space-y-4">
           <div className="flex items-center justify-between">
@@ -158,7 +195,6 @@ export default function TeachersPage() {
             )}
           </div>
 
-          {/* Min Rating Filter */}
           <div>
             <label className="text-xs text-gray-500 mb-1.5 block">
               최소 평점
@@ -183,7 +219,6 @@ export default function TeachersPage() {
             </div>
           </div>
 
-          {/* Max Price Filter */}
           <div>
             <label className="text-xs text-gray-500 mb-1.5 block">
               최대 가격
@@ -210,7 +245,6 @@ export default function TeachersPage() {
         </div>
       )}
 
-      {/* Specialty Filter Tags */}
       <div className="flex gap-2 overflow-x-auto pb-2 mb-3 scrollbar-hide">
         {specialtyFilters.map((specialty) => (
           <button
@@ -227,7 +261,6 @@ export default function TeachersPage() {
         ))}
       </div>
 
-      {/* Sort Options */}
       <div className="flex gap-2 mb-4">
         {sortOptions.map((option) => (
           <button
@@ -244,9 +277,13 @@ export default function TeachersPage() {
         ))}
       </div>
 
-      {/* Teacher List */}
       <div className="space-y-3">
-        {filteredTeachers.length === 0 ? (
+        {isLoading ? (
+          <div className="text-center py-12">
+            <div className="w-8 h-8 border-2 border-violet-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+            <p className="text-sm text-gray-500">선생님 목록을 불러오는 중...</p>
+          </div>
+        ) : filteredTeachers.length === 0 ? (
           <div className="text-center py-12 bg-white/50 backdrop-blur-xl rounded-2xl border border-white/60 shadow-sm">
             <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500">조건에 맞는 선생님이 없습니다</p>
@@ -264,7 +301,6 @@ export default function TeachersPage() {
         )}
       </div>
 
-      {/* Results count */}
       {filteredTeachers.length > 0 && (
         <p className="text-center text-xs text-muted-foreground mt-4">
           총 {filteredTeachers.length}명의 선생님

@@ -1,25 +1,25 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { Inbox, Clock, CheckCircle, Bell, ChevronRight, AlertCircle } from "lucide-react";
 import { RequestStatusChip } from "@/components/feedback/request-status-chip";
-import { getFeedbackRequestsForTeacher, getRemainingTime } from "@/lib/feedback-store";
-import { FeedbackRequestStatus, PROBLEM_TYPE_LABELS } from "@/types";
-import { getTeacherProfile } from "@/lib/teacher-store";
+import { getRemainingTime } from "@/lib/time-utils";
+import { getTeacherFeedbackRequests } from "@/lib/queries";
+import { FeedbackRequest, FeedbackRequestStatus, PROBLEM_TYPE_LABELS } from "@/types";
+import { useTeacherMode } from "@/hooks/useTeacherMode";
 
 type TabType = "pending" | "active" | "completed";
 
-function getCurrentTeacherId(): string {
-  if (typeof window === "undefined") return "t1";
-  const profile = getTeacherProfile();
-  return profile.teacherProfileId || "t1";
-}
-
 export default function InboxPage() {
   const [tab, setTab] = useState<TabType>("pending");
-  const teacherId = getCurrentTeacherId();
-  const requests = getFeedbackRequestsForTeacher(teacherId);
+  const { teacherProfileId } = useTeacherMode();
+  const [requests, setRequests] = useState<FeedbackRequest[]>([]);
+
+  useEffect(() => {
+    if (!teacherProfileId) return;
+    getTeacherFeedbackRequests(teacherProfileId).then(setRequests);
+  }, [teacherProfileId]);
 
   const pendingRequests = requests.filter((r) => r.status === "SENT");
   const activeRequests = requests.filter((r) => r.status === "ACCEPTED");

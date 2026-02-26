@@ -20,7 +20,8 @@ import {
   Star,
   Lock,
 } from "lucide-react";
-import { getTeacherById, saveFeedbackRequest, updateRequestStatus } from "@/lib/feedback-store";
+import { getTeacherById, createFeedbackRequest, updateFeedbackRequestStatus } from "@/lib/queries";
+import { getUserId } from "@/lib/user-id";
 import { Teacher, ProblemType, PROBLEM_TYPE_LABELS } from "@/types";
 
 const problemTypes: { value: ProblemType; label: string; description: string }[] = [
@@ -72,8 +73,7 @@ function NewFeedbackRequestContent() {
 
   useEffect(() => {
     if (teacherId) {
-      const t = getTeacherById(teacherId);
-      setTeacher(t || null);
+      getTeacherById(teacherId).then((t) => setTeacher(t));
     }
   }, [teacherId]);
 
@@ -89,31 +89,32 @@ function NewFeedbackRequestContent() {
 
     setIsSubmitting(true);
 
-    // Save the feedback request
-    const request = saveFeedbackRequest({
-      studentId: "student1", // Current user ID
-      teacherId: teacher.id,
-      teacher,
-      composer,
-      piece,
-      measureStart: parseInt(measureStart),
-      measureEnd: parseInt(measureEnd),
-      problemType: problemType as ProblemType,
-      description,
-      videoUrl: "/videos/sample.mp4", // Mock video URL
-      faceBlurred: faceBlur,
-      status: "DRAFT",
-      creditAmount: teacher.priceCredits,
-      paymentStatus: "pending",
-    });
+    try {
+      const request = await createFeedbackRequest({
+        studentId: getUserId(),
+        teacherId: teacher.id,
+        composer,
+        piece,
+        measureStart: parseInt(measureStart),
+        measureEnd: parseInt(measureEnd),
+        problemType: problemType as ProblemType,
+        description,
+        videoUrl: "/videos/sample.mp4",
+        faceBlurred: faceBlur,
+        status: "DRAFT",
+        creditAmount: teacher.priceCredits,
+        paymentStatus: "pending",
+      });
 
-    // Simulate payment and send
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-
-    // Update to SENT status
-    updateRequestStatus(request.id, "SENT");
-
-    router.push(`/feedback/${request.id}`);
+      if (request) {
+        await updateFeedbackRequestStatus(request.id, "SENT");
+        router.push(`/feedback/${request.id}`);
+      }
+    } catch (err) {
+      console.error("Failed to create feedback request:", err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const canProceed = () => {

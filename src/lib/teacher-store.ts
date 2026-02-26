@@ -9,7 +9,6 @@ import {
   AIReview,
   TeacherProfileData,
 } from "@/types";
-import { getFeedbackRequestsForTeacher } from "./feedback-store";
 import { supabase } from "./supabase";
 
 const PROFILE_KEY = "grit-on-profile";
@@ -321,40 +320,6 @@ export function initManagedStudents(students: ManagedStudent[]): void {
 
 export function getManagedStudentById(id: string): ManagedStudent | undefined {
   return getManagedStudents().find((s) => s.id === id);
-}
-
-// ─── Dashboard Stats ───
-
-export function getTeacherDashboardStats(teacherId: string): TeacherDashboardStats {
-  const students = getManagedStudents();
-  const requests = getFeedbackRequestsForTeacher(teacherId);
-
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-
-  const pending = requests.filter((r) => r.status === "SENT").length;
-  const active = requests.filter((r) => r.status === "ACCEPTED").length;
-  const completedThisMonth = requests.filter(
-    (r) =>
-      ["SUBMITTED", "COMPLETED"].includes(r.status) &&
-      r.completedAt &&
-      new Date(r.completedAt) >= monthStart
-  ).length;
-
-  const completedRequests = requests.filter((r) =>
-    ["SUBMITTED", "COMPLETED"].includes(r.status)
-  );
-  const totalCredits = completedRequests.reduce((sum, r) => sum + r.creditAmount, 0);
-
-  return {
-    totalStudents: students.length,
-    pendingRequests: pending,
-    activeRequests: active,
-    completedThisMonth,
-    totalCreditsEarned: totalCredits,
-    avgRating: 4.8,
-    responseRate: 96,
-  };
 }
 
 // ─── Teacher Profile Data (editable profile) ───

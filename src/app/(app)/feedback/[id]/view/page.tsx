@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { safeBack } from "@/lib/navigation";
 import {
@@ -13,11 +13,8 @@ import {
   Star,
   Sparkles,
 } from "lucide-react";
-import {
-  getFeedbackRequestById,
-  getFeedbackByRequestId,
-  updateRequestStatus,
-} from "@/lib/feedback-store";
+import { getFeedbackRequestById, getFeedback, updateFeedbackRequestStatus } from "@/lib/queries";
+import { FeedbackRequest, Feedback } from "@/types";
 
 export default function FeedbackViewPage() {
   const params = useParams();
@@ -25,9 +22,51 @@ export default function FeedbackViewPage() {
   const requestId = params.id as string;
 
   const [isCompleting, setIsCompleting] = useState(false);
+  const [request, setRequest] = useState<FeedbackRequest | null>(null);
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const request = getFeedbackRequestById(requestId);
-  const feedback = getFeedbackByRequestId(requestId);
+  useEffect(() => {
+    const load = async () => {
+      setIsLoading(true);
+      try {
+        const [req, fb] = await Promise.all([
+          getFeedbackRequestById(requestId),
+          getFeedback(requestId),
+        ]);
+        setRequest(req);
+        setFeedback(fb);
+      } catch (err) {
+        console.error("Failed to load feedback:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
+  }, [requestId]);
+
+  const handleComplete = async () => {
+    setIsCompleting(true);
+    try {
+      await updateFeedbackRequestStatus(requestId, "COMPLETED");
+      router.push("/feedback");
+    } catch (err) {
+      console.error("Failed to complete feedback:", err);
+      setIsCompleting(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
+        <div className="bg-blob-extra" />
+        <div className="text-center py-12">
+          <div className="w-8 h-8 border-2 border-violet-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm text-muted-foreground">불러오는 중...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!request || !feedback) {
     return (
@@ -47,17 +86,9 @@ export default function FeedbackViewPage() {
     );
   }
 
-  const handleComplete = async () => {
-    setIsCompleting(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    updateRequestStatus(requestId, "COMPLETED");
-    router.push("/feedback");
-  };
-
   return (
     <div className="px-4 py-6 max-w-lg mx-auto pb-32 min-h-screen bg-blob-violet">
       <div className="bg-blob-extra" />
-      {/* Header */}
       <button
         onClick={() => safeBack(router)}
         className="flex items-center gap-2 text-muted-foreground mb-6"
@@ -66,7 +97,6 @@ export default function FeedbackViewPage() {
         <span>뒤로</span>
       </button>
 
-      {/* Title */}
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-2">
           <Sparkles className="w-5 h-5 text-primary" />
@@ -77,7 +107,6 @@ export default function FeedbackViewPage() {
         </p>
       </div>
 
-      {/* Piece Info */}
       <div className="bg-card rounded-xl p-4 border border-border mb-4">
         <h2 className="font-semibold text-foreground">
           {request.composer} - {request.piece}
@@ -87,7 +116,6 @@ export default function FeedbackViewPage() {
         </p>
       </div>
 
-      {/* Demo Video */}
       {feedback.demoVideoUrl && (
         <div className="bg-gradient-to-br from-primary/5 to-violet-500/5 rounded-xl p-4 border border-primary/10 mb-4">
           <h2 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
@@ -108,7 +136,6 @@ export default function FeedbackViewPage() {
         </div>
       )}
 
-      {/* Comments by Measure */}
       <div className="bg-card rounded-xl p-4 border border-border mb-4">
         <h2 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
           <FileText className="w-4 h-4 text-primary" />
@@ -133,7 +160,6 @@ export default function FeedbackViewPage() {
         </div>
       </div>
 
-      {/* Practice Card */}
       <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl p-4 border border-emerald-200 mb-4">
         <h2 className="text-sm font-semibold text-emerald-800 mb-4 flex items-center gap-2">
           <Music className="w-4 h-4" />
@@ -141,7 +167,6 @@ export default function FeedbackViewPage() {
         </h2>
 
         <div className="space-y-4">
-          {/* Section */}
           <div>
             <span className="text-xs text-emerald-600">연습 구간</span>
             <p className="text-sm font-medium text-emerald-800 mt-0.5">
@@ -149,7 +174,6 @@ export default function FeedbackViewPage() {
             </p>
           </div>
 
-          {/* Tempo Progression */}
           <div>
             <span className="text-xs text-emerald-600">템포 진행</span>
             <p className="text-sm font-medium text-emerald-800 mt-0.5">
@@ -157,7 +181,6 @@ export default function FeedbackViewPage() {
             </p>
           </div>
 
-          {/* Steps */}
           <div>
             <span className="text-xs text-emerald-600">연습 순서</span>
             <ol className="mt-2 space-y-2">
@@ -175,7 +198,6 @@ export default function FeedbackViewPage() {
             </ol>
           </div>
 
-          {/* Daily Time */}
           <div className="flex items-center gap-2 pt-3 border-t border-emerald-200">
             <Clock className="w-4 h-4 text-emerald-600" />
             <span className="text-sm text-emerald-700">
@@ -186,7 +208,6 @@ export default function FeedbackViewPage() {
         </div>
       </div>
 
-      {/* Rating (if completed) */}
       {request.status === "COMPLETED" && (
         <div className="bg-card rounded-xl p-4 border border-border mb-4">
           <h2 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
@@ -207,7 +228,6 @@ export default function FeedbackViewPage() {
         </div>
       )}
 
-      {/* Fixed CTA */}
       {request.status === "SUBMITTED" && (
         <div className="fixed bottom-20 left-0 right-0 px-4 py-3 bg-background/80 backdrop-blur-lg border-t border-border">
           <div className="max-w-lg mx-auto">

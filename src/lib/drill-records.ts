@@ -4,7 +4,7 @@
  * TodayDrillList의 완료 상태를 records 페이지에서 동적으로 표시
  */
 
-import { mockDrillCards, groupDrillsBySong } from "@/data";
+import { groupDrillsBySong } from "@/lib/utils-practice";
 import type { DrillCard } from "@/types";
 import type { PracticeSession } from "@/lib/db";
 
@@ -130,11 +130,11 @@ export function buildScheduledDays(year: number, month: number): Set<number> {
   return result;
 }
 
-/** 사용 가능한 전체 드릴 목록 (mock + custom - hidden) */
-export function getAllAvailableDrills(): DrillCard[] {
+/** 사용 가능한 전체 드릴 목록 (DB + custom - hidden) */
+export function getAllAvailableDrills(dbDrillCards: DrillCard[] = []): DrillCard[] {
   const customDrills = loadCustomDrills();
   const hiddenDrills = loadHiddenDrills();
-  return [...mockDrillCards, ...customDrills].filter(
+  return [...dbDrillCards, ...customDrills].filter(
     (d) => !hiddenDrills.has(d.id)
   );
 }

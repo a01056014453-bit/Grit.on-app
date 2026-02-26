@@ -3,17 +3,43 @@
 import { useParams, useRouter } from "next/navigation";
 import { safeBack } from "@/lib/navigation";
 import { ArrowLeft, Music, Clock, TrendingUp, Play, Pause, BarChart2, Target, AlertCircle } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { formatDuration } from "@/lib/format";
-import { findRecordingById } from "@/data";
+import { getRecordingById } from "@/lib/queries";
+import type { RecordingDetail } from "@/types";
 
 export default function RecordingDetailPage() {
   const params = useParams();
   const router = useRouter();
   const [isPlaying, setIsPlaying] = useState(false);
   const [playProgress, setPlayProgress] = useState(0);
+  const [recording, setRecording] = useState<RecordingDetail | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const recording = findRecordingById(params.id as string);
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const data = await getRecordingById(params.id as string);
+        setRecording(data);
+      } catch (err) {
+        console.error("Failed to load recording:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
+  }, [params.id]);
+
+  if (isLoading) {
+    return (
+      <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-violet">
+        <div className="bg-blob-extra" />
+        <div className="flex items-center justify-center py-32">
+          <div className="w-8 h-8 border-2 border-violet-600 border-t-transparent rounded-full animate-spin" />
+        </div>
+      </div>
+    );
+  }
 
   if (!recording) {
     return (

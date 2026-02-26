@@ -18,34 +18,57 @@ import {
   ChevronRight,
   BarChart3
 } from "lucide-react";
-import { getPieceById } from "@/data/mock-analyzed-pieces";
-import { getPieceAnalysisById, getUserPracticeData } from "@/data/mock-piece-analysis";
-import type { AnalyzedPiece, MeasureAnalysis, PieceAnalysis, MeasureProgress } from "@/types/piece";
+import {
+  getPieceById,
+  getPieceAnalysis,
+  getUserPracticeData,
+} from "@/lib/queries/pieces";
+import type { Piece, PieceAnalysis, PiecePracticeData } from "@/lib/queries/pieces";
+import { getUserId } from "@/lib/user-id";
 
-// 난이도 색상
-const difficultyColors = {
+interface SectionData {
+  startMeasure: number;
+  endMeasure: number;
+  sectionName: string;
+  technicalDifficulty: string;
+  dynamics: string;
+  rhythmPattern?: string;
+  suggestedTempo?: { practice: number; min: number; max: number };
+  techniques?: string[];
+  expression?: string[];
+  practiceNotes?: string;
+}
+
+interface MeasureProgressData {
+  measureStart: number;
+  mastery: string;
+  practiceCount: number;
+  practiceTime: number;
+  lastPracticedAt?: string;
+}
+
+const difficultyColors: Record<string, string> = {
   easy: "bg-green-100 text-green-700 border-green-200",
   medium: "bg-yellow-100 text-yellow-700 border-yellow-200",
   hard: "bg-orange-100 text-orange-700 border-orange-200",
   very_hard: "bg-red-100 text-red-700 border-red-200",
 };
 
-const difficultyLabels = {
+const difficultyLabels: Record<string, string> = {
   easy: "쉬움",
   medium: "보통",
   hard: "어려움",
   very_hard: "매우 어려움",
 };
 
-// 마스터리 배경색
-const masteryBg = {
+const masteryBg: Record<string, string> = {
   not_started: "bg-gray-100",
   learning: "bg-yellow-50",
   practicing: "bg-blue-50",
   mastered: "bg-green-50",
 };
 
-const masteryLabels = {
+const masteryLabels: Record<string, string> = {
   not_started: "시작 전",
   learning: "학습 중",
   practicing: "연습 중",
@@ -58,32 +81,41 @@ export default function SectionDetailPage() {
   const pieceId = params.id as string;
   const sectionIndex = parseInt(params.sectionIndex as string, 10);
 
-  const [piece, setPiece] = useState<AnalyzedPiece | null>(null);
+  const [piece, setPiece] = useState<Piece | null>(null);
   const [analysis, setAnalysis] = useState<PieceAnalysis | null>(null);
-  const [section, setSection] = useState<MeasureAnalysis | null>(null);
-  const [practiceProgress, setPracticeProgress] = useState<MeasureProgress | null>(null);
+  const [sections, setSections] = useState<SectionData[]>([]);
+  const [section, setSection] = useState<SectionData | null>(null);
+  const [practiceProgress, setPracticeProgress] = useState<MeasureProgressData | null>(null);
 
   useEffect(() => {
-    const pieceData = getPieceById(pieceId);
-    const analysisData = getPieceAnalysisById(pieceId);
-    const practiceData = getUserPracticeData("user_001", pieceId);
+    async function load() {
+      const userId = getUserId();
+      const pieceData = await getPieceById(pieceId);
+      if (pieceData) setPiece(pieceData);
 
-    if (pieceData) setPiece(pieceData);
-    if (analysisData) {
-      setAnalysis(analysisData);
-      if (analysisData.sections[sectionIndex]) {
-        const sectionData = analysisData.sections[sectionIndex];
-        setSection(sectionData);
+      const analysisData = await getPieceAnalysis(pieceId);
+      if (analysisData) {
+        setAnalysis(analysisData);
+        const parsedSections = (Array.isArray(analysisData.sections) ? analysisData.sections : []) as unknown as SectionData[];
+        setSections(parsedSections);
+        if (parsedSections[sectionIndex]) {
+          const sectionData = parsedSections[sectionIndex];
+          setSection(sectionData);
 
-        // 해당 섹션의 연습 진행도 찾기
-        if (practiceData) {
-          const progress = practiceData.measureProgress.find(
-            (p) => p.measureStart === sectionData.startMeasure
-          );
-          if (progress) setPracticeProgress(progress);
+          if (userId) {
+            const practiceData = await getUserPracticeData(userId, pieceId);
+            if (practiceData) {
+              const measureProgress = (practiceData.measureProgress ? (Array.isArray(practiceData.measureProgress) ? practiceData.measureProgress : []) : []) as unknown as MeasureProgressData[];
+              const progress = measureProgress.find(
+                (p) => p.measureStart === sectionData.startMeasure
+              );
+              if (progress) setPracticeProgress(progress);
+            }
+          }
         }
       }
     }
+    load();
   }, [pieceId, sectionIndex]);
 
   if (!piece || !analysis || !section) {
@@ -98,7 +130,7 @@ export default function SectionDetailPage() {
   }
 
   const hasPrevSection = sectionIndex > 0;
-  const hasNextSection = sectionIndex < analysis.sections.length - 1;
+  const hasNextSection = sectionIndex < sections.length - 1;
 
   const formatPracticeTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
@@ -121,11 +153,11 @@ export default function SectionDetailPage() {
           <ArrowLeft className="w-5 h-5 text-gray-600" />
         </button>
         <div className="flex-1">
-          <p className="text-xs text-gray-500">{piece.composer.shortName}</p>
+          <p className="text-xs text-gray-500">{piece.composerShortName}</p>
           <h1 className="text-lg font-bold text-black truncate">{piece.title}</h1>
         </div>
         <div className="text-right">
-          <p className="text-xs text-gray-400">섹션 {sectionIndex + 1}/{analysis.sections.length}</p>
+          <p className="text-xs text-gray-400">섹션 {sectionIndex + 1}/{sections.length}</p>
         </div>
       </div>
 
@@ -157,76 +189,84 @@ export default function SectionDetailPage() {
       </div>
 
       {/* Tempo Info */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
-        <div className="flex items-center gap-2 mb-3">
-          <Gauge className="w-4 h-4 text-violet-500" />
-          <h3 className="text-sm font-semibold text-black">템포 가이드</h3>
+      {section.suggestedTempo && (
+        <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Gauge className="w-4 h-4 text-violet-500" />
+            <h3 className="text-sm font-semibold text-black">템포 가이드</h3>
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="text-center p-3 bg-gray-50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">연습 템포</p>
+              <p className="text-xl font-bold text-violet-600">{section.suggestedTempo.practice}</p>
+              <p className="text-xs text-gray-400">BPM</p>
+            </div>
+            <div className="text-center p-3 bg-gray-50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">최소</p>
+              <p className="text-xl font-bold text-gray-600">{section.suggestedTempo.min}</p>
+              <p className="text-xs text-gray-400">BPM</p>
+            </div>
+            <div className="text-center p-3 bg-gray-50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">최대</p>
+              <p className="text-xl font-bold text-gray-600">{section.suggestedTempo.max}</p>
+              <p className="text-xs text-gray-400">BPM</p>
+            </div>
+          </div>
         </div>
-        <div className="grid grid-cols-3 gap-4">
-          <div className="text-center p-3 bg-gray-50 rounded-lg">
-            <p className="text-xs text-gray-500 mb-1">연습 템포</p>
-            <p className="text-xl font-bold text-violet-600">{section.suggestedTempo.practice}</p>
-            <p className="text-xs text-gray-400">BPM</p>
-          </div>
-          <div className="text-center p-3 bg-gray-50 rounded-lg">
-            <p className="text-xs text-gray-500 mb-1">최소</p>
-            <p className="text-xl font-bold text-gray-600">{section.suggestedTempo.min}</p>
-            <p className="text-xs text-gray-400">BPM</p>
-          </div>
-          <div className="text-center p-3 bg-gray-50 rounded-lg">
-            <p className="text-xs text-gray-500 mb-1">최대</p>
-            <p className="text-xl font-bold text-gray-600">{section.suggestedTempo.max}</p>
-            <p className="text-xs text-gray-400">BPM</p>
-          </div>
-        </div>
-      </div>
+      )}
 
       {/* Techniques */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
-        <div className="flex items-center gap-2 mb-3">
-          <Music2 className="w-4 h-4 text-violet-500" />
-          <h3 className="text-sm font-semibold text-black">필요 테크닉</h3>
+      {section.techniques && section.techniques.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Music2 className="w-4 h-4 text-violet-500" />
+            <h3 className="text-sm font-semibold text-black">필요 테크닉</h3>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {section.techniques.map((technique, idx) => (
+              <span
+                key={idx}
+                className="px-3 py-1.5 bg-violet-50 text-violet-700 rounded-full text-xs font-medium"
+              >
+                {technique}
+              </span>
+            ))}
+          </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {section.techniques.map((technique, idx) => (
-            <span
-              key={idx}
-              className="px-3 py-1.5 bg-violet-50 text-violet-700 rounded-full text-xs font-medium"
-            >
-              {technique}
-            </span>
-          ))}
-        </div>
-      </div>
+      )}
 
       {/* Expression */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
-        <div className="flex items-center gap-2 mb-3">
-          <Volume2 className="w-4 h-4 text-violet-500" />
-          <h3 className="text-sm font-semibold text-black">표현 지시어</h3>
+      {section.expression && section.expression.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Volume2 className="w-4 h-4 text-violet-500" />
+            <h3 className="text-sm font-semibold text-black">표현 지시어</h3>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {section.expression.map((exp, idx) => (
+              <span
+                key={idx}
+                className="px-3 py-1.5 bg-amber-50 text-amber-700 rounded-full text-xs font-medium italic"
+              >
+                {exp}
+              </span>
+            ))}
+          </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {section.expression.map((exp, idx) => (
-            <span
-              key={idx}
-              className="px-3 py-1.5 bg-amber-50 text-amber-700 rounded-full text-xs font-medium italic"
-            >
-              {exp}
-            </span>
-          ))}
-        </div>
-      </div>
+      )}
 
       {/* Practice Notes */}
-      <div className="bg-gradient-to-br from-violet-50 to-white rounded-xl border border-violet-100 p-4 mb-4">
-        <div className="flex items-center gap-2 mb-3">
-          <Lightbulb className="w-4 h-4 text-violet-500" />
-          <h3 className="text-sm font-semibold text-black">AI 연습 조언</h3>
+      {section.practiceNotes && (
+        <div className="bg-gradient-to-br from-violet-50 to-white rounded-xl border border-violet-100 p-4 mb-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Lightbulb className="w-4 h-4 text-violet-500" />
+            <h3 className="text-sm font-semibold text-black">AI 연습 조언</h3>
+          </div>
+          <p className="text-sm text-gray-700 leading-relaxed">
+            {section.practiceNotes}
+          </p>
         </div>
-        <p className="text-sm text-gray-700 leading-relaxed">
-          {section.practiceNotes}
-        </p>
-      </div>
+      )}
 
       {/* My Practice Stats */}
       {practiceProgress && (

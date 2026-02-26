@@ -14,7 +14,6 @@ import {
 import type { RankingUser } from "@/types";
 import { INSTRUMENT_EMOJIS, INSTRUMENT_LABELS } from "@/types/ranking";
 import { fetchTodayRankings, fetchMyRanking } from "@/lib/ranking-queries";
-import { mockRankingUsers, currentUserRanking } from "@/data/mock-rankings";
 import { getUserId } from "@/lib/user-id";
 import { cn } from "@/lib/utils";
 import dynamic from "next/dynamic";
@@ -264,7 +263,6 @@ export default function RankingPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  // API를 통해 랭킹 데이터 조회 (빈 결과 시 mock fallback)
   const loadRankings = async () => {
     setLoadError(null);
     setIsLoading(true);
@@ -273,19 +271,12 @@ export default function RankingPage() {
         fetchTodayRankings(),
         fetchMyRanking(getUserId()),
       ]);
-      if (rankings.length > 0) {
-        setRankers(rankings);
-        setMyRanking(my);
-      } else {
-        setRankers(mockRankingUsers);
-        setMyRanking(currentUserRanking);
-      }
+      setRankers(rankings);
+      setMyRanking(my);
       setElapsedSeconds(0);
     } catch (err) {
       console.error("Failed to load rankings:", err);
       setLoadError("랭킹 데이터를 불러오지 못했습니다.");
-      setRankers(mockRankingUsers);
-      setMyRanking(currentUserRanking);
     } finally {
       setIsLoading(false);
     }
@@ -346,7 +337,6 @@ export default function RankingPage() {
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4 flex items-center gap-3">
           <div className="flex-1">
             <p className="text-sm font-medium text-red-800">{loadError}</p>
-            <p className="text-xs text-red-600 mt-0.5">임시 데이터를 표시합니다</p>
           </div>
           <button
             onClick={loadRankings}

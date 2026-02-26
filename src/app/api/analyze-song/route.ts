@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import type { SongAIInfo } from "@/data/mock-songs";
+import type { SongAIInfo } from "@/types/song-analysis";
 
 // OpenAI 클라이언트를 런타임에 생성 (빌드 시 에러 방지)
 function getOpenAIClient(): OpenAI | null {

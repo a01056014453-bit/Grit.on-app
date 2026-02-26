@@ -3,8 +3,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, Plus, Repeat, Play, Trash2 } from "lucide-react";
-import { mockDrillCards, groupDrillsBySong } from "@/data";
+import { groupDrillsBySong } from "@/lib/utils-practice";
+import { getDrillCards } from "@/lib/queries";
 import { savePracticeSession, getAllSessions, deleteSession } from "@/lib/db";
+import { getUserId } from "@/lib/user-id";
 import type { DrillCard } from "@/types";
 
 interface TodayDrillListProps {
@@ -189,6 +191,7 @@ export function TodayDrillList({ onDrillSelect, selectedDrillId, showPlayButton 
   const [completedDrills, setCompletedDrills] = useState<Set<string>>(new Set());
   const [customDrills, setCustomDrills] = useState<DrillCard[]>([]);
   const [hiddenDrills, setHiddenDrills] = useState<Set<string>>(new Set());
+  const [dbDrillCards, setDbDrillCards] = useState<DrillCard[]>([]);
 
   const now = new Date();
   const isToday = !date || (date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth() && date.getDate() === now.getDate());
@@ -203,7 +206,13 @@ export function TodayDrillList({ onDrillSelect, selectedDrillId, showPlayButton 
     router.push("/practice?drill=" + encodeURIComponent(drill.id));
   };
 
-  // localStorage에서 완료된 드릴과 커스텀 드릴 로드
+  useEffect(() => {
+    const userId = getUserId();
+    if (userId) {
+      getDrillCards(userId).then(setDbDrillCards);
+    }
+  }, []);
+
   useEffect(() => {
     const targetDate = date || new Date();
     const dateStr = formatDateStr(targetDate);
@@ -343,7 +352,7 @@ export function TodayDrillList({ onDrillSelect, selectedDrillId, showPlayButton 
   const customDrillIds = new Set(customDrills.map(d => d.id));
 
   // 모든 드릴 합치기 (숨긴 드릴 제외)
-  const allDrills = [...mockDrillCards, ...customDrills].filter(d => !hiddenDrills.has(d.id));
+  const allDrills = [...dbDrillCards, ...customDrills].filter(d => !hiddenDrills.has(d.id));
   const groupedDrills = groupDrillsBySong(allDrills);
 
   const totalCount = allDrills.length;

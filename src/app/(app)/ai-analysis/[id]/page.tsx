@@ -6,27 +6,42 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Music, User, Clock, BookOpen, Hash, Lightbulb, FileText, ExternalLink, Target, ChevronRight, BarChart3, Play } from "lucide-react";
 import { saveAnalyzedSong } from "@/lib/song-analysis-store";
-import { getPieceById } from "@/data/mock-analyzed-pieces";
-import { getPieceAnalysisById, getUserPracticeData } from "@/data/mock-piece-analysis";
-import type { PieceAnalysis, PiecePracticeData, MeasureProgress } from "@/types/piece";
+import {
+  getPieceById,
+  getPieceAnalysis,
+  getUserPracticeData,
+} from "@/lib/queries/pieces";
+import type { PieceAnalysis as QueryPieceAnalysis, PiecePracticeData as QueryPiecePracticeData } from "@/lib/queries/pieces";
+import { getUserId } from "@/lib/user-id";
 
-// 난이도 색상
-const difficultyColors = {
+interface SectionData {
+  startMeasure: number;
+  endMeasure: number;
+  sectionName: string;
+  technicalDifficulty: string;
+  dynamics: string;
+}
+
+interface MeasureProgressData {
+  measureStart: number;
+  mastery: string;
+}
+
+const difficultyColors: Record<string, string> = {
   easy: "bg-green-100 text-green-700",
   medium: "bg-yellow-100 text-yellow-700",
   hard: "bg-orange-100 text-orange-700",
   very_hard: "bg-red-100 text-red-700",
 };
 
-const difficultyLabels = {
+const difficultyLabels: Record<string, string> = {
   easy: "쉬움",
   medium: "보통",
   hard: "어려움",
   very_hard: "매우 어려움",
 };
 
-// 마스터리 색상
-const masteryColors = {
+const masteryColors: Record<string, string> = {
   not_started: "bg-gray-200",
   learning: "bg-yellow-400",
   practicing: "bg-blue-400",
@@ -306,27 +321,28 @@ export default function AnalysisDetailPage() {
 
   const analysis = analysisDatabase[id];
 
-  // 새로운 마디별 분석 데이터
-  const [pieceAnalysis, setPieceAnalysis] = useState<PieceAnalysis | null>(null);
-  const [practiceData, setPracticeData] = useState<PiecePracticeData | null>(null);
+  const [pieceAnalysis, setPieceAnalysis] = useState<QueryPieceAnalysis | null>(null);
+  const [practiceData, setPracticeData] = useState<QueryPiecePracticeData | null>(null);
 
-  // 새로운 분석 데이터 로드
   useEffect(() => {
-    // piece_001, piece_002 등으로 매핑
-    const pieceIdMap: Record<string, string> = {
-      "1": "piece_001",
-      "2": "piece_002",
-      "3": "piece_003",
-      "4": "piece_004",
-      "5": "piece_005",
-    };
-    const pieceId = pieceIdMap[id];
-    if (pieceId) {
-      const analysisData = getPieceAnalysisById(pieceId);
-      const practice = getUserPracticeData("user_001", pieceId);
+    async function load() {
+      const userId = getUserId();
+      const pieceIdMap: Record<string, string> = {
+        "1": "piece_001",
+        "2": "piece_002",
+        "3": "piece_003",
+        "4": "piece_004",
+        "5": "piece_005",
+      };
+      const pieceId = pieceIdMap[id] ?? id;
+      const analysisData = await getPieceAnalysis(pieceId);
       if (analysisData) setPieceAnalysis(analysisData);
-      if (practice) setPracticeData(practice);
+      if (userId) {
+        const practice = await getUserPracticeData(userId, pieceId);
+        if (practice) setPracticeData(practice);
+      }
     }
+    load();
   }, [id]);
 
   // 분석 기록 저장 (이미 분석된 곡이면 최근 조회로 업데이트)
@@ -534,9 +550,11 @@ export default function AnalysisDetailPage() {
       </Section>
 
       {/* Section-by-Section Analysis */}
-      {pieceAnalysis && (
+      {pieceAnalysis && (() => {
+        const sections = (Array.isArray(pieceAnalysis.sections) ? pieceAnalysis.sections : []) as unknown as SectionData[];
+        const measureProgress = (practiceData?.measureProgress ? (Array.isArray(practiceData.measureProgress) ? practiceData.measureProgress : []) : []) as unknown as MeasureProgressData[];
+        return (
         <Section title="마디별 상세 분석" icon={Target}>
-          {/* Practice Stats */}
           {practiceData && (
             <div className="mb-4 p-3 bg-violet-50 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
@@ -557,8 +575,8 @@ export default function AnalysisDetailPage() {
           )}
 
           <div className="space-y-2">
-            {pieceAnalysis.sections.map((section, idx) => {
-              const sectionPractice = practiceData?.measureProgress.find(
+            {sections.map((section, idx) => {
+              const sectionPractice = measureProgress.find(
                 (p) => p.measureStart === section.startMeasure
               );
 
@@ -605,7 +623,7 @@ export default function AnalysisDetailPage() {
             이 곡 연습 시작하기
           </Link>
         </Section>
-      )}
+      ); })()}
 
       {/* IMSLP Sheet Music */}
       <Section title="무료 악보 (IMSLP)" icon={Music}>

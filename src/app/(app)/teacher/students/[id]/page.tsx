@@ -13,8 +13,7 @@ import {
   Award,
   BookOpen,
 } from "lucide-react";
-import { getManagedStudentById, initManagedStudents } from "@/lib/teacher-store";
-import { mockTeacherStudents } from "@/data/mock-teacher-students";
+import { getTeacherStudentById } from "@/lib/queries";
 import { ManagedStudent } from "@/types";
 
 export default function StudentDetailPage() {
@@ -22,12 +21,34 @@ export default function StudentDetailPage() {
   const params = useParams();
   const studentId = params.id as string;
   const [student, setStudent] = useState<ManagedStudent | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    initManagedStudents(mockTeacherStudents);
-    const found = getManagedStudentById(studentId);
-    if (found) setStudent(found);
+    const load = async () => {
+      setIsLoading(true);
+      try {
+        const data = await getTeacherStudentById(studentId);
+        setStudent(data);
+      } catch (err) {
+        console.error("Failed to load student:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
   }, [studentId]);
+
+  if (isLoading) {
+    return (
+      <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-orange">
+        <div className="bg-blob-orange-extra" />
+        <div className="text-center py-12">
+          <div className="w-8 h-8 border-2 border-orange-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm text-slate-400">불러오는 중...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!student) {
     return (
@@ -57,7 +78,6 @@ export default function StudentDetailPage() {
   return (
     <div className="px-4 py-6 max-w-lg mx-auto min-h-screen pb-24 bg-blob-orange">
       <div className="bg-blob-orange-extra" />
-      {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button onClick={() => safeBack(router)}>
           <ArrowLeft className="w-6 h-6 text-slate-700" />
@@ -65,7 +85,6 @@ export default function StudentDetailPage() {
         <h1 className="text-lg font-bold text-slate-900">학생 상세</h1>
       </div>
 
-      {/* Profile Card */}
       <div className="bg-white rounded-xl p-5 border border-slate-100 mb-4">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center shrink-0">
@@ -94,7 +113,6 @@ export default function StudentDetailPage() {
         </div>
       </div>
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-2 gap-3 mb-4">
         <div className="bg-white rounded-xl p-4 border border-slate-100">
           <div className="flex items-center gap-2 mb-2">
@@ -151,7 +169,6 @@ export default function StudentDetailPage() {
         </div>
       </div>
 
-      {/* Current Pieces */}
       <div className="bg-white rounded-xl p-4 border border-slate-100 mb-4">
         <h3 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
           <Music className="w-4 h-4 text-orange-600" />
@@ -172,7 +189,6 @@ export default function StudentDetailPage() {
         </div>
       </div>
 
-      {/* Info */}
       <div className="bg-white rounded-xl p-4 border border-slate-100">
         <h3 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
           <Calendar className="w-4 h-4 text-orange-600" />

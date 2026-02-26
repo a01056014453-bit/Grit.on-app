@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { safeBack } from "@/lib/navigation";
 import Link from "next/link";
@@ -16,8 +17,9 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { RequestStatusChip } from "@/components/feedback/request-status-chip";
-import { getFeedbackRequestById, getRemainingTime } from "@/lib/feedback-store";
-import { PROBLEM_TYPE_LABELS } from "@/types";
+import { getFeedbackRequestById } from "@/lib/queries";
+import { getRemainingTime } from "@/lib/time-utils";
+import { FeedbackRequest, PROBLEM_TYPE_LABELS } from "@/types";
 
 const statusSteps = [
   { status: "SENT", label: "전송됨", description: "선생님 수락 대기" },
@@ -31,7 +33,35 @@ export default function FeedbackDetailPage() {
   const router = useRouter();
   const requestId = params.id as string;
 
-  const request = getFeedbackRequestById(requestId);
+  const [request, setRequest] = useState<FeedbackRequest | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      setIsLoading(true);
+      try {
+        const data = await getFeedbackRequestById(requestId);
+        setRequest(data);
+      } catch (err) {
+        console.error("Failed to load feedback request:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
+  }, [requestId]);
+
+  if (isLoading) {
+    return (
+      <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
+        <div className="bg-blob-extra" />
+        <div className="text-center py-12">
+          <div className="w-8 h-8 border-2 border-violet-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm text-muted-foreground">불러오는 중...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!request) {
     return (
@@ -79,7 +109,6 @@ export default function FeedbackDetailPage() {
   return (
     <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
       <div className="bg-blob-extra" />
-      {/* Header */}
       <button
         onClick={() => safeBack(router)}
         className="flex items-center gap-2 text-muted-foreground mb-6"
@@ -88,7 +117,6 @@ export default function FeedbackDetailPage() {
         <span>뒤로</span>
       </button>
 
-      {/* Status & Title */}
       <div className="mb-6">
         <RequestStatusChip status={request.status} size="md" />
         <h1 className="text-xl font-bold text-foreground mt-3">
@@ -99,19 +127,16 @@ export default function FeedbackDetailPage() {
         </p>
       </div>
 
-      {/* Status Timeline (only for active requests) */}
       {currentStep >= 0 && (
         <div className="bg-card rounded-xl p-4 border border-border mb-4">
           <h2 className="text-sm font-semibold text-foreground mb-4">진행 상태</h2>
           <div className="relative">
-            {/* Progress line */}
             <div className="absolute left-3 top-3 bottom-3 w-0.5 bg-secondary" />
             <div
               className="absolute left-3 top-3 w-0.5 bg-primary transition-all"
               style={{ height: `${(currentStep / 3) * 100}%` }}
             />
 
-            {/* Steps */}
             <div className="space-y-4">
               {statusSteps.map((step, index) => {
                 const isCompleted = index < currentStep;
@@ -147,7 +172,6 @@ export default function FeedbackDetailPage() {
                         <p className="text-xs text-muted-foreground">{step.description}</p>
                       )}
 
-                      {/* SLA countdown */}
                       {isCurrent && step.status === "SENT" && acceptDeadlineTime && (
                         <div
                           className={`mt-2 inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs ${
@@ -186,7 +210,6 @@ export default function FeedbackDetailPage() {
         </div>
       )}
 
-      {/* Declined/Expired Message */}
       {isDeclinedOrExpired && (
         <div className="bg-red-50 rounded-xl p-4 border border-red-200 mb-4">
           <div className="flex items-start gap-3">
@@ -214,7 +237,6 @@ export default function FeedbackDetailPage() {
         </div>
       )}
 
-      {/* Teacher Info */}
       {request.teacher && (
         <div className="bg-card rounded-xl p-4 border border-border mb-4">
           <h2 className="text-sm font-semibold text-foreground mb-3">선생님</h2>
@@ -243,7 +265,6 @@ export default function FeedbackDetailPage() {
         </div>
       )}
 
-      {/* Request Details */}
       <div className="bg-card rounded-xl p-4 border border-border mb-4">
         <h2 className="text-sm font-semibold text-foreground mb-3">요청 내용</h2>
 
@@ -274,7 +295,6 @@ export default function FeedbackDetailPage() {
         </div>
       </div>
 
-      {/* Clarification (if any) */}
       {request.clarificationRequest && (
         <div className="bg-amber-50 rounded-xl p-4 border border-amber-200 mb-4">
           <div className="flex items-start gap-2 mb-2">
@@ -304,7 +324,6 @@ export default function FeedbackDetailPage() {
         </div>
       )}
 
-      {/* Action Button (for SUBMITTED status) */}
       {request.status === "SUBMITTED" && (
         <Link
           href={`/feedback/${request.id}/view`}
@@ -314,7 +333,6 @@ export default function FeedbackDetailPage() {
         </Link>
       )}
 
-      {/* Payment Info */}
       <div className="mt-4 p-3 bg-secondary/50 rounded-xl">
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">결제 금액</span>

@@ -6,7 +6,9 @@ import { safeBack } from "@/lib/navigation";
 import { ArrowLeft, Play, Pause, ChevronLeft, ChevronRight, Check, X, Clock, Music, Volume2 } from "lucide-react";
 import { StatsCard } from "@/components/app";
 import { getAllSessions, getPracticeStats, savePracticeSession, type PracticeSession } from "@/lib/db";
-import { mockDrillCards, groupDrillsBySong } from "@/data";
+import { getDrillCards } from "@/lib/queries";
+import { groupDrillsBySong } from "@/lib/utils-practice";
+import { getUserId } from "@/lib/user-id";
 
 interface Drill {
   id: string;
@@ -35,6 +37,7 @@ export default function GoalsPage() {
   const [allSessions, setAllSessions] = useState<PracticeSession[]>([]);
   const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [drillCards, setDrillCards] = useState<import("@/types").DrillCard[]>([]);
 
   // Audio player state
   const [playingSession, setPlayingSession] = useState<PracticeSession | null>(null);
@@ -80,15 +83,12 @@ export default function GoalsPage() {
     return streak;
   }
 
-  // Load data
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Total hours
         const stats = await getPracticeStats();
         setTotalHours(Math.round(stats.totalPracticeTime / 3600));
 
-        // Week sessions
         const sessions = await getAllSessions();
         setAllSessions(sessions);
         const weekStart = new Date(today);
@@ -101,9 +101,14 @@ export default function GoalsPage() {
         });
         setWeekSessions(thisWeekSessions.length);
 
-        // Streak
         const streak = calculateStreak(sessions);
         setStreakDays(streak);
+
+        const userId = getUserId();
+        if (userId) {
+          const cards = await getDrillCards(userId);
+          setDrillCards(cards);
+        }
       } catch (error) {
         console.error("Failed to load data:", error);
       } finally {
@@ -214,7 +219,7 @@ export default function GoalsPage() {
     if (completedIds.size === 0) return [];
 
     // Get all available drills (mock + custom)
-    const mockDrills = groupDrillsBySong(mockDrillCards).flatMap(g => g.drills);
+    const dbDrills = groupDrillsBySong(drillCards).flatMap(g => g.drills);
     const customDrillsData = localStorage.getItem("grit-on-custom-drills");
     const customDrills: Drill[] = customDrillsData ? JSON.parse(customDrillsData) : [];
 
@@ -222,7 +227,7 @@ export default function GoalsPage() {
     const dateDrillsData = localStorage.getItem(`grit-on-drills-${dateKey}`);
     const dateDrills: Drill[] = dateDrillsData ? JSON.parse(dateDrillsData) : [];
 
-    const allDrills = [...mockDrills, ...customDrills, ...dateDrills];
+    const allDrills = [...dbDrills, ...customDrills, ...dateDrills];
 
     // Filter to only completed drills
     return allDrills.filter(d => completedIds.has(d.id));

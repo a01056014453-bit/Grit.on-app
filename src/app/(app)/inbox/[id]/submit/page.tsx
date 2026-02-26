@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { safeBack } from "@/lib/navigation";
 import {
@@ -14,8 +14,9 @@ import {
   CheckCircle,
   AlertCircle,
 } from "lucide-react";
-import { getFeedbackRequestById, saveFeedback, getRemainingTime } from "@/lib/feedback-store";
-import { FeedbackComment, PracticeCard } from "@/types";
+import { getFeedbackRequestById, saveFeedback } from "@/lib/queries";
+import { getRemainingTime } from "@/lib/time-utils";
+import { FeedbackRequest, FeedbackComment, PracticeCard } from "@/types";
 
 interface CommentDraft {
   measureStart: string;
@@ -28,9 +29,9 @@ export default function SubmitFeedbackPage() {
   const router = useRouter();
   const requestId = params.id as string;
 
-  const request = getFeedbackRequestById(requestId);
+  const [request, setRequest] = useState<FeedbackRequest | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Form states
   const [comments, setComments] = useState<CommentDraft[]>([
     { measureStart: "", measureEnd: "", text: "" },
     { measureStart: "", measureEnd: "", text: "" },
@@ -43,6 +44,33 @@ export default function SubmitFeedbackPage() {
   const [dailyMinutes, setDailyMinutes] = useState("15");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const load = async () => {
+      setIsLoading(true);
+      try {
+        const data = await getFeedbackRequestById(requestId);
+        setRequest(data);
+      } catch (err) {
+        console.error("Failed to load feedback request:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
+  }, [requestId]);
+
+  if (isLoading) {
+    return (
+      <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
+        <div className="bg-blob-extra" />
+        <div className="text-center py-12">
+          <div className="w-8 h-8 border-2 border-violet-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm text-muted-foreground">불러오는 중...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!request) {
     return (
@@ -71,13 +99,14 @@ export default function SubmitFeedbackPage() {
   };
 
   const removeComment = (index: number) => {
-    if (comments.length <= 3) return; // Minimum 3 comments
+    if (comments.length <= 3) return;
     setComments(comments.filter((_, i) => i !== index));
   };
 
   const updateComment = (index: number, field: keyof CommentDraft, value: string) => {
-    const updated = [...comments];
-    updated[index][field] = value;
+    const updated = comments.map((c, i) =>
+      i === index ? { ...c, [field]: value } : c
+    );
     setComments(updated);
   };
 
@@ -91,8 +120,7 @@ export default function SubmitFeedbackPage() {
   };
 
   const updatePracticeStep = (index: number, value: string) => {
-    const updated = [...practiceSteps];
-    updated[index] = value;
+    const updated = practiceSteps.map((s, i) => (i === index ? value : s));
     setPracticeSteps(updated);
   };
 
@@ -104,16 +132,13 @@ export default function SubmitFeedbackPage() {
   };
 
   const isFormValid = () => {
-    // At least 3 comments with content
     const validComments = comments.filter(
       (c) => c.measureStart && c.text.trim()
     );
     if (validComments.length < 3) return false;
 
-    // Practice card required fields
     if (!practiceSection || !practiceTempo) return false;
 
-    // At least 2 practice steps
     const validSteps = practiceSteps.filter((s) => s.trim());
     if (validSteps.length < 2) return false;
 
@@ -140,21 +165,24 @@ export default function SubmitFeedbackPage() {
       dailyMinutes: parseInt(dailyMinutes) || 15,
     };
 
-    saveFeedback({
-      requestId,
-      comments: feedbackComments,
-      demoVideoUrl: demoVideo ? "/videos/demo.mp4" : undefined,
-      practiceCard,
-    });
-
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    router.push("/inbox");
+    try {
+      await saveFeedback({
+        requestId,
+        comments: feedbackComments,
+        demoVideoUrl: demoVideo ? "/videos/demo.mp4" : undefined,
+        practiceCard,
+      });
+      router.push("/inbox");
+    } catch (err) {
+      console.error("Failed to save feedback:", err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className="px-4 py-6 max-w-lg mx-auto pb-32 min-h-screen bg-blob-violet">
       <div className="bg-blob-extra" />
-      {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button
           onClick={() => safeBack(router)}
@@ -170,7 +198,6 @@ export default function SubmitFeedbackPage() {
         </div>
       </div>
 
-      {/* SLA Warning */}
       {submitDeadline && (
         <div
           className={`rounded-xl p-3 mb-6 flex items-center gap-2 ${
@@ -204,7 +231,6 @@ export default function SubmitFeedbackPage() {
         </div>
       )}
 
-      {/* Comments Section */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
@@ -276,7 +302,6 @@ export default function SubmitFeedbackPage() {
         </div>
       </div>
 
-      {/* Demo Video */}
       <div className="mb-6">
         <h2 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
           <Video className="w-4 h-4 text-primary" />
@@ -318,7 +343,6 @@ export default function SubmitFeedbackPage() {
         </div>
       </div>
 
-      {/* Practice Card */}
       <div className="mb-6">
         <h2 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
           <Music className="w-4 h-4 text-primary" />
@@ -326,7 +350,6 @@ export default function SubmitFeedbackPage() {
         </h2>
 
         <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl p-4 border border-emerald-200 space-y-4">
-          {/* Section */}
           <div>
             <label className="text-xs text-emerald-700 mb-1 block">연습 구간 *</label>
             <input
@@ -338,7 +361,6 @@ export default function SubmitFeedbackPage() {
             />
           </div>
 
-          {/* Tempo */}
           <div>
             <label className="text-xs text-emerald-700 mb-1 block">템포 진행 *</label>
             <input
@@ -350,7 +372,6 @@ export default function SubmitFeedbackPage() {
             />
           </div>
 
-          {/* Steps */}
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="text-xs text-emerald-700">연습 순서 (최소 2개) *</label>
@@ -388,7 +409,6 @@ export default function SubmitFeedbackPage() {
             </div>
           </div>
 
-          {/* Daily Minutes */}
           <div>
             <label className="text-xs text-emerald-700 mb-1 block">하루 권장 연습 시간</label>
             <div className="flex items-center gap-2">
@@ -404,7 +424,6 @@ export default function SubmitFeedbackPage() {
         </div>
       </div>
 
-      {/* Validation Warning */}
       {!isFormValid() && (
         <div className="mb-4 p-3 bg-amber-50 rounded-xl border border-amber-200">
           <p className="text-xs text-amber-800 flex items-start gap-2">
@@ -414,7 +433,6 @@ export default function SubmitFeedbackPage() {
         </div>
       )}
 
-      {/* Fixed Submit Button */}
       <div className="fixed bottom-20 left-0 right-0 px-4 py-3 bg-background/80 backdrop-blur-lg border-t border-border">
         <div className="max-w-lg mx-auto">
           <button
