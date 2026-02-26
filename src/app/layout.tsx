@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Montserrat } from "next/font/google";
 import "./globals.css";
+import SplashWrapper from "@/components/SplashWrapper";
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -94,7 +95,10 @@ export default function RootLayout({
             }}
           />
         )}
-        {children}
+        {/* ✅ 스플래시 화면 래퍼 - YAMNet 모델 로드 중 표시 */}
+        <SplashWrapper>
+          {children}
+        </SplashWrapper>
       </body>
     </html>
   );
