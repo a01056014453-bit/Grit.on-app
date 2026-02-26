@@ -111,16 +111,16 @@ const ThreeEighthsRestMiddleIcon = ({ className = "" }: { className?: string }) 
   </svg>
 );
 
-// Time signatures
+// Time signatures - compound meters use dotted quarter beats
 const TIME_SIGNATURES = [
-  { name: "1/4", beats: 1 },
-  { name: "2/4", beats: 2 },
-  { name: "3/4", beats: 3 },
-  { name: "4/4", beats: 4 },
-  { name: "3/8", beats: 3 },
-  { name: "6/8", beats: 6 },
-  { name: "9/8", beats: 9 },
-  { name: "12/8", beats: 12 },
+  { name: "1/4", beats: 1, compound: false },
+  { name: "2/4", beats: 2, compound: false },
+  { name: "3/4", beats: 3, compound: false },
+  { name: "4/4", beats: 4, compound: false },
+  { name: "3/8", beats: 1, compound: true },
+  { name: "6/8", beats: 2, compound: true },
+  { name: "9/8", beats: 3, compound: true },
+  { name: "12/8", beats: 4, compound: true },
 ];
 
 // Subdivision pattern type
@@ -133,9 +133,6 @@ interface SubdivisionPattern {
   pattern: number[];
   // restIndices: 쉼표 위치 (소리가 나지 않아야 하는 subIndex within pattern)
   restIndices?: number[];
-  // mutedBeatMod: For compound meters, mute beats where (beatIndex % 3) is in this array
-  // e.g., [1] means mute beats 1, 4, 7, 10... (middle of each group of 3)
-  mutedBeatMod?: number[];
 }
 
 // Subdivisions with musical note icons
@@ -149,11 +146,11 @@ const SUBDIVISIONS: SubdivisionPattern[] = [
 ];
 
 // Compound meter subdivisions (3/8, 6/8, 9/8, 12/8)
-// Note: For compound meters, beats = eighth notes, so patterns are per eighth note
+// 복합박자: 점4분음표 = 1박, 패턴은 점4분음표 내의 비율
 const COMPOUND_SUBDIVISIONS: SubdivisionPattern[] = [
-  { id: "c1", icon: "♩.", label: "점4분", pattern: [1] },  // 1 sound per dotted quarter (handled via mainBeatIndices)
-  { id: "c2", icon: "three-eighths", label: "8분×3", pattern: [1] },  // 1 sound per eighth note
-  { id: "c3", icon: "three-eighths-rest", label: "1-쉼-3", pattern: [1], mutedBeatMod: [1] },  // Skip middle eighth (beat % 3 === 1)
+  { id: "c1", icon: "♩.", label: "점4분", pattern: [1] },
+  { id: "c2", icon: "three-eighths", label: "8분×3", pattern: [1/3, 1/3, 1/3] },
+  { id: "c3", icon: "three-eighths-rest", label: "1-쉼-3", pattern: [1/3, 1/3, 1/3], restIndices: [1] },
 ];
 
 // Get subdivisions based on time signature
@@ -169,39 +166,19 @@ const isCompoundMeter = (timeSigName: string): boolean => {
   return ["3/8", "6/8", "9/8", "12/8"].includes(timeSigName);
 };
 
-// Get main beat indices (which beats should make sound for given subdivision)
-const getMainBeatIndices = (timeSig: { name: string; beats: number }, subdivId: string): Set<number> => {
+// Get main beat indices (all beats are main beats now)
+const getMainBeatIndices = (timeSig: { name: string; beats: number }): Set<number> => {
   const mainBeats = new Set<number>();
-
-  if (isCompoundMeter(timeSig.name) && subdivId === "c1") {
-    // 점4분: only first beat of each group of 3 makes sound
-    for (let i = 0; i < timeSig.beats; i += 3) {
-      mainBeats.add(i);
-    }
-  } else {
-    // All beats make sound
-    for (let i = 0; i < timeSig.beats; i++) {
-      mainBeats.add(i);
-    }
+  for (let i = 0; i < timeSig.beats; i++) {
+    mainBeats.add(i);
   }
-
   return mainBeats;
 };
 
-// Get auto-accents based on time signature and subdivision
-const getAutoAccents = (timeSig: { name: string; beats: number }, subdivId: string): boolean[] => {
+// Get auto-accents based on time signature
+const getAutoAccents = (timeSig: { name: string; beats: number }): boolean[] => {
   const accents = Array(timeSig.beats).fill(false);
-
-  if (isCompoundMeter(timeSig.name)) {
-    // Compound meters: accent every 3rd eighth note (1, 4, 7, 10...)
-    for (let i = 0; i < timeSig.beats; i += 3) {
-      accents[i] = true;
-    }
-  } else {
-    // Simple meters: accent the first beat
-    accents[0] = true;
-  }
-
+  accents[0] = true;
   return accents;
 };
 
@@ -283,18 +260,12 @@ export function MetronomeControl({
   const animationFrameRef = useRef<number | null>(null);
   const scheduledBeatsRef = useRef<ScheduledBeat[]>([]);
 
-  // Main beat indices (which beats make sound)
-  const mainBeatIndices = getMainBeatIndices(timeSig, subdiv.id);
+  // Main beat indices (all beats are main beats)
+  const mainBeatIndices = getMainBeatIndices(timeSig);
 
-  // Check if a beat is muted (for c3 pattern etc.)
-  const isBeatMuted = (beatIndex: number): boolean => {
-    const mutedBeatMod = subdiv.mutedBeatMod || [];
-    return mutedBeatMod.includes(beatIndex % 3);
-  };
-
-  // Check if a beat will make sound (considering mainBeatIndices and muted beats)
+  // Check if a beat will make sound
   const willBeatSound = (beatIndex: number): boolean => {
-    return mainBeatIndices.has(beatIndex) && !isBeatMuted(beatIndex);
+    return mainBeatIndices.has(beatIndex);
   };
 
   // Settings refs (to avoid stale closures)
@@ -312,7 +283,7 @@ export function MetronomeControl({
 
   // 박자 또는 세분 변경 시 악센트 자동 설정
   useEffect(() => {
-    const newAccents = getAutoAccents(timeSig, subdiv.id);
+    const newAccents = getAutoAccents(timeSig);
     setAccents(newAccents);
   }, [timeSig, subdiv.id]);
 
@@ -335,58 +306,56 @@ export function MetronomeControl({
     });
   }, [isPlaying, bpm, timeSig, subdiv, onStateChange]);
 
-  // Schedule a single note
+  // Schedule a single note with timbre-based sound differentiation
   // beatIndex: 0 ~ (beats-1), subIndex: 0 ~ (pattern.length-1)
   const scheduleNote = useCallback((time: number, beatIndex: number, subIndex: number) => {
     if (!audioCtxRef.current) return;
 
     const currentSubdiv = subdivRef.current;
     const isMainBeat = subIndex === 0;
-    const isSoundBeat = mainBeatIndicesRef.current.has(beatIndex);
     const isAccent = isMainBeat && (accentsRef.current[beatIndex] || false);
 
-    // Check if this is a rest position using restIndices from subdivision pattern
+    // Check if this is a rest position
     const restIndices = currentSubdiv.restIndices || [];
     const isRestPosition = restIndices.includes(subIndex);
 
-    // Check if this beat should be muted (for compound meter patterns like 1-쉼-3)
-    const mutedBeatMod = currentSubdiv.mutedBeatMod || [];
-    const isMutedBeat = mutedBeatMod.includes(beatIndex % 3);
-
-    // Determine if sound should play
-    // - For main beats (subIndex 0): play if beatIndex is in mainBeatIndices and not muted
-    // - For subdivisions (subIndex > 0): play unless it's a rest position or beat is muted
-    const shouldPlaySound = isMainBeat
-      ? isSoundBeat && !isRestPosition && !isMutedBeat
-      : !isRestPosition && !isMutedBeat;
-
-    if (shouldPlaySound) {
-      // Create oscillator for click sound
+    if (!isRestPosition) {
       const osc = audioCtxRef.current.createOscillator();
-      const envelope = audioCtxRef.current.createGain();
+      const gain = audioCtxRef.current.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtxRef.current.destination);
 
-      // Different frequencies for accent, main beat, subdivision
-      osc.frequency.value = isAccent ? 880 : isMainBeat ? 660 : 440;
-      osc.type = "sine";
+      if (isAccent) {
+        // 강박: 높고 짧고 날카로운 소리
+        osc.type = "triangle";
+        osc.frequency.value = 1500;
+        gain.gain.setValueAtTime(0.5, time);
+        gain.gain.exponentialRampToValueAtTime(0.001, time + 0.03);
+      } else if (isMainBeat) {
+        // 약박: 중간 높이, 둥근 소리
+        osc.type = "sine";
+        osc.frequency.value = 900;
+        gain.gain.setValueAtTime(0.45, time);
+        gain.gain.exponentialRampToValueAtTime(0.001, time + 0.04);
+      } else {
+        // 세분화: 낮고 부드러운 소리
+        osc.type = "sine";
+        osc.frequency.value = 600;
+        gain.gain.setValueAtTime(0.3, time);
+        gain.gain.exponentialRampToValueAtTime(0.001, time + 0.025);
+      }
 
-      // Volume envelope
-      const volume = isAccent ? 0.5 : isMainBeat ? 0.35 : 0.2;
-      envelope.gain.setValueAtTime(volume, time);
-      envelope.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
-
-      osc.connect(envelope);
-      envelope.connect(audioCtxRef.current.destination);
       osc.start(time);
-      osc.stop(time + 0.05);
+      osc.stop(time + 0.08);
     }
 
-    // Store scheduled beat for visual sync (only main beats for display)
+    // Store scheduled beat for visual sync (only main beats)
     if (isMainBeat) {
       scheduledBeatsRef.current.push({ time, beatIndex });
     }
 
     // Callback for beat
-    if (isMainBeat && onBeat && isSoundBeat) {
+    if (isMainBeat && onBeat) {
       const delayMs = Math.max(0, (time - audioCtxRef.current.currentTime) * 1000);
       setTimeout(() => {
         onBeat(beatIndex + 1, isAccent, Date.now());
@@ -413,7 +382,10 @@ export function MetronomeControl({
       );
 
       // Calculate next note time based on pattern
-      const secondsPerBeat = 60.0 / bpmRef.current;
+      // 복합박자: 점4분음표 = 4분음표 × 1.5
+      const secondsPerBeat = timeSigRef.current.compound
+        ? (60.0 / bpmRef.current) * 1.5
+        : 60.0 / bpmRef.current;
       const currentRatio = pattern[currentSubIndexRef.current];
       const noteLength = secondsPerBeat * currentRatio;
       nextNoteTimeRef.current += noteLength;
@@ -644,106 +616,35 @@ export function MetronomeControl({
 
       {/* Beat Visualization - 터치하여 악센트 설정 */}
       <div className="px-3 py-3 mx-4">
-        {timeSig.beats > 6 ? (
-          // Two rows for beats > 6
-          // 9/8: 6 + 3, 12/8: 6 + 6
-          (() => {
-            const firstRowCount = timeSig.name === "9/8" ? 6 : Math.ceil(timeSig.beats / 2);
-            const secondRowCount = timeSig.beats - firstRowCount;
+        <div className="flex justify-center gap-3">
+          {[...Array(timeSig.beats)].map((_, i) => {
+            const isActive = isPlaying && currentBeat === i;
+            const hasAccent = accents[i] || false;
             return (
-              <div className="flex flex-col items-center gap-2">
-                <div className="flex justify-center gap-2">
-                  {[...Array(firstRowCount)].map((_, i) => {
-                    const isActive = isPlaying && currentBeat === i;
-                    const hasAccent = accents[i] || false;
-                    const isSoundBeat = willBeatSound(i);
-                    return (
-                      <button
-                        key={i}
-                        onClick={() => toggleAccent(i)}
-                        className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-50 ${
-                          isActive
-                            ? "bg-white scale-110"
-                            : hasAccent
-                            ? "bg-violet-500"
-                            : isSoundBeat
-                            ? "bg-gray-300"
-                            : "bg-gray-200"
-                        }`}
-                      >
-                        {hasAccent && (
-                          <span className={`font-bold text-xs ${isActive ? "text-black" : isPlaying ? "text-white" : "text-white"}`}>
-                            ^
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="flex justify-center gap-2">
-                  {[...Array(secondRowCount)].map((_, i) => {
-                    const beatIndex = firstRowCount + i;
-                    const isActive = isPlaying && currentBeat === beatIndex;
-                    const hasAccent = accents[beatIndex] || false;
-                    const isSoundBeat = willBeatSound(beatIndex);
-                    return (
-                      <button
-                        key={beatIndex}
-                        onClick={() => toggleAccent(beatIndex)}
-                        className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-50 ${
-                          isActive
-                            ? "bg-white scale-110"
-                            : hasAccent
-                            ? "bg-violet-500"
-                            : isSoundBeat
-                            ? "bg-gray-300"
-                            : "bg-gray-200"
-                        }`}
-                      >
-                        {hasAccent && (
-                          <span className={`font-bold text-xs ${isActive ? "text-black" : isPlaying ? "text-white" : "text-white"}`}>
-                            ^
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+              <button
+                key={i}
+                onClick={() => toggleAccent(i)}
+                className={`w-11 h-11 rounded-full flex items-center justify-center transition-all duration-50 ${
+                  isActive
+                    ? i === 0 ? "bg-white scale-125 shadow-lg" : "bg-white scale-110"
+                    : hasAccent
+                    ? "bg-violet-500"
+                    : "bg-gray-300"
+                }`}
+              >
+                {hasAccent && (
+                  <span className={`font-bold text-xs ${isActive ? "text-black" : "text-white"}`}>
+                    ^
+                  </span>
+                )}
+              </button>
             );
-          })()
-        ) : (
-          // Single row for beats <= 6
-          <div className="flex justify-center gap-2">
-            {[...Array(timeSig.beats)].map((_, i) => {
-              const isActive = isPlaying && currentBeat === i;
-              const hasAccent = accents[i] || false;
-              const isSoundBeat = willBeatSound(i);
-              return (
-                <button
-                  key={i}
-                  onClick={() => toggleAccent(i)}
-                  className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-50 ${
-                    isActive
-                      ? "bg-white scale-110"
-                      : hasAccent
-                      ? "bg-violet-500"
-                      : isSoundBeat
-                      ? "bg-gray-300"
-                      : "bg-gray-200"
-                  }`}
-                >
-                  {hasAccent && (
-                    <span className={`font-bold text-xs ${isActive ? "text-black" : "text-white"}`}>
-                      ^
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+          })}
+        </div>
+        {timeSig.compound && (
+          <p className="text-[10px] text-violet-400 text-center mt-1.5">♩. = {bpm} BPM</p>
         )}
-        <p className="text-[10px] text-gray-400 text-center mt-2">
+        <p className="text-[10px] text-gray-400 text-center mt-1">
           터치하여 악센트 설정
         </p>
       </div>
