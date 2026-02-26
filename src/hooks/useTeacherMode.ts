@@ -5,6 +5,7 @@ import {
   getTeacherProfile,
   updateTeacherProfile,
   getVerification,
+  syncVerificationFromSupabase,
 } from "@/lib/teacher-store";
 import { TeacherVerificationStatus } from "@/types";
 
@@ -29,9 +30,12 @@ export function useTeacherMode() {
   useEffect(() => {
     reload();
 
+    // Supabase에서 최신 인증 상태 동기화 (관리자 승인/반려 반영)
+    syncVerificationFromSupabase().then(() => reload()).catch(() => {});
+
     // 다른 컴포넌트에서 토글했을 때 동기화
     const handleStorage = (e: StorageEvent) => {
-      if (e.key === "grit-on-profile") reload();
+      if (e.key === "grit-on-profile" || e.key === "grit-on-teacher-verification") reload();
     };
     const handleCustom = () => reload();
     window.addEventListener("storage", handleStorage);

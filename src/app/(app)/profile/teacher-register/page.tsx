@@ -21,6 +21,7 @@ import {
 import {
   getVerification,
   submitVerification,
+  syncVerificationFromSupabase,
 } from "@/lib/teacher-store";
 
 type Step = 1 | 2 | 3;
@@ -36,7 +37,10 @@ export default function TeacherRegisterPage() {
   const [verification, setVerification] = useState<TeacherVerification | null>(null);
 
   useEffect(() => {
-    setVerification(getVerification());
+    // Supabase에서 최신 인증 상태 동기화 후 로드
+    syncVerificationFromSupabase()
+      .then(() => setVerification(getVerification()))
+      .catch(() => setVerification(getVerification()));
   }, []);
 
   // 클라이언트에서 verification 로딩 전까지 로딩 표시

@@ -10,6 +10,7 @@ import {
   TeacherProfileData,
 } from "@/types";
 import { supabase } from "./supabase";
+import { getUserId } from "./user-id";
 
 const PROFILE_KEY = "grit-on-profile";
 const VERIFICATION_KEY = "grit-on-teacher-verification";
@@ -123,11 +124,13 @@ export function submitVerification(documents: TeacherDocument[], aiReview?: AIRe
 }
 
 async function submitVerificationToSupabase(v: TeacherVerification): Promise<void> {
+  const userId = getUserId();
   await supabase.from("teachers").upsert({
     id: v.id,
     name: v.applicantName,
     specialty: v.specialty,
     verified: false,
+    user_id: userId || null,
     career: JSON.parse(JSON.stringify({
       verification: {
         status: v.status,
@@ -293,6 +296,64 @@ async function rejectVerificationInSupabase(id: string, reason: string): Promise
   await supabase.from("teachers").update({
     career: { ...career, verification: { ...verification, status: "rejected", reviewedAt: new Date().toISOString(), rejectReason: reason } },
   }).eq("id", id);
+}
+
+// ─── Supabase → localStorage 동기화 ───
+
+/**
+ * Supabase에서 현재 사용자의 인증 상태를 가져와 localStorage에 동기화.
+ * 관리자가 Supabase에서 승인/반려했을 때 사용자 기기에 반영됨.
+ */
+export async function syncVerificationFromSupabase(): Promise<TeacherVerificationStatus> {
+  const userId = getUserId();
+  if (!userId) return "none";
+
+  // user_id로 검색
+  const { data, error } = await supabase
+    .from("teachers")
+    .select("id, name, specialty, verified, career")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !data) return getVerification().status;
+
+  const career = data.career as Record<string, unknown> | null;
+  if (!career || !("verification" in career)) return "none";
+
+  const v = (career as { verification: Record<string, unknown> }).verification;
+  const remoteStatus: TeacherVerificationStatus = data.verified
+    ? "approved"
+    : ((v.status as string) || "pending") as TeacherVerificationStatus;
+
+  // localStorage에 최신 상태 반영
+  const localVerification = getVerification();
+  if (localVerification.status !== remoteStatus) {
+    const updated: TeacherVerification = {
+      id: data.id,
+      applicantName: data.name,
+      specialty: data.specialty ?? [],
+      status: remoteStatus,
+      documents: (v.documents as TeacherDocument[]) ?? [],
+      appliedAt: v.appliedAt as string | undefined,
+      reviewedAt: v.reviewedAt as string | undefined,
+      rejectReason: v.rejectReason as string | undefined,
+      aiReview: v.aiReview as AIReview | undefined,
+    };
+    saveVerification(updated);
+
+    // 승인됐으면 프로필도 업데이트
+    if (remoteStatus === "approved") {
+      updateTeacherProfile({ isTeacher: true, teacherProfileId: data.id });
+    }
+    // 반려나 미인증이면 선생님 모드 OFF
+    if (remoteStatus === "rejected" || remoteStatus === "none") {
+      updateTeacherProfile({ isTeacher: false, teacherMode: false });
+    }
+  }
+
+  return remoteStatus;
 }
 
 // ─── Managed Students ───
