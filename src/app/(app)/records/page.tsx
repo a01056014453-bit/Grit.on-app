@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   ChevronLeft,
@@ -14,6 +14,8 @@ import {
   Clock,
   ArrowLeft,
   Mic,
+  Play,
+  Square,
   Plus,
   X,
 } from "lucide-react";
@@ -43,6 +45,73 @@ function getCountStyle(count: number, isToday: boolean, isFuture: boolean, hasSc
 
 const weekdayNames = ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"];
 const dayNames = ["일", "월", "화", "수", "목", "금", "토"];
+
+// ─── Free Session Row ────────────────────────────────────────────────────────
+
+function FreeSessionRow({ session }: { session: import("@/lib/drill-records").RecordSession }) {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (audioUrl) URL.revokeObjectURL(audioUrl);
+    };
+  }, [audioUrl]);
+
+  const togglePlay = () => {
+    if (!session.audioBlob) return;
+
+    if (isPlaying && audioRef.current) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+      return;
+    }
+
+    const url = audioUrl ?? URL.createObjectURL(session.audioBlob);
+    if (!audioUrl) setAudioUrl(url);
+
+    const audio = new Audio(url);
+    audioRef.current = audio;
+    audio.onended = () => setIsPlaying(false);
+    audio.play();
+    setIsPlaying(true);
+  };
+
+  return (
+    <div
+      className="flex items-center gap-3 rounded-xl px-3.5 py-3"
+      style={{
+        background: "rgba(255,255,255,0.35)",
+        backdropFilter: "blur(8px)",
+        WebkitBackdropFilter: "blur(8px)",
+        border: "1px solid rgba(255,255,255,0.4)",
+      }}
+    >
+      <Music className="w-4 h-4 text-violet-400 shrink-0" />
+      <div className="flex-1 min-w-0">
+        <span className="text-[12px] font-medium text-gray-800 block truncate">
+          {session.piece}
+        </span>
+        <span className="text-[11px] text-gray-400">
+          {session.time} · {session.duration}
+        </span>
+      </div>
+      {session.hasRecording && (
+        <button
+          onClick={togglePlay}
+          className="w-7 h-7 rounded-full bg-violet-500 flex items-center justify-center hover:bg-violet-600 transition-colors shrink-0"
+        >
+          {isPlaying ? (
+            <Square className="w-3 h-3 text-white" fill="white" />
+          ) : (
+            <Play className="w-3 h-3 text-white ml-0.5" fill="white" />
+          )}
+        </button>
+      )}
+    </div>
+  );
+}
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -89,6 +158,10 @@ export default function RecordsPage() {
   // 동적 데이터 생성
   const pieces = useMemo(() => buildPiecesForDate(dateStr, sessions), [dateStr, sessions, refreshKey]);
   const recordSessions = useMemo(() => buildSessionsForDate(dateStr, sessions), [dateStr, sessions]);
+  const freeSessions = useMemo(
+    () => recordSessions.filter((s) => !s.pieceId.startsWith("drill-")),
+    [recordSessions]
+  );
   const calendarData = useMemo(() => buildCalendarData(calendarYear, calendarMonth, sessions), [calendarYear, calendarMonth, sessions]);
   const scheduledDays = useMemo(() => buildScheduledDays(calendarYear, calendarMonth), [calendarYear, calendarMonth, refreshKey]);
 
@@ -350,8 +423,8 @@ export default function RecordsPage() {
                   {weekdayNames[selectedDate.getDay()]}
                 </h3>
                 <p className="text-[11px] text-gray-400/80 mt-0.5">
-                  {pieces.length > 0
-                    ? `${pieces.reduce((s, p) => s + p.tasks.length, 0)}개 연습 · ${totalRecordings}개 녹음`
+                  {pieces.length > 0 || freeSessions.length > 0
+                    ? `${pieces.reduce((s, p) => s + p.tasks.length, 0) + freeSessions.length}개 연습 · ${totalRecordings}개 녹음`
                     : "연습 일정이 없습니다"}
                 </p>
               </div>
@@ -571,8 +644,32 @@ export default function RecordsPage() {
           )}
         </div>
 
+        {/* ─── FREE PRACTICE SECTION ─── */}
+        {freeSessions.length > 0 && (
+          <div
+            className="rounded-[20px] p-5 mb-4"
+            style={{
+              background: "rgba(255,255,255,0.55)",
+              backdropFilter: "blur(16px)",
+              WebkitBackdropFilter: "blur(16px)",
+              border: "1px solid rgba(255,255,255,0.6)",
+              boxShadow: "0 8px 32px rgba(124,58,237,0.08)",
+            }}
+          >
+            <span className="text-[13px] font-bold text-gray-900">
+              자유 연습 {freeSessions.length}개
+            </span>
+
+            <div className="mt-3 space-y-2">
+              {freeSessions.map((session) => (
+                <FreeSessionRow key={session.id} session={session} />
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Empty state */}
-        {pieces.length === 0 && (
+        {pieces.length === 0 && freeSessions.length === 0 && (
           <div
             className="rounded-[20px] p-8 mb-4 text-center"
             style={{

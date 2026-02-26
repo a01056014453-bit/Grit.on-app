@@ -1,22 +1,26 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import {
+  classifyAudioClip,
+  preloadModel,
+  onModelStatusChange,
+  type AudioLabel,
+  type ModelStatus,
+} from "@/lib/audio-classifier";
 
 // ─────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────
-export type AudioLabel =
-  | "PIANO_PLAYING"
-  | "VOICE"
-  | "METRONOME_ONLY"
-  | "SILENCE"
-  | "NOISE";
+export type { AudioLabel } from "@/lib/audio-classifier";
 
 export interface BeatTimestamp {
   time: number;
   wallTime: number;
   isAccent: boolean;
 }
+
+export type { ModelStatus } from "@/lib/audio-classifier";
 
 export interface AudioRecorderState {
   isRecording: boolean;
@@ -36,6 +40,7 @@ export interface AudioRecorderState {
   audioLabel: AudioLabel | null;
   classificationConfidence: number;
   frequencyBands: number[];
+  modelStatus: ModelStatus;
 }
 
 interface UseAudioRecorderOptions {
@@ -47,44 +52,25 @@ interface UseAudioRecorderOptions {
 }
 
 // ─────────────────────────────────────────────
-// iOS WebView 네이티브 브릿지 타입 선언
-// ─────────────────────────────────────────────
-declare global {
-  interface Window {
-    /**
-     * React Native WebView 브릿지 (iOS 네이티브 녹음)
-     * RN 앱에서 window.ReactNativeWebView.postMessage()로 오디오 전달
-     */
-    ReactNativeWebView?: {
-      postMessage: (msg: string) => void;
-    };
-    /**
-     * iOS 네이티브 → 웹으로 오디오 청크 전달 콜백
-     * RN 앱에서 window.onNativeAudioChunk(base64, mimeType) 호출
-     */
-    onNativeAudioChunk?: (base64: string, mimeType: string) => void;
-    /**
-     * iOS 네이티브 → 웹으로 녹음 완료 콜백
-     * RN 앱에서 window.onNativeAudioStop(base64, mimeType) 호출
-     */
-    onNativeAudioStop?: (base64: string, mimeType: string) => void;
-  }
-}
-
-/** React Native WebView 환경 여부 */
-const isNativeApp = (): boolean =>
-  typeof window !== "undefined" && !!window.ReactNativeWebView;
-
-// ─────────────────────────────────────────────
 // 상수
 // ─────────────────────────────────────────────
-const CLASSIFY_INTERVAL_MS = 3000;       // 3초마다 서버 분류
-const CALIBRATION_SAMPLES = 300;         // ~5초 (60fps × 5)
-const CALIBRATION_SKIP = 60;             // 첫 1초 스킵 (마이크 초기화)
-const PIANO_ON_THRESHOLD_MS = 800;       // 피아노 0.8초 이상 → 카운팅 시작
-const PIANO_OFF_DELAY_MS = 7000;         // 피아노 안 들린 후 7초 대기 → 중단 (3초 주기 기준 2~3회 SILENCE 허용)
-const VOICE_SUPPRESS_MS = 2500;          // 목소리 감지 후 2.5초간 카운팅 중단
+const CLASSIFY_INTERVAL_MS = 3000; // 3초마다 분류
+const CALIBRATION_SAMPLES = 300; // ~5초 (60fps × 5)
+const CALIBRATION_SKIP = 60; // 첫 1초 스킵 (마이크 초기화)
+const PIANO_ON_THRESHOLD_MS = 800; // 피아노 0.8초 이상 → 카운팅 시작
+const PIANO_OFF_DELAY_MS = 7000; // 피아노 안 들린 후 7초 → 중단
+const VOICE_SUPPRESS_MS = 2500; // 목소리 감지 후 2.5초간 카운팅 중단
 const MIN_CONFIDENCE = 0.55;
+
+// ─────────────────────────────────────────────
+// 네이티브 앱 환경 감지
+// ─────────────────────────────────────────────
+function isNativeApp(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    !!(window as unknown as Record<string, unknown>).ReactNativeWebView
+  );
+}
 
 // ─────────────────────────────────────────────
 // 메인 훅
@@ -113,6 +99,7 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
     audioLabel: null,
     classificationConfidence: 0,
     frequencyBands: Array(20).fill(0),
+    modelStatus: "idle",
   });
 
   // ── Metronome refs ──
@@ -162,6 +149,20 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
   const lastVoiceDetectedTimeRef = useRef<number>(0);
   const cumulativePianoMsRef = useRef<number>(0);
 
+  // ── 네이티브 브릿지 refs ──
+  const nativeBridgeListenerRef = useRef<((e: MessageEvent) => void) | null>(
+    null
+  );
+
+  // YAMNet 모델 사전 로드 + 상태 추적
+  useEffect(() => {
+    preloadModel();
+    const unsubscribe = onModelStatusChange((status) => {
+      setState((prev) => ({ ...prev, modelStatus: status }));
+    });
+    return unsubscribe;
+  }, []);
+
   // ─────────────────────────────────────────────
   // 데시벨 계산
   // ─────────────────────────────────────────────
@@ -182,12 +183,16 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
   const updatePracticeState = useCallback(
     (label: AudioLabel, confidence: number) => {
       const currentTime = Date.now();
-      const isPianoSound = label === "PIANO_PLAYING" && confidence >= MIN_CONFIDENCE;
+      const isPianoSound =
+        label === "PIANO_PLAYING" && confidence >= MIN_CONFIDENCE;
       const isVoiceSound = label === "VOICE" && confidence >= MIN_CONFIDENCE;
 
       if (isVoiceSound) {
         lastVoiceDetectedTimeRef.current = currentTime;
-        cumulativePianoMsRef.current = Math.max(0, cumulativePianoMsRef.current - 500);
+        cumulativePianoMsRef.current = Math.max(
+          0,
+          cumulativePianoMsRef.current - 500
+        );
       }
 
       if (isPianoSound) {
@@ -195,7 +200,8 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
         cumulativePianoMsRef.current += CLASSIFY_INTERVAL_MS;
       }
 
-      const timeSinceLastPiano = currentTime - lastPianoDetectedTimeRef.current;
+      const timeSinceLastPiano =
+        currentTime - lastPianoDetectedTimeRef.current;
       const timeSinceVoice = currentTime - lastVoiceDetectedTimeRef.current;
       const voiceRecentlyDetected = timeSinceVoice < VOICE_SUPPRESS_MS;
 
@@ -227,48 +233,22 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
   );
 
   // ─────────────────────────────────────────────
-  // 서버 API로 오디오 분류 요청
+  // 브라우저 TF.js로 오디오 분류 (서버 호출 제거)
   // ─────────────────────────────────────────────
-  const classifyAudioClip = useCallback(
-    async (audioBlob: Blob, dbSamples: number[]) => {
+  const classifyAudioClipLocal = useCallback(
+    async (audioBlob: Blob) => {
       if (isClassifyingRef.current) return;
       isClassifyingRef.current = true;
 
       try {
-        const avgDb =
-          dbSamples.length > 0
-            ? dbSamples.reduce((a, b) => a + b, 0) / dbSamples.length
-            : 0;
-        const noiseFloor = noiseFloorDecibelRef.current;
-
-        const formData = new FormData();
-        formData.append("audio", audioBlob);
-        formData.append("avgDecibel", avgDb.toFixed(1));
-        formData.append("noiseFloor", noiseFloor.toFixed(1));
-
-        const res = await fetch("/api/classify-audio", {
-          method: "POST",
-          body: formData,
+        const result = await classifyAudioClip(audioBlob, {
+          metronomeOn: metronomeActiveRef.current,
         });
 
-        if (!res.ok) {
-          console.warn("[Classify] API 오류:", res.status);
-          return;
-        }
-
-        const data = await res.json();
-
-        // CLIENT_SIDE 신호: YAMNET_SERVER_URL 없음 → 무음 필터만 적용
-        if (data.label === "CLIENT_SIDE") {
-          console.log("[Classify] 클라이언트 사이드 모드 (서버 없음)");
-          return;
-        }
-
-        const label = data.label as AudioLabel;
-        const confidence = data.confidence as number;
+        const { label, confidence, reason } = result;
 
         console.log(
-          `[Classify] ${label} (${(confidence * 100).toFixed(0)}%) avgDb=${avgDb.toFixed(1)} floor=${noiseFloor.toFixed(1)} ${data.reason ?? ""}`
+          `[Classify] ${label} (${(confidence * 100).toFixed(0)}%) ${reason}`
         );
 
         updatePracticeState(label, confidence);
@@ -280,7 +260,7 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
           isPianoDetected: isActuallyPlayingRef.current,
         }));
       } catch (err) {
-        console.error("[Classify] 요청 실패:", err);
+        console.error("[Classify] 분류 실패:", err);
       } finally {
         isClassifyingRef.current = false;
       }
@@ -289,27 +269,17 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
   );
 
   // ─────────────────────────────────────────────
-  // 3초마다 오디오 클립 캡처 + dB 수집 → 서버 분류
+  // 3초마다 오디오 클립 캡처 → 브라우저 분류
   // ─────────────────────────────────────────────
   const startClassifyLoop = useCallback(
     (stream: MediaStream) => {
-      if (classifyIntervalRef.current) clearInterval(classifyIntervalRef.current);
+      if (classifyIntervalRef.current)
+        clearInterval(classifyIntervalRef.current);
 
       const startClipCapture = () => {
         if (!isRecordingRef.current || isPausedRef.current) return;
         if (!isCalibrationCompleteRef.current) return;
 
-        // ── iOS 네이티브 앱: MediaRecorder 대신 브릿지 사용 ──────────────
-        if (isNativeApp()) {
-          // RN 앱에 "3초 클립 달라"고 요청
-          window.ReactNativeWebView!.postMessage(
-            JSON.stringify({ type: "REQUEST_AUDIO_CLIP", durationMs: CLASSIFY_INTERVAL_MS })
-          );
-          // 응답은 window.onNativeAudioChunk 콜백으로 수신 (아래 등록)
-          return;
-        }
-
-        // ── 웹 / Android WebView: 기존 MediaRecorder 방식 ────────────────
         const mimeType = MediaRecorder.isTypeSupported("audio/webm")
           ? "audio/webm"
           : "audio/mp4";
@@ -327,72 +297,54 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
             clearInterval(clipDbIntervalRef.current);
             clipDbIntervalRef.current = null;
           }
+
           if (classifyChunksRef.current.length > 0) {
-            const blob = new Blob(classifyChunksRef.current, { type: mimeType });
-            const samples = [...clipDbSamplesRef.current];
-            classifyAudioClip(blob, samples);
+            const blob = new Blob(classifyChunksRef.current, {
+              type: mimeType,
+            });
+            classifyAudioClipLocal(blob);
           }
         };
 
         classifyRecorderRef.current = recorder;
         recorder.start();
 
+        // 100ms마다 현재 dB 샘플 수집
         clipDbIntervalRef.current = setInterval(() => {
           if (!analyserRef.current) return;
-          const timeData = new Uint8Array(analyserRef.current.frequencyBinCount);
+          const timeData = new Uint8Array(
+            analyserRef.current.frequencyBinCount
+          );
           analyserRef.current.getByteTimeDomainData(timeData);
           const db = calculateDecibel(timeData);
           clipDbSamplesRef.current.push(db);
         }, 100);
 
+        // 3초 후 중지 → onstop에서 분류 호출
         setTimeout(() => {
-          if (recorder.state === "recording") recorder.stop();
+          if (recorder.state === "recording") {
+            recorder.stop();
+          }
         }, CLASSIFY_INTERVAL_MS);
       };
 
-      classifyIntervalRef.current = setInterval(startClipCapture, CLASSIFY_INTERVAL_MS);
+      classifyIntervalRef.current = setInterval(
+        startClipCapture,
+        CLASSIFY_INTERVAL_MS
+      );
     },
-    [classifyAudioClip, calculateDecibel]
+    [classifyAudioClipLocal, calculateDecibel]
   );
-
-  // ─────────────────────────────────────────────
-  // iOS 네이티브 브릿지 콜백 등록
-  // ─────────────────────────────────────────────
-  useEffect(() => {
-    if (!isNativeApp()) return;
-
-    // RN 앱이 window.onNativeAudioChunk(base64, mimeType) 호출 → 분류
-    window.onNativeAudioChunk = (base64: string, mimeType: string) => {
-      const binary = atob(base64);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      const blob = new Blob([bytes], { type: mimeType });
-      // dB 샘플은 analyser에서 별도 수집 중이므로 현재 캐시된 값 사용
-      classifyAudioClip(blob, [...clipDbSamplesRef.current]);
-      clipDbSamplesRef.current = [];
-    };
-
-    // 전체 녹음 완료 콜백
-    window.onNativeAudioStop = (base64: string, mimeType: string) => {
-      const binary = atob(base64);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      const blob = new Blob([bytes], { type: mimeType });
-      const url = URL.createObjectURL(blob);
-      setState((prev) => ({ ...prev, audioBlob: blob, audioUrl: url }));
-    };
-
-    return () => {
-      window.onNativeAudioChunk = undefined;
-      window.onNativeAudioStop = undefined;
-    };
-  }, [classifyAudioClip]);
 
   // ─────────────────────────────────────────────
   // 오디오 분석 루프 (시각화 + 캘리브레이션)
   // ─────────────────────────────────────────────
   const analyzeAudio = useCallback(() => {
-    if (!analyserRef.current || !isRecordingRef.current || isPausedRef.current) {
+    if (
+      !analyserRef.current ||
+      !isRecordingRef.current ||
+      isPausedRef.current
+    ) {
       if (isRecordingRef.current && !isPausedRef.current) {
         animationFrameRef.current = requestAnimationFrame(analyzeAudio);
       }
@@ -426,7 +378,10 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
         const p75 = sorted[Math.floor(sorted.length * 0.75)];
         noiseFloorDecibelRef.current = Math.max(42, p75 + 3);
         isCalibrationCompleteRef.current = true;
-        console.log("[Calibration] 완료. 노이즈 플로어:", noiseFloorDecibelRef.current);
+        console.log(
+          "[Calibration] 완료 (5초). 노이즈 플로어:",
+          noiseFloorDecibelRef.current
+        );
         setState((prev) => ({
           ...prev,
           noiseFloor: noiseFloorDecibelRef.current,
@@ -446,7 +401,7 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
 
     // ── 시각화 밴드 계산 ──
     const binCount = frequencyData.length;
-    const binWidth = (sampleRate / 2) / binCount;
+    const binWidth = sampleRate / 2 / binCount;
     const bands: number[] = [];
     const bandCount = 20;
     const usableBins = Math.min(binCount, Math.floor(8000 / binWidth));
@@ -478,15 +433,6 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
   // 마이크 권한 요청
   // ─────────────────────────────────────────────
   const requestPermission = useCallback(async () => {
-    // iOS 네이티브: RN 앱에 권한 요청 위임
-    if (isNativeApp()) {
-      window.ReactNativeWebView!.postMessage(
-        JSON.stringify({ type: "REQUEST_MIC_PERMISSION" })
-      );
-      setState((prev) => ({ ...prev, hasPermission: true, error: null }));
-      return true;
-    }
-
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
@@ -511,36 +457,15 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
   // 녹음 시작
   // ─────────────────────────────────────────────
   const startRecording = useCallback(async () => {
-    if (!mediaStreamRef.current && !isNativeApp()) {
+    if (!mediaStreamRef.current) {
       const ok = await requestPermission();
       if (!ok) return;
     }
 
-    // ── iOS 네이티브: RN에 녹음 시작 명령 ──────────────────────────────
-    if (isNativeApp()) {
-      window.ReactNativeWebView!.postMessage(
-        JSON.stringify({ type: "START_RECORDING" })
-      );
-      // AudioContext는 Web Audio API (FFT 시각화용) - 사용자 액션 후 생성 ✅
-      try {
-        const audioContext = new AudioContext();
-        audioContextRef.current = audioContext;
-        // 네이티브 스트림이 없으므로 analyser는 빈 노드로 초기화
-        // (볼륨 시각화는 RN에서 별도 콜백으로 제공 가능)
-      } catch {
-        console.warn("[iOS] AudioContext 생성 실패 (시각화 비활성)");
-      }
-
-      _initRecordingState();
-      return;
-    }
-
-    // ── 웹 / Android: 기존 방식 ──────────────────────────────────────
     const stream = mediaStreamRef.current;
     if (!stream) return;
 
     try {
-      // AudioContext는 사용자 액션(startRecording 호출) 이후 생성 → iOS Safe ✅
       const audioContext = new AudioContext();
       const analyser = audioContext.createAnalyser();
       analyser.fftSize = 4096;
@@ -552,104 +477,153 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
       audioContextRef.current = audioContext;
       analyserRef.current = analyser;
 
-      const mimeType = MediaRecorder.isTypeSupported("audio/webm")
-        ? "audio/webm"
-        : "audio/mp4";
-      const mediaRecorder = new MediaRecorder(stream, { mimeType });
-      chunksRef.current = [];
+      // ── 네이티브 앱 환경 vs 웹 환경 분기 ──
+      if (isNativeApp()) {
+        // 네이티브 앱: MediaRecorder 대신 브릿지 메시지로 녹음 파일 수신
+        setupNativeBridge();
+      } else {
+        // 웹: MediaRecorder 사용
+        const mimeType = MediaRecorder.isTypeSupported("audio/webm")
+          ? "audio/webm"
+          : "audio/mp4";
+        const mediaRecorder = new MediaRecorder(stream, { mimeType });
+        chunksRef.current = [];
 
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data);
-      };
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: mimeType });
-        const url = URL.createObjectURL(blob);
-        setState((prev) => ({ ...prev, audioBlob: blob, audioUrl: url }));
-      };
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) chunksRef.current.push(e.data);
+        };
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(chunksRef.current, { type: mimeType });
+          const url = URL.createObjectURL(blob);
+          setState((prev) => ({ ...prev, audioBlob: blob, audioUrl: url }));
+        };
 
-      mediaRecorderRef.current = mediaRecorder;
-      mediaRecorder.start(1000);
+        mediaRecorderRef.current = mediaRecorder;
+        mediaRecorder.start(1000);
+      }
 
-      _initRecordingState();
+      // ── 상태 초기화 ──
+      isRecordingRef.current = true;
+      isPausedRef.current = false;
+      isActuallyPlayingRef.current = false;
+      cumulativePianoMsRef.current = 0;
+      lastPianoDetectedTimeRef.current = 0;
+      lastVoiceDetectedTimeRef.current = 0;
+      noiseFloorDecibelRef.current = 0;
+      calibrationSamplesRef.current = [];
+      isCalibrationCompleteRef.current = false;
+      isClassifyingRef.current = false;
 
+      // ── 타이머 시작 ──
+      const startTime = Date.now();
+      let accumulatedPracticeTime = 0;
+
+      totalTimeIntervalRef.current = setInterval(() => {
+        setState((prev) => ({
+          ...prev,
+          totalTime: Math.floor((Date.now() - startTime) / 1000),
+        }));
+      }, 1000);
+
+      practiceTimeIntervalRef.current = setInterval(() => {
+        if (isActuallyPlayingRef.current) {
+          accumulatedPracticeTime += 0.1;
+          setState((prev) => ({
+            ...prev,
+            practiceTime: Math.floor(accumulatedPracticeTime),
+          }));
+        }
+      }, 100);
+
+      setState((prev) => ({
+        ...prev,
+        isRecording: true,
+        isPaused: false,
+        error: null,
+        totalTime: 0,
+        practiceTime: 0,
+        currentDecibel: 0,
+        isPianoDetected: false,
+        audioBlob: null,
+        audioUrl: null,
+        noiseFloor: 0,
+        isCalibrating: true,
+        audioLabel: null,
+        classificationConfidence: 0,
+      }));
+
+      // ── 분석 루프 시작 (시각화 + 캘리브레이션) ──
       animationFrameRef.current = requestAnimationFrame(analyzeAudio);
+
+      // ── 3초마다 브라우저 분류 시작 ──
       startClassifyLoop(stream);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "녹음을 시작할 수 없습니다";
+      const msg =
+        err instanceof Error ? err.message : "녹음을 시작할 수 없습니다";
       setState((prev) => ({ ...prev, error: msg }));
     }
   }, [requestPermission, analyzeAudio, startClassifyLoop]);
 
-  /** 녹음 시작 시 공통 상태 초기화 */
-  const _initRecordingState = useCallback(() => {
-    isRecordingRef.current = true;
-    isPausedRef.current = false;
-    isActuallyPlayingRef.current = false;
-    cumulativePianoMsRef.current = 0;
-    lastPianoDetectedTimeRef.current = 0;
-    lastVoiceDetectedTimeRef.current = 0;
-    noiseFloorDecibelRef.current = 0;
-    calibrationSamplesRef.current = [];
-    isCalibrationCompleteRef.current = false;
-    isClassifyingRef.current = false;
+  // ─────────────────────────────────────────────
+  // 네이티브 브릿지 설정 (iOS WebView)
+  // ─────────────────────────────────────────────
+  const setupNativeBridge = useCallback(() => {
+    // 기존 리스너 정리
+    if (nativeBridgeListenerRef.current) {
+      window.removeEventListener("message", nativeBridgeListenerRef.current);
+    }
 
-    const startTime = Date.now();
-    let accumulatedPracticeTime = 0;
+    const listener = (event: MessageEvent) => {
+      try {
+        const data =
+          typeof event.data === "string" ? JSON.parse(event.data) : event.data;
 
-    if (totalTimeIntervalRef.current) clearInterval(totalTimeIntervalRef.current);
-    if (practiceTimeIntervalRef.current) clearInterval(practiceTimeIntervalRef.current);
-
-    totalTimeIntervalRef.current = setInterval(() => {
-      setState((prev) => ({
-        ...prev,
-        totalTime: Math.floor((Date.now() - startTime) / 1000),
-      }));
-    }, 1000);
-
-    practiceTimeIntervalRef.current = setInterval(() => {
-      if (isActuallyPlayingRef.current) {
-        accumulatedPracticeTime += 0.1;
-        setState((prev) => ({
-          ...prev,
-          practiceTime: Math.floor(accumulatedPracticeTime),
-        }));
+        if (data.type === "NATIVE_AUDIO_RECORDED") {
+          // 네이티브에서 녹음 완료된 파일을 Base64로 전달
+          const byteString = atob(data.base64);
+          const ab = new ArrayBuffer(byteString.length);
+          const ia = new Uint8Array(ab);
+          for (let i = 0; i < byteString.length; i++) {
+            ia[i] = byteString.charCodeAt(i);
+          }
+          const blob = new Blob([ab], { type: data.mimeType ?? "audio/m4a" });
+          const url = URL.createObjectURL(blob);
+          setState((prev) => ({ ...prev, audioBlob: blob, audioUrl: url }));
+        }
+      } catch {
+        // 무관한 메시지 무시
       }
-    }, 100);
+    };
 
-    setState((prev) => ({
-      ...prev,
-      isRecording: true,
-      isPaused: false,
-      error: null,
-      totalTime: 0,
-      practiceTime: 0,
-      currentDecibel: 0,
-      isPianoDetected: false,
-      audioBlob: null,
-      audioUrl: null,
-      noiseFloor: 0,
-      isCalibrating: true,
-      audioLabel: null,
-      classificationConfidence: 0,
-    }));
+    nativeBridgeListenerRef.current = listener;
+    window.addEventListener("message", listener);
+
+    // 네이티브에게 녹음 시작 요청
+    const rn = (window as unknown as Record<string, unknown>).ReactNativeWebView as {
+      postMessage: (msg: string) => void;
+    };
+    rn.postMessage(JSON.stringify({ type: "START_RECORDING" }));
   }, []);
 
   // ─────────────────────────────────────────────
   // 일시정지
   // ─────────────────────────────────────────────
   const pauseRecording = useCallback(() => {
-    if (isNativeApp()) {
-      window.ReactNativeWebView!.postMessage(JSON.stringify({ type: "PAUSE_RECORDING" }));
-    } else if (mediaRecorderRef.current?.state === "recording") {
+    if (!isRecordingRef.current || isPausedRef.current) return;
+
+    if (mediaRecorderRef.current) {
       mediaRecorderRef.current.pause();
     }
-
     isPausedRef.current = true;
 
-    if (totalTimeIntervalRef.current) clearInterval(totalTimeIntervalRef.current);
-    if (practiceTimeIntervalRef.current) clearInterval(practiceTimeIntervalRef.current);
-    if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-    if (classifyIntervalRef.current) clearInterval(classifyIntervalRef.current);
+    if (totalTimeIntervalRef.current)
+      clearInterval(totalTimeIntervalRef.current);
+    if (practiceTimeIntervalRef.current)
+      clearInterval(practiceTimeIntervalRef.current);
+    if (animationFrameRef.current)
+      cancelAnimationFrame(animationFrameRef.current);
+    if (classifyIntervalRef.current)
+      clearInterval(classifyIntervalRef.current);
     if (clipDbIntervalRef.current) clearInterval(clipDbIntervalRef.current);
     if (classifyRecorderRef.current?.state === "recording") {
       classifyRecorderRef.current.stop();
@@ -660,25 +634,36 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
       pausedPracticeTimeRef.current = prev.practiceTime;
       return { ...prev, isPaused: true };
     });
+
+    // 네이티브 앱이면 네이티브에 일시정지 요청
+    if (isNativeApp()) {
+      const rn = (window as unknown as Record<string, unknown>).ReactNativeWebView as {
+        postMessage: (msg: string) => void;
+      };
+      rn.postMessage(JSON.stringify({ type: "PAUSE_RECORDING" }));
+    }
   }, []);
 
   // ─────────────────────────────────────────────
   // 재개
   // ─────────────────────────────────────────────
   const resumeRecording = useCallback(() => {
-    if (isNativeApp()) {
-      window.ReactNativeWebView!.postMessage(JSON.stringify({ type: "RESUME_RECORDING" }));
-    } else if (mediaRecorderRef.current?.state === "paused") {
+    if (!isRecordingRef.current || !isPausedRef.current) return;
+
+    if (mediaRecorderRef.current) {
       mediaRecorderRef.current.resume();
     }
-
     isPausedRef.current = false;
+
+    // 하이스테리시스 초기화
     lastPianoDetectedTimeRef.current = 0;
     lastVoiceDetectedTimeRef.current = 0;
     cumulativePianoMsRef.current = 0;
 
-    if (totalTimeIntervalRef.current) clearInterval(totalTimeIntervalRef.current);
-    if (practiceTimeIntervalRef.current) clearInterval(practiceTimeIntervalRef.current);
+    if (totalTimeIntervalRef.current)
+      clearInterval(totalTimeIntervalRef.current);
+    if (practiceTimeIntervalRef.current)
+      clearInterval(practiceTimeIntervalRef.current);
 
     const resumeTime = Date.now();
     const previousTotal = pausedTotalTimeRef.current;
@@ -687,7 +672,8 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
     totalTimeIntervalRef.current = setInterval(() => {
       setState((p) => ({
         ...p,
-        totalTime: previousTotal + Math.floor((Date.now() - resumeTime) / 1000),
+        totalTime:
+          previousTotal + Math.floor((Date.now() - resumeTime) / 1000),
       }));
     }, 1000);
 
@@ -707,9 +693,14 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
 
     if (mediaStreamRef.current) {
       startClassifyLoop(mediaStreamRef.current);
-    } else if (isNativeApp()) {
-      // iOS: 스트림 없이 분류 루프만 재시작 (빈 스트림 전달)
-      startClassifyLoop(new MediaStream());
+    }
+
+    // 네이티브 앱이면 네이티브에 재개 요청
+    if (isNativeApp()) {
+      const rn = (window as unknown as Record<string, unknown>).ReactNativeWebView as {
+        postMessage: (msg: string) => void;
+      };
+      rn.postMessage(JSON.stringify({ type: "RESUME_RECORDING" }));
     }
   }, [analyzeAudio, startClassifyLoop]);
 
@@ -717,27 +708,45 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
   // 중지
   // ─────────────────────────────────────────────
   const stopRecording = useCallback(() => {
-    if (isNativeApp()) {
-      window.ReactNativeWebView!.postMessage(JSON.stringify({ type: "STOP_RECORDING" }));
-    } else if (mediaRecorderRef.current && isRecordingRef.current) {
+    if (!isRecordingRef.current) return;
+
+    if (mediaRecorderRef.current) {
       mediaRecorderRef.current.stop();
     }
-
     isRecordingRef.current = false;
     isPausedRef.current = false;
 
-    if (totalTimeIntervalRef.current) clearInterval(totalTimeIntervalRef.current);
-    if (practiceTimeIntervalRef.current) clearInterval(practiceTimeIntervalRef.current);
-    if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-    if (classifyIntervalRef.current) clearInterval(classifyIntervalRef.current);
+    if (totalTimeIntervalRef.current)
+      clearInterval(totalTimeIntervalRef.current);
+    if (practiceTimeIntervalRef.current)
+      clearInterval(practiceTimeIntervalRef.current);
+    if (animationFrameRef.current)
+      cancelAnimationFrame(animationFrameRef.current);
+    if (classifyIntervalRef.current)
+      clearInterval(classifyIntervalRef.current);
     if (clipDbIntervalRef.current) clearInterval(clipDbIntervalRef.current);
     if (classifyRecorderRef.current?.state === "recording") {
       classifyRecorderRef.current.stop();
     }
+
     if (audioContextRef.current?.state !== "closed") {
       audioContextRef.current?.close();
     }
     audioContextRef.current = null;
+
+    // 네이티브 브릿지 리스너 정리
+    if (nativeBridgeListenerRef.current) {
+      window.removeEventListener("message", nativeBridgeListenerRef.current);
+      nativeBridgeListenerRef.current = null;
+    }
+
+    // 네이티브 앱이면 네이티브에 녹음 중지 요청
+    if (isNativeApp()) {
+      const rn = (window as unknown as Record<string, unknown>).ReactNativeWebView as {
+        postMessage: (msg: string) => void;
+      };
+      rn.postMessage(JSON.stringify({ type: "STOP_RECORDING" }));
+    }
 
     setState((prev) => ({
       ...prev,
@@ -784,10 +793,14 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
       if (mediaStreamRef.current) {
         mediaStreamRef.current.getTracks().forEach((t) => t.stop());
       }
-      if (totalTimeIntervalRef.current) clearInterval(totalTimeIntervalRef.current);
-      if (practiceTimeIntervalRef.current) clearInterval(practiceTimeIntervalRef.current);
-      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-      if (classifyIntervalRef.current) clearInterval(classifyIntervalRef.current);
+      if (totalTimeIntervalRef.current)
+        clearInterval(totalTimeIntervalRef.current);
+      if (practiceTimeIntervalRef.current)
+        clearInterval(practiceTimeIntervalRef.current);
+      if (animationFrameRef.current)
+        cancelAnimationFrame(animationFrameRef.current);
+      if (classifyIntervalRef.current)
+        clearInterval(classifyIntervalRef.current);
       if (clipDbIntervalRef.current) clearInterval(clipDbIntervalRef.current);
       if (classifyRecorderRef.current?.state === "recording") {
         classifyRecorderRef.current.stop();
@@ -796,6 +809,9 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
         audioContextRef.current?.close();
       }
       audioContextRef.current = null;
+      if (nativeBridgeListenerRef.current) {
+        window.removeEventListener("message", nativeBridgeListenerRef.current);
+      }
     };
   }, []);
 
@@ -807,6 +823,5 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
     resumeRecording,
     stopRecording,
     reset,
-    isNativeApp: isNativeApp(),
   };
 }

@@ -116,11 +116,17 @@ async function callGPT(
   openai: OpenAI,
   prompt: string,
   maxTokens: number = 8192,
-  temperature: number = 0.3,
+  temperature: number = 0.1,
 ): Promise<string> {
   const completion = await openai.chat.completions.create({
     model: "gpt-4o",
-    messages: [{ role: "user", content: prompt }],
+    messages: [
+      {
+        role: "system",
+        content: "반드시 한국어로만 응답하세요. 일본어, 중국어는 절대 사용하지 마세요. 고유명사(인명, 지명, 작품명)는 원어 표기를 허용합니다. 확실하지 않은 정보는 빈 문자열(\"\")로 반환하고 절대 추측하여 작성하지 마세요. JSON 외에 다른 텍스트는 출력하지 마세요.",
+      },
+      { role: "user", content: prompt },
+    ],
     max_tokens: maxTokens,
     temperature,
     top_p: 0.2,
@@ -139,7 +145,13 @@ async function callPerplexity(
   try {
     const completion = await perplexity.chat.completions.create({
       model: "sonar-pro",
-      messages: [{ role: "user", content: prompt }],
+      messages: [
+        {
+          role: "system",
+          content: "반드시 한국어로만 응답하세요. 일본어, 중국어는 절대 사용하지 마세요. 고유명사(인명, 지명, 작품명)는 원어 표기를 허용합니다. 확실하지 않은 정보는 빈 문자열(\"\")로 반환하고 절대 추측하여 작성하지 마세요. JSON 외에 다른 텍스트는 출력하지 마세요.",
+        },
+        { role: "user", content: prompt },
+      ],
       max_tokens: maxTokens,
       temperature: 0.1,
     });
@@ -248,13 +260,14 @@ async function runPhase2(
   composer: string,
   title: string,
   opus: string,
+  verifiedMeta?: { composer: string; title: string; opus: string; key: string },
 ): Promise<{
   composer_life: ComposerLife;
   historical_background: HistoricalBackground;
   song_characteristics: SongCharacteristics;
 }> {
   console.log("[Phase 2] 인문학적 배경...");
-  const prompt = createPhase2Prompt(composer, title, opus);
+  const prompt = createPhase2Prompt(composer, title, opus, verifiedMeta);
   const text = await callAI(openai, prompt, 8192, "Phase 2");
   const parsed = await safeParseJSON(text, openai, "Phase 2");
 
@@ -289,10 +302,11 @@ async function runPhase3(
   opus: string,
   musicXml?: string,
   referenceData?: string | null,
+  verifiedMeta?: { composer: string; title: string; opus: string; key: string },
 ): Promise<{ structure_analysis_v2: StructureAnalysisV2 }> {
   console.log("[Phase 3] 구조/화성 분석...");
-  const prompt = createPhase3Prompt(composer, title, opus, musicXml, referenceData || undefined);
-  const text = await callAI(openai, prompt, 16384, "Phase 3");
+  const prompt = createPhase3Prompt(composer, title, opus, musicXml, referenceData || undefined, verifiedMeta);
+  const text = await callAI(openai, prompt, 8192, "Phase 3");
   const parsed = await safeParseJSON(text, openai, "Phase 3");
 
   const structure_analysis_v2: StructureAnalysisV2 = {
@@ -320,7 +334,7 @@ async function runPhase4(
 }> {
   console.log("[Phase 4] 연습법 + 4주 루틴 + 추천 연주...");
   const prompt = createPhase4Prompt(composer, title, opus, sectionNames);
-  const text = await callAI(openai, prompt, 16384, "Phase 4");
+  const text = await callAI(openai, prompt, 8192, "Phase 4");
   const parsed = await safeParseJSON(text, openai, "Phase 4");
 
   const practice_method: PracticeMethod = {
@@ -345,6 +359,49 @@ async function runPhase4(
   return { practice_method, recommended_performances_v2 };
 }
 
+/** Phase 1 meta와 Phase 2/3 결과의 교차검증 */
+function crossValidateMeta(
+  phase1Meta: SongAnalysis["meta"],
+  phase2Result: {
+    composer_life: ComposerLife;
+    historical_background: HistoricalBackground;
+    song_characteristics: SongCharacteristics;
+  },
+  phase3Result: { structure_analysis_v2: StructureAnalysisV2 },
+): void {
+  const fields: Array<{ name: string; phase1Value: string }> = [
+    { name: "composer", phase1Value: phase1Meta.composer },
+    { name: "title", phase1Value: phase1Meta.title },
+    { name: "opus", phase1Value: phase1Meta.opus },
+    { name: "key", phase1Value: phase1Meta.key },
+  ];
+
+  for (const { name, phase1Value } of fields) {
+    if (!phase1Value) continue;
+
+    // Phase 2 텍스트에서 불일치 검사
+    const phase2Texts = [
+      phase2Result.composer_life.summary,
+      phase2Result.composer_life.at_composition,
+      phase2Result.song_characteristics.composition_background,
+    ].join(" ");
+
+    // Phase 3 섹션에서 불일치 검사
+    const phase3Texts = phase3Result.structure_analysis_v2.sections
+      .map((s) => `${s.key_signature} ${s.tempo}`)
+      .join(" ");
+
+    const allTexts = `${phase2Texts} ${phase3Texts}`;
+
+    // opus/key 불일치 감지 (다른 작품번호나 조성이 언급된 경우)
+    if (name === "opus" && phase1Value && allTexts.includes("Op.") && !allTexts.includes(phase1Value)) {
+      console.warn(`[CrossValidate] ${name} 불일치 감지: Phase 1="${phase1Value}" — Phase 2/3 텍스트에서 다른 값 발견. Phase 1 값 우선 적용.`);
+    }
+  }
+
+  console.log(`[CrossValidate] Phase 1 meta 교차검증 완료: ${phase1Meta.composer} - ${phase1Meta.title} (${phase1Meta.opus}, ${phase1Meta.key})`);
+}
+
 /** 4-Phase 파이프라인 실행 (V2) */
 async function runV2Pipeline(
   openai: OpenAI,
@@ -358,11 +415,15 @@ async function runV2Pipeline(
   // Phase 1: 데이터 검증 + 곡 개요 (레퍼런스 데이터 주입)
   const { meta, song_overview } = await runPhase1(openai, composer, title, musicXml, referenceData);
 
-  // Phase 2 & 3: 병렬 실행 (Phase 3에 레퍼런스 데이터 주입)
+  // Phase 2 & 3: 병렬 실행 (Phase 1 meta를 검증 기준값으로 주입)
+  const verifiedMeta = { composer: meta.composer, title: meta.title, opus: meta.opus, key: meta.key };
   const [phase2Result, phase3Result] = await Promise.all([
-    runPhase2(openai, meta.composer, meta.title, meta.opus),
-    runPhase3(openai, meta.composer, meta.title, meta.opus, musicXml, referenceData),
+    runPhase2(openai, meta.composer, meta.title, meta.opus, verifiedMeta),
+    runPhase3(openai, meta.composer, meta.title, meta.opus, musicXml, referenceData, verifiedMeta),
   ]);
+
+  // Phase 1 meta와 Phase 2/3 결과 교차검증
+  crossValidateMeta(meta, phase2Result, phase3Result);
 
   // Phase 4: Phase 3 결과 기반
   const sectionNames = phase3Result.structure_analysis_v2.sections.map((s) => s.section);

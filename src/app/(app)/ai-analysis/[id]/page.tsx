@@ -1,6 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
+import { safeBack } from "@/lib/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Music, User, Clock, BookOpen, Hash, Lightbulb, FileText, ExternalLink, Target, ChevronRight, BarChart3, Play } from "lucide-react";
@@ -361,7 +362,7 @@ export default function AnalysisDetailPage() {
     return (
       <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-violet">
       <div className="bg-blob-extra" />
-        <button onClick={() => router.back()} className="flex items-center gap-2 text-muted-foreground mb-6">
+        <button onClick={() => safeBack(router)} className="flex items-center gap-2 text-muted-foreground mb-6">
           <ArrowLeft className="w-5 h-5" />
           <span>뒤로</span>
         </button>
@@ -378,7 +379,7 @@ export default function AnalysisDetailPage() {
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button
-          onClick={() => router.back()}
+          onClick={() => safeBack(router)}
           className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors"
         >
           <ArrowLeft className="w-5 h-5 text-muted-foreground" />

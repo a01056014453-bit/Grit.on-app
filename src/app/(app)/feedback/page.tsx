@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { safeBack } from "@/lib/navigation";
 import { MessageSquare, Clock, CheckCircle, Plus, ChevronRight, ChevronLeft } from "lucide-react";
 import { RequestStatusChip } from "@/components/feedback/request-status-chip";
 import { getFeedbackRequestsByStudent, getRemainingTime } from "@/lib/feedback-store";
@@ -32,7 +33,7 @@ export default function FeedbackListPage() {
       {/* Header */}
       <div className="mb-6 flex items-center gap-3">
         <button
-          onClick={() => router.back()}
+          onClick={() => safeBack(router)}
           className="w-9 h-9 rounded-full bg-white/30 backdrop-blur-sm flex items-center justify-center border border-white/40 hover:bg-white/50 transition-colors shrink-0"
         >
           <ChevronLeft className="w-5 h-5 text-gray-700" />

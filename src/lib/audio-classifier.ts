@@ -1,23 +1,17 @@
 /**
- * AudioClassifier - Sophisticated audio classification for practice time detection
+ * YAMNet TF.js 브라우저 기반 오디오 분류기
  *
- * Classifies audio into:
- * - PIANO_PLAYING: Piano sound detected
- * - VOICE: Human voice/speech detected
- * - METRONOME_ONLY: Only metronome clicks (no piano)
- * - SILENCE: No significant sound
- * - NOISE: Non-musical noise (tapping, ambient)
- *
- * Uses FFT features + heuristics to distinguish sounds:
- * - Spectral flatness
- * - Spectral centroid
- * - Harmonic ratio
- * - Zero crossing rate (approximated)
- * - Periodic click detection for metronome
+ * Python 서버(analyze_server.py) 없이 브라우저에서 직접 오디오를 분류합니다.
+ * 키워드 분류 로직은 analyze_server.py에서 이식.
  */
+import * as tf from "@tensorflow/tfjs";
+import { YAMNET_CLASSES } from "./yamnet-classes";
 
 import type { BeatTimestamp } from "./metronome-engine";
 
+// ─────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────
 export type AudioLabel =
   | "PIANO_PLAYING"
   | "VOICE"
@@ -28,455 +22,397 @@ export type AudioLabel =
 export interface ClassificationResult {
   label: AudioLabel;
   confidence: number;
-  features: AudioFeatures;
+  reason: string;
+  topClass: string;
 }
 
-export interface AudioFeatures {
-  spectralFlatness: number; // 0-1, higher = more noise-like
-  spectralCentroid: number; // Hz, center of mass of spectrum
-  harmonicRatio: number; // 0-1, higher = more harmonic/tonal
-  energy: number; // Total energy
-  lowMidRatio: number; // Energy ratio in voice range
-  highFreqRatio: number; // Energy ratio in high frequencies
-  veryHighRatio: number; // Energy ratio in very high frequencies
-  isPeriodic: boolean; // Detected periodic clicks
-}
+// ─────────────────────────────────────────────
+// 키워드 분류 (analyze_server.py에서 이식)
+// ─────────────────────────────────────────────
+const INSTRUMENT_KEYWORDS = [
+  "Music",
+  "Piano",
+  "Guitar",
+  "Violin",
+  "Cello",
+  "Flute",
+  "Drum",
+  "Keyboard",
+  "Organ",
+  "Harp",
+  "Accordion",
+  "Harmonica",
+  "Banjo",
+  "Mandolin",
+  "Ukulele",
+  "Bass",
+  "Synthesizer",
+  "Electric piano",
+  "Plucked string instrument",
+  "Bowed string instrument",
+  "Brass instrument",
+  "Wind instrument",
+  "Percussion",
+  "Orchestra",
+  "Classical music",
+  "Jazz",
+  "String section",
+  "Pizzicato",
+  "Strum",
+  "Harpsichord",
+  "Trumpet",
+  "Trombone",
+  "French horn",
+  "Saxophone",
+  "Clarinet",
+  "Timpani",
+] as const;
 
-// Frequency band boundaries (Hz)
-const BANDS = {
-  VERY_LOW: [20, 100],
-  LOW: [100, 500],
-  MID: [500, 2000],
-  HIGH: [2000, 4000],
-  VERY_HIGH: [4000, 8000],
-} as const;
+const SPEECH_KEYWORDS = [
+  "Speech",
+  "Conversation",
+  "Narration",
+  "Singing",
+  "Chant",
+  "Child speech",
+  "Babbling",
+  "Whispering",
+  "Shout",
+  "Yell",
+  "Laughter",
+  "Rapping",
+  "Humming",
+] as const;
 
-/**
- * Calculate energy in a frequency band
- */
-function getBandEnergy(
-  frequencyData: Uint8Array,
-  sampleRate: number,
-  lowFreq: number,
-  highFreq: number
-): number {
-  const nyquist = sampleRate / 2;
-  const binCount = frequencyData.length;
-  const binWidth = nyquist / binCount;
+const METRONOME_KEYWORDS = [
+  "Click",
+  "Clicking",
+  "Tick",
+  "Ticking",
+  "Wood block",
+  "Claves",
+  "Tick-tock",
+] as const;
 
-  const lowBin = Math.floor(lowFreq / binWidth);
-  const highBin = Math.min(Math.ceil(highFreq / binWidth), binCount - 1);
+const SILENCE_KEYWORDS = [
+  "Silence",
+  "White noise",
+  "Pink noise",
+  "Static",
+] as const;
 
-  let sum = 0;
-  let count = 0;
-  for (let i = lowBin; i <= highBin; i++) {
-    sum += frequencyData[i];
-    count++;
+// ─────────────────────────────────────────────
+// 모델 싱글톤
+// ─────────────────────────────────────────────
+const YAMNET_MODEL_URL =
+  "https://tfhub.dev/google/tfjs-model/yamnet/tfjs/1";
+
+let modelInstance: tf.GraphModel | null = null;
+let modelLoadPromise: Promise<tf.GraphModel> | null = null;
+
+export type ModelStatus = "idle" | "loading" | "ready" | "error";
+let currentModelStatus: ModelStatus = "idle";
+const statusListeners: Set<(status: ModelStatus) => void> = new Set();
+
+function setModelStatus(status: ModelStatus): void {
+  currentModelStatus = status;
+  for (const listener of statusListeners) {
+    listener(status);
   }
-  return count > 0 ? sum / count : 0;
 }
 
-/**
- * Calculate spectral flatness (Wiener entropy)
- * Higher values indicate noise-like, lower values indicate tonal
- */
-function calculateSpectralFlatness(frequencyData: Uint8Array): number {
-  // Use bins from 100Hz to 8000Hz
-  const startBin = 5;
-  const endBin = Math.min(frequencyData.length - 1, 200);
+/** 모델 로딩 상태 변경 콜백 등록 */
+export function onModelStatusChange(
+  listener: (status: ModelStatus) => void
+): () => void {
+  statusListeners.add(listener);
+  // 현재 상태 즉시 전달
+  listener(currentModelStatus);
+  return () => statusListeners.delete(listener);
+}
 
-  let geometricSum = 0;
-  let arithmeticSum = 0;
-  let count = 0;
+/** 현재 모델 로딩 상태 조회 */
+export function getModelStatus(): ModelStatus {
+  return currentModelStatus;
+}
 
-  for (let i = startBin; i <= endBin; i++) {
-    const value = Math.max(frequencyData[i], 1); // Avoid log(0)
-    geometricSum += Math.log(value);
-    arithmeticSum += value;
-    count++;
+async function getModel(): Promise<tf.GraphModel> {
+  if (modelInstance) return modelInstance;
+
+  if (!modelLoadPromise) {
+    setModelStatus("loading");
+    modelLoadPromise = tf
+      .loadGraphModel(YAMNET_MODEL_URL, { fromTFHub: true })
+      .then((model) => {
+        modelInstance = model;
+        setModelStatus("ready");
+        console.log("[YAMNet] TF.js 모델 로드 완료");
+        return model;
+      })
+      .catch((err) => {
+        modelLoadPromise = null;
+        setModelStatus("error");
+        throw err;
+      });
   }
 
-  if (count === 0 || arithmeticSum === 0) return 0;
-
-  const geometricMean = Math.exp(geometricSum / count);
-  const arithmeticMean = arithmeticSum / count;
-
-  return geometricMean / arithmeticMean;
+  return modelLoadPromise;
 }
 
-/**
- * Calculate spectral centroid (center of mass of spectrum)
- */
-function calculateSpectralCentroid(
-  frequencyData: Uint8Array,
-  sampleRate: number
-): number {
-  const nyquist = sampleRate / 2;
-  const binWidth = nyquist / frequencyData.length;
-
-  let weightedSum = 0;
-  let totalEnergy = 0;
-
-  for (let i = 0; i < frequencyData.length; i++) {
-    const freq = i * binWidth;
-    const magnitude = frequencyData[i];
-    weightedSum += freq * magnitude;
-    totalEnergy += magnitude;
-  }
-
-  return totalEnergy > 0 ? weightedSum / totalEnergy : 0;
+/** 모델 사전 로드 (선택사항, UI 시작 시 호출 가능) */
+export function preloadModel(): void {
+  getModel().catch((err) =>
+    console.warn("[YAMNet] 모델 사전 로드 실패:", err)
+  );
 }
 
-/**
- * Estimate harmonic ratio based on peak-to-average ratio in spectrum
- * Harmonic sounds have distinct peaks, noise is more flat
- */
-function estimateHarmonicRatio(frequencyData: Uint8Array): number {
-  const startBin = 5;
-  const endBin = Math.min(frequencyData.length - 1, 200);
-
-  let sum = 0;
-  let maxVal = 0;
-  let count = 0;
-
-  for (let i = startBin; i <= endBin; i++) {
-    sum += frequencyData[i];
-    maxVal = Math.max(maxVal, frequencyData[i]);
-    count++;
-  }
-
-  const avg = count > 0 ? sum / count : 0;
-  if (avg === 0) return 0;
-
-  // Peak to average ratio, normalized
-  const ratio = maxVal / avg;
-  // Normalize to 0-1 range (typical values 1-10)
-  return Math.min(1, (ratio - 1) / 9);
-}
-
-/**
- * Detect if audio has periodic impulses (metronome clicks)
- * by analyzing the time-domain autocorrelation characteristics
- */
-function detectPeriodicClicks(
-  frequencyData: Uint8Array,
-  recentBeatTimestamps: BeatTimestamp[],
-  currentTime: number,
-  toleranceMs: number = 30
+// ─────────────────────────────────────────────
+// 유틸리티
+// ─────────────────────────────────────────────
+function matchesKeywords(
+  className: string,
+  keywords: readonly string[]
 ): boolean {
-  // Check if current time is near a metronome beat
-  const isNearBeat = recentBeatTimestamps.some(
-    (bt) => Math.abs(bt.wallTime - currentTime) <= toleranceMs
-  );
-
-  if (!isNearBeat) return false;
-
-  // Check for impulse-like spectrum (wide frequency spread, short duration)
-  // Metronome clicks have a very flat, wide spectrum
-  const flatness = calculateSpectralFlatness(frequencyData);
-
-  // High spectral flatness during beat time suggests metronome click
-  return flatness > 0.3;
+  const lower = className.toLowerCase();
+  return keywords.some((kw) => lower.includes(kw.toLowerCase()));
 }
 
-/**
- * Mask metronome beat windows from analysis
- * Returns a copy of frequency data with beat windows zeroed
- */
-function maskBeatWindows(
-  frequencyData: Uint8Array,
-  recentBeatTimestamps: BeatTimestamp[],
-  currentTime: number,
-  maskWindowMs: number = 25
-): Uint8Array {
-  const isNearBeat = recentBeatTimestamps.some(
-    (bt) => Math.abs(bt.wallTime - currentTime) <= maskWindowMs
-  );
+function categorize(className: string, metronomeOn: boolean): AudioLabel {
+  const isMetronome = matchesKeywords(className, METRONOME_KEYWORDS);
+  if (isMetronome && metronomeOn) return "METRONOME_ONLY";
+  if (matchesKeywords(className, INSTRUMENT_KEYWORDS)) return "PIANO_PLAYING";
+  if (matchesKeywords(className, SPEECH_KEYWORDS)) return "VOICE";
+  if (matchesKeywords(className, SILENCE_KEYWORDS)) return "SILENCE";
+  return "NOISE";
+}
 
-  if (isNearBeat) {
-    // Return heavily attenuated data during beat windows
-    const masked = new Uint8Array(frequencyData.length);
-    for (let i = 0; i < frequencyData.length; i++) {
-      masked[i] = Math.floor(frequencyData[i] * 0.1); // 90% attenuation
+function resampleTo16kHz(
+  audioData: Float32Array,
+  sourceSampleRate: number
+): Float32Array {
+  if (sourceSampleRate === 16000) return audioData;
+
+  const ratio = sourceSampleRate / 16000;
+  const newLength = Math.round(audioData.length / ratio);
+  const resampled = new Float32Array(newLength);
+
+  for (let i = 0; i < newLength; i++) {
+    const srcIndex = i * ratio;
+    const low = Math.floor(srcIndex);
+    const high = Math.min(low + 1, audioData.length - 1);
+    const frac = srcIndex - low;
+    resampled[i] = audioData[low] * (1 - frac) + audioData[high] * frac;
+  }
+
+  return resampled;
+}
+
+// ─────────────────────────────────────────────
+// Blob → Float32Array (16kHz mono)
+// ─────────────────────────────────────────────
+async function decodeAudioBlob(
+  blob: Blob
+): Promise<Float32Array> {
+  const arrayBuffer = await blob.arrayBuffer();
+  // OfflineAudioContext으로 디코딩 후 리샘플링
+  const tempCtx = new OfflineAudioContext(1, 1, 44100);
+  const audioBuffer = await tempCtx.decodeAudioData(arrayBuffer);
+  const channelData = audioBuffer.getChannelData(0);
+  return resampleTo16kHz(channelData, audioBuffer.sampleRate);
+}
+
+// ─────────────────────────────────────────────
+// 메인 분류 함수 (3초 클립 Blob → 라벨)
+// ─────────────────────────────────────────────
+export async function classifyAudioClip(
+  audioBlob: Blob,
+  options: { metronomeOn?: boolean } = {}
+): Promise<ClassificationResult> {
+  const { metronomeOn = false } = options;
+
+  try {
+    const model = await getModel();
+    const samples = await decodeAudioBlob(audioBlob);
+
+    // RMS 기반 무음 감지
+    let sumSq = 0;
+    for (let i = 0; i < samples.length; i++) {
+      sumSq += samples[i] * samples[i];
     }
-    return masked;
-  }
+    const rms = Math.sqrt(sumSq / samples.length);
+    if (rms < 0.001) {
+      return {
+        label: "SILENCE",
+        confidence: 0.95,
+        reason: `near-silent (rms=${rms.toFixed(6)})`,
+        topClass: "Silence",
+      };
+    }
 
-  return frequencyData;
-}
+    // YAMNet 추론
+    const inputTensor = tf.tensor1d(samples);
+    const output = model.execute(inputTensor);
 
-/**
- * Main classification function
- */
-export function classifyAudio(
-  frequencyData: Uint8Array,
-  timeData: Uint8Array,
-  sampleRate: number,
-  options: {
-    recentBeatTimestamps?: BeatTimestamp[];
-    metronomeActive?: boolean;
-    noiseFloor?: number;
-  } = {}
-): ClassificationResult {
-  const {
-    recentBeatTimestamps = [],
-    metronomeActive = false,
-    noiseFloor = 35,
-  } = options;
-
-  const currentTime = Date.now();
-
-  // Apply beat masking if metronome is active
-  const processedFreqData = metronomeActive
-    ? maskBeatWindows(frequencyData, recentBeatTimestamps, currentTime)
-    : frequencyData;
-
-  // Calculate features
-  const veryLowEnergy = getBandEnergy(processedFreqData, sampleRate, ...BANDS.VERY_LOW);
-  const lowEnergy = getBandEnergy(processedFreqData, sampleRate, ...BANDS.LOW);
-  const midEnergy = getBandEnergy(processedFreqData, sampleRate, ...BANDS.MID);
-  const highEnergy = getBandEnergy(processedFreqData, sampleRate, ...BANDS.HIGH);
-  const veryHighEnergy = getBandEnergy(processedFreqData, sampleRate, ...BANDS.VERY_HIGH);
-
-  const totalEnergy = veryLowEnergy + lowEnergy + midEnergy + highEnergy + veryHighEnergy;
-  const spectralFlatness = calculateSpectralFlatness(processedFreqData);
-  const spectralCentroid = calculateSpectralCentroid(processedFreqData, sampleRate);
-  const harmonicRatio = estimateHarmonicRatio(processedFreqData);
-
-  const lowMidRatio = totalEnergy > 0 ? (lowEnergy + midEnergy) / totalEnergy : 0;
-  const highFreqRatio = totalEnergy > 0 ? (highEnergy + veryHighEnergy) / totalEnergy : 0;
-  const veryHighRatio = totalEnergy > 0 ? veryHighEnergy / totalEnergy : 0;
-
-  // Detect periodic clicks (metronome)
-  const isPeriodic = metronomeActive
-    ? detectPeriodicClicks(frequencyData, recentBeatTimestamps, currentTime)
-    : false;
-
-  const features: AudioFeatures = {
-    spectralFlatness,
-    spectralCentroid,
-    harmonicRatio,
-    energy: totalEnergy,
-    lowMidRatio,
-    highFreqRatio,
-    veryHighRatio,
-    isPeriodic,
-  };
-
-  // Classification logic
-
-  // 1. Check for silence (lowered threshold — speech through phone mic can be quiet)
-  if (totalEnergy < 25) {
-    return {
-      label: "SILENCE",
-      confidence: 0.95,
-      features,
-    };
-  }
-
-  // 2. Check for metronome-only (high flatness, near beat time, low sustained energy)
-  if (metronomeActive && isPeriodic && totalEnergy < 100) {
-    return {
-      label: "METRONOME_ONLY",
-      confidence: 0.85,
-      features,
-    };
-  }
-
-  // 3. Check for piano FIRST (before voice)
-  // Piano through phone mic may lack high frequencies but has:
-  // - High harmonic ratio (clean tonal sound with overtones)
-  // - Higher total energy than voice
-  // - Even energy spread across bands
-  // - Lower spectral flatness (more tonal)
-
-  // Primary piano path: clear harmonic content with decent energy
-  const hasPianoCharacteristics =
-    harmonicRatio > 0.3 &&
-    totalEnergy > 60 &&
-    spectralFlatness < 0.7;
-
-  // Strong piano path: high harmonic ratio indicates tonal instrument
-  const isStrongPiano =
-    harmonicRatio > 0.4 &&
-    totalEnergy > 80 &&
-    spectralFlatness < 0.6;
-
-  // High-frequency piano path (original - good speakers/mics)
-  const hasHighFreqPiano =
-    highFreqRatio > 0.2 &&
-    veryHighRatio > 0.05 &&
-    harmonicRatio > 0.25;
-
-  // Check for even energy spread (piano has wide distribution)
-  const energyValues = [veryLowEnergy, lowEnergy, midEnergy, highEnergy, veryHighEnergy];
-  const maxEnergy = Math.max(...energyValues);
-  const minEnergy = Math.min(...energyValues.filter((e) => e > 10));
-  const spreadRatio = minEnergy > 0 ? minEnergy / maxEnergy : 0;
-  const hasEvenSpread = spreadRatio > 0.15 && totalEnergy > 50;
-
-  if (isStrongPiano || hasHighFreqPiano || (hasPianoCharacteristics && hasEvenSpread)) {
-    const pianoConfidence = Math.min(
-      0.95,
-      0.5 + harmonicRatio * 0.4 + highFreqRatio * 0.3 + (1 - spectralFlatness) * 0.2
-    );
-    return {
-      label: "PIANO_PLAYING",
-      confidence: pianoConfidence,
-      features,
-    };
-  }
-
-  // 4. Check for voice
-  // Voice characteristics:
-  // - Energy concentrated in 100-2000Hz
-  // - Weak high frequencies
-  // - Lower harmonic ratio than piano (formants, not pure harmonics)
-  // - Spectral centroid typically 200-2500Hz
-  // Primary voice path: strict conditions
-  const isVoiceLikePrimary =
-    lowMidRatio > 0.6 &&
-    highFreqRatio < 0.3 &&
-    spectralCentroid < 2500 &&
-    spectralCentroid > 150 &&
-    harmonicRatio > 0.15 &&
-    harmonicRatio < 0.45; // Exclude piano (piano has higher harmonic ratio)
-
-  // Secondary voice path: quieter speech (totalEnergy 25-120)
-  const isVoiceLikeQuiet =
-    totalEnergy < 120 &&
-    totalEnergy >= 25 &&
-    lowMidRatio > 0.55 &&
-    highFreqRatio < 0.35 &&
-    spectralCentroid > 100 &&
-    spectralCentroid < 3000 &&
-    spectralFlatness < 0.85 &&
-    harmonicRatio < 0.40; // Exclude piano
-
-  if (isVoiceLikePrimary || isVoiceLikeQuiet) {
-    const voiceConfidence = isVoiceLikePrimary
-      ? Math.min(0.9, 0.5 + lowMidRatio * 0.3 + (0.3 - highFreqRatio))
-      : Math.min(0.8, 0.4 + lowMidRatio * 0.3);
-    return {
-      label: "VOICE",
-      confidence: voiceConfidence,
-      features,
-    };
-  }
-
-  // 5. Fallback piano check — anything with decent harmonic content
-  if (hasPianoCharacteristics) {
-    const pianoConfidence = Math.min(
-      0.85,
-      0.4 + harmonicRatio * 0.4 + (1 - spectralFlatness) * 0.2
-    );
-    return {
-      label: "PIANO_PLAYING",
-      confidence: pianoConfidence,
-      features,
-    };
-  }
-
-  // 6. Low energy but not silence — likely quiet voice or ambient
-  if (totalEnergy < 60) {
-    return {
-      label: "SILENCE",
-      confidence: 0.7,
-      features,
-    };
-  }
-
-  // 7. Default to noise if nothing else matches
-  return {
-    label: "NOISE",
-    confidence: 0.6,
-    features,
-  };
-}
-
-/**
- * PracticeTimeTracker - Tracks cumulative practice time with hysteresis
- */
-export class PracticeTimeTracker {
-  private cumulativePianoMs = 0;
-  private lastPianoTime = 0;
-  private lastVoiceTime = 0;
-  private isCurrentlyCounting = false;
-  private practiceTimeSeconds = 0;
-
-  // Thresholds
-  private readonly pianoOnThresholdMs = 1500; // 1.5s of piano to start counting
-  private readonly pianoOffThresholdMs = 1000; // 1s gap allowed
-  private readonly voiceStopThresholdMs = 2000; // 2s of voice stops counting
-  private readonly minConfidence = 0.70;
-
-  /**
-   * Update tracker with new classification result
-   * @returns Current practice time in seconds
-   */
-  update(result: ClassificationResult, deltaMs: number = 100): number {
-    const now = Date.now();
-
-    if (result.label === "PIANO_PLAYING" && result.confidence >= this.minConfidence) {
-      this.cumulativePianoMs += deltaMs;
-      this.lastPianoTime = now;
-
-      // Start counting after threshold
-      if (!this.isCurrentlyCounting && this.cumulativePianoMs >= this.pianoOnThresholdMs) {
-        this.isCurrentlyCounting = true;
-      }
-
-      // Increment practice time if counting
-      if (this.isCurrentlyCounting) {
-        this.practiceTimeSeconds += deltaMs / 1000;
-      }
-    } else if (result.label === "VOICE" && result.confidence >= this.minConfidence) {
-      this.lastVoiceTime = now;
-
-      // Stop counting if voice persists
-      if (now - this.lastPianoTime > this.voiceStopThresholdMs) {
-        this.isCurrentlyCounting = false;
-        this.cumulativePianoMs = 0;
-      }
+    let scoresTensor: tf.Tensor;
+    if (Array.isArray(output)) {
+      scoresTensor = output[0];
+      for (let i = 1; i < output.length; i++) output[i].dispose();
     } else {
-      // Silence, noise, or metronome only
-      // Allow short gaps without stopping
-      if (this.isCurrentlyCounting) {
-        if (now - this.lastPianoTime > this.pianoOffThresholdMs) {
-          this.isCurrentlyCounting = false;
-          this.cumulativePianoMs = 0;
+      scoresTensor = output;
+    }
+
+    const scores = (await scoresTensor.array()) as number[][];
+    scoresTensor.dispose();
+    inputTensor.dispose();
+
+    // 프레임별 투표
+    const votes: Record<AudioLabel, number> = {
+      PIANO_PLAYING: 0,
+      VOICE: 0,
+      METRONOME_ONLY: 0,
+      SILENCE: 0,
+      NOISE: 0,
+    };
+    let bestConfidence = 0;
+    let bestClassName = "";
+
+    for (const frameScores of scores) {
+      let maxIdx = 0;
+      let maxScore = frameScores[0];
+      for (let j = 1; j < frameScores.length; j++) {
+        if (frameScores[j] > maxScore) {
+          maxScore = frameScores[j];
+          maxIdx = j;
         }
       }
+
+      const className = YAMNET_CLASSES[maxIdx] ?? "Unknown";
+      votes[categorize(className, metronomeOn)] += 1;
+
+      if (maxScore > bestConfidence) {
+        bestConfidence = maxScore;
+        bestClassName = className;
+      }
     }
 
-    return Math.floor(this.practiceTimeSeconds);
-  }
+    // 투표 결과 → 최종 라벨
+    const totalFrames = scores.length;
+    let winnerLabel: AudioLabel = "SILENCE";
+    let winnerVotes = 0;
+    for (const [label, count] of Object.entries(votes)) {
+      if (count > winnerVotes) {
+        winnerVotes = count;
+        winnerLabel = label as AudioLabel;
+      }
+    }
 
-  /**
-   * Check if currently counting practice time
-   */
-  isCounting(): boolean {
-    return this.isCurrentlyCounting;
-  }
+    const confidence = totalFrames > 0 ? winnerVotes / totalFrames : 0;
 
-  /**
-   * Get current practice time in seconds
-   */
-  getPracticeTime(): number {
-    return Math.floor(this.practiceTimeSeconds);
-  }
-
-  /**
-   * Reset tracker
-   */
-  reset(): void {
-    this.cumulativePianoMs = 0;
-    this.lastPianoTime = 0;
-    this.lastVoiceTime = 0;
-    this.isCurrentlyCounting = false;
-    this.practiceTimeSeconds = 0;
+    return {
+      label: winnerLabel,
+      confidence,
+      reason: `${bestClassName} (${(bestConfidence * 100).toFixed(0)}%)`,
+      topClass: bestClassName,
+    };
+  } catch (err) {
+    console.error("[YAMNet] 분류 실패:", err);
+    return {
+      label: "SILENCE",
+      confidence: 0.5,
+      reason: `error: ${err instanceof Error ? err.message : String(err)}`,
+      topClass: "Unknown",
+    };
   }
 }
 
-// Singleton tracker instance
-export const practiceTimeTracker = new PracticeTimeTracker();
+// ─────────────────────────────────────────────
+// 세션 분석 (실시간 라벨 축적 → 사후 요약)
+// ─────────────────────────────────────────────
+export interface SessionAnalysisResult {
+  totalDuration: number;
+  netPracticeTime: number;
+  restTime: number;
+  summary: {
+    instrumentPercent: number;
+    voicePercent: number;
+    silencePercent: number;
+    noisePercent: number;
+    metronomePercent: number;
+  };
+}
+
+export function aggregateSessionFromLabels(
+  labels: Array<{ label: AudioLabel; durationMs: number }>
+): SessionAnalysisResult {
+  const totals: Record<string, number> = {
+    instrument: 0,
+    voice: 0,
+    silence: 0,
+    noise: 0,
+    metronome: 0,
+  };
+
+  let totalMs = 0;
+  for (const entry of labels) {
+    totalMs += entry.durationMs;
+    switch (entry.label) {
+      case "PIANO_PLAYING":
+        totals.instrument += entry.durationMs;
+        break;
+      case "VOICE":
+        totals.voice += entry.durationMs;
+        break;
+      case "SILENCE":
+        totals.silence += entry.durationMs;
+        break;
+      case "METRONOME_ONLY":
+        totals.metronome += entry.durationMs;
+        break;
+      default:
+        totals.noise += entry.durationMs;
+        break;
+    }
+  }
+
+  const totalSec = totalMs / 1000;
+  const practiceMs = totals.instrument;
+
+  return {
+    totalDuration: totalSec,
+    netPracticeTime: practiceMs / 1000,
+    restTime: (totalMs - practiceMs) / 1000,
+    summary: {
+      instrumentPercent:
+        totalMs > 0
+          ? Math.round((totals.instrument / totalMs) * 1000) / 10
+          : 0,
+      voicePercent:
+        totalMs > 0 ? Math.round((totals.voice / totalMs) * 1000) / 10 : 0,
+      silencePercent:
+        totalMs > 0
+          ? Math.round((totals.silence / totalMs) * 1000) / 10
+          : 0,
+      noisePercent:
+        totalMs > 0 ? Math.round((totals.noise / totalMs) * 1000) / 10 : 0,
+      metronomePercent:
+        totalMs > 0
+          ? Math.round((totals.metronome / totalMs) * 1000) / 10
+          : 0,
+    },
+  };
+}
+
+// ─────────────────────────────────────────────
+// 하위호환: 기존 FFT 기반 분류 인터페이스 유지
+// (metronome-engine 등에서 import할 수 있으므로)
+// ─────────────────────────────────────────────
+export interface AudioFeatures {
+  spectralFlatness: number;
+  spectralCentroid: number;
+  harmonicRatio: number;
+  energy: number;
+  lowMidRatio: number;
+  highFreqRatio: number;
+  veryHighRatio: number;
+  isPeriodic: boolean;
+}

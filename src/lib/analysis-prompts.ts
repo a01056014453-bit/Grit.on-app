@@ -159,12 +159,26 @@ JSON만 출력하십시오.`;
 
 // ── Phase 2: 인문학적 배경 (생애, 시대, 곡 특징) ──
 
-export function createPhase2Prompt(composer: string, title: string, opus: string): string {
+export function createPhase2Prompt(
+  composer: string,
+  title: string,
+  opus: string,
+  verifiedMeta?: { composer: string; title: string; opus: string; key: string },
+): string {
+  const metaVerification = verifiedMeta
+    ? `\n\n[🔒 Phase 1 검증 기준값 — 아래 정보를 정답으로 간주하고, 이와 다른 정보를 생성하지 마십시오]
+- 작곡가: ${verifiedMeta.composer}
+- 곡 제목: ${verifiedMeta.title}
+- 작품번호: ${verifiedMeta.opus}
+- 조성: ${verifiedMeta.key}`
+    : '';
+
   return `당신은 세계적인 음악학자(Musicologist)이자 음악사 전문가입니다.
 
 작곡가: ${composer}
 곡 제목: ${title}
 작품번호: ${opus}
+${metaVerification}
 
 ${KOREAN_OUTPUT_RULE}
 
@@ -213,23 +227,23 @@ JSON만 출력:
   "composer_life": {
     "summary": "한국어 8-10문장 — 작곡가 생애 전체 요약",
     "timeline": [
-      { "period": "시기명 + 연도 (예: 본 시절·유년기 (1770-1792))", "description": "한국어 3-5문장 — 해당 시기 상세 설명" },
-      { "period": "이 곡의 시기 + 연도 (예: Op.2 시기 (1795-1796) – 이 소나타의 정확한 위치)", "description": "한국어 3-5문장 — 이 곡이 작곡된 맥락" },
-      { "period": "이후 시기 + 연도", "description": "한국어 3-5문장" }
+      { "period": "시기명 + 연도 (예: 본 시절·유년기 (1770-1792))", "description": "한국어 5-7문장 — 해당 시기 상세 설명" },
+      { "period": "이 곡의 시기 + 연도 (예: Op.2 시기 (1795-1796) – 이 소나타의 정확한 위치)", "description": "한국어 5-7문장 — 이 곡이 작곡된 맥락" },
+      { "period": "이후 시기 + 연도", "description": "한국어 5-7문장" }
     ],
     "at_composition": "한국어 5-8문장 — 작곡 당시 구체적 상황"
   },
   "historical_background": {
     "era_characteristics": "한국어 5-8문장 — 음악사적 위치 + 이 작곡가의 역할",
-    "contemporary_composers": "한국어 3-5문장 — 동시대 작곡가와의 관계/영향",
-    "musical_movement": "한국어 3-5문장 — 이 곡이 보여주는 형식적 실험/혁신"
+    "contemporary_composers": "한국어 5-7문장 — 동시대 작곡가와의 관계/영향",
+    "musical_movement": "한국어 5-7문장 — 이 곡이 보여주는 형식적 실험/혁신"
   },
   "song_characteristics": {
     "composition_background": "한국어 5-8문장 — 4-1. 작곡 배경 및 예술적 맥락",
     "form_and_structure": "한국어 15-25문장 — 4-2. 각 구성 단위별 음악 형식·구조 상세 서술 (소나타→악장별, 소품집→각 소품별, 변주곡→각 변주별)",
     "technique": "한국어 10-15문장 — 4-3. 각 구성 단위별 기교적 특징 (손가락 번호 절대 금지! 터치/동작/호흡 중심)",
     "literary_dramatic": "한국어 10-15문장 — 4-4. 각 구성 단위별 문학적·극적 특징",
-    "conclusion": "한국어 3-5문장 — 이 곡의 음악사적 의의와 현대적 가치"
+    "conclusion": "한국어 5-7문장 — 이 곡의 음악사적 의의와 현대적 가치"
   }
 }
 
@@ -238,7 +252,14 @@ JSON만 출력하십시오.`;
 
 // ── Phase 3: 구조/화성 분석 ──
 
-export function createPhase3Prompt(composer: string, title: string, opus: string, musicXml?: string, referenceData?: string): string {
+export function createPhase3Prompt(
+  composer: string,
+  title: string,
+  opus: string,
+  musicXml?: string,
+  referenceData?: string,
+  verifiedMeta?: { composer: string; title: string; opus: string; key: string },
+): string {
   const xmlSection = musicXml
     ? `\n\n[MusicXML 데이터]\n아래 MusicXML에서 정확한 마디 번호, 조성, 박자, 음형을 직접 읽어 사용하십시오.\n\`\`\`xml\n${musicXml.substring(0, 60000)}\n\`\`\``
     : '';
@@ -247,11 +268,20 @@ export function createPhase3Prompt(composer: string, title: string, opus: string
     ? `\n\n[🔍 웹 검색 레퍼런스 데이터 — 이 데이터가 1차 출처입니다. 반드시 사용하십시오.]\n${referenceData}\n\n🚨 절대 규칙:\n1. 레퍼런스에 명시된 조성(key), 박자(time signature), 템포(tempo marking), 마디 수를 **그대로** 사용하십시오.\n2. 레퍼런스에 "Key: D major, Time signature: 2/2"라고 되어 있으면, key_signature는 "D major", time_signature는 "2/2"여야 합니다.\n3. 레퍼런스에 "typically 6/8" 또는 "approx. 87 measures" 등이 있으면, 그 값을 그대로 사용하십시오 (6/8, mm. 1-87).\n4. "문헌 확인 필요"는 레퍼런스에 해당 정보가 전혀 없을 때만 사용하십시오.\n5. 레퍼런스와 상충하는 정보를 절대 생성하지 마십시오.`
     : '\n\n🚨 확실하지 않은 조성, 박자, 마디 번호는 추측하지 말고 "문헌 확인 필요"로 표기하십시오.';
 
+  const metaVerification = verifiedMeta
+    ? `\n\n[🔒 Phase 1 검증 기준값 — 아래 정보를 정답으로 간주하고, 이와 다른 정보를 생성하지 마십시오]
+- 작곡가: ${verifiedMeta.composer}
+- 곡 제목: ${verifiedMeta.title}
+- 작품번호: ${verifiedMeta.opus}
+- 조성: ${verifiedMeta.key}`
+    : '';
+
   return `당신은 세계적인 음악 이론가(Music Theorist)이자 화성학 전문가입니다.
 
 작곡가: ${composer}
 곡 제목: ${title}
 작품번호: ${opus}
+${metaVerification}
 ${xmlSection}
 ${refSection}
 

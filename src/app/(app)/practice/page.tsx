@@ -202,6 +202,7 @@ function PracticePageContent() {
     audioLabel,
     classificationConfidence,
     frequencyBands,
+    modelStatus,
     requestPermission,
     startRecording,
     pauseRecording,
@@ -508,68 +509,52 @@ function PracticePageContent() {
 
     let analysisData: AnalysisResult;
 
-    try {
-      // YAMNet 서버로 분석 요청 (audioBlob이 있을 때)
-      if (audioBlob && audioBlob.size > 0) {
-        const formData = new FormData();
-        formData.append("audio", audioBlob, "recording.webm");
-        formData.append("totalDuration", actualTotalTime.toString());
-        formData.append("metronome", metronomeIsPlaying.toString());
+    // 실시간 분류 데이터로 즉시 분석 (서버 왕복 불필요)
+    const classificationData = {
+      instrument: Math.round(ref.instrument),
+      voice: Math.round(ref.voice),
+      silence: Math.round(ref.silence),
+      noise: Math.round(ref.noise),
+    };
+    const totalClassified =
+      classificationData.instrument +
+      classificationData.voice +
+      classificationData.silence +
+      classificationData.noise;
+    const effectiveTotalTime =
+      actualTotalTime > 0 ? actualTotalTime : totalClassified;
 
-        const response = await fetch("/api/analyze-practice", {
-          method: "POST",
-          body: formData,
-        });
+    console.log("[Analysis] 분류 데이터:", classificationData, "총:", effectiveTotalTime);
 
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success && result.data) {
-            analysisData = result.data;
-            console.log("YAMNet 분석 완료:", analysisData.summary);
-          } else {
-            throw new Error("분석 실패");
-          }
-        } else {
-          throw new Error("API 요청 실패");
-        }
-      } else {
-        // audioBlob이 없으면 실시간 분류 데이터 사용
-        throw new Error("No audio blob");
-      }
-    } catch (error) {
-      console.warn("API 분석 실패, 실시간 데이터 사용:", error);
+    const instrumentPercent =
+      effectiveTotalTime > 0
+        ? Math.round((classificationData.instrument / effectiveTotalTime) * 100)
+        : 0;
+    const voicePercent =
+      effectiveTotalTime > 0
+        ? Math.round((classificationData.voice / effectiveTotalTime) * 100)
+        : 0;
+    const silencePercent =
+      effectiveTotalTime > 0
+        ? Math.round((classificationData.silence / effectiveTotalTime) * 100)
+        : 0;
+    const noisePercent =
+      effectiveTotalTime > 0
+        ? Math.round((classificationData.noise / effectiveTotalTime) * 100)
+        : 0;
 
-      // 실시간 분류 데이터로 폴백
-      const classificationData = {
-        instrument: Math.round(ref.instrument),
-        voice: Math.round(ref.voice),
-        silence: Math.round(ref.silence),
-        noise: Math.round(ref.noise),
-      };
-      const totalClassified = classificationData.instrument + classificationData.voice + classificationData.silence + classificationData.noise;
-      const fallbackTotalTime = actualTotalTime > 0 ? actualTotalTime : totalClassified;
-
-      const instrumentPercent = fallbackTotalTime > 0 ? Math.round((classificationData.instrument / fallbackTotalTime) * 100) : 0;
-      const voicePercent = fallbackTotalTime > 0 ? Math.round((classificationData.voice / fallbackTotalTime) * 100) : 0;
-      const silencePercent = fallbackTotalTime > 0 ? Math.round((classificationData.silence / fallbackTotalTime) * 100) : 0;
-      const noisePercent = fallbackTotalTime > 0 ? Math.round((classificationData.noise / fallbackTotalTime) * 100) : 0;
-
-      const netPracticeTime = classificationData.instrument;
-      const restTime = fallbackTotalTime - netPracticeTime;
-
-      analysisData = {
-        totalDuration: fallbackTotalTime,
-        netPracticeTime,
-        restTime,
-        segments: [],
-        summary: {
-          instrumentPercent,
-          voicePercent,
-          silencePercent,
-          noisePercent,
-        },
-      };
-    }
+    analysisData = {
+      totalDuration: effectiveTotalTime,
+      netPracticeTime: classificationData.instrument,
+      restTime: effectiveTotalTime - classificationData.instrument,
+      segments: [],
+      summary: {
+        instrumentPercent,
+        voicePercent,
+        silencePercent,
+        noisePercent,
+      },
+    };
 
     setAnalysisResult(analysisData);
     setCompletedSession(prev => prev ? {
@@ -1218,6 +1203,20 @@ function PracticePageContent() {
           >
             ✕
           </button>
+        </div>
+      )}
+
+      {/* AI 모델 로딩 상태 */}
+      {modelStatus === "loading" && (
+        <div className="bg-violet-50 border border-violet-200 rounded-lg px-3 py-2 mb-4 flex items-center gap-2 text-xs text-violet-700">
+          <div className="w-3 h-3 border-2 border-violet-400 border-t-transparent rounded-full animate-spin" />
+          AI 분류 모델 준비 중...
+        </div>
+      )}
+      {modelStatus === "error" && (
+        <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4 flex items-center gap-2 text-xs text-red-700">
+          <div className="w-2 h-2 bg-red-500 rounded-full" />
+          AI 모델 로드 실패 — 연습 시간 자동 측정이 제한됩니다
         </div>
       )}
 

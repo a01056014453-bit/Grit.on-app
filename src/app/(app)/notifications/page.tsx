@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { safeBack } from "@/lib/navigation";
 import {
   Bell,
   ChevronLeft,
@@ -179,7 +180,7 @@ export default function NotificationsPage() {
       <div className="flex items-center justify-between mb-6 pt-2">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => router.back()}
+            onClick={() => safeBack(router)}
             className="w-9 h-9 rounded-full bg-white/30 backdrop-blur-sm flex items-center justify-center border border-white/40"
           >
             <ChevronLeft className="w-5 h-5 text-gray-700" />

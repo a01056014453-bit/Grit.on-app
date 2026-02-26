@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { safeBack } from "@/lib/navigation";
 import Link from "next/link";
 import {
   Users,
@@ -138,7 +139,7 @@ export default function RoomsPage() {
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button
-          onClick={() => router.back()}
+          onClick={() => safeBack(router)}
           className="w-10 h-10 rounded-full bg-white/30 backdrop-blur-sm border border-white/40 flex items-center justify-center hover:bg-white/50 transition-colors"
         >
           <ArrowLeft className="w-5 h-5 text-gray-600" />

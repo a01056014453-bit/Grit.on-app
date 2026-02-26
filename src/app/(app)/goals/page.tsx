@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { safeBack } from "@/lib/navigation";
 import { ArrowLeft, Play, Pause, ChevronLeft, ChevronRight, Check, X, Clock, Music, Volume2 } from "lucide-react";
 import { StatsCard } from "@/components/app";
 import { getAllSessions, getPracticeStats, savePracticeSession, type PracticeSession } from "@/lib/db";
@@ -587,7 +588,7 @@ export default function GoalsPage() {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <button
-            onClick={() => router.back()}
+            onClick={() => safeBack(router)}
             className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center"
           >
             <ArrowLeft className="w-5 h-5 text-gray-600" />

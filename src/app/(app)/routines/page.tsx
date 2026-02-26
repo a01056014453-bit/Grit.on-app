@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { safeBack } from "@/lib/navigation";
 import { ChevronLeft, Plus, X, Repeat, Trash2, Check } from "lucide-react";
 import { mockDrillCards, groupDrillsBySong, mockSongs as initialSongs, composerList } from "@/data";
 
@@ -183,7 +184,7 @@ export default function RoutinesPage() {
       {/* Header */}
       <div className="flex items-start gap-3 mb-6">
         <button
-          onClick={() => router.back()}
+          onClick={() => safeBack(router)}
           className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center shrink-0 hover:bg-gray-200 transition-colors"
         >
           <ChevronLeft className="w-5 h-5 text-gray-600" />

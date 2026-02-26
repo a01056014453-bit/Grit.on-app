@@ -262,9 +262,12 @@ export default function RankingPage() {
   const [rankers, setRankers] = useState<RankingUser[]>([]);
   const [myRanking, setMyRanking] = useState<RankingUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  // Supabase에서 랭킹 데이터 조회 (빈 결과 시 mock fallback)
+  // API를 통해 랭킹 데이터 조회 (빈 결과 시 mock fallback)
   const loadRankings = async () => {
+    setLoadError(null);
+    setIsLoading(true);
     try {
       const [rankings, my] = await Promise.all([
         fetchTodayRankings(),
@@ -280,6 +283,7 @@ export default function RankingPage() {
       setElapsedSeconds(0);
     } catch (err) {
       console.error("Failed to load rankings:", err);
+      setLoadError("랭킹 데이터를 불러오지 못했습니다.");
       setRankers(mockRankingUsers);
       setMyRanking(currentUserRanking);
     } finally {
@@ -336,6 +340,22 @@ export default function RankingPage() {
           <Trophy className="w-5 h-5 text-white" />
         </div>
       </div>
+
+      {/* Error Banner */}
+      {loadError && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4 flex items-center gap-3">
+          <div className="flex-1">
+            <p className="text-sm font-medium text-red-800">{loadError}</p>
+            <p className="text-xs text-red-600 mt-0.5">임시 데이터를 표시합니다</p>
+          </div>
+          <button
+            onClick={loadRankings}
+            className="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold rounded-lg transition-colors"
+          >
+            다시 시도
+          </button>
+        </div>
+      )}
 
       {/* Loading / Empty State */}
       {isLoading ? (

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Play, Pause, Minus, Plus, Timer, Volume2, VolumeX } from "lucide-react";
+import { safeBack } from "@/lib/navigation";
 
 const TEMPO_PRESETS = [
   { label: "Largo", bpm: 50 },
@@ -33,15 +34,14 @@ export default function MetronomePage() {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const nextBeatTimeRef = useRef<number>(0);
 
-  // ✅ FIX: AudioContext를 useEffect에서 자동 생성하지 않음
-  // iOS는 사용자 터치 없이 AudioContext를 만들면 소리가 안 남
-  // → startMetronome() 버튼 클릭 시점에 생성
-
-  const getOrCreateAudioContext = useCallback(() => {
-    if (!audioContextRef.current) {
-      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-    }
-    return audioContextRef.current;
+  // AudioContext는 사용자 터치 시점에 생성 (iOS WebView 호환)
+  // useEffect에서 자동 생성하면 iOS에서 소리가 나지 않음
+  useEffect(() => {
+    return () => {
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+      }
+    };
   }, []);
 
   const playClick = useCallback((isAccent: boolean) => {
@@ -54,9 +54,11 @@ export default function MetronomePage() {
     oscillator.connect(gainNode);
     gainNode.connect(ctx.destination);
 
+    // Accent beat (first beat) is higher pitched
     oscillator.frequency.value = isAccent ? 1000 : 800;
     oscillator.type = "sine";
 
+    // Short click sound
     const now = ctx.currentTime;
     gainNode.gain.setValueAtTime(isAccent ? 0.5 : 0.3, now);
     gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
@@ -66,12 +68,14 @@ export default function MetronomePage() {
   }, [isMuted]);
 
   const startMetronome = useCallback(() => {
-    // ✅ FIX: 버튼 클릭 시점에 AudioContext 생성 (iOS Safe)
-    const ctx = getOrCreateAudioContext();
+    // 사용자 터치 시점에 AudioContext 생성 (iOS WebView 호환)
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
 
-    // suspended 상태면 resume (브라우저 자동재생 정책 대응)
-    if (ctx.state === "suspended") {
-      ctx.resume();
+    // Resume audio context if suspended
+    if (audioContextRef.current.state === "suspended") {
+      audioContextRef.current.resume();
     }
 
     setIsPlaying(true);
@@ -80,6 +84,7 @@ export default function MetronomePage() {
 
     const intervalMs = (60 / bpm) * 1000;
 
+    // Play first beat immediately
     playClick(true);
 
     intervalRef.current = setInterval(() => {
@@ -87,7 +92,7 @@ export default function MetronomePage() {
       setCurrentBeat(beat + 1);
       playClick(beat === 0);
     }, intervalMs);
-  }, [bpm, timeSignature, playClick, getOrCreateAudioContext]);
+  }, [bpm, timeSignature, playClick]);
 
   const stopMetronome = useCallback(() => {
     setIsPlaying(false);
@@ -98,7 +103,7 @@ export default function MetronomePage() {
     }
   }, []);
 
-  // BPM / 박자 변경 시 재시작
+  // Restart metronome when BPM or time signature changes while playing
   useEffect(() => {
     if (isPlaying) {
       stopMetronome();
@@ -106,13 +111,11 @@ export default function MetronomePage() {
     }
   }, [bpm, timeSignature]);
 
-  // 언마운트 클린업
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      // AudioContext는 사용자가 명시적으로 닫을 때만 닫음
-      if (audioContextRef.current?.state !== "closed") {
-        audioContextRef.current?.close();
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
       }
     };
   }, []);
@@ -131,22 +134,13 @@ export default function MetronomePage() {
     return "Presto";
   };
 
-  // ✅ FIX: WebView에서 히스토리가 없을 때 빈 화면 방지
-  const handleBack = () => {
-    if (window.history.length > 1) {
-      router.back();
-    } else {
-      router.push("/");
-    }
-  };
-
   return (
     <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
       <div className="bg-blob-extra" />
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button
-          onClick={handleBack}  // ✅ router.back() → handleBack()
+          onClick={() => safeBack(router)}
           className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors"
         >
           <ArrowLeft className="w-5 h-5 text-muted-foreground" />
@@ -197,7 +191,6 @@ export default function MetronomePage() {
           >
             <Minus className="w-6 h-6" />
           </button>
-          {/* ✅ 재생 버튼 클릭 시 AudioContext 생성됨 */}
           <button
             onClick={() => (isPlaying ? stopMetronome() : startMetronome())}
             className={`w-20 h-20 rounded-full flex items-center justify-center transition-all shadow-lg active:scale-95 ${

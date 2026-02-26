@@ -1,6 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
+import { safeBack } from "@/lib/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -37,7 +38,7 @@ export default function FeedbackDetailPage() {
       <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
       <div className="bg-blob-extra" />
         <button
-          onClick={() => router.back()}
+          onClick={() => safeBack(router)}
           className="flex items-center gap-2 text-muted-foreground mb-6"
         >
           <ArrowLeft className="w-5 h-5" />
@@ -80,7 +81,7 @@ export default function FeedbackDetailPage() {
       <div className="bg-blob-extra" />
       {/* Header */}
       <button
-        onClick={() => router.back()}
+        onClick={() => safeBack(router)}
         className="flex items-center gap-2 text-muted-foreground mb-6"
       >
         <ArrowLeft className="w-5 h-5" />

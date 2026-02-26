@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { safeBack } from "@/lib/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -157,7 +158,7 @@ export default function HelpRequestDetailPage() {
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button
-          onClick={() => router.back()}
+          onClick={() => safeBack(router)}
           className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors"
         >
           <ArrowLeft className="w-5 h-5 text-muted-foreground" />

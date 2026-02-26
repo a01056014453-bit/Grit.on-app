@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { Play, Search, Users, GraduationCap, Check, Bell, BookOpen } from "lucide-react";
 import { BentoGrid, BentoCard } from "@/components/ui/bento-grid";
 import { StatsCard, DailyGoal } from "@/components/app";
-import { mockUser, mockStats, getGreeting } from "@/data";
-import { getTodayPracticeTime, getPracticeStats, seedMockSessions } from "@/lib/db";
+import { mockUser, getGreeting } from "@/data";
+import { seedMockSessions } from "@/lib/db";
 import { syncPracticeSessions } from "@/lib/sync-practice";
 import { usePracticeSessions } from "@/hooks/usePracticeSessions";
 import { useTeacherMode } from "@/hooks/useTeacherMode";
@@ -87,51 +87,48 @@ export default function HomePage() {
   // 공유 훅으로 세션 데이터 로드 (연습 페이지와 동일 데이터 소스)
   const { sessions: allSessions, isLoading: sessionsLoading } = usePracticeSessions();
 
-  const [todayMinutes, setTodayMinutes] = useState(0);
   const [dailyGoal, setDailyGoal] = useState(60);
-  const [totalHours, setTotalHours] = useState(0);
-  const [weekSessions, setWeekSessions] = useState(0);
-  const [streakDays, setStreakDays] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
   const [notifCount, setNotifCount] = useState(0);
 
   useEffect(() => {
     setNotifCount(getUnreadCount());
   }, []);
 
-  // 세션 데이터에서 통계 계산
+  // localStorage에서 목표 시간 로드
   useEffect(() => {
-    if (sessionsLoading) return;
+    const savedGoal = localStorage.getItem('grit-on-daily-goal');
+    if (savedGoal) setDailyGoal(parseInt(savedGoal, 10));
+  }, []);
 
-    async function loadStats() {
-      try {
-        const todayData = await getTodayPracticeTime();
-        setTodayMinutes(Math.round(todayData.practiceTime / 60));
+  // allSessions에서 직접 통계 계산 (단일 데이터 소스 → 실시간 반영)
+  const todayMinutes = useMemo(() => {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todaySessions = allSessions.filter((s) => {
+      const d = new Date(s.startTime);
+      d.setHours(0, 0, 0, 0);
+      return d.getTime() === todayStart.getTime();
+    });
+    const totalPracticeSec = todaySessions.reduce((sum, s) => sum + s.practiceTime, 0);
+    return Math.round(totalPracticeSec / 60);
+  }, [allSessions]);
 
-        const stats = await getPracticeStats();
-        setTotalHours(Math.round(stats.totalPracticeTime / 3600));
+  const totalHours = useMemo(() => {
+    const totalSec = allSessions.reduce((sum, s) => sum + s.practiceTime, 0);
+    return Math.round(totalSec / 3600);
+  }, [allSessions]);
 
-        const now = new Date();
-        const weekStart = new Date(now);
-        weekStart.setDate(now.getDate() - now.getDay());
-        weekStart.setHours(0, 0, 0, 0);
-        setWeekSessions(allSessions.filter(s => new Date(s.startTime) >= weekStart).length);
-        setStreakDays(calculateStreak(allSessions));
+  const weekSessions = useMemo(() => {
+    const now = new Date();
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - now.getDay());
+    weekStart.setHours(0, 0, 0, 0);
+    return allSessions.filter((s) => new Date(s.startTime) >= weekStart).length;
+  }, [allSessions]);
 
-        const savedGoal = localStorage.getItem('grit-on-daily-goal');
-        if (savedGoal) setDailyGoal(parseInt(savedGoal, 10));
-      } catch (error) {
-        console.error('Failed to load practice data:', error);
-        setTodayMinutes(mockStats.todayMinutes);
-        setTotalHours(mockStats.totalHours);
-        setWeekSessions(mockStats.weekSessions);
-        setStreakDays(mockStats.streakDays);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    loadStats();
-  }, [allSessions, sessionsLoading]);
+  const streakDays = useMemo(() => calculateStreak(allSessions), [allSessions]);
+
+  const isLoading = sessionsLoading;
 
   // 연속 일수 계산 함수
   function calculateStreak(sessions: { startTime: Date }[]): number {

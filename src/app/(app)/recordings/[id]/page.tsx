@@ -1,6 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
+import { safeBack } from "@/lib/navigation";
 import { ArrowLeft, Music, Clock, Play, Pause, Trash2, Calendar, Timer } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { formatTime } from "@/lib/format";
@@ -147,7 +148,7 @@ export default function RecordingDetailPage() {
       <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-violet">
       <div className="bg-blob-extra" />
         <button
-          onClick={() => router.back()}
+          onClick={() => safeBack(router)}
           className="flex items-center gap-2 text-gray-600 mb-6"
         >
           <ArrowLeft className="w-5 h-5" />
@@ -166,7 +167,7 @@ export default function RecordingDetailPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <button
-          onClick={() => router.back()}
+          onClick={() => safeBack(router)}
           className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
         >
           <ArrowLeft className="w-5 h-5 text-gray-600" />

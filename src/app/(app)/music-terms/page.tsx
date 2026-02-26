@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { safeBack } from "@/lib/navigation";
 import { ArrowLeft, Search, BookOpen, Music, Volume2, Gauge, Hand, Mic, Users, Zap, PenTool } from "lucide-react";
 
 interface MusicTerm {
@@ -1272,7 +1273,7 @@ export default function MusicTermsPage() {
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button
-          onClick={() => router.back()}
+          onClick={() => safeBack(router)}
           className="w-10 h-10 rounded-full bg-white/40 backdrop-blur-sm flex items-center justify-center hover:bg-white/60 transition-colors border border-white/50"
         >
           <ArrowLeft className="w-5 h-5 text-muted-foreground" />

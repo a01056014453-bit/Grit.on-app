@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
+import { safeBack } from "@/lib/navigation";
 import {
   ArrowLeft,
   Music,
@@ -32,7 +33,7 @@ export default function StudentDetailPage() {
     return (
       <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-orange">
       <div className="bg-blob-orange-extra" />
-        <button onClick={() => router.back()} className="mb-6">
+        <button onClick={() => safeBack(router)} className="mb-6">
           <ArrowLeft className="w-6 h-6 text-slate-700" />
         </button>
         <div className="text-center py-16">
@@ -58,7 +59,7 @@ export default function StudentDetailPage() {
       <div className="bg-blob-orange-extra" />
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => router.back()}>
+        <button onClick={() => safeBack(router)}>
           <ArrowLeft className="w-6 h-6 text-slate-700" />
         </button>
         <h1 className="text-lg font-bold text-slate-900">학생 상세</h1>
