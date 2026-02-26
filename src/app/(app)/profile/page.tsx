@@ -38,6 +38,7 @@ import { updateTeacherProfile } from "@/lib/teacher-store";
 import { TeacherVerificationStatus } from "@/types";
 import BlurText from "@/components/reactbits/BlurText";
 import GradientText from "@/components/reactbits/GradientText";
+import { getUserAnalyses } from "@/lib/user-analyses";
 
 /* ─── Animation variants ─── */
 const listContainer: Variants = {
@@ -166,8 +167,6 @@ interface AnalysisItem {
   id: string;
   composer: string;
   title: string;
-  difficulty: string;
-  updatedAt: string;
 }
 
 interface Badge {
@@ -231,12 +230,9 @@ export default function ProfilePage() {
   useEffect(() => {
     async function loadData() {
       try {
-        // 분석 목록 가져오기
-        const analysesRes = await fetch("/api/analyses");
-        const analysesData = await analysesRes.json();
-        if (analysesData.success) {
-          setAnalyses(analysesData.data);
-        }
+        // 사용자가 실제 분석한 곡 목록 (localStorage)
+        const userAnalyses = getUserAnalyses();
+        setAnalyses(userAnalyses.map(a => ({ id: a.id, composer: a.composer, title: a.title })));
 
         // 연습 통계 가져오기
         const stats = await getPracticeStats();
@@ -262,7 +258,7 @@ export default function ProfilePage() {
         setMaxStreak(max);
 
         // 배지 계산
-        const earnedBadges = calculateBadges(allSessions, stats, analysesData.data?.length || 0);
+        const earnedBadges = calculateBadges(allSessions, stats, userAnalyses.length);
         setBadges(earnedBadges);
       } catch (error) {
         console.error("Failed to load profile data:", error);
@@ -643,13 +639,13 @@ export default function ProfilePage() {
           }}
           className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-white/30 transition-colors border-b border-white/30"
         >
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 text-left">
             {teacherMode ? (
               <ToggleRight className="w-5 h-5 text-violet-600" />
             ) : (
               <ToggleLeft className="w-5 h-5 text-gray-400" />
             )}
-            <div>
+            <div className="text-left">
               <span className="text-sm text-gray-700">선생님 모드</span>
               {!isTeacher && (
                 <p className="text-[11px] text-gray-400 mt-0.5">켜면 학생에게 피드백을 제공할 수 있어요</p>

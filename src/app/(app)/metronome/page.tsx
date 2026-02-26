@@ -29,6 +29,7 @@ export default function MetronomePage() {
   const [currentBeat, setCurrentBeat] = useState(0);
   const [timeSignature, setTimeSignature] = useState(4);
   const [isMuted, setIsMuted] = useState(false);
+  const [volume, setVolume] = useState(0.7);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -58,14 +59,15 @@ export default function MetronomePage() {
     oscillator.frequency.value = isAccent ? 1000 : 800;
     oscillator.type = "sine";
 
-    // Short click sound
+    // Short click sound - volume 적용
     const now = ctx.currentTime;
-    gainNode.gain.setValueAtTime(isAccent ? 0.5 : 0.3, now);
+    const baseGain = isAccent ? 0.5 : 0.3;
+    gainNode.gain.setValueAtTime(baseGain * volume, now);
     gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
 
     oscillator.start(now);
     oscillator.stop(now + 0.05);
-  }, [isMuted]);
+  }, [isMuted, volume]);
 
   const startMetronome = useCallback(() => {
     // 사용자 터치 시점에 AudioContext 생성 (iOS WebView 호환)
@@ -225,6 +227,26 @@ export default function MetronomePage() {
         <div className="flex justify-between text-xs text-muted-foreground mt-1">
           <span>20</span>
           <span>300</span>
+        </div>
+      </div>
+
+      {/* Volume Control */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-foreground">볼륨</h3>
+          <span className="text-xs text-muted-foreground">{Math.round(volume * 100)}%</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <VolumeX className="w-4 h-4 text-gray-400 shrink-0" />
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={Math.round(volume * 100)}
+            onChange={(e) => setVolume(Number(e.target.value) / 100)}
+            className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-green-500"
+          />
+          <Volume2 className="w-4 h-4 text-gray-400 shrink-0" />
         </div>
       </div>
 

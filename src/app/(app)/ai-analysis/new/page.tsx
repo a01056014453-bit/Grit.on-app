@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { safeBack } from "@/lib/navigation";
 import { ArrowLeft, Brain, Loader2, Music, User } from "lucide-react";
 import { getComposers, type Composer } from "@/lib/queries/composers";
+import { addUserAnalysis } from "@/lib/user-analyses";
 
 interface SearchItem {
   composer: string;
@@ -215,6 +216,8 @@ export default function NewAnalysisPage() {
     await new Promise((resolve) => setTimeout(resolve, 500));
 
     if (analysisId) {
+      // 사용자 분석 기록에 추가
+      addUserAnalysis({ id: analysisId, composer, title });
       // 분석 데이터가 있으면 해당 페이지로 이동
       router.push(`/ai-analysis/${analysisId}`);
     } else {
