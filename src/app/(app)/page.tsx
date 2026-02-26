@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Play, Search, Users, GraduationCap, Check, Bell, BookOpen } from "lucide-react";
 import { BentoGrid, BentoCard } from "@/components/ui/bento-grid";
 import { StatsCard, DailyGoal } from "@/components/app";
@@ -15,7 +16,16 @@ import { getUnreadCount } from "@/lib/notification-store";
 import { TeacherDashboard } from "@/components/teacher";
 
 export default function HomePage() {
+  const router = useRouter();
   const { isTeacher, teacherMode, teacherProfileId, toggleMode } = useTeacherMode();
+
+  // 온보딩 미완료 시 리다이렉트
+  useEffect(() => {
+    const done = localStorage.getItem("grit-on-onboarding-complete");
+    if (!done) {
+      router.replace("/onboarding");
+    }
+  }, [router]);
 
   const [profileLoading, setProfileLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<{ name: string } | null>(null);
