@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { safeBack } from "@/lib/navigation";
 import { motion, AnimatePresence, Variants } from "framer-motion";
 import { getUserSongs } from "@/lib/queries/songs";
-import { getComposerList } from "@/lib/queries/composers";
+import { ComposerAutocomplete, TitleAutocomplete } from "@/components/ui/composer-autocomplete";
 import { getUserId } from "@/lib/user-id";
 import type { Song } from "@/types";
 import type { SongAnalysis } from "@/types/song-analysis";
@@ -220,17 +220,6 @@ export default function AnalysisPage() {
       ]
     : [];
 
-  const [composerList, setComposerList] = useState<{ key: string; label: string }[]>([]);
-  useEffect(() => {
-    getComposerList().then(setComposerList);
-  }, []);
-  const filteredComposers = newSong.composer.length >= 2
-    ? composerList.filter((c) =>
-        c.label.toLowerCase().includes(newSong.composer.toLowerCase()) ||
-        c.key.includes(newSong.composer.toLowerCase())
-      )
-    : [];
-
   const titleText = "AI 곡 분석하기";
 
   return (
@@ -338,50 +327,19 @@ export default function AnalysisPage() {
               </div>
 
               <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-700 mb-1.5 block">
-                    작곡가
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="2글자 이상 입력"
-                    value={newSong.composer}
-                    onChange={(e) => setNewSong({ ...newSong, composer: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300/40 placeholder:text-gray-400 transition-all"
-                    autoFocus
-                  />
-                  {filteredComposers.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {filteredComposers.map((c) => (
-                        <button
-                          key={c.key}
-                          onClick={() => setNewSong({ ...newSong, composer: c.label })}
-                          className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
-                            newSong.composer === c.label
-                              ? "bg-violet-600 text-white border-violet-600"
-                              : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100"
-                          }`}
-                        >
-                          {c.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-gray-700 mb-1.5 block">
-                    곡 제목
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="예) Ballade Op.23 No.1"
-                    value={newSong.title}
-                    onChange={(e) => setNewSong({ ...newSong, title: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300/40 placeholder:text-gray-400 transition-all"
-                  />
-                </div>
-
+                <ComposerAutocomplete
+                  value={newSong.composer}
+                  onChange={(v) => setNewSong({ ...newSong, composer: v, title: "" })}
+                  label="작곡가"
+                  placeholder="2글자 이상 입력"
+                />
+                <TitleAutocomplete
+                  composer={newSong.composer}
+                  value={newSong.title}
+                  onChange={(v) => setNewSong({ ...newSong, title: v })}
+                  label="곡 제목"
+                  placeholder="예) Ballade Op.23 No.1"
+                />
               </div>
 
               <motion.button
