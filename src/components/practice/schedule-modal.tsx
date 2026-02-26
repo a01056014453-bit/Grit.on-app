@@ -5,6 +5,7 @@ import { X, Plus } from "lucide-react";
 import { getUserSongs, getDrillCards } from "@/lib/queries";
 import { getAllAvailableDrills } from "@/lib/drill-records";
 import { getUserId } from "@/lib/user-id";
+import { ComposerAutocomplete, TitleAutocomplete } from "@/components/ui/composer-autocomplete";
 import type { Song } from "@/types";
 
 interface NewDrillForm {
@@ -61,33 +62,6 @@ export function ScheduleModal({
     allDrills.forEach((d) => songs.add(d.song));
     return Array.from(songs);
   }, [dbDrills]);
-
-  // 작곡가 자동완성 (기존 곡 데이터에서 추출)
-  const filteredComposers = useMemo(() => {
-    if (form.composer.length < 2) return [];
-    const composerSet = new Map<string, string>();
-    userSongs.forEach((s) => {
-      const parts = s.title.split(" ");
-      if (parts.length >= 2) {
-        const composer = parts.slice(0, 2).join(" ");
-        composerSet.set(composer.toLowerCase(), composer);
-      }
-    });
-    return Array.from(composerSet.entries())
-      .filter(([key]) => key.includes(form.composer.toLowerCase()))
-      .map(([key, label]) => ({ key, label }));
-  }, [form.composer, userSongs]);
-
-  // 곡 자동완성
-  const filteredSongSuggestions = form.songTitle.length >= 2
-    ? userSongs.filter((s) => {
-        const matchesTitle = s.title.toLowerCase().includes(form.songTitle.toLowerCase());
-        const matchesComposer = form.composer
-          ? s.title.toLowerCase().includes(form.composer.toLowerCase())
-          : true;
-        return matchesTitle && matchesComposer;
-      })
-    : [];
 
   // 새 연습 추가
   const handleAddDrill = () => {
@@ -188,56 +162,18 @@ export function ScheduleModal({
                     취소
                   </button>
                 </div>
-                <input
-                  type="text"
+                <ComposerAutocomplete
                   value={form.composer}
-                  onChange={(e) => setForm({ ...form, composer: e.target.value })}
+                  onChange={(v) => setForm({ ...form, composer: v })}
                   placeholder="작곡가 (2글자 이상)"
-                  className="w-full px-3 py-2 bg-white rounded-lg text-sm border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black"
                   autoFocus
                 />
-                {filteredComposers.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {filteredComposers.slice(0, 4).map((c) => (
-                      <button
-                        key={c.key}
-                        onClick={() => setForm({ ...form, composer: c.label })}
-                        className={`text-xs px-2 py-1 rounded-full transition-colors ${
-                          form.composer === c.label
-                            ? "bg-black text-white"
-                            : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-100"
-                        }`}
-                      >
-                        {c.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                <input
-                  type="text"
+                <TitleAutocomplete
                   value={form.songTitle}
-                  onChange={(e) => setForm({ ...form, songTitle: e.target.value })}
+                  onChange={(v) => setForm({ ...form, songTitle: v })}
+                  composer={form.composer}
                   placeholder="곡 이름 (2글자 이상)"
-                  className="w-full px-3 py-2 bg-white rounded-lg text-sm border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black"
                 />
-                {filteredSongSuggestions.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {filteredSongSuggestions.slice(0, 3).map((s) => {
-                      const parts = s.title.split(" ");
-                      const songOnly = parts.slice(2).join(" ") || s.title;
-                      const composerOnly = parts.slice(0, 2).join(" ");
-                      return (
-                        <button
-                          key={s.id}
-                          onClick={() => setForm({ ...form, composer: composerOnly, songTitle: songOnly })}
-                          className="text-xs px-2 py-1 rounded-full bg-white border border-gray-200 text-gray-600 hover:bg-gray-100 truncate max-w-[150px]"
-                        >
-                          {s.title}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
               </div>
             )}
           </div>
