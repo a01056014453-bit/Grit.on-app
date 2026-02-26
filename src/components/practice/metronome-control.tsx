@@ -382,10 +382,8 @@ export function MetronomeControl({
       );
 
       // Calculate next note time based on pattern
-      // 복합박자: 점4분음표 = 4분음표 × 1.5
-      const secondsPerBeat = timeSigRef.current.compound
-        ? (60.0 / bpmRef.current) * 1.5
-        : 60.0 / bpmRef.current;
+      // BPM = 박 속도 (단순박: ♩, 복합박: ♩.) → 간격은 동일하게 60/bpm
+      const secondsPerBeat = 60.0 / bpmRef.current;
       const currentRatio = pattern[currentSubIndexRef.current];
       const noteLength = secondsPerBeat * currentRatio;
       nextNoteTimeRef.current += noteLength;

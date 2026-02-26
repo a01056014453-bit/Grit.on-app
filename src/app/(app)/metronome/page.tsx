@@ -207,8 +207,8 @@ export default function MetronomePage() {
     (beatIndex: number) => {
       if (!audioContextRef.current || isMuted) return;
       const ctx = audioContextRef.current;
-      // 복합박자: 점4분음표 = 4분음표 × 1.5
-      const beatDur = isCompound ? (60 / bpm) * 1.5 : 60 / bpm;
+      // BPM = 박 속도 (♩ 또는 ♩.) → 간격 동일: 60/bpm
+      const beatDur = 60 / bpm;
 
       pattern.subdivisions.forEach((sub) => {
         const noteTime = ctx.currentTime + sub.offset * beatDur;
@@ -222,7 +222,7 @@ export default function MetronomePage() {
         }
       });
     },
-    [bpm, isMuted, volume, pattern, isCompound, createClick]
+    [bpm, isMuted, volume, pattern, createClick]
   );
 
   const playBeatRef = useRef(playBeat);
@@ -243,14 +243,14 @@ export default function MetronomePage() {
     setCurrentBeat(1);
     playBeatRef.current(0);
 
-    // 복합박자: 점4분음표 간격 = (60/bpm) * 1.5
-    const ms = isCompound ? (60 / bpm) * 1.5 * 1000 : (60 / bpm) * 1000;
+    // BPM = 박 속도 → 간격: 60/bpm
+    const ms = (60 / bpm) * 1000;
     intervalRef.current = setInterval(() => {
       beat = (beat + 1) % timeSig.beats;
       setCurrentBeat(beat + 1);
       playBeatRef.current(beat);
     }, ms);
-  }, [bpm, timeSig.beats, isCompound]);
+  }, [bpm, timeSig.beats]);
 
   const stopMetronome = useCallback(() => {
     setIsPlaying(false);
