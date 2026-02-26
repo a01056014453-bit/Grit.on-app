@@ -9,6 +9,35 @@ const SplashScreen = dynamic(() => import("@/components/SplashScreen"), {
 });
 
 const SPLASH_SHOWN_KEY = "sempre-splash-shown";
+const DATA_VERSION_KEY = "sempre-data-version";
+const CURRENT_DATA_VERSION = "2"; // 목업 데이터 제거 마이그레이션
+
+function runDataMigration() {
+  if (typeof window === "undefined") return;
+
+  const version = localStorage.getItem(DATA_VERSION_KEY);
+  if (version === CURRENT_DATA_VERSION) return;
+
+  // 목업 알림 데이터 제거
+  localStorage.removeItem("sempre-notifications");
+
+  // 목업 연습 세션 제거 (IndexedDB)
+  indexedDB.deleteDatabase("griton_db");
+
+  // 서비스 워커 캐시 정리 (오래된 JS 번들 제거)
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.getRegistrations().then((regs) =>
+      regs.forEach((reg) => reg.unregister())
+    );
+  }
+  if ("caches" in window) {
+    caches.keys().then((keys) =>
+      keys.forEach((key) => caches.delete(key))
+    );
+  }
+
+  localStorage.setItem(DATA_VERSION_KEY, CURRENT_DATA_VERSION);
+}
 
 export default function SplashWrapper({
   children,
@@ -19,6 +48,9 @@ export default function SplashWrapper({
   const [splashDone, setSplashDone] = useState(false);
 
   useEffect(() => {
+    // 데이터 마이그레이션 (1회 실행)
+    runDataMigration();
+
     // 세션당 1회만 스플래시 표시
     const alreadyShown = sessionStorage.getItem(SPLASH_SHOWN_KEY);
     if (!alreadyShown) {
