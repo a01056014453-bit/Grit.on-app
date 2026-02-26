@@ -139,7 +139,7 @@ export default function ProfileSetupPage() {
       </div>
 
       {/* Step Content */}
-      <div className="flex-1 px-6">
+      <div className="px-6">
         <AnimatePresence mode="wait">
           <motion.div
             key={step}
@@ -320,7 +320,7 @@ export default function ProfileSetupPage() {
       </div>
 
       {/* Bottom button */}
-      <div className="px-6 pb-12 pt-4">
+      <div className="px-6 pb-8 pt-6">
         <button
           onClick={() => {
             if (step < totalSteps - 1) {
