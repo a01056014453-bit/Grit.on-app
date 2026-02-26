@@ -75,6 +75,30 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body className={`${montserrat.variable} antialiased`}>
+        {/* 목업 데이터 정리 - 인라인 스크립트로 SW 캐시 무관하게 즉시 실행 */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                var v = localStorage.getItem('sempre-data-version');
+                if (v === '4') return;
+                localStorage.removeItem('grit-on-notifications');
+                indexedDB.deleteDatabase('griton_db');
+                if ('serviceWorker' in navigator) {
+                  navigator.serviceWorker.getRegistrations().then(function(r) {
+                    r.forEach(function(sw) { sw.unregister(); });
+                  });
+                }
+                if ('caches' in window) {
+                  caches.keys().then(function(k) {
+                    k.forEach(function(c) { caches.delete(c); });
+                  });
+                }
+                localStorage.setItem('sempre-data-version', '4');
+              })();
+            `,
+          }}
+        />
         {isDev && (
           <script
             dangerouslySetInnerHTML={{
