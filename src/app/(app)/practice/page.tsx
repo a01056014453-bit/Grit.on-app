@@ -27,7 +27,7 @@ import {
 } from "@/lib/drill-records";
 import type { PracticeType, Song, PracticeTodo } from "@/types";
 import Link from "next/link";
-import { Music2, ChevronRight, ChevronLeft, Plus, Check, X, Clock, RotateCcw, Repeat, ArrowRight, Trash2, Calendar, Mic, CheckCircle2, Circle, ChevronDown, ChevronUp, Music } from "lucide-react";
+import { Music2, ChevronRight, ChevronLeft, Plus, Check, X, Clock, RotateCcw, Repeat, ArrowRight, Trash2, Calendar, Mic, CheckCircle2, Circle, ChevronDown, ChevronUp, Music, Play, Square } from "lucide-react";
 import {
   PracticeTimer,
   SongSelectionModal,
@@ -37,6 +37,7 @@ import {
   ScheduleModal,
 } from "@/components/practice";
 import { AlertCircle, MonitorOff } from "lucide-react";
+import { fetchAudioUrlsForDate } from "@/lib/audio-storage";
 import { type MetronomeState } from "@/components/practice/metronome-control";
 import type { AnalysisResult } from "@/app/api/analyze-practice/route";
 
@@ -76,6 +77,94 @@ interface DailyCompletion {
   completedDrillIds: string[];
 }
 
+// ─── 타임라인 재생 가능 세션 ────────────────────────────────────────────────
+
+function PlayableTimelineSession({ session }: { session: import("@/lib/drill-records").RecordSession }) {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [localBlobUrl, setLocalBlobUrl] = useState<string | null>(null);
+  const [playing, setPlaying] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (localBlobUrl) URL.revokeObjectURL(localBlobUrl);
+    };
+  }, [localBlobUrl]);
+
+  const canPlay = !!session.audioBlob || !!session.audioUrl;
+
+  const togglePlay = () => {
+    if (!canPlay) return;
+    if (playing && audioRef.current) {
+      audioRef.current.pause();
+      setPlaying(false);
+      return;
+    }
+    let url: string;
+    if (session.audioBlob) {
+      url = localBlobUrl ?? URL.createObjectURL(session.audioBlob);
+      if (!localBlobUrl) setLocalBlobUrl(url);
+    } else {
+      url = session.audioUrl!;
+    }
+    const audio = new Audio(url);
+    audioRef.current = audio;
+    audio.onended = () => setPlaying(false);
+    audio.play();
+    setPlaying(true);
+  };
+
+  return (
+    <div className="flex items-start gap-3 mb-3 relative">
+      <div className="w-2 h-2 rounded-full bg-violet-400/60 mt-2.5 shrink-0 relative z-10" />
+      <div
+        className="flex-1 rounded-xl px-3.5 py-2.5"
+        style={{
+          background: "rgba(255,255,255,0.35)",
+          backdropFilter: "blur(8px)",
+          WebkitBackdropFilter: "blur(8px)",
+          border: "1px solid rgba(255,255,255,0.4)",
+        }}
+      >
+        <div className="flex items-center justify-between">
+          <span className="text-[13px] font-medium text-gray-800 truncate">
+            {session.piece}
+          </span>
+          <div className="flex items-center gap-1.5 shrink-0 ml-2">
+            {session.hasRecording && (
+              <span
+                className="text-[11px] font-medium text-green-600 px-1.5 py-0.5 rounded-md"
+                style={{ background: "rgba(34,197,94,0.15)" }}
+              >
+                녹음
+              </span>
+            )}
+            {canPlay && (
+              <button
+                onClick={togglePlay}
+                className="w-6 h-6 rounded-full bg-violet-500 flex items-center justify-center hover:bg-violet-600 transition-colors"
+              >
+                {playing ? (
+                  <Square className="w-2.5 h-2.5 text-white" fill="white" />
+                ) : (
+                  <Play className="w-2.5 h-2.5 text-white ml-0.5" fill="white" />
+                )}
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-2 mt-1">
+          <span className="text-[12px] text-gray-400">{session.detail}</span>
+          <span className="text-[12px] text-gray-400">·</span>
+          <span className="text-[12px] text-gray-400 flex items-center gap-0.5">
+            <Clock className="w-3 h-3" />
+            {session.duration}
+          </span>
+        </div>
+        <span className="text-[11px] text-violet-400 mt-1 block">{session.time}</span>
+      </div>
+    </div>
+  );
+}
 
 export default function PracticePage() {
   return (
@@ -1028,8 +1117,34 @@ function PracticePageContent() {
 
   const recDateStr = drillFormatDateStr(calSelectedDate);
   const recPieces = useMemo(() => calMounted ? buildPiecesForDate(recDateStr, recentSessions) : [], [recDateStr, recentSessions, refreshKey, calMounted]);
-  const recSessions = useMemo(() => calMounted ? buildSessionsForDate(recDateStr, recentSessions) : [], [recDateStr, recentSessions, refreshKey, calMounted]);
+  const recSessionsRaw = useMemo(() => calMounted ? buildSessionsForDate(recDateStr, recentSessions) : [], [recDateStr, recentSessions, refreshKey, calMounted]);
   const scheduledDays = useMemo(() => calMounted ? buildScheduledDays(calYear, calMonth) : new Set<number>(), [calYear, calMonth, refreshKey, calMounted]);
+
+  // Supabase 오디오 URL 로드
+  const [recAudioUrlMap, setRecAudioUrlMap] = useState<Map<string, string>>(new Map());
+  useEffect(() => {
+    if (calMounted) {
+      fetchAudioUrlsForDate(recDateStr).then(setRecAudioUrlMap);
+    }
+  }, [recDateStr, calMounted]);
+
+  // 로컬 Blob 없는 세션에 Supabase URL 머지
+  const recSessions = useMemo(() => {
+    if (recAudioUrlMap.size === 0) return recSessionsRaw;
+    return recSessionsRaw.map((s) => {
+      if (s.audioBlob) return s;
+      const matchingSession = recentSessions.find(
+        (sess) => drillFormatDateStr(new Date(sess.startTime)) === recDateStr && sess.pieceId === s.pieceId
+      );
+      if (matchingSession) {
+        const isoKey = new Date(matchingSession.startTime).toISOString();
+        const url = recAudioUrlMap.get(isoKey);
+        if (url) return { ...s, hasRecording: true, audioUrl: url };
+      }
+      return s;
+    });
+  }, [recSessionsRaw, recAudioUrlMap, recentSessions, recDateStr]);
+
   const recTotalCompleted = recPieces.reduce((s, p) => s + p.completed, 0);
   const recTotalTasks = recPieces.reduce((s, p) => s + p.total, 0);
   const recTotalRecordings = recSessions.filter((s) => s.hasRecording).length;
@@ -1596,49 +1711,7 @@ function PracticePageContent() {
                       />
 
                       {recSessions.map((session) => (
-                        <div key={session.id} className="flex items-start gap-3 mb-3 relative">
-                          {/* Dot */}
-                          <div className="w-2 h-2 rounded-full bg-violet-400/60 mt-2.5 shrink-0 relative z-10" />
-
-                          {/* Session Card */}
-                          <div
-                            className="flex-1 rounded-xl px-3.5 py-2.5"
-                            style={{
-                              background: "rgba(255,255,255,0.35)",
-                              backdropFilter: "blur(8px)",
-                              WebkitBackdropFilter: "blur(8px)",
-                              border: "1px solid rgba(255,255,255,0.4)",
-                            }}
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="text-[13px] font-medium text-gray-800 truncate">
-                                {session.piece}
-                              </span>
-                              <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                                {session.hasRecording && (
-                                  <span
-                                    className="text-[11px] font-medium text-green-600 px-1.5 py-0.5 rounded-md"
-                                    style={{
-                                      background: "rgba(34,197,94,0.15)",
-                                      backdropFilter: "blur(4px)",
-                                    }}
-                                  >
-                                    녹음
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-[12px] text-gray-400">{session.detail}</span>
-                              <span className="text-[12px] text-gray-400">·</span>
-                              <span className="text-[12px] text-gray-400 flex items-center gap-0.5">
-                                <Clock className="w-3 h-3" />
-                                {session.duration}
-                              </span>
-                            </div>
-                            <span className="text-[11px] text-violet-400 mt-1 block">{session.time}</span>
-                          </div>
-                        </div>
+                        <PlayableTimelineSession key={session.id} session={session} />
                       ))}
                     </div>
                   </div>
