@@ -272,8 +272,10 @@ export default function RecordingPlayerPage() {
 
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
-    const ratio = x / rect.width;
-    audio.currentTime = ratio * duration;
+    const ratio = Math.max(0, Math.min(1, x / rect.width));
+    const newTime = ratio * duration;
+    audio.currentTime = newTime;
+    setCurrentTime(newTime); // 즉시 state 업데이트 → canvas 다시 그리기
   };
 
   const setA = () => setRegionA(currentTime);
