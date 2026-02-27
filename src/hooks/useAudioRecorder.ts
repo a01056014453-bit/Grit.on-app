@@ -41,6 +41,7 @@ export interface AudioRecorderState {
   classificationConfidence: number;
   frequencyBands: number[];
   modelStatus: ModelStatus;
+  calibrationCountdown: number | null; // null=대기, 3/2/1=카운트다운, 0=시작!
 }
 
 interface UseAudioRecorderOptions {
@@ -55,8 +56,9 @@ interface UseAudioRecorderOptions {
 // 상수
 // ─────────────────────────────────────────────
 const CLASSIFY_INTERVAL_MS = 3000; // 3초마다 분류
-const CALIBRATION_SAMPLES = 300; // ~5초 (60fps × 5)
-const CALIBRATION_SKIP = 60; // 첫 1초 스킵 (마이크 초기화)
+const CALIBRATION_SAMPLES = 120; // ~2초 (60fps × 2) — 이후 3초 카운트다운
+const CALIBRATION_SKIP = 30; // 첫 0.5초 스킵 (마이크 초기화)
+const COUNTDOWN_SECONDS = 3; // 카운트다운 3초
 const PIANO_ON_THRESHOLD_MS = 800; // 피아노 0.8초 이상 → 카운팅 시작
 const PIANO_OFF_DELAY_MS = 7000; // 피아노 안 들린 후 7초 → 중단
 const VOICE_SUPPRESS_MS = 2500; // 목소리 감지 후 2.5초간 카운팅 중단
@@ -100,6 +102,7 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
     classificationConfidence: 0,
     frequencyBands: Array(20).fill(0),
     modelStatus: "idle",
+    calibrationCountdown: null,
   });
 
   // ── Metronome refs ──
@@ -145,6 +148,7 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
   const noiseFloorDecibelRef = useRef<number>(0);
   const calibrationSamplesRef = useRef<number[]>([]);
   const isCalibrationCompleteRef = useRef<boolean>(false);
+  const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // ── Piano detection hysteresis refs ──
   const lastPianoDetectedTimeRef = useRef<number>(0);
@@ -371,7 +375,7 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
     }
     const peakVolume = Math.min(100, (maxAmplitude / 128) * 100 * 4);
 
-    // ── 5초 캘리브레이션 ──
+    // ── 소음 분석 (~2초) → 카운트다운 (3초) ──
     if (!isCalibrationCompleteRef.current) {
       calibrationSamplesRef.current.push(decibel);
       if (calibrationSamplesRef.current.length >= CALIBRATION_SAMPLES) {
@@ -381,36 +385,61 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
         noiseFloorDecibelRef.current = Math.max(42, p75 + 3);
         isCalibrationCompleteRef.current = true;
         console.log(
-          "[Calibration] 완료 (5초). 노이즈 플로어:",
+          "[Calibration] 소음 분석 완료. 노이즈 플로어:",
           noiseFloorDecibelRef.current
         );
 
-        // ── 캘리브레이션 완료 후 타이머 시작 ──
-        timerStartTimeRef.current = Date.now();
-        accumulatedPracticeRef.current = 0;
-
-        totalTimeIntervalRef.current = setInterval(() => {
-          setState((prev) => ({
-            ...prev,
-            totalTime: Math.floor((Date.now() - timerStartTimeRef.current) / 1000),
-          }));
-        }, 1000);
-
-        practiceTimeIntervalRef.current = setInterval(() => {
-          if (isActuallyPlayingRef.current) {
-            accumulatedPracticeRef.current += 0.1;
-            setState((prev) => ({
-              ...prev,
-              practiceTime: Math.floor(accumulatedPracticeRef.current),
-            }));
-          }
-        }, 100);
-
+        // ── 3초 카운트다운 시작 ──
         setState((prev) => ({
           ...prev,
           noiseFloor: noiseFloorDecibelRef.current,
-          isCalibrating: false,
+          calibrationCountdown: COUNTDOWN_SECONDS,
         }));
+
+        let count = COUNTDOWN_SECONDS;
+        countdownIntervalRef.current = setInterval(() => {
+          count--;
+          if (count > 0) {
+            setState((prev) => ({ ...prev, calibrationCountdown: count }));
+          } else {
+            // 카운트다운 종료 → 타이머 시작
+            if (countdownIntervalRef.current) {
+              clearInterval(countdownIntervalRef.current);
+              countdownIntervalRef.current = null;
+            }
+
+            timerStartTimeRef.current = Date.now();
+            accumulatedPracticeRef.current = 0;
+
+            totalTimeIntervalRef.current = setInterval(() => {
+              setState((prev) => ({
+                ...prev,
+                totalTime: Math.floor((Date.now() - timerStartTimeRef.current) / 1000),
+              }));
+            }, 1000);
+
+            practiceTimeIntervalRef.current = setInterval(() => {
+              if (isActuallyPlayingRef.current) {
+                accumulatedPracticeRef.current += 0.1;
+                setState((prev) => ({
+                  ...prev,
+                  practiceTime: Math.floor(accumulatedPracticeRef.current),
+                }));
+              }
+            }, 100);
+
+            setState((prev) => ({
+              ...prev,
+              isCalibrating: false,
+              calibrationCountdown: 0,
+            }));
+
+            // "시작!" 표시 0.8초 후 제거
+            setTimeout(() => {
+              setState((prev) => ({ ...prev, calibrationCountdown: null }));
+            }, 800);
+          }
+        }, 1000);
       } else {
         setState((prev) => ({
           ...prev,
@@ -557,6 +586,7 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
         isCalibrating: true,
         audioLabel: null,
         classificationConfidence: 0,
+        calibrationCountdown: null,
       }));
 
       // ── 분석 루프 시작 (시각화 + 캘리브레이션) ──
@@ -623,6 +653,8 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
     }
     isPausedRef.current = true;
 
+    if (countdownIntervalRef.current)
+      clearInterval(countdownIntervalRef.current);
     if (totalTimeIntervalRef.current)
       clearInterval(totalTimeIntervalRef.current);
     if (practiceTimeIntervalRef.current)
@@ -723,6 +755,8 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
     isRecordingRef.current = false;
     isPausedRef.current = false;
 
+    if (countdownIntervalRef.current)
+      clearInterval(countdownIntervalRef.current);
     if (totalTimeIntervalRef.current)
       clearInterval(totalTimeIntervalRef.current);
     if (practiceTimeIntervalRef.current)
@@ -763,6 +797,7 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
       currentVolume: 0,
       audioLabel: null,
       classificationConfidence: 0,
+      calibrationCountdown: null,
     }));
   }, []);
 
@@ -784,12 +819,17 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
         isCalibrating: false,
         audioLabel: null,
         classificationConfidence: 0,
+        calibrationCountdown: null,
       };
     });
     chunksRef.current = [];
     calibrationSamplesRef.current = [];
     isCalibrationCompleteRef.current = false;
     cumulativePianoMsRef.current = 0;
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
   }, []);
 
   // ─────────────────────────────────────────────
@@ -800,6 +840,8 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
       if (mediaStreamRef.current) {
         mediaStreamRef.current.getTracks().forEach((t) => t.stop());
       }
+      if (countdownIntervalRef.current)
+        clearInterval(countdownIntervalRef.current);
       if (totalTimeIntervalRef.current)
         clearInterval(totalTimeIntervalRef.current);
       if (practiceTimeIntervalRef.current)

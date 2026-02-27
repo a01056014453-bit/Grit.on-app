@@ -24,6 +24,10 @@ interface PracticeTimerProps {
   currentVolume?: number;
   /** 실시간 주파수 밴드 데이터 (0-100, 20개) */
   frequencyBands?: number[];
+  /** 캘리브레이션 중 여부 */
+  isCalibrating?: boolean;
+  /** 카운트다운 숫자 (null=대기, 3/2/1=카운트다운, 0=시작!) */
+  calibrationCountdown?: number | null;
   onStart?: () => void;
   onPause?: () => void;
   onResume?: () => void;
@@ -41,6 +45,8 @@ export function PracticeTimer({
   hasPermission,
   currentVolume = 0,
   frequencyBands,
+  isCalibrating = false,
+  calibrationCountdown = null,
   onStart,
   onPause,
   onResume,
@@ -118,42 +124,94 @@ export function PracticeTimer({
             )}
           </AnimatePresence>
 
-          {/* Large Timer Display */}
-          <div className="text-center mb-1">
-            <div className="font-number text-7xl font-semibold tracking-tight">
-              <motion.span
-                key={`m-${minutesKey}`}
-                initial={isRecording ? { y: -4, opacity: 0.5 } : false}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
-                className={`inline-block ${
-                  isRecording && !isPaused ? "text-violet-900" : "text-gray-900"
-                }`}
+          {/* Large Timer Display / Calibration Countdown */}
+          <AnimatePresence mode="wait">
+            {isCalibrating || calibrationCountdown === 0 ? (
+              <motion.div
+                key="calibration"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ duration: 0.3 }}
+                className="text-center mb-1"
               >
-                {time.minutes}
-              </motion.span>
-              <span
-                className={`mx-1 ${
-                  isRecording && !isPaused
-                    ? "text-violet-400 animate-pulse"
-                    : "text-gray-400"
-                }`}
+                {calibrationCountdown === null ? (
+                  /* 소음 분석 중 */
+                  <div className="py-2">
+                    <div className="text-3xl mb-3">🎤</div>
+                    <p className="text-lg font-semibold text-gray-700">주변 소음 분석 중...</p>
+                    <p className="text-sm text-gray-400 mt-1">조용히 기다려주세요</p>
+                  </div>
+                ) : calibrationCountdown > 0 ? (
+                  /* 카운트다운 3, 2, 1 */
+                  <div className="py-2">
+                    <p className="text-sm text-violet-500 font-medium mb-2">{calibrationCountdown}초 후에 시작합니다</p>
+                    <motion.div
+                      key={`cd-${calibrationCountdown}`}
+                      initial={{ scale: 1.5, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ duration: 0.3, ease: "easeOut" }}
+                      className="font-number text-8xl font-bold text-violet-600"
+                    >
+                      {calibrationCountdown}
+                    </motion.div>
+                  </div>
+                ) : (
+                  /* 시작! */
+                  <motion.div
+                    initial={{ scale: 0.5, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 15 }}
+                    className="py-2"
+                  >
+                    <div className="font-number text-6xl font-bold text-green-500">시작!</div>
+                  </motion.div>
+                )}
+              </motion.div>
+            ) : (
+              <motion.div
+                key="timer"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.3 }}
+                className="text-center mb-1"
               >
-                :
-              </span>
-              <motion.span
-                key={`s-${secondsKey}`}
-                initial={isRecording ? { y: -4, opacity: 0.5 } : false}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
-                className={`inline-block ${
-                  isRecording && !isPaused ? "text-violet-900" : "text-gray-900"
-                }`}
-              >
-                {time.seconds}
-              </motion.span>
-            </div>
-          </div>
+                <div className="font-number text-7xl font-semibold tracking-tight">
+                  <motion.span
+                    key={`m-${minutesKey}`}
+                    initial={isRecording ? { y: -4, opacity: 0.5 } : false}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
+                    className={`inline-block ${
+                      isRecording && !isPaused ? "text-violet-900" : "text-gray-900"
+                    }`}
+                  >
+                    {time.minutes}
+                  </motion.span>
+                  <span
+                    className={`mx-1 ${
+                      isRecording && !isPaused
+                        ? "text-violet-400 animate-pulse"
+                        : "text-gray-400"
+                    }`}
+                  >
+                    :
+                  </span>
+                  <motion.span
+                    key={`s-${secondsKey}`}
+                    initial={isRecording ? { y: -4, opacity: 0.5 } : false}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
+                    className={`inline-block ${
+                      isRecording && !isPaused ? "text-violet-900" : "text-gray-900"
+                    }`}
+                  >
+                    {time.seconds}
+                  </motion.span>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Status Indicators */}
           <div className="flex items-center justify-center gap-4 text-sm text-gray-500 mb-6">
@@ -181,11 +239,11 @@ export function PracticeTimer({
                 >
                   <span
                     className={`w-2 h-2 rounded-full ${
-                      isPaused ? "bg-yellow-500" : "bg-red-500 animate-pulse"
+                      isCalibrating ? "bg-yellow-500 animate-pulse" : isPaused ? "bg-yellow-500" : "bg-red-500 animate-pulse"
                     }`}
                   />
                   <span className="text-gray-700 font-medium">
-                    {isPaused ? "일시정지" : "녹음 중"}
+                    {isCalibrating ? "준비 중" : isPaused ? "일시정지" : "녹음 중"}
                   </span>
                 </motion.div>
               )}

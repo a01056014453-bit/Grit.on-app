@@ -266,6 +266,7 @@ function PracticePageContent() {
     audioBlob,
     noiseFloor,
     isCalibrating,
+    calibrationCountdown,
     audioLabel,
     classificationConfidence,
     frequencyBands,
@@ -1398,6 +1399,8 @@ function PracticePageContent() {
         hasPermission={hasPermission}
         currentVolume={currentVolume}
         frequencyBands={frequencyBands}
+        isCalibrating={isCalibrating}
+        calibrationCountdown={calibrationCountdown}
         onStart={handleStartRecording}
         onPause={pauseRecording}
         onResume={handleResumeRecording}
