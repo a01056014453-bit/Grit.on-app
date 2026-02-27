@@ -1178,8 +1178,8 @@ function PracticePageContent() {
       const count = calSessionsByDate[sessionKey]?.length || 0;
       const hasDrills = scheduled.size > 0 || count > 0;
       if (!hasDrills) { result.set(key, { status: "none", hasSchedule, remainingCount: 0 }); continue; }
-      const allDone = scheduled.size > 0 && scheduled.size === completed.size && [...scheduled].every(id => completed.has(id));
       const remainingCount = [...scheduled].filter(id => !completed.has(id)).length;
+      const allDone = scheduled.size > 0 ? remainingCount === 0 : true;
       result.set(key, { status: allDone ? "complete" : "incomplete", hasSchedule, remainingCount });
     }
     return result;
@@ -1229,8 +1229,8 @@ function PracticePageContent() {
       const count = calSessionsByDate[dayKey]?.length || 0;
       const hasDrills = dayScheduled.size > 0 || count > 0;
       if (!hasDrills) { statuses.set(day, { status: "none", remainingCount: 0 }); continue; }
-      const allDone = dayScheduled.size > 0 && dayScheduled.size === dayCompleted.size && [...dayScheduled].every(id => dayCompleted.has(id));
       const remainingCount = [...dayScheduled].filter(id => !dayCompleted.has(id)).length;
+      const allDone = dayScheduled.size > 0 ? remainingCount === 0 : true;
       statuses.set(day, { status: allDone ? "complete" : "incomplete", remainingCount });
     }
     return statuses;
