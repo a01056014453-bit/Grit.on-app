@@ -19,13 +19,7 @@ export default function HomePage() {
   const router = useRouter();
   const { isTeacher, teacherMode, teacherProfileId, toggleMode } = useTeacherMode();
 
-  // 온보딩 미완료 시 리다이렉트
-  useEffect(() => {
-    const done = localStorage.getItem("sempre-onboarding-done");
-    if (!done) {
-      router.replace("/onboarding");
-    }
-  }, [router]);
+  // AuthGuard에서 온보딩/로그인 체크 처리됨
 
   const [profileLoading, setProfileLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<{ name: string } | null>(null);

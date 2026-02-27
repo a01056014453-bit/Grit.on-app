@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mic, Video, ChevronRight } from "lucide-react";
@@ -327,6 +327,21 @@ export default function OnboardingPage() {
     "idle" | "granted" | "denied"
   >("idle");
   const touchStartX = useRef(0);
+
+  // 이미 온보딩 완료한 사용자 가드
+  useEffect(() => {
+    const onboardingDone = localStorage.getItem("sempre-onboarding-done");
+    const authStatus = localStorage.getItem("sempre-auth");
+
+    if (onboardingDone && authStatus) {
+      router.replace("/");
+      return;
+    }
+    if (onboardingDone && !authStatus) {
+      router.replace("/onboarding/login");
+      return;
+    }
+  }, [router]);
 
   const slide = SLIDES[current];
 

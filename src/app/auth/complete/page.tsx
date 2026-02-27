@@ -14,6 +14,8 @@ export default function AuthCompletePage() {
 
       if (user) {
         // 로그인 상태 설정
+        const provider = user.app_metadata?.provider || "google";
+        localStorage.setItem("sempre-auth", provider);
         localStorage.setItem("grit-on-logged-in", "true");
         localStorage.setItem("grit-on-user-id", user.id);
 

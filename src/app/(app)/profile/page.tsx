@@ -489,10 +489,11 @@ export default function ProfilePage() {
     } catch {
       // Supabase 로그아웃 실패해도 로컬 정리는 진행
     }
+    localStorage.removeItem("sempre-auth");
     localStorage.removeItem("grit-on-logged-in");
     localStorage.removeItem("grit-on-user-id");
     setAuthUser(null);
-    router.push("/landing");
+    router.push("/onboarding/login");
   };
 
   const handleGoogleLogin = async () => {

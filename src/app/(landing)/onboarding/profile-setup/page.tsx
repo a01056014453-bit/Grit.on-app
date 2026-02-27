@@ -183,7 +183,14 @@ export default function ProfileSetupPage() {
     });
 
     setShowCelebration(true);
-    setTimeout(() => router.push("/"), 2500);
+
+    // 이미 로그인된 상태면 홈으로, 아니면 로그인 페이지로
+    const authStatus = localStorage.getItem("sempre-auth");
+    if (authStatus) {
+      setTimeout(() => router.push("/"), 2500);
+    } else {
+      setTimeout(() => router.push("/onboarding/login"), 2500);
+    }
   };
 
   // Cleanup debounce on unmount
