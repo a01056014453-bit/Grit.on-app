@@ -138,6 +138,8 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
   const isActuallyPlayingRef = useRef<boolean>(false);
   const pausedTotalTimeRef = useRef<number>(0);
   const pausedPracticeTimeRef = useRef<number>(0);
+  const timerStartTimeRef = useRef<number>(0);
+  const accumulatedPracticeRef = useRef<number>(0);
 
   // ── Calibration refs ──
   const noiseFloorDecibelRef = useRef<number>(0);
@@ -382,6 +384,28 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
           "[Calibration] 완료 (5초). 노이즈 플로어:",
           noiseFloorDecibelRef.current
         );
+
+        // ── 캘리브레이션 완료 후 타이머 시작 ──
+        timerStartTimeRef.current = Date.now();
+        accumulatedPracticeRef.current = 0;
+
+        totalTimeIntervalRef.current = setInterval(() => {
+          setState((prev) => ({
+            ...prev,
+            totalTime: Math.floor((Date.now() - timerStartTimeRef.current) / 1000),
+          }));
+        }, 1000);
+
+        practiceTimeIntervalRef.current = setInterval(() => {
+          if (isActuallyPlayingRef.current) {
+            accumulatedPracticeRef.current += 0.1;
+            setState((prev) => ({
+              ...prev,
+              practiceTime: Math.floor(accumulatedPracticeRef.current),
+            }));
+          }
+        }, 100);
+
         setState((prev) => ({
           ...prev,
           noiseFloor: noiseFloorDecibelRef.current,
@@ -514,26 +538,9 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
       isCalibrationCompleteRef.current = false;
       isClassifyingRef.current = false;
 
-      // ── 타이머 시작 ──
-      const startTime = Date.now();
-      let accumulatedPracticeTime = 0;
-
-      totalTimeIntervalRef.current = setInterval(() => {
-        setState((prev) => ({
-          ...prev,
-          totalTime: Math.floor((Date.now() - startTime) / 1000),
-        }));
-      }, 1000);
-
-      practiceTimeIntervalRef.current = setInterval(() => {
-        if (isActuallyPlayingRef.current) {
-          accumulatedPracticeTime += 0.1;
-          setState((prev) => ({
-            ...prev,
-            practiceTime: Math.floor(accumulatedPracticeTime),
-          }));
-        }
-      }, 100);
+      // 타이머는 캘리브레이션 완료 후 시작 (analyzeAudio에서)
+      timerStartTimeRef.current = 0;
+      accumulatedPracticeRef.current = 0;
 
       setState((prev) => ({
         ...prev,
@@ -667,7 +674,7 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
 
     const resumeTime = Date.now();
     const previousTotal = pausedTotalTimeRef.current;
-    let accumulatedPracticeTime = pausedPracticeTimeRef.current;
+    accumulatedPracticeRef.current = pausedPracticeTimeRef.current;
 
     totalTimeIntervalRef.current = setInterval(() => {
       setState((p) => ({
@@ -679,10 +686,10 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
 
     practiceTimeIntervalRef.current = setInterval(() => {
       if (isActuallyPlayingRef.current) {
-        accumulatedPracticeTime += 0.1;
+        accumulatedPracticeRef.current += 0.1;
         setState((p) => ({
           ...p,
-          practiceTime: Math.floor(accumulatedPracticeTime),
+          practiceTime: Math.floor(accumulatedPracticeRef.current),
         }));
       }
     }, 100);
