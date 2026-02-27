@@ -1579,15 +1579,11 @@ function PracticePageContent() {
               {/* Legend */}
               <div className="flex items-center justify-end gap-3 mt-3">
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded-full bg-violet-200/60 flex items-center justify-center">
-                    <span className="text-[6px] text-violet-500">✓</span>
-                  </div>
+                  <div className="w-3 h-3 rounded-full bg-violet-200/60" />
                   <span className="text-[10px] text-gray-400">완료</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded-full bg-violet-500/80 flex items-center justify-center">
-                    <span className="text-[6px] text-white font-bold">2</span>
-                  </div>
+                  <div className="w-3 h-3 rounded-full bg-violet-500/80" />
                   <span className="text-[10px] text-gray-400">미완료</span>
                 </div>
               </div>
