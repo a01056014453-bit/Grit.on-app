@@ -69,13 +69,6 @@ export default function LoginRequiredPage() {
     }
   };
 
-  const reasons = [
-    { emoji: "🔒", text: "연습 기록을 안전하게 보호해요" },
-    { emoji: "📱", text: "앱 삭제해도 기록이 사라지지 않아요" },
-    { emoji: "🔄", text: "여러 기기에서 동기화돼요" },
-    { emoji: "👩‍🏫", text: "선생님과 기록을 공유할 수 있어요" },
-  ];
-
   return (
     <div className="min-h-[100dvh] flex flex-col bg-gradient-to-br from-violet-50 via-white to-purple-50">
       {/* 상단: 프로필 인사 */}
@@ -96,29 +89,6 @@ export default function LoginRequiredPage() {
           </motion.div>
         )}
 
-        {/* 로그인 필요 이유 */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="w-full max-w-sm space-y-3 mb-8"
-        >
-          <p className="text-sm text-gray-500 text-center mb-4">
-            로그인하면 이런 점이 좋아요
-          </p>
-          {reasons.map((reason, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.4, delay: 0.3 + i * 0.1 }}
-              className="flex items-center gap-3 bg-white/60 backdrop-blur-sm rounded-2xl px-4 py-3 border border-white/40"
-            >
-              <span className="text-xl">{reason.emoji}</span>
-              <span className="text-sm font-medium text-gray-700">{reason.text}</span>
-            </motion.div>
-          ))}
-        </motion.div>
       </div>
 
       {/* 하단: 로그인 버튼 */}
