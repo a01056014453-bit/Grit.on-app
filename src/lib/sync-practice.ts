@@ -1,5 +1,6 @@
 import { getUserId } from "./user-id";
 import { getUnsyncedSessions, markSessionSynced } from "./db";
+import { uploadAudioBlob, updateSessionAudioUrl } from "./audio-storage";
 
 export async function syncPracticeSessions(): Promise<void> {
   try {
@@ -51,11 +52,24 @@ export async function syncPracticeSessions(): Promise<void> {
 
     const result = await res.json();
 
-    // 동기화 성공한 세션들 마킹
+    // 동기화 성공한 세션들 마킹 + 오디오 업로드
     if (result.success) {
       for (const session of unsynced) {
         if (session.id !== undefined) {
           await markSessionSynced(session.id);
+        }
+
+        // 오디오 Blob이 있으면 Storage에 업로드
+        if (session.audioBlob) {
+          try {
+            const startTimeStr = new Date(session.startTime).toISOString();
+            const audioUrl = await uploadAudioBlob(session.audioBlob, startTimeStr);
+            if (audioUrl) {
+              await updateSessionAudioUrl(userId, startTimeStr, audioUrl);
+            }
+          } catch (err) {
+            console.error("Failed to upload audio for session:", err);
+          }
         }
       }
     }

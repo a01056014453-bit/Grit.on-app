@@ -31,6 +31,7 @@ import {
   loadCompletedDrills,
   getAllAvailableDrills,
 } from "@/lib/drill-records";
+import { fetchAudioUrlsForDate } from "@/lib/audio-storage";
 import { ScheduleModal } from "@/components/practice";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -50,17 +51,17 @@ const dayNames = ["일", "월", "화", "수", "목", "금", "토"];
 
 function FreeSessionRow({ session }: { session: import("@/lib/drill-records").RecordSession }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [localBlobUrl, setLocalBlobUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
   useEffect(() => {
     return () => {
-      if (audioUrl) URL.revokeObjectURL(audioUrl);
+      if (localBlobUrl) URL.revokeObjectURL(localBlobUrl);
     };
-  }, [audioUrl]);
+  }, [localBlobUrl]);
 
   const togglePlay = () => {
-    if (!session.audioBlob) return;
+    if (!session.audioBlob && !session.audioUrl) return;
 
     if (isPlaying && audioRef.current) {
       audioRef.current.pause();
@@ -68,8 +69,14 @@ function FreeSessionRow({ session }: { session: import("@/lib/drill-records").Re
       return;
     }
 
-    const url = audioUrl ?? URL.createObjectURL(session.audioBlob);
-    if (!audioUrl) setAudioUrl(url);
+    // 로컬 Blob 우선, 없으면 Supabase URL 사용
+    let url: string;
+    if (session.audioBlob) {
+      url = localBlobUrl ?? URL.createObjectURL(session.audioBlob);
+      if (!localBlobUrl) setLocalBlobUrl(url);
+    } else {
+      url = session.audioUrl!;
+    }
 
     const audio = new Audio(url);
     audioRef.current = audio;
@@ -113,6 +120,98 @@ function FreeSessionRow({ session }: { session: import("@/lib/drill-records").Re
   );
 }
 
+// ─── Timeline Session Row ────────────────────────────────────────────────────
+
+function TimelineSessionRow({ session }: { session: import("@/lib/drill-records").RecordSession }) {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [localBlobUrl, setLocalBlobUrl] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (localBlobUrl) URL.revokeObjectURL(localBlobUrl);
+    };
+  }, [localBlobUrl]);
+
+  const canPlay = !!session.audioBlob || !!session.audioUrl;
+
+  const togglePlay = () => {
+    if (!canPlay) return;
+
+    if (isPlaying && audioRef.current) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+      return;
+    }
+
+    let url: string;
+    if (session.audioBlob) {
+      url = localBlobUrl ?? URL.createObjectURL(session.audioBlob);
+      if (!localBlobUrl) setLocalBlobUrl(url);
+    } else {
+      url = session.audioUrl!;
+    }
+
+    const audio = new Audio(url);
+    audioRef.current = audio;
+    audio.onended = () => setIsPlaying(false);
+    audio.play();
+    setIsPlaying(true);
+  };
+
+  return (
+    <div className="flex items-start gap-3 mb-3 relative">
+      <div className="w-2 h-2 rounded-full bg-violet-400/60 mt-2.5 shrink-0 relative z-10" />
+      <div
+        className="flex-1 rounded-xl px-3.5 py-2.5"
+        style={{
+          background: "rgba(255,255,255,0.35)",
+          backdropFilter: "blur(8px)",
+          WebkitBackdropFilter: "blur(8px)",
+          border: "1px solid rgba(255,255,255,0.4)",
+        }}
+      >
+        <div className="flex items-center justify-between">
+          <span className="text-[13px] font-medium text-gray-800 truncate">
+            {session.piece}
+          </span>
+          <div className="flex items-center gap-1.5 shrink-0 ml-2">
+            {session.hasRecording && (
+              <span
+                className="text-[11px] font-medium text-green-600 px-1.5 py-0.5 rounded-md"
+                style={{ background: "rgba(34,197,94,0.15)" }}
+              >
+                녹음
+              </span>
+            )}
+            {canPlay && (
+              <button
+                onClick={togglePlay}
+                className="w-6 h-6 rounded-full bg-violet-500 flex items-center justify-center hover:bg-violet-600 transition-colors"
+              >
+                {isPlaying ? (
+                  <Square className="w-2.5 h-2.5 text-white" fill="white" />
+                ) : (
+                  <Play className="w-2.5 h-2.5 text-white ml-0.5" fill="white" />
+                )}
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-2 mt-1">
+          <span className="text-[12px] text-gray-400">{session.detail}</span>
+          <span className="text-[12px] text-gray-400">·</span>
+          <span className="text-[12px] text-gray-400 flex items-center gap-0.5">
+            <Clock className="w-3 h-3" />
+            {session.duration}
+          </span>
+        </div>
+        <span className="text-[11px] text-violet-400 mt-1 block">{session.time}</span>
+      </div>
+    </div>
+  );
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function RecordsPage() {
@@ -127,6 +226,9 @@ export default function RecordsPage() {
 
   // IndexedDB 세션 로드
   const { sessions, reload: reloadSessions } = usePracticeSessions();
+
+  // Supabase에서 오디오 URL 가져오기
+  const [audioUrlMap, setAudioUrlMap] = useState<Map<string, string>>(new Map());
 
   const daysInMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate();
   const firstDayOfMonth = new Date(calendarYear, calendarMonth, 1).getDay();
@@ -157,7 +259,28 @@ export default function RecordsPage() {
 
   // 동적 데이터 생성
   const pieces = useMemo(() => buildPiecesForDate(dateStr, sessions), [dateStr, sessions, refreshKey]);
-  const recordSessions = useMemo(() => buildSessionsForDate(dateStr, sessions), [dateStr, sessions]);
+  const recordSessions = useMemo(() => {
+    const built = buildSessionsForDate(dateStr, sessions);
+    // Supabase audioUrl 머지 (로컬 Blob 없는 경우)
+    if (audioUrlMap.size > 0) {
+      return built.map((s) => {
+        if (s.audioBlob) return s; // 로컬 Blob이 있으면 그대로
+        // startTime으로 매칭
+        const matchingSession = sessions.find(
+          (sess) => formatDateStr(new Date(sess.startTime)) === dateStr && sess.pieceId === s.pieceId
+        );
+        if (matchingSession) {
+          const isoKey = new Date(matchingSession.startTime).toISOString();
+          const url = audioUrlMap.get(isoKey);
+          if (url) {
+            return { ...s, hasRecording: true, audioUrl: url };
+          }
+        }
+        return s;
+      });
+    }
+    return built;
+  }, [dateStr, sessions, audioUrlMap]);
   const freeSessions = useMemo(
     () => recordSessions.filter((s) => !s.pieceId.startsWith("drill-")),
     [recordSessions]
@@ -257,6 +380,11 @@ export default function RecordsPage() {
     },
     [isSelectedToday, dateStr, reloadSessions]
   );
+
+  // Supabase에서 날짜별 오디오 URL 로드
+  useEffect(() => {
+    fetchAudioUrlsForDate(dateStr).then(setAudioUrlMap);
+  }, [dateStr]);
 
   // 클라이언트 마운트 후 데이터 갱신
   const [mounted, setMounted] = useState(false);
@@ -598,43 +726,7 @@ export default function RecordsPage() {
                         style={{ borderLeft: "2px solid rgba(167,139,250,0.3)" }}
                       />
                       {recordSessions.map((session) => (
-                        <div key={session.id} className="flex items-start gap-3 mb-3 relative">
-                          <div className="w-2 h-2 rounded-full bg-violet-400/60 mt-2.5 shrink-0 relative z-10" />
-                          <div
-                            className="flex-1 rounded-xl px-3.5 py-2.5"
-                            style={{
-                              background: "rgba(255,255,255,0.35)",
-                              backdropFilter: "blur(8px)",
-                              WebkitBackdropFilter: "blur(8px)",
-                              border: "1px solid rgba(255,255,255,0.4)",
-                            }}
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="text-[13px] font-medium text-gray-800 truncate">
-                                {session.piece}
-                              </span>
-                              <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                                {session.hasRecording && (
-                                  <span
-                                    className="text-[11px] font-medium text-green-600 px-1.5 py-0.5 rounded-md"
-                                    style={{ background: "rgba(34,197,94,0.15)" }}
-                                  >
-                                    녹음
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-[12px] text-gray-400">{session.detail}</span>
-                              <span className="text-[12px] text-gray-400">·</span>
-                              <span className="text-[12px] text-gray-400 flex items-center gap-0.5">
-                                <Clock className="w-3 h-3" />
-                                {session.duration}
-                              </span>
-                            </div>
-                            <span className="text-[11px] text-violet-400 mt-1 block">{session.time}</span>
-                          </div>
-                        </div>
+                        <TimelineSessionRow key={session.id} session={session} />
                       ))}
                     </div>
                   </div>

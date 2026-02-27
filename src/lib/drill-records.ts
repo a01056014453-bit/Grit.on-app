@@ -39,6 +39,7 @@ export interface RecordSession {
   duration: string;
   hasRecording?: boolean;
   audioBlob?: Blob;
+  audioUrl?: string;
 }
 
 // ─── localStorage Helpers ────────────────────────────────────────────────────
