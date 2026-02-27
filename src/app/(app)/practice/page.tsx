@@ -116,23 +116,18 @@ function PlayableTimelineSession({ session }: { session: import("@/lib/drill-rec
           <span className="text-[13px] font-medium text-gray-800 truncate">
             {session.piece}
           </span>
-          <div className="flex items-center gap-1.5 shrink-0 ml-2">
-            {session.hasRecording && (
-              <span
-                className="text-[11px] font-medium text-green-600 px-1.5 py-0.5 rounded-md"
-                style={{ background: "rgba(34,197,94,0.15)" }}
-              >
-                녹음
-              </span>
-            )}
-            {canPlay && (
-              <Play className="w-3 h-3 text-violet-500" fill="currentColor" />
-            )}
-          </div>
+          {session.hasRecording && (
+            <span
+              className="text-[11px] font-medium text-green-600 px-1.5 py-0.5 rounded-md shrink-0 ml-2"
+              style={{ background: "rgba(34,197,94,0.15)" }}
+            >
+              녹음
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2 mt-1">
-          <span className="text-[12px] text-gray-400">{session.detail}</span>
-          <span className="text-[12px] text-gray-400">·</span>
+          {session.detail && <span className="text-[12px] text-gray-400">{session.detail}</span>}
+          {session.detail && <span className="text-[12px] text-gray-400">·</span>}
           <span className="text-[12px] text-gray-400 flex items-center gap-0.5">
             <Clock className="w-3 h-3" />
             {session.duration}

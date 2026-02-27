@@ -145,14 +145,27 @@ export default function RecordingPlayerPage() {
       ctx.fillRect(x + 0.5, y, Math.max(1, barW - 1), barH);
     });
 
-    // Playhead
+    // Playhead — thick red line with circle handle
     const playheadX = progress * w;
-    ctx.strokeStyle = "rgba(239, 68, 68, 0.8)";
-    ctx.lineWidth = 2;
+    // Glow
+    ctx.strokeStyle = "rgba(239, 68, 68, 0.25)";
+    ctx.lineWidth = 6;
     ctx.beginPath();
     ctx.moveTo(playheadX, 0);
     ctx.lineTo(playheadX, h);
     ctx.stroke();
+    // Core line
+    ctx.strokeStyle = "rgba(239, 68, 68, 0.9)";
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(playheadX, 0);
+    ctx.lineTo(playheadX, h);
+    ctx.stroke();
+    // Handle circle at top
+    ctx.fillStyle = "rgba(239, 68, 68, 0.95)";
+    ctx.beginPath();
+    ctx.arc(playheadX, 0, 5, 0, Math.PI * 2);
+    ctx.fill();
 
     // A/B markers
     if (regionA !== null && duration > 0) {
