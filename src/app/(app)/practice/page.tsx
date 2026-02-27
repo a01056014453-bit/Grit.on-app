@@ -1087,6 +1087,7 @@ function PracticePageContent() {
   const [calMonth, setCalMonth] = useState(new Date().getMonth());
   const [calYear, setCalYear] = useState(new Date().getFullYear());
   const [calSelectedDate, setCalSelectedDate] = useState<Date>(new Date());
+  const [calViewMode, setCalViewMode] = useState<"week" | "month">("week");
 
   // calSessionsByDate is now from usePracticeSessions hook
 
@@ -1111,6 +1112,18 @@ function PracticePageContent() {
   const calToday = new Date();
   const calDayNames = ["일", "월", "화", "수", "목", "금", "토"];
   const calWeekdayNames = ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"];
+
+  // 주간 뷰: 선택된 날짜가 포함된 주의 7일
+  const calWeekDays = useMemo(() => {
+    const start = new Date(calSelectedDate);
+    start.setDate(start.getDate() - start.getDay());
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(start);
+      d.setDate(d.getDate() + i);
+      return d;
+    });
+  }, [calSelectedDate]);
+
   const totalDrillCount = dbDrillCards.length + customDrills.length;
 
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
@@ -1123,6 +1136,28 @@ function PracticePageContent() {
   const recDateStr = drillFormatDateStr(calSelectedDate);
   const recSessionsRaw = useMemo(() => calMounted ? buildSessionsForDate(recDateStr, recentSessions) : [], [recDateStr, recentSessions, refreshKey, calMounted]);
   const scheduledDays = useMemo(() => calMounted ? buildScheduledDays(calYear, calMonth) : new Set<number>(), [calYear, calMonth, refreshKey, calMounted]);
+
+  // 주간 뷰 날짜별 상태 (월 경계를 넘을 수 있으므로 별도 계산)
+  const calWeekStatuses = useMemo(() => {
+    if (!calMounted) return new Map<string, { status: "none" | "complete" | "incomplete"; hasSchedule: boolean }>();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const result = new Map<string, { status: "none" | "complete" | "incomplete"; hasSchedule: boolean }>();
+    for (const d of calWeekDays) {
+      const key = drillFormatDateStr(d);
+      const scheduled = loadScheduledDrillIds(key);
+      const hasSchedule = scheduled.size > 0;
+      if (d > today) { result.set(key, { status: "none", hasSchedule }); continue; }
+      const completed = loadCompletedDrills(key);
+      const sessionKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      const count = calSessionsByDate[sessionKey]?.length || 0;
+      const hasDrills = scheduled.size > 0 || count > 0;
+      if (!hasDrills) { result.set(key, { status: "none", hasSchedule }); continue; }
+      const allDone = scheduled.size > 0 && scheduled.size === completed.size && [...scheduled].every(id => completed.has(id));
+      result.set(key, { status: allDone ? "complete" : "incomplete", hasSchedule });
+    }
+    return result;
+  }, [calWeekDays, calSessionsByDate, refreshKey, calMounted]);
 
   // Supabase 오디오 URL 로드
   const [recAudioUrlMap, setRecAudioUrlMap] = useState<Map<string, string>>(new Map());
@@ -1174,12 +1209,20 @@ function PracticePageContent() {
     return statuses;
   }, [calYear, calMonth, calDaysInMonth, calSessionsByDate, refreshKey, calMounted]);
 
-  const navigateCalMonth = (dir: number) => {
-    let m = calMonth + dir, y = calYear;
-    if (m < 0) { m = 11; y--; }
-    if (m > 11) { m = 0; y++; }
-    setCalMonth(m);
-    setCalYear(y);
+  const navigateCalendar = (dir: number) => {
+    if (calViewMode === "week") {
+      const newDate = new Date(calSelectedDate);
+      newDate.setDate(newDate.getDate() + dir * 7);
+      setCalSelectedDate(newDate);
+      setCalMonth(newDate.getMonth());
+      setCalYear(newDate.getFullYear());
+    } else {
+      let m = calMonth + dir, y = calYear;
+      if (m < 0) { m = 11; y--; }
+      if (m > 11) { m = 0; y++; }
+      setCalMonth(m);
+      setCalYear(y);
+    }
   };
 
   // 스케줄 저장
@@ -1386,15 +1429,25 @@ function PracticePageContent() {
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <span className="text-xl font-bold text-gray-900">{calYear}년 {calMonth + 1}월</span>
-                  {calPracticeDays > 0 && (
+                  {calViewMode === "month" && calPracticeDays > 0 && (
                     <span className="flex items-center gap-1 text-sm text-violet-600 font-bold">
                       <Check className="w-4 h-4" />{calPracticeDays}
                     </span>
                   )}
                 </div>
                 <div className="flex items-center gap-1">
-                  <button onClick={() => navigateCalMonth(-1)} className="p-1.5 rounded-full hover:bg-white/30 transition-colors"><ChevronLeft className="w-4 h-4 text-gray-400" /></button>
-                  <button onClick={() => navigateCalMonth(1)} className="p-1.5 rounded-full hover:bg-white/30 transition-colors"><ChevronRight className="w-4 h-4 text-gray-400" /></button>
+                  <div className="flex items-center bg-white/40 rounded-lg p-0.5 mr-1">
+                    <button
+                      onClick={() => { setCalViewMode("week"); setCalMonth(calSelectedDate.getMonth()); setCalYear(calSelectedDate.getFullYear()); }}
+                      className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all ${calViewMode === "week" ? "bg-violet-500 text-white shadow-sm" : "text-gray-400"}`}
+                    >주</button>
+                    <button
+                      onClick={() => { setCalViewMode("month"); setCalMonth(calSelectedDate.getMonth()); setCalYear(calSelectedDate.getFullYear()); }}
+                      className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all ${calViewMode === "month" ? "bg-violet-500 text-white shadow-sm" : "text-gray-400"}`}
+                    >월</button>
+                  </div>
+                  <button onClick={() => navigateCalendar(-1)} className="p-1.5 rounded-full hover:bg-white/30 transition-colors"><ChevronLeft className="w-4 h-4 text-gray-400" /></button>
+                  <button onClick={() => navigateCalendar(1)} className="p-1.5 rounded-full hover:bg-white/30 transition-colors"><ChevronRight className="w-4 h-4 text-gray-400" /></button>
                 </div>
               </div>
               <div className="grid grid-cols-7 gap-1 mb-1">
@@ -1402,47 +1455,95 @@ function PracticePageContent() {
                   <div key={day} className={`text-center text-sm font-medium py-1 ${i === 0 ? "text-red-400" : i === 6 ? "text-blue-400" : "text-gray-400"}`}>{day}</div>
                 ))}
               </div>
-              <div className="grid grid-cols-7 gap-1">
-                {Array(calFirstDay).fill(null).map((_, i) => (
-                  <div key={`e-${i}`} className="flex flex-col items-center py-1"><div className="w-8 h-8" /><span className="text-[10px] h-4" /></div>
-                ))}
-                {Array(calDaysInMonth).fill(null).map((_, i) => {
-                  const day = i + 1;
-                  const key = `${calYear}-${String(calMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-                  const count = calSessionsByDate[key]?.length || 0;
-                  const isToday = day === calToday.getDate() && calMonth === calToday.getMonth() && calYear === calToday.getFullYear();
-                  const isFuture = calYear > calToday.getFullYear() || (calYear === calToday.getFullYear() && calMonth > calToday.getMonth()) || (calYear === calToday.getFullYear() && calMonth === calToday.getMonth() && day > calToday.getDate());
-                  const isSelected = day === calSelectedDate.getDate() && calMonth === calSelectedDate.getMonth() && calYear === calSelectedDate.getFullYear();
-                  const dow = (calFirstDay + i) % 7;
-                  const hasSchedule = scheduledDays.has(day);
-                  const dayStatus = calDayStatuses.get(day) || "none";
 
-                  const countStyle = isFuture && hasSchedule
-                    ? "bg-violet-100/60 text-violet-400"
-                    : isFuture
-                    ? "bg-white/10 opacity-30"
-                    : isToday && dayStatus === "complete"
-                    ? "bg-violet-300 text-violet-700 shadow-lg shadow-violet-300/30"
-                    : isToday && dayStatus === "incomplete"
-                    ? "bg-violet-600 text-white shadow-lg shadow-violet-500/30"
-                    : isToday
-                    ? "bg-violet-600 text-white shadow-lg shadow-violet-500/30"
-                    : dayStatus === "complete"
-                    ? "bg-violet-200/60 text-violet-500"
-                    : dayStatus === "incomplete"
-                    ? "bg-violet-500/80 text-white"
-                    : "bg-white/20 backdrop-blur-sm";
+              {calViewMode === "week" ? (
+                /* ── 주간 뷰 ── */
+                <div className="grid grid-cols-7 gap-1">
+                  {calWeekDays.map((d, i) => {
+                    const day = d.getDate();
+                    const dateStr = drillFormatDateStr(d);
+                    const sessionKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                    const count = calSessionsByDate[sessionKey]?.length || 0;
+                    const isToday = d.toDateString() === calToday.toDateString();
+                    const todayMidnight = new Date(calToday.getFullYear(), calToday.getMonth(), calToday.getDate());
+                    const isFuture = d.getTime() > todayMidnight.getTime();
+                    const isSelected = d.toDateString() === calSelectedDate.toDateString();
+                    const dow = d.getDay();
+                    const weekInfo = calWeekStatuses.get(dateStr);
+                    const dayStatus = weekInfo?.status || "none";
+                    const hasSchedule = weekInfo?.hasSchedule || false;
+                    const isOtherMonth = d.getMonth() !== calMonth;
 
-                  return (
-                    <button key={day} onClick={() => { setCalSelectedDate(new Date(calYear, calMonth, day)); }} className="flex flex-col items-center py-1">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${countStyle} ${isSelected && !isToday ? "ring-2 ring-violet-400 ring-offset-1 ring-offset-transparent" : ""}`}>
-                        {dayStatus === "complete" ? "✓" : dayStatus === "incomplete" && !isToday ? count > 0 ? count : "·" : !isFuture && count > 0 ? count : isFuture && hasSchedule ? "·" : ""}
-                      </div>
-                      <span className={`text-[10px] mt-0.5 ${dow === 0 ? "text-red-400" : dow === 6 ? "text-blue-400" : "text-gray-500"}`}>{day}</span>
-                    </button>
-                  );
-                })}
-              </div>
+                    const countStyle = isFuture && hasSchedule
+                      ? "bg-violet-100/60 text-violet-400"
+                      : isFuture
+                      ? "bg-white/10 opacity-30"
+                      : isToday && dayStatus === "complete"
+                      ? "bg-violet-300 text-violet-700 shadow-lg shadow-violet-300/30"
+                      : isToday && dayStatus === "incomplete"
+                      ? "bg-violet-600 text-white shadow-lg shadow-violet-500/30"
+                      : isToday
+                      ? "bg-violet-600 text-white shadow-lg shadow-violet-500/30"
+                      : dayStatus === "complete"
+                      ? "bg-violet-200/60 text-violet-500"
+                      : dayStatus === "incomplete"
+                      ? "bg-violet-500/80 text-white"
+                      : "bg-white/20 backdrop-blur-sm";
+
+                    return (
+                      <button key={i} onClick={() => { setCalSelectedDate(new Date(d)); setCalMonth(d.getMonth()); setCalYear(d.getFullYear()); }} className="flex flex-col items-center py-1">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${countStyle} ${isSelected && !isToday ? "ring-2 ring-violet-400 ring-offset-1 ring-offset-transparent" : ""}`}>
+                          {dayStatus === "complete" ? "✓" : dayStatus === "incomplete" && !isToday ? count > 0 ? count : "·" : !isFuture && count > 0 ? count : isFuture && hasSchedule ? "·" : ""}
+                        </div>
+                        <span className={`text-[10px] mt-0.5 ${isOtherMonth ? "text-gray-300" : dow === 0 ? "text-red-400" : dow === 6 ? "text-blue-400" : "text-gray-500"}`}>{day}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                /* ── 월간 뷰 ── */
+                <div className="grid grid-cols-7 gap-1">
+                  {Array(calFirstDay).fill(null).map((_, i) => (
+                    <div key={`e-${i}`} className="flex flex-col items-center py-1"><div className="w-8 h-8" /><span className="text-[10px] h-4" /></div>
+                  ))}
+                  {Array(calDaysInMonth).fill(null).map((_, i) => {
+                    const day = i + 1;
+                    const key = `${calYear}-${String(calMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                    const count = calSessionsByDate[key]?.length || 0;
+                    const isToday = day === calToday.getDate() && calMonth === calToday.getMonth() && calYear === calToday.getFullYear();
+                    const isFuture = calYear > calToday.getFullYear() || (calYear === calToday.getFullYear() && calMonth > calToday.getMonth()) || (calYear === calToday.getFullYear() && calMonth === calToday.getMonth() && day > calToday.getDate());
+                    const isSelected = day === calSelectedDate.getDate() && calMonth === calSelectedDate.getMonth() && calYear === calSelectedDate.getFullYear();
+                    const dow = (calFirstDay + i) % 7;
+                    const hasSchedule = scheduledDays.has(day);
+                    const dayStatus = calDayStatuses.get(day) || "none";
+
+                    const countStyle = isFuture && hasSchedule
+                      ? "bg-violet-100/60 text-violet-400"
+                      : isFuture
+                      ? "bg-white/10 opacity-30"
+                      : isToday && dayStatus === "complete"
+                      ? "bg-violet-300 text-violet-700 shadow-lg shadow-violet-300/30"
+                      : isToday && dayStatus === "incomplete"
+                      ? "bg-violet-600 text-white shadow-lg shadow-violet-500/30"
+                      : isToday
+                      ? "bg-violet-600 text-white shadow-lg shadow-violet-500/30"
+                      : dayStatus === "complete"
+                      ? "bg-violet-200/60 text-violet-500"
+                      : dayStatus === "incomplete"
+                      ? "bg-violet-500/80 text-white"
+                      : "bg-white/20 backdrop-blur-sm";
+
+                    return (
+                      <button key={day} onClick={() => { setCalSelectedDate(new Date(calYear, calMonth, day)); }} className="flex flex-col items-center py-1">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${countStyle} ${isSelected && !isToday ? "ring-2 ring-violet-400 ring-offset-1 ring-offset-transparent" : ""}`}>
+                          {dayStatus === "complete" ? "✓" : dayStatus === "incomplete" && !isToday ? count > 0 ? count : "·" : !isFuture && count > 0 ? count : isFuture && hasSchedule ? "·" : ""}
+                        </div>
+                        <span className={`text-[10px] mt-0.5 ${dow === 0 ? "text-red-400" : dow === 6 ? "text-blue-400" : "text-gray-500"}`}>{day}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
 
               {/* Legend */}
               <div className="flex items-center justify-end gap-3 mt-3">
