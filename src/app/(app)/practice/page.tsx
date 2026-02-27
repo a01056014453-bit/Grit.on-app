@@ -1123,9 +1123,9 @@ function PracticePageContent() {
   const calDayNames = ["일", "월", "화", "수", "목", "금", "토"];
   const calWeekdayNames = ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"];
 
-  // 주간 뷰: 선택된 날짜가 포함된 주의 7일
+  // 주간 뷰: 선택된 날짜가 포함된 주의 7일 (시간 제거하여 날짜만 비교)
   const calWeekDays = useMemo(() => {
-    const start = new Date(calSelectedDate);
+    const start = new Date(calSelectedDate.getFullYear(), calSelectedDate.getMonth(), calSelectedDate.getDate());
     start.setDate(start.getDate() - start.getDay());
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date(start);
