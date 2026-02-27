@@ -50,6 +50,12 @@ export async function POST(request: NextRequest) {
           | "guitar"
           | "vocal",
       });
+    } else if (nickname !== "연습생") {
+      // 실제 닉네임이 있으면 프로필 업데이트 (익명→실명)
+      await supabaseServer
+        .from("profiles")
+        .update({ nickname })
+        .eq("id", userId);
     }
 
     // 세션 동기화
