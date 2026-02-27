@@ -226,207 +226,189 @@ export function PracticeAnalysisModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 overflow-y-auto">
-      <div className="min-h-full flex items-start justify-center p-4 py-8">
-      <div className="bg-white rounded-2xl w-full max-w-md animate-in zoom-in-95 duration-200">
-        {/* Header - 메인 결과 */}
-        <div className="p-6 pb-4 text-center bg-gradient-to-br from-violet-500 to-purple-600 rounded-t-2xl">
-          <div className="w-16 h-16 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center mx-auto mb-3">
-            <Music className="w-8 h-8 text-white" />
-          </div>
-          {songName && (
-            <p className="text-white font-semibold mb-1">{songName}</p>
-          )}
-          {todoNote && (
-            <p className="text-violet-200 text-xs mb-2 bg-white/10 rounded-full px-3 py-1 inline-block">
-              {todoNote}
-            </p>
-          )}
-          <p className="text-violet-100 text-sm mb-1">
-            총 <span className="font-semibold text-white">{formatTimeDisplay(totalDuration)}</span> 중
-          </p>
-          <p className="text-white text-2xl font-bold">
-            실제 연주 시간은 {formatTimeDisplay(netPracticeTime)}
-          </p>
-          <p className="text-violet-200 text-xs mt-2">
-            나머지 {formatTimeDisplay(restTime)}은 휴식 및 준비 시간입니다
-          </p>
-        </div>
-
-        {/* Main Content */}
-        <div className="p-5 space-y-4">
-          {/* 목표 달성률 */}
-          <div className="bg-gray-50 rounded-xl p-4">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <Target className="w-4 h-4 text-violet-500" />
-                <span className="text-sm font-medium text-gray-700">Grit Gauge 반영</span>
-              </div>
-              <span className="text-sm font-bold text-violet-600">
-                +{Math.floor(netPracticeTime / 60)}분
-              </span>
-            </div>
-            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-violet-500 to-purple-600 rounded-full transition-all duration-500"
-                style={{ width: `${goalProgress}%` }}
-              />
-            </div>
-            <p className="text-xs text-gray-500 mt-2 text-center">
-              오늘의 목표 {Math.round(goalProgress)}% 달성 ({Math.floor(netPracticeTime / 60)}/{dailyGoal}분)
-              {goalProgress >= 100 && " 🎉"}
-            </p>
-          </div>
-
-          {/* 순 연습시간 게이지 */}
-          <div className="bg-gray-50 rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-4">
-              <Activity className="w-4 h-4 text-violet-500" />
-              <span className="text-sm font-medium text-gray-700">AI 분석 결과</span>
-            </div>
-            <PracticeGauge percent={summary.instrumentPercent} />
-          </div>
-
-          {/* 타임라인 시각화 */}
-          <div className="bg-gray-50 rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <TrendingUp className="w-4 h-4 text-gray-500" />
-              <span className="text-sm font-medium text-gray-700">연습 타임라인</span>
-            </div>
-
-            {/* 타임라인 바 */}
-            <div className="relative h-8 bg-gray-200 rounded-lg overflow-hidden mb-2">
-              {segments && segments.length > 0 ? (
-                segments.map((seg, idx) => {
-                  const startPercent = (seg.startTime / totalDuration) * 100;
-                  const widthPercent = ((seg.endTime - seg.startTime) / totalDuration) * 100;
-                  return (
-                    <button
-                      key={idx}
-                      onClick={() => handleSeek(seg.startTime)}
-                      className={`absolute top-0 h-full ${getSegmentColor(seg.type)} hover:opacity-80 transition-opacity`}
-                      style={{
-                        left: `${startPercent}%`,
-                        width: `${Math.max(widthPercent, 0.5)}%`,
-                      }}
-                      title={`${seg.type}: ${formatTimeShort(seg.startTime)} - ${formatTimeShort(seg.endTime)}`}
-                    />
-                  );
-                })
-              ) : (
-                // 세그먼트가 없을 때 summary 기반으로 표시 (연주/휴식)
-                <>
-                  <div
-                    className="absolute top-0 h-full bg-violet-500"
-                    style={{ left: 0, width: `${summary.instrumentPercent}%` }}
-                  />
-                </>
+    <div className="fixed inset-0 bg-black/50 z-50 flex flex-col">
+      <div className="flex-1 overflow-y-auto">
+        <div className="min-h-full flex items-start justify-center p-4 pt-6 pb-0">
+          <div className="bg-white rounded-2xl w-full max-w-md animate-in zoom-in-95 duration-200">
+            {/* Header - 컴팩트 */}
+            <div className="px-5 py-4 text-center bg-gradient-to-br from-violet-500 to-purple-600 rounded-t-2xl">
+              {songName && (
+                <p className="text-white/90 font-semibold text-sm mb-0.5">{songName}</p>
               )}
-
-              {/* 재생 위치 표시 */}
-              {audioUrl && duration > 0 && (
-                <div
-                  className="absolute top-0 w-0.5 h-full bg-black z-10"
-                  style={{ left: `${(currentTime / duration) * 100}%` }}
-                />
+              {todoNote && (
+                <p className="text-violet-200 text-[11px] mb-1">{todoNote}</p>
               )}
+              <p className="text-violet-100 text-xs">
+                총 {formatTimeDisplay(totalDuration)} 중
+              </p>
+              <p className="text-white text-xl font-bold">
+                실제 연주 시간은 {formatTimeDisplay(netPracticeTime)}
+              </p>
+              <p className="text-violet-200 text-[11px] mt-1">
+                나머지 {formatTimeDisplay(restTime)}은 휴식 및 준비 시간입니다
+              </p>
             </div>
 
-            {/* 범례 */}
-            <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 text-[10px]">
-              <div className="flex items-center gap-1">
-                <div className="w-2 h-2 rounded-full bg-violet-500" />
-                <span className="text-gray-600">연주 {summary.instrumentPercent}%</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-2 h-2 rounded-full bg-gray-300" />
-                <span className="text-gray-600">휴식 {100 - summary.instrumentPercent}%</span>
-              </div>
-            </div>
-          </div>
-
-          {/* 다시 듣기 */}
-          {audioUrl && (
-            <div className="bg-gray-50 rounded-xl p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Volume2 className="w-4 h-4 text-gray-500" />
-                <span className="text-sm font-medium text-gray-700">다시 듣기</span>
-                <span className="text-xs text-gray-400 ml-auto">
-                  {formatTimeShort(currentTime)} / {formatTimeShort(duration || totalDuration)}
-                </span>
-              </div>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={handlePlayPause}
-                  className="w-10 h-10 rounded-full bg-black flex items-center justify-center hover:bg-gray-800 shrink-0"
-                >
-                  {isPlaying ? (
-                    <Pause className="w-5 h-5 text-white" fill="currentColor" />
-                  ) : (
-                    <Play className="w-5 h-5 text-white ml-0.5" fill="currentColor" />
-                  )}
-                </button>
-                <div
-                  className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden cursor-pointer"
-                  onClick={(e) => {
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const percent = (e.clientX - rect.left) / rect.width;
-                    handleSeek(percent * (duration || totalDuration));
-                  }}
-                >
+            {/* Main Content - 컴팩트 */}
+            <div className="p-4 space-y-3">
+              {/* 목표 달성률 */}
+              <div className="bg-gray-50 rounded-xl p-3">
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <Target className="w-3.5 h-3.5 text-violet-500" />
+                    <span className="text-xs font-medium text-gray-700">Grit Gauge 반영</span>
+                  </div>
+                  <span className="text-xs font-bold text-violet-600">
+                    +{Math.floor(netPracticeTime / 60)}분
+                  </span>
+                </div>
+                <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-black rounded-full transition-all duration-100"
-                    style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
+                    className="h-full bg-gradient-to-r from-violet-500 to-purple-600 rounded-full transition-all duration-500"
+                    style={{ width: `${goalProgress}%` }}
                   />
                 </div>
-              </div>
-              <p className="text-xs text-gray-400 mt-2 text-center">
-                타임라인의 구간을 클릭하면 해당 위치로 이동합니다
-              </p>
-              {/* Hidden audio element */}
-              <audio
-                ref={audioRef}
-                src={audioUrl}
-                onTimeUpdate={handleTimeUpdate}
-                onLoadedMetadata={handleLoadedMetadata}
-                onEnded={handleEnded}
-                preload="metadata"
-              />
-            </div>
-          )}
-
-          {/* AI 코칭 피드백 */}
-          <div className="bg-violet-50 rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Lightbulb className="w-4 h-4 text-violet-500" />
-              <span className="text-sm font-medium text-violet-700">AI 코칭</span>
-            </div>
-            <div className="space-y-2">
-              {coachingFeedbacks.map((feedback, idx) => (
-                <p key={idx} className="text-sm text-violet-800">
-                  • {feedback}
+                <p className="text-[10px] text-gray-500 mt-1.5 text-center">
+                  오늘의 목표 {Math.round(goalProgress)}% 달성 ({Math.floor(netPracticeTime / 60)}/{dailyGoal}분)
+                  {goalProgress >= 100 && " 🎉"}
                 </p>
-              ))}
+              </div>
+
+              {/* AI 분석 + 타임라인 합체 */}
+              <div className="bg-gray-50 rounded-xl p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <Activity className="w-3.5 h-3.5 text-violet-500" />
+                    <span className="text-xs font-medium text-gray-700">AI 분석 결과</span>
+                  </div>
+                  <span className="text-lg font-bold text-gray-900">{summary.instrumentPercent}%</span>
+                </div>
+                <div className="h-2 bg-gray-200 rounded-full overflow-hidden mb-3">
+                  <div
+                    className={`h-full bg-gradient-to-r ${summary.instrumentPercent >= 80 ? "from-green-400 to-emerald-500" : summary.instrumentPercent >= 60 ? "from-violet-500 to-purple-600" : "from-amber-400 to-orange-500"} rounded-full transition-all duration-700 ease-out`}
+                    style={{ width: `${Math.min(100, Math.max(0, summary.instrumentPercent))}%` }}
+                  />
+                </div>
+
+                {/* 타임라인 바 */}
+                <div className="relative h-6 bg-gray-200 rounded-md overflow-hidden mb-1.5">
+                  {segments && segments.length > 0 ? (
+                    segments.map((seg, idx) => {
+                      const startPercent = (seg.startTime / totalDuration) * 100;
+                      const widthPercent = ((seg.endTime - seg.startTime) / totalDuration) * 100;
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => handleSeek(seg.startTime)}
+                          className={`absolute top-0 h-full ${getSegmentColor(seg.type)} hover:opacity-80 transition-opacity`}
+                          style={{
+                            left: `${startPercent}%`,
+                            width: `${Math.max(widthPercent, 0.5)}%`,
+                          }}
+                          title={`${seg.type}: ${formatTimeShort(seg.startTime)} - ${formatTimeShort(seg.endTime)}`}
+                        />
+                      );
+                    })
+                  ) : (
+                    <div
+                      className="absolute top-0 h-full bg-violet-500"
+                      style={{ left: 0, width: `${summary.instrumentPercent}%` }}
+                    />
+                  )}
+                  {audioUrl && duration > 0 && (
+                    <div
+                      className="absolute top-0 w-0.5 h-full bg-black z-10"
+                      style={{ left: `${(currentTime / duration) * 100}%` }}
+                    />
+                  )}
+                </div>
+                <div className="flex flex-wrap justify-center gap-x-3 text-[10px]">
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 rounded-full bg-violet-500" />
+                    <span className="text-gray-600">연주 {summary.instrumentPercent}%</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 rounded-full bg-gray-300" />
+                    <span className="text-gray-600">휴식 {100 - summary.instrumentPercent}%</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 다시 듣기 - 컴팩트 */}
+              {audioUrl && (
+                <div className="bg-gray-50 rounded-xl p-3">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handlePlayPause}
+                      className="w-8 h-8 rounded-full bg-black flex items-center justify-center hover:bg-gray-800 shrink-0"
+                    >
+                      {isPlaying ? (
+                        <Pause className="w-4 h-4 text-white" fill="currentColor" />
+                      ) : (
+                        <Play className="w-4 h-4 text-white ml-0.5" fill="currentColor" />
+                      )}
+                    </button>
+                    <div
+                      className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden cursor-pointer"
+                      onClick={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const percent = (e.clientX - rect.left) / rect.width;
+                        handleSeek(percent * (duration || totalDuration));
+                      }}
+                    >
+                      <div
+                        className="h-full bg-black rounded-full transition-all duration-100"
+                        style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
+                      />
+                    </div>
+                    <span className="text-[10px] text-gray-400 shrink-0">
+                      {formatTimeShort(currentTime)}/{formatTimeShort(duration || totalDuration)}
+                    </span>
+                  </div>
+                  <audio
+                    ref={audioRef}
+                    src={audioUrl}
+                    onTimeUpdate={handleTimeUpdate}
+                    onLoadedMetadata={handleLoadedMetadata}
+                    onEnded={handleEnded}
+                    preload="metadata"
+                  />
+                </div>
+              )}
+
+              {/* AI 코칭 피드백 */}
+              <div className="bg-violet-50 rounded-xl p-3">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Lightbulb className="w-3.5 h-3.5 text-violet-500" />
+                  <span className="text-xs font-medium text-violet-700">AI 코칭</span>
+                </div>
+                <div className="space-y-1">
+                  {coachingFeedbacks.map((feedback, idx) => (
+                    <p key={idx} className="text-xs text-violet-800 leading-relaxed">
+                      • {feedback}
+                    </p>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>
-
-        {/* Actions */}
-        <div className="p-4 border-t border-gray-100 flex gap-3">
-          <button
-            onClick={onDiscard}
-            className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
-          >
-            저장 안함
-          </button>
-          <button
-            onClick={onSave}
-            className="flex-1 py-3 bg-black text-white rounded-xl font-medium hover:bg-gray-800 transition-colors"
-          >
-            저장하기
-          </button>
-        </div>
       </div>
+
+      {/* Actions - 하단 고정 */}
+      <div className="shrink-0 bg-white border-t border-gray-100 p-4 flex gap-3 max-w-md mx-auto w-full">
+        <button
+          onClick={onDiscard}
+          className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
+        >
+          저장 안함
+        </button>
+        <button
+          onClick={onSave}
+          className="flex-1 py-3 bg-black text-white rounded-xl font-medium hover:bg-gray-800 transition-colors"
+        >
+          저장하기
+        </button>
       </div>
     </div>
   );

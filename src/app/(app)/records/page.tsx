@@ -335,7 +335,7 @@ export default function RecordsPage() {
 
         {/* CALENDAR CARD */}
         <div
-          className="rounded-[20px] p-5 mb-4"
+          className="rounded-[20px] p-4 mb-4"
           style={{
             background: "rgba(255,255,255,0.55)",
             backdropFilter: "blur(16px)",
@@ -345,9 +345,9 @@ export default function RecordsPage() {
           }}
         >
           {/* Calendar Header */}
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
-              <span className="text-[18px] font-bold text-gray-900">
+              <span className="text-[15px] font-bold text-gray-900">
                 {calendarYear}년 {calendarMonth + 1}월
               </span>
               {practiceDaysInMonth > 0 && (
@@ -368,11 +368,11 @@ export default function RecordsPage() {
           </div>
 
           {/* Day Headers */}
-          <div className="grid grid-cols-7 gap-1 mb-1">
+          <div className="grid grid-cols-7 gap-1 mb-0.5">
             {dayNames.map((day, i) => (
               <div
                 key={day}
-                className={`text-center text-sm font-medium py-1 ${
+                className={`text-center text-[11px] font-medium py-0.5 ${
                   i === 0 ? "text-red-400" : i === 6 ? "text-blue-400" : "text-gray-400"
                 }`}
               >
@@ -386,9 +386,9 @@ export default function RecordsPage() {
             {Array(firstDayOfMonth)
               .fill(null)
               .map((_, i) => (
-                <div key={`e-${i}`} className="flex flex-col items-center py-1">
-                  <div className="w-8 h-8" />
-                  <span className="text-[10px] h-4" />
+                <div key={`e-${i}`} className="flex flex-col items-center py-0.5">
+                  <div className="w-6 h-6" />
+                  <span className="text-[9px] h-3" />
                 </div>
               ))}
 
@@ -422,10 +422,10 @@ export default function RecordsPage() {
                       setExpandedPieces(new Set());
                       setShowTimeline(false);
                     }}
-                    className="flex flex-col items-center py-1"
+                    className="flex flex-col items-center py-0.5"
                   >
                     <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${getCountStyle(
+                      className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold transition-all ${getCountStyle(
                         count,
                         isToday,
                         isFuture,
@@ -435,7 +435,7 @@ export default function RecordsPage() {
                       {!isFuture && count > 0 ? count : isFuture && hasSchedule ? "·" : ""}
                     </div>
                     <span
-                      className={`text-[10px] mt-0.5 ${
+                      className={`text-[9px] mt-0.5 ${
                         dayOfWeek === 0
                           ? "text-red-400"
                           : dayOfWeek === 6

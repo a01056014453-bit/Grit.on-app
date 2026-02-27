@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
         } | null;
         return {
           id: row.user_id as string,
-          nickname: profiles?.nickname || "익명",
+          nickname: profiles?.nickname || "연습생",
           instrument: profiles?.instrument || "piano",
           netPracticeTime: (row.net_practice_time as number) || 0,
           isPracticing: (row.is_practicing as boolean) || false,

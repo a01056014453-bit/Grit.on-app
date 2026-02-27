@@ -143,6 +143,7 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
   const pausedPracticeTimeRef = useRef<number>(0);
   const timerStartTimeRef = useRef<number>(0);
   const accumulatedPracticeRef = useRef<number>(0);
+  const lastPracticeCheckRef = useRef<number>(0);
 
   // ── Calibration refs ──
   const noiseFloorDecibelRef = useRef<number>(0);
@@ -418,9 +419,13 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
               }));
             }, 1000);
 
+            lastPracticeCheckRef.current = Date.now();
             practiceTimeIntervalRef.current = setInterval(() => {
+              const now = Date.now();
+              const delta = (now - lastPracticeCheckRef.current) / 1000;
+              lastPracticeCheckRef.current = now;
               if (isActuallyPlayingRef.current) {
-                accumulatedPracticeRef.current += 0.1;
+                accumulatedPracticeRef.current += delta;
                 setState((prev) => ({
                   ...prev,
                   practiceTime: Math.floor(accumulatedPracticeRef.current),
@@ -716,9 +721,13 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
       }));
     }, 1000);
 
+    lastPracticeCheckRef.current = Date.now();
     practiceTimeIntervalRef.current = setInterval(() => {
+      const now = Date.now();
+      const delta = (now - lastPracticeCheckRef.current) / 1000;
+      lastPracticeCheckRef.current = now;
       if (isActuallyPlayingRef.current) {
-        accumulatedPracticeRef.current += 0.1;
+        accumulatedPracticeRef.current += delta;
         setState((p) => ({
           ...p,
           practiceTime: Math.floor(accumulatedPracticeRef.current),

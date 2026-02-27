@@ -39,6 +39,7 @@ import { TeacherVerificationStatus } from "@/types";
 import BlurText from "@/components/reactbits/BlurText";
 import GradientText from "@/components/reactbits/GradientText";
 import { getUserAnalyses } from "@/lib/user-analyses";
+import { getAnalyzedPieces } from "@/lib/queries/pieces";
 import { createClient } from "@/lib/supabase-browser";
 
 /* ─── Animation variants ─── */
@@ -253,9 +254,19 @@ export default function ProfilePage() {
   useEffect(() => {
     async function loadData() {
       try {
-        // 사용자가 실제 분석한 곡 목록 (localStorage)
-        const userAnalyses = getUserAnalyses();
-        setAnalyses(userAnalyses.map(a => ({ id: a.id, composer: a.composer, title: a.title })));
+        // 사용자가 분석한 곡 목록 (Supabase DB → fallback localStorage)
+        let analysisCount = 0;
+        const dbPieces = await getAnalyzedPieces();
+        if (dbPieces.length > 0) {
+          const mapped = dbPieces.map(p => ({ id: p.id, composer: p.composerShortName, title: p.title }));
+          setAnalyses(mapped);
+          analysisCount = mapped.length;
+        } else {
+          const localAnalyses = getUserAnalyses();
+          const mapped = localAnalyses.map(a => ({ id: a.id, composer: a.composer, title: a.title }));
+          setAnalyses(mapped);
+          analysisCount = mapped.length;
+        }
 
         // 연습 통계 가져오기
         const stats = await getPracticeStats();
@@ -281,7 +292,7 @@ export default function ProfilePage() {
         setMaxStreak(max);
 
         // 배지 계산
-        const earnedBadges = calculateBadges(allSessions, stats, userAnalyses.length);
+        const earnedBadges = calculateBadges(allSessions, stats, analysisCount);
         setBadges(earnedBadges);
       } catch (error) {
         console.error("Failed to load profile data:", error);
@@ -792,7 +803,7 @@ export default function ProfilePage() {
           <div className="p-6 text-center">
             <BookOpen className="w-8 h-8 text-gray-300 mx-auto mb-2" />
             <p className="text-sm text-gray-500">아직 분석한 곡이 없습니다</p>
-            <Link href="/analysis" className="text-xs text-primary mt-1 inline-block">
+            <Link href="/ai-analysis" className="text-xs text-primary mt-1 inline-block">
               곡 분석하러 가기 →
             </Link>
           </div>
@@ -816,7 +827,7 @@ export default function ProfilePage() {
             ))}
             {analyses.length > 5 && (
               <Link
-                href="/analysis"
+                href="/ai-analysis"
                 className="block px-4 py-3 text-center text-sm text-primary hover:bg-white/30 transition-colors"
               >
                 전체 보기 ({analyses.length}곡)

@@ -91,7 +91,7 @@ export function DailyGoal({ completed, target, onTargetChange }: DailyGoalProps)
             </button>
 
             {isOpen && (
-              <div className="absolute right-0 top-full mt-2 bg-white rounded-2xl shadow-lg border border-gray-100 py-2 z-50 min-w-[140px]">
+              <div className="absolute right-0 bottom-full mb-2 bg-white rounded-2xl shadow-lg border border-gray-100 py-2 z-50 min-w-[140px] max-h-[280px] overflow-y-auto">
                 <p className="text-xs text-gray-500 px-4 py-1 border-b border-gray-100 mb-1">
                   목표 시간 설정
                 </p>

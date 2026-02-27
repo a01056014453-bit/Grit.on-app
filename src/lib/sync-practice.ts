@@ -9,15 +9,21 @@ export async function syncPracticeSessions(): Promise<void> {
 
     const unsynced = await getUnsyncedSessions();
 
-    // 프로필 정보 가져오기
-    let nickname = "익명";
+    // 프로필 정보 가져오기 (두 키 모두 확인)
+    let nickname = "연습생";
     let instrument = "piano";
     try {
       const saved = localStorage.getItem("grit-on-profile");
-      if (saved) {
-        const profile = JSON.parse(saved);
+      const sempreSaved = localStorage.getItem("sempre-user-profile");
+      const profile = saved ? JSON.parse(saved) : sempreSaved ? JSON.parse(sempreSaved) : null;
+      if (profile) {
         if (profile.nickname) nickname = profile.nickname;
         if (profile.instrument) instrument = profile.instrument;
+        // instruments 배열인 경우 (sempre-user-profile 형식)
+        if (!profile.instrument && profile.instruments?.length > 0) {
+          const instMap: Record<string, string> = { "피아노": "piano", "바이올린": "violin", "첼로": "cello", "비올라": "violin", "플루트": "flute", "클라리넷": "clarinet", "기타": "guitar" };
+          instrument = instMap[profile.instruments[0]] || "piano";
+        }
       }
     } catch {}
 

@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const userId: string = body.userId;
     const sessions: SyncSession[] = body.sessions ?? [];
-    const nickname: string = body.nickname ?? "익명";
+    const nickname: string = body.nickname ?? "연습생";
     const instrument: string = body.instrument ?? "piano";
 
     if (!userId) {

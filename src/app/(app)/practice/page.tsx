@@ -1437,10 +1437,10 @@ function PracticePageContent() {
           {/* 연습 기록 - Calendar */}
           <div id="practice-records">
             <span className="inline-block font-bold text-sm text-violet-700 bg-violet-100 px-3.5 py-1 rounded-full mb-3">연습 기록</span>
-            <div className="rounded-[20px] p-5" style={{ background: "rgba(255,255,255,0.55)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", border: "1px solid rgba(255,255,255,0.6)", boxShadow: "0 8px 32px rgba(124,58,237,0.08)" }}>
-              <div className="flex items-center justify-between mb-4">
+            <div className="rounded-[20px] p-4" style={{ background: "rgba(255,255,255,0.55)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", border: "1px solid rgba(255,255,255,0.6)", boxShadow: "0 8px 32px rgba(124,58,237,0.08)" }}>
+              <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-xl font-bold text-gray-900">{calYear}년 {calMonth + 1}월</span>
+                  <span className="text-[15px] font-bold text-gray-900">{calYear}년 {calMonth + 1}월</span>
                   {calViewMode === "month" && calPracticeDays > 0 && (
                     <span className="flex items-center gap-1 text-sm text-violet-600 font-bold">
                       <Check className="w-4 h-4" />{calPracticeDays}
@@ -1462,9 +1462,9 @@ function PracticePageContent() {
                   <button onClick={() => navigateCalendar(1)} className="p-1.5 rounded-full hover:bg-white/30 transition-colors"><ChevronRight className="w-4 h-4 text-gray-400" /></button>
                 </div>
               </div>
-              <div className="grid grid-cols-7 gap-1 mb-1">
+              <div className="grid grid-cols-7 gap-1 mb-0.5">
                 {calDayNames.map((day, i) => (
-                  <div key={day} className={`text-center text-sm font-medium py-1 ${i === 0 ? "text-red-400" : i === 6 ? "text-blue-400" : "text-gray-400"}`}>{day}</div>
+                  <div key={day} className={`text-center text-[11px] font-medium py-0.5 ${i === 0 ? "text-red-400" : i === 6 ? "text-blue-400" : "text-gray-400"}`}>{day}</div>
                 ))}
               </div>
 
@@ -1503,11 +1503,11 @@ function PracticePageContent() {
                       : "bg-white/20 backdrop-blur-sm";
 
                     return (
-                      <button key={i} onClick={() => { setCalSelectedDate(new Date(d)); setCalMonth(d.getMonth()); setCalYear(d.getFullYear()); }} className="flex flex-col items-center py-1">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${countStyle} ${isSelected && !isToday ? "ring-2 ring-violet-400 ring-offset-1 ring-offset-transparent" : ""}`}>
+                      <button key={i} onClick={() => { setCalSelectedDate(new Date(d)); setCalMonth(d.getMonth()); setCalYear(d.getFullYear()); }} className="flex flex-col items-center py-0.5">
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold transition-all ${countStyle} ${isSelected && !isToday ? "ring-2 ring-violet-400 ring-offset-1 ring-offset-transparent" : ""}`}>
                           {dayStatus === "complete" ? "✓" : dayStatus === "incomplete" && !isToday ? count > 0 ? count : "·" : !isFuture && count > 0 ? count : isFuture && hasSchedule ? "·" : ""}
                         </div>
-                        <span className={`text-[10px] mt-0.5 ${isOtherMonth ? "text-gray-300" : dow === 0 ? "text-red-400" : dow === 6 ? "text-blue-400" : "text-gray-500"}`}>{day}</span>
+                        <span className={`text-[9px] mt-0.5 ${isOtherMonth ? "text-gray-300" : dow === 0 ? "text-red-400" : dow === 6 ? "text-blue-400" : "text-gray-500"}`}>{day}</span>
                       </button>
                     );
                   })}
@@ -1516,7 +1516,7 @@ function PracticePageContent() {
                 /* ── 월간 뷰 ── */
                 <div className="grid grid-cols-7 gap-1">
                   {Array(calFirstDay).fill(null).map((_, i) => (
-                    <div key={`e-${i}`} className="flex flex-col items-center py-1"><div className="w-8 h-8" /><span className="text-[10px] h-4" /></div>
+                    <div key={`e-${i}`} className="flex flex-col items-center py-0.5"><div className="w-6 h-6" /><span className="text-[9px] h-3" /></div>
                   ))}
                   {Array(calDaysInMonth).fill(null).map((_, i) => {
                     const day = i + 1;
@@ -1546,11 +1546,11 @@ function PracticePageContent() {
                       : "bg-white/20 backdrop-blur-sm";
 
                     return (
-                      <button key={day} onClick={() => { setCalSelectedDate(new Date(calYear, calMonth, day)); }} className="flex flex-col items-center py-1">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${countStyle} ${isSelected && !isToday ? "ring-2 ring-violet-400 ring-offset-1 ring-offset-transparent" : ""}`}>
+                      <button key={day} onClick={() => { setCalSelectedDate(new Date(calYear, calMonth, day)); }} className="flex flex-col items-center py-0.5">
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold transition-all ${countStyle} ${isSelected && !isToday ? "ring-2 ring-violet-400 ring-offset-1 ring-offset-transparent" : ""}`}>
                           {dayStatus === "complete" ? "✓" : dayStatus === "incomplete" && !isToday ? count > 0 ? count : "·" : !isFuture && count > 0 ? count : isFuture && hasSchedule ? "·" : ""}
                         </div>
-                        <span className={`text-[10px] mt-0.5 ${dow === 0 ? "text-red-400" : dow === 6 ? "text-blue-400" : "text-gray-500"}`}>{day}</span>
+                        <span className={`text-[9px] mt-0.5 ${dow === 0 ? "text-red-400" : dow === 6 ? "text-blue-400" : "text-gray-500"}`}>{day}</span>
                       </button>
                     );
                   })}
