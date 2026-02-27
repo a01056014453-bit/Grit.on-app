@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft, Play, Pause, Square, SkipBack, SkipForward, Repeat } from "lucide-react";
+import { ArrowLeft, Play, Pause, SkipBack, SkipForward, Repeat } from "lucide-react";
 import { getSession, type PracticeSession } from "@/lib/db";
 import { safeBack } from "@/lib/navigation";
 
@@ -193,16 +193,32 @@ export default function RecordingPlayerPage() {
       }
     };
 
-    const onLoadedMetadata = () => setDuration(audio.duration);
+    const onLoadedMetadata = () => {
+      if (audio.duration && isFinite(audio.duration)) {
+        setDuration(audio.duration);
+      }
+    };
+    const onDurationChange = () => {
+      if (audio.duration && isFinite(audio.duration)) {
+        setDuration(audio.duration);
+      }
+    };
     const onEnded = () => setIsPlaying(false);
 
     audio.addEventListener("timeupdate", onTimeUpdate);
     audio.addEventListener("loadedmetadata", onLoadedMetadata);
+    audio.addEventListener("durationchange", onDurationChange);
     audio.addEventListener("ended", onEnded);
+
+    // If already loaded (e.g. cached), read duration immediately
+    if (audio.duration && isFinite(audio.duration)) {
+      setDuration(audio.duration);
+    }
 
     return () => {
       audio.removeEventListener("timeupdate", onTimeUpdate);
       audio.removeEventListener("loadedmetadata", onLoadedMetadata);
+      audio.removeEventListener("durationchange", onDurationChange);
       audio.removeEventListener("ended", onEnded);
     };
   }, [isLooping, regionA, regionB]);
@@ -290,22 +306,30 @@ export default function RecordingPlayerPage() {
     );
   }
 
+  const practiceDurationMin = Math.round(session.totalTime / 60);
+  const recordingDurationStr = duration > 0 ? formatTime(duration) : "";
+
   return (
     <div className="min-h-[100dvh] bg-blob-violet relative flex flex-col">
       <div className="bg-blob-extra" />
 
       {/* Header */}
-      <div className="px-4 pt-6 pb-2 relative z-10">
-        <div className="flex items-center gap-3 mb-4">
+      <div className="px-4 pt-5 pb-1 relative z-10">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => safeBack(router)}
-            className="w-9 h-9 rounded-full bg-white/30 backdrop-blur-sm flex items-center justify-center border border-white/40"
+            className="w-8 h-8 rounded-full bg-white/30 backdrop-blur-sm flex items-center justify-center border border-white/40"
           >
             <ArrowLeft className="w-4 h-4 text-gray-600" />
           </button>
           <div className="flex-1 min-w-0">
             <h1 className="text-sm font-bold text-gray-900 truncate">{session.pieceName}</h1>
-            <p className="text-xs text-gray-400">{formatDateTime(session.startTime)}</p>
+            <p className="text-[11px] text-gray-400 mt-0.5">
+              {formatDateTime(session.startTime)}
+              {session.todoNote ? ` · ${session.todoNote}` : ""}
+              {practiceDurationMin > 0 ? ` · ${practiceDurationMin}분 연습` : ""}
+              {recordingDurationStr ? ` · 녹음 ${recordingDurationStr}` : ""}
+            </p>
           </div>
         </div>
       </div>
@@ -313,7 +337,7 @@ export default function RecordingPlayerPage() {
       {/* Waveform */}
       <div className="flex-1 flex flex-col justify-center px-4 relative z-10">
         <div
-          className="rounded-2xl p-4"
+          className="rounded-2xl p-3"
           style={{
             background: "rgba(255,255,255,0.55)",
             backdropFilter: "blur(16px)",
@@ -326,39 +350,22 @@ export default function RecordingPlayerPage() {
           <canvas
             ref={canvasRef}
             onClick={handleCanvasClick}
-            className="w-full h-32 cursor-pointer rounded-lg"
+            className="w-full h-28 cursor-pointer rounded-lg"
             style={{ touchAction: "none" }}
           />
 
           {/* Time display */}
-          <div className="flex items-center justify-between mt-3 px-1">
+          <div className="flex items-center justify-between mt-2 px-1">
             <span className="text-xs text-gray-500 font-mono">{formatTime(currentTime)}</span>
             <span className="text-xs text-gray-400 font-mono">{formatTime(duration)}</span>
-          </div>
-
-          {/* Progress bar */}
-          <div
-            className="h-1 bg-violet-100 rounded-full mt-1 mx-1 cursor-pointer"
-            onClick={(e) => {
-              const rect = e.currentTarget.getBoundingClientRect();
-              const ratio = (e.clientX - rect.left) / rect.width;
-              if (audioRef.current && duration > 0) {
-                audioRef.current.currentTime = ratio * duration;
-              }
-            }}
-          >
-            <div
-              className="h-full bg-violet-500 rounded-full transition-all duration-100"
-              style={{ width: duration > 0 ? `${(currentTime / duration) * 100}%` : "0%" }}
-            />
           </div>
         </div>
 
         {/* AB Repeat Controls */}
-        <div className="flex items-center justify-center gap-3 mt-4">
+        <div className="flex items-center justify-center gap-2.5 mt-3">
           <button
             onClick={setA}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors ${
               regionA !== null
                 ? "bg-violet-600 text-white"
                 : "bg-white/40 text-gray-600 border border-white/50"
@@ -368,7 +375,7 @@ export default function RecordingPlayerPage() {
           </button>
           <button
             onClick={setB}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors ${
               regionB !== null
                 ? "bg-violet-600 text-white"
                 : "bg-white/40 text-gray-600 border border-white/50"
@@ -379,18 +386,18 @@ export default function RecordingPlayerPage() {
           <button
             onClick={toggleLoop}
             disabled={regionA === null || regionB === null}
-            className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
+            className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${
               isLooping
                 ? "bg-violet-600 text-white"
                 : "bg-white/40 text-gray-500 border border-white/50"
             } disabled:opacity-30`}
           >
-            <Repeat className="w-3.5 h-3.5" />
+            <Repeat className="w-3 h-3" />
           </button>
           {(regionA !== null || regionB !== null) && (
             <button
               onClick={clearRegion}
-              className="px-2 py-1.5 rounded-lg text-xs text-gray-400 hover:text-gray-600"
+              className="px-2 py-1 rounded-lg text-[11px] text-gray-400 hover:text-gray-600"
             >
               초기화
             </button>
@@ -399,14 +406,14 @@ export default function RecordingPlayerPage() {
       </div>
 
       {/* Playback Controls */}
-      <div className="px-4 pb-8 pt-4 relative z-10">
+      <div className="px-4 pb-8 pt-3 relative z-10">
         {/* Speed selector */}
-        <div className="flex items-center justify-center gap-2 mb-5">
+        <div className="flex items-center justify-center gap-1.5 mb-4">
           {SPEEDS.map((speed) => (
             <button
               key={speed}
               onClick={() => setPlaybackRate(speed)}
-              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+              className={`px-2 py-0.5 rounded-full text-[11px] font-medium transition-colors ${
                 playbackRate === speed
                   ? "bg-violet-600 text-white"
                   : "bg-white/40 text-gray-500 border border-white/40"
@@ -418,51 +425,43 @@ export default function RecordingPlayerPage() {
         </div>
 
         {/* Transport controls */}
-        <div className="flex items-center justify-center gap-4">
+        <div className="flex items-center justify-center gap-3">
           <button
             onClick={() => seek(-5)}
-            className="w-10 h-10 rounded-full bg-white/40 border border-white/50 flex items-center justify-center active:bg-white/60 transition-colors"
+            className="w-9 h-9 rounded-full bg-white/40 border border-white/50 flex items-center justify-center active:bg-white/60 transition-colors"
           >
-            <SkipBack className="w-4 h-4 text-gray-600" />
+            <SkipBack className="w-3.5 h-3.5 text-gray-600" />
           </button>
           <button
             onClick={() => seek(-1)}
-            className="w-10 h-10 rounded-full bg-white/40 border border-white/50 flex items-center justify-center active:bg-white/60 transition-colors"
+            className="w-9 h-9 rounded-full bg-white/40 border border-white/50 flex items-center justify-center active:bg-white/60 transition-colors"
           >
-            <SkipBack className="w-3 h-3 text-gray-600" />
+            <SkipBack className="w-2.5 h-2.5 text-gray-600" />
           </button>
 
           <button
             onClick={togglePlay}
-            className="w-16 h-16 rounded-full bg-violet-600 flex items-center justify-center shadow-lg shadow-violet-500/30 active:bg-violet-700 transition-colors"
+            className="w-14 h-14 rounded-full bg-violet-600 flex items-center justify-center shadow-lg shadow-violet-500/30 active:bg-violet-700 transition-colors"
           >
             {isPlaying ? (
-              <Pause className="w-7 h-7 text-white" />
+              <Pause className="w-6 h-6 text-white" />
             ) : (
-              <Play className="w-7 h-7 text-white ml-1" fill="white" />
+              <Play className="w-6 h-6 text-white ml-0.5" fill="white" />
             )}
           </button>
 
           <button
             onClick={() => seek(1)}
-            className="w-10 h-10 rounded-full bg-white/40 border border-white/50 flex items-center justify-center active:bg-white/60 transition-colors"
+            className="w-9 h-9 rounded-full bg-white/40 border border-white/50 flex items-center justify-center active:bg-white/60 transition-colors"
           >
-            <SkipForward className="w-3 h-3 text-gray-600" />
+            <SkipForward className="w-2.5 h-2.5 text-gray-600" />
           </button>
           <button
             onClick={() => seek(5)}
-            className="w-10 h-10 rounded-full bg-white/40 border border-white/50 flex items-center justify-center active:bg-white/60 transition-colors"
+            className="w-9 h-9 rounded-full bg-white/40 border border-white/50 flex items-center justify-center active:bg-white/60 transition-colors"
           >
-            <SkipForward className="w-4 h-4 text-gray-600" />
+            <SkipForward className="w-3.5 h-3.5 text-gray-600" />
           </button>
-        </div>
-
-        {/* Session info */}
-        <div className="mt-5 text-center">
-          <p className="text-xs text-gray-400">
-            {session.todoNote && <span>{session.todoNote} · </span>}
-            총 {Math.round(session.totalTime / 60)}분 연습
-          </p>
         </div>
       </div>
 

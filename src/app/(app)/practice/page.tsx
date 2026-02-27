@@ -93,9 +93,8 @@ function PlayableTimelineSession({ session }: { session: import("@/lib/drill-rec
   const router = useRouter();
   const canPlay = !!session.audioBlob || !!session.audioUrl;
 
-  const handlePlay = () => {
-    if (!canPlay) return;
-    if (session.dbId != null) {
+  const handleClick = () => {
+    if (canPlay && session.dbId != null) {
       router.push(`/practice/recording/${session.dbId}`);
     }
   };
@@ -104,7 +103,8 @@ function PlayableTimelineSession({ session }: { session: import("@/lib/drill-rec
     <div className="flex items-start gap-3 mb-3 relative">
       <div className="w-2 h-2 rounded-full bg-violet-400/60 mt-2.5 shrink-0 relative z-10" />
       <div
-        className="flex-1 rounded-xl px-3.5 py-2.5"
+        onClick={handleClick}
+        className={`flex-1 rounded-xl px-3.5 py-2.5 ${canPlay ? "cursor-pointer active:scale-[0.98] transition-transform" : ""}`}
         style={{
           background: "rgba(255,255,255,0.35)",
           backdropFilter: "blur(8px)",
@@ -126,12 +126,7 @@ function PlayableTimelineSession({ session }: { session: import("@/lib/drill-rec
               </span>
             )}
             {canPlay && (
-              <button
-                onClick={handlePlay}
-                className="w-6 h-6 rounded-full bg-violet-500 flex items-center justify-center hover:bg-violet-600 transition-colors"
-              >
-                <Play className="w-2.5 h-2.5 text-white ml-0.5" fill="white" />
-              </button>
+              <Play className="w-3 h-3 text-violet-500" fill="currentColor" />
             )}
           </div>
         </div>

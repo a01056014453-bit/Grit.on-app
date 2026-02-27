@@ -53,14 +53,16 @@ function FreeSessionRow({ session }: { session: import("@/lib/drill-records").Re
   const router = useRouter();
   const canPlay = !!session.audioBlob || !!session.audioUrl;
 
-  const handlePlay = () => {
-    if (!canPlay || session.dbId == null) return;
-    router.push(`/practice/recording/${session.dbId}`);
+  const handleClick = () => {
+    if (canPlay && session.dbId != null) {
+      router.push(`/practice/recording/${session.dbId}`);
+    }
   };
 
   return (
     <div
-      className="flex items-center gap-3 rounded-xl px-3.5 py-3"
+      onClick={handleClick}
+      className={`flex items-center gap-3 rounded-xl px-3.5 py-3 ${canPlay ? "cursor-pointer active:scale-[0.98] transition-transform" : ""}`}
       style={{
         background: "rgba(255,255,255,0.35)",
         backdropFilter: "blur(8px)",
@@ -78,12 +80,7 @@ function FreeSessionRow({ session }: { session: import("@/lib/drill-records").Re
         </span>
       </div>
       {canPlay && (
-        <button
-          onClick={handlePlay}
-          className="w-7 h-7 rounded-full bg-violet-500 flex items-center justify-center hover:bg-violet-600 transition-colors shrink-0"
-        >
-          <Play className="w-3 h-3 text-white ml-0.5" fill="white" />
-        </button>
+        <Play className="w-3.5 h-3.5 text-violet-500 shrink-0" fill="currentColor" />
       )}
     </div>
   );
@@ -95,16 +92,18 @@ function TimelineSessionRow({ session }: { session: import("@/lib/drill-records"
   const router = useRouter();
   const canPlay = !!session.audioBlob || !!session.audioUrl;
 
-  const handlePlay = () => {
-    if (!canPlay || session.dbId == null) return;
-    router.push(`/practice/recording/${session.dbId}`);
+  const handleClick = () => {
+    if (canPlay && session.dbId != null) {
+      router.push(`/practice/recording/${session.dbId}`);
+    }
   };
 
   return (
     <div className="flex items-start gap-3 mb-3 relative">
       <div className="w-2 h-2 rounded-full bg-violet-400/60 mt-2.5 shrink-0 relative z-10" />
       <div
-        className="flex-1 rounded-xl px-3.5 py-2.5"
+        onClick={handleClick}
+        className={`flex-1 rounded-xl px-3.5 py-2.5 ${canPlay ? "cursor-pointer active:scale-[0.98] transition-transform" : ""}`}
         style={{
           background: "rgba(255,255,255,0.35)",
           backdropFilter: "blur(8px)",
@@ -126,18 +125,13 @@ function TimelineSessionRow({ session }: { session: import("@/lib/drill-records"
               </span>
             )}
             {canPlay && (
-              <button
-                onClick={handlePlay}
-                className="w-6 h-6 rounded-full bg-violet-500 flex items-center justify-center hover:bg-violet-600 transition-colors"
-              >
-                <Play className="w-2.5 h-2.5 text-white ml-0.5" fill="white" />
-              </button>
+              <Play className="w-3 h-3 text-violet-500" fill="currentColor" />
             )}
           </div>
         </div>
         <div className="flex items-center gap-2 mt-1">
-          <span className="text-[12px] text-gray-400">{session.detail}</span>
-          <span className="text-[12px] text-gray-400">·</span>
+          {session.detail && <span className="text-[12px] text-gray-400">{session.detail}</span>}
+          {session.detail && <span className="text-[12px] text-gray-400">·</span>}
           <span className="text-[12px] text-gray-400 flex items-center gap-0.5">
             <Clock className="w-3 h-3" />
             {session.duration}
