@@ -496,18 +496,12 @@ export default function ProfilePage() {
     router.push("/onboarding/login");
   };
 
-  const handleGoogleLogin = async () => {
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-    if (error) {
-      console.error("Google login error:", error.message);
-      alert("로그인에 실패했습니다. 다시 시도해주세요.");
-    }
+  const handleGoogleLogin = () => {
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    const redirectUri = `${window.location.origin}/auth/google/callback`;
+    const scope = "email profile openid";
+    const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&prompt=select_account`;
+    window.location.href = url;
   };
 
   const settingsItems = [
