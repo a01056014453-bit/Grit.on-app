@@ -280,7 +280,8 @@ export function TodayDrillList({ onDrillSelect, selectedDrillId, showPlayButton 
   const handleToggle = async (drillId: string) => {
     if (!isToday) return;
 
-    const drill = allDrills.find(d => d.id === drillId);
+    const allAvail = [...dbDrillCards, ...customDrills];
+    const drill = allAvail.find(d => d.id === drillId);
     const wasCompleted = completedDrills.has(drillId);
 
     setCompletedDrills(prev => {
@@ -352,13 +353,26 @@ export function TodayDrillList({ onDrillSelect, selectedDrillId, showPlayButton 
   const customDrillIds = new Set(customDrills.map(d => d.id));
 
   // 모든 드릴 합치기 (숨긴 드릴 제외)
-  const allDrills = [...dbDrillCards, ...customDrills].filter(d => !hiddenDrills.has(d.id));
+  const allAvailable = [...dbDrillCards, ...customDrills].filter(d => !hiddenDrills.has(d.id));
+
+  // 오늘 스케줄된 드릴만 표시 (스케줄 없으면 빈 리스트)
+  const targetDate = date || new Date();
+  const targetDateStr = formatDateStr(targetDate);
+  const scheduledIds = (() => {
+    if (typeof window === "undefined") return new Set<string>();
+    const saved = localStorage.getItem(`grit-on-scheduled-${targetDateStr}`);
+    if (!saved) return new Set<string>();
+    try { return new Set<string>(JSON.parse(saved)); } catch { return new Set<string>(); }
+  })();
+
+  const allDrills = allAvailable.filter(d => scheduledIds.has(d.id));
   const groupedDrills = groupDrillsBySong(allDrills);
 
   const totalCount = allDrills.length;
   const completedCount = allDrills.filter(d => completedDrills.has(d.id)).length;
 
-  // completedOnly 모드이거나 과거 날짜에 완료 기록이 없으면 표시하지 않음
+  // 스케줄된 드릴이 없으면 표시하지 않음
+  if (totalCount === 0) return null;
   if (completedOnly && completedCount === 0) return null;
   if (!completedOnly && !isToday && completedCount === 0) return null;
 
