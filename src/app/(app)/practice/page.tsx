@@ -1033,6 +1033,13 @@ function PracticePageContent() {
     const updatedDrills = [...customDrills, drill];
     setCustomDrills(updatedDrills);
     localStorage.setItem("grit-on-custom-drills", JSON.stringify(updatedDrills));
+
+    // 오늘 스케줄에 자동 등록
+    const todayStr = drillFormatDateStr(new Date());
+    const currentScheduled = loadScheduledDrillIds(todayStr);
+    currentScheduled.add(drill.id);
+    saveScheduledDrillIds(todayStr, Array.from(currentScheduled));
+
     setNewDrill({ selectedSong: "", isNewSong: false, composer: "", songTitle: "", measures: "", title: "", mode: "duration", duration: 5, recurrence: 3 });
     setIsAddDrillModalOpen(false);
   };
