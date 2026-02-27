@@ -1491,13 +1491,13 @@ function PracticePageContent() {
                       : isFuture
                       ? "bg-white/10 opacity-30"
                       : isToday && dayStatus === "complete"
-                      ? "bg-violet-300 text-violet-700 shadow-lg shadow-violet-300/30"
+                      ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30"
                       : isToday && dayStatus === "incomplete"
                       ? "bg-violet-600 text-white shadow-lg shadow-violet-500/30"
                       : isToday
                       ? "bg-violet-600 text-white shadow-lg shadow-violet-500/30"
                       : dayStatus === "complete"
-                      ? "bg-violet-200/60 text-violet-500"
+                      ? "bg-emerald-100 text-emerald-600"
                       : dayStatus === "incomplete"
                       ? "bg-violet-500/80 text-white"
                       : "bg-white/20 backdrop-blur-sm";
@@ -1534,13 +1534,13 @@ function PracticePageContent() {
                       : isFuture
                       ? "bg-white/10 opacity-30"
                       : isToday && dayStatus === "complete"
-                      ? "bg-violet-300 text-violet-700 shadow-lg shadow-violet-300/30"
+                      ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30"
                       : isToday && dayStatus === "incomplete"
                       ? "bg-violet-600 text-white shadow-lg shadow-violet-500/30"
                       : isToday
                       ? "bg-violet-600 text-white shadow-lg shadow-violet-500/30"
                       : dayStatus === "complete"
-                      ? "bg-violet-200/60 text-violet-500"
+                      ? "bg-emerald-100 text-emerald-600"
                       : dayStatus === "incomplete"
                       ? "bg-violet-500/80 text-white"
                       : "bg-white/20 backdrop-blur-sm";
@@ -1560,7 +1560,9 @@ function PracticePageContent() {
               {/* Legend */}
               <div className="flex items-center justify-end gap-3 mt-3">
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded-full bg-violet-200/60" />
+                  <div className="w-3 h-3 rounded-full bg-emerald-100 flex items-center justify-center">
+                    <span className="text-[6px] text-emerald-600">✓</span>
+                  </div>
                   <span className="text-[10px] text-gray-400">완료</span>
                 </div>
                 <div className="flex items-center gap-1">
