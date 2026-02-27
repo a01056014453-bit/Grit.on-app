@@ -1071,7 +1071,8 @@ function PracticePageContent() {
       saveScheduledDrillIds(recDateStr, ids);
 
       // 캐리오버를 위해 스케줄된 드릴 정보를 날짜별 키에도 저장
-      const allDrills = [...dbDrillCards, ...loadCustomDrills()];
+      const latestCustomDrills = loadCustomDrills();
+      const allDrills = [...dbDrillCards, ...latestCustomDrills];
       const drillsToSave = ids
         .map(id => allDrills.find(d => d.id === id))
         .filter(Boolean)
@@ -1086,6 +1087,12 @@ function PracticePageContent() {
         }));
       if (drillsToSave.length > 0) {
         localStorage.setItem(`grit-on-drills-${recDateStr}`, JSON.stringify(drillsToSave));
+      }
+
+      // customDrills state 갱신 → TodayDrillList 리렌더
+      const savedDrills = localStorage.getItem("grit-on-custom-drills");
+      if (savedDrills) {
+        setCustomDrills(JSON.parse(savedDrills));
       }
 
       setIsScheduleModalOpen(false);
