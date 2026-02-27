@@ -5,6 +5,7 @@ import { X, Plus } from "lucide-react";
 import { getUserSongs, getDrillCards } from "@/lib/queries";
 import { getAllAvailableDrills } from "@/lib/drill-records";
 import { getUserId } from "@/lib/user-id";
+import { pushUserDataDebounced } from "@/lib/sync-user-data";
 import { ComposerAutocomplete, TitleAutocomplete } from "@/components/ui/composer-autocomplete";
 import type { Song } from "@/types";
 
@@ -91,6 +92,7 @@ export function ScheduleModal({
     const existing = saved ? JSON.parse(saved) : [];
     existing.push(drill);
     localStorage.setItem("grit-on-custom-drills", JSON.stringify(existing));
+    pushUserDataDebounced("grit-on-custom-drills");
 
     // 기존 스케줄에 새 드릴 추가
     const scheduledRaw = localStorage.getItem(`grit-on-scheduled-${dateStr}`);

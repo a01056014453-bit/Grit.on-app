@@ -6,6 +6,7 @@ import type { DrillCard } from "@/types";
 import { useAudioRecorder, usePracticeSessions } from "@/hooks";
 import { savePracticeSession, getAllSessions, deleteSession, type PracticeSession } from "@/lib/db";
 import { syncPracticeSessions } from "@/lib/sync-practice";
+import { pushUserDataDebounced } from "@/lib/sync-user-data";
 import { completePracticeTodo } from "@/lib/practice-todo-store";
 import { addNotification } from "@/lib/notification-store";
 import { formatTime } from "@/lib/format";
@@ -757,10 +758,12 @@ function PracticePageContent() {
             ? new Set(JSON.parse(savedCompleted).completedDrillIds || [])
             : new Set<string>();
           completedIds.add(activeDrill.id);
-          localStorage.setItem(`grit-on-completed-${todayStr}`, JSON.stringify({
+          const completedKey1 = `grit-on-completed-${todayStr}`;
+          localStorage.setItem(completedKey1, JSON.stringify({
             date: todayStr,
             completedDrillIds: Array.from(completedIds),
           }));
+          pushUserDataDebounced(completedKey1);
           setCompletedDrills(completedIds as Set<string>);
           setActiveDrill(null);
         }
@@ -864,10 +867,12 @@ function PracticePageContent() {
       }
       // Save to localStorage with today's date
       const todayStr = getTodayStr();
-      localStorage.setItem(`grit-on-completed-${todayStr}`, JSON.stringify({
+      const completedKey2 = `grit-on-completed-${todayStr}`;
+      localStorage.setItem(completedKey2, JSON.stringify({
         date: todayStr,
         completedDrillIds: Array.from(newSet),
       }));
+      pushUserDataDebounced(completedKey2);
       return newSet;
     });
   };
@@ -883,6 +888,7 @@ function PracticePageContent() {
     ];
     setCustomDrills(newCustomDrills);
     localStorage.setItem("grit-on-custom-drills", JSON.stringify(newCustomDrills));
+    pushUserDataDebounced("grit-on-custom-drills");
     setCarryOverDrills([]);
     setShowCarryOver(false);
   };
@@ -984,6 +990,7 @@ function PracticePageContent() {
     const updatedDrills = [...customDrills, ...newDrills];
     setCustomDrills(updatedDrills);
     localStorage.setItem("grit-on-custom-drills", JSON.stringify(updatedDrills));
+    pushUserDataDebounced("grit-on-custom-drills");
   };
 
   // Toggle routine day
@@ -1034,6 +1041,7 @@ function PracticePageContent() {
     const updatedDrills = [...customDrills, drill];
     setCustomDrills(updatedDrills);
     localStorage.setItem("grit-on-custom-drills", JSON.stringify(updatedDrills));
+    pushUserDataDebounced("grit-on-custom-drills");
 
     // 오늘 스케줄에 자동 등록
     const todayStr = drillFormatDateStr(new Date());
@@ -1050,6 +1058,7 @@ function PracticePageContent() {
     const updatedDrills = customDrills.filter(d => d.id !== drillId);
     setCustomDrills(updatedDrills);
     localStorage.setItem("grit-on-custom-drills", JSON.stringify(updatedDrills));
+    pushUserDataDebounced("grit-on-custom-drills");
   };
 
   // Get weekly practice data

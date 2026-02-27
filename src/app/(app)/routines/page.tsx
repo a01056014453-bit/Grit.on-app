@@ -8,6 +8,7 @@ import { ChevronLeft, Plus, X, Repeat, Trash2, Check } from "lucide-react";
 import { getDrillCards, getUserSongs } from "@/lib/queries";
 import { groupDrillsBySong } from "@/lib/utils-practice";
 import { getUserId } from "@/lib/user-id";
+import { pushUserDataDebounced } from "@/lib/sync-user-data";
 import type { DrillCard, Song } from "@/types";
 
 interface Drill {
@@ -167,6 +168,7 @@ export default function RoutinesPage() {
     }));
     const updatedDrills = [...currentDrills, ...newDrills];
     localStorage.setItem("grit-on-custom-drills", JSON.stringify(updatedDrills));
+    pushUserDataDebounced("grit-on-custom-drills");
 
     setAppliedRoutineId(routine.id);
     setTimeout(() => setAppliedRoutineId(null), 2000);

@@ -5,6 +5,7 @@
  */
 
 import { groupDrillsBySong } from "@/lib/utils-practice";
+import { pushUserDataDebounced } from "@/lib/sync-user-data";
 import type { DrillCard } from "@/types";
 import type { PracticeSession } from "@/lib/db";
 
@@ -107,11 +108,13 @@ export function loadScheduledDrillIds(dateStr: string): Set<string> {
 
 export function saveScheduledDrillIds(dateStr: string, ids: string[]): void {
   if (typeof window === "undefined") return;
+  const key = `grit-on-scheduled-${dateStr}`;
   if (ids.length === 0) {
-    localStorage.removeItem(`grit-on-scheduled-${dateStr}`);
+    localStorage.removeItem(key);
   } else {
-    localStorage.setItem(`grit-on-scheduled-${dateStr}`, JSON.stringify(ids));
+    localStorage.setItem(key, JSON.stringify(ids));
   }
+  pushUserDataDebounced(key);
 }
 
 /** 해당 월에서 일정이 잡힌 날짜 Set */

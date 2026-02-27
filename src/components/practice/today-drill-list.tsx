@@ -7,6 +7,7 @@ import { groupDrillsBySong } from "@/lib/utils-practice";
 import { getDrillCards } from "@/lib/queries";
 import { savePracticeSession, getAllSessions, deleteSession } from "@/lib/db";
 import { getUserId } from "@/lib/user-id";
+import { pushUserDataDebounced } from "@/lib/sync-user-data";
 import type { DrillCard } from "@/types";
 
 interface TodayDrillListProps {
@@ -264,6 +265,7 @@ export function TodayDrillList({ onDrillSelect, selectedDrillId, showPlayButton 
         const drills = JSON.parse(savedCustom);
         const updated = drills.filter((d: any) => d.id !== drillId);
         localStorage.setItem("grit-on-custom-drills", JSON.stringify(updated));
+        pushUserDataDebounced("grit-on-custom-drills");
       }
       setCustomDrills(prev => prev.filter(d => d.id !== drillId));
     } else {
@@ -271,6 +273,7 @@ export function TodayDrillList({ onDrillSelect, selectedDrillId, showPlayButton 
         const newSet = new Set(prev);
         newSet.add(drillId);
         localStorage.setItem("grit-on-hidden-drills", JSON.stringify(Array.from(newSet)));
+        pushUserDataDebounced("grit-on-hidden-drills");
         return newSet;
       });
     }
@@ -292,10 +295,12 @@ export function TodayDrillList({ onDrillSelect, selectedDrillId, showPlayButton 
         newSet.add(drillId);
       }
       const dateStr = formatDateStr(new Date());
-      localStorage.setItem(`grit-on-completed-${dateStr}`, JSON.stringify({
+      const completedKey = `grit-on-completed-${dateStr}`;
+      localStorage.setItem(completedKey, JSON.stringify({
         date: dateStr,
         completedDrillIds: Array.from(newSet),
       }));
+      pushUserDataDebounced(completedKey);
       return newSet;
     });
 

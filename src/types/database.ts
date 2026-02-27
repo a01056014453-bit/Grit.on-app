@@ -1131,6 +1131,27 @@ export type Database = {
           },
         ]
       }
+      user_data_sync: {
+        Row: {
+          user_id: string
+          data_key: string
+          data_value: Json
+          updated_at: string
+        }
+        Insert: {
+          user_id: string
+          data_key: string
+          data_value: Json
+          updated_at?: string
+        }
+        Update: {
+          user_id?: string
+          data_key?: string
+          data_value?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

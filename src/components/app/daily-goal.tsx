@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion, animate } from "framer-motion";
 import { Target, Check, BarChart3 } from "lucide-react";
 import { ProgressRing } from "./progress-ring";
+import { pushUserDataDebounced } from "@/lib/sync-user-data";
 
 interface DailyGoalProps {
   completed: number;
@@ -68,6 +69,7 @@ export function DailyGoal({ completed, target, onTargetChange }: DailyGoalProps)
 
   const handleSelectGoal = (minutes: number) => {
     localStorage.setItem('grit-on-daily-goal', minutes.toString());
+    pushUserDataDebounced("grit-on-daily-goal");
     onTargetChange?.(minutes);
     setIsOpen(false);
   };

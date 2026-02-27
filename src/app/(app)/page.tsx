@@ -10,6 +10,7 @@ import { getGreeting } from "@/lib/utils-practice";
 import { getProfile, profileToUser } from "@/lib/queries";
 import { getUserId } from "@/lib/user-id";
 import { syncPracticeSessions } from "@/lib/sync-practice";
+import { syncUserData } from "@/lib/sync-user-data";
 import { usePracticeSessions } from "@/hooks/usePracticeSessions";
 import { useTeacherMode } from "@/hooks/useTeacherMode";
 import { getUnreadCount } from "@/lib/notification-store";
@@ -42,13 +43,15 @@ export default function HomePage() {
     loadProfile();
   }, []);
 
-  // Sync practice sessions to Supabase on load + tab visibility change
+  // Sync all data to Supabase on load + tab visibility change
   useEffect(() => {
     syncPracticeSessions().catch(console.error);
+    syncUserData().catch(console.error);
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
         syncPracticeSessions().catch(console.error);
+        syncUserData().catch(console.error);
       }
     };
     document.addEventListener("visibilitychange", handleVisibilityChange);
