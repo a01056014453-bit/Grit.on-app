@@ -3,6 +3,8 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
+import { getProfile } from "@/lib/queries/profiles";
+import { pullUserData } from "@/lib/sync-user-data";
 
 export default function AuthCompletePage() {
   const router = useRouter();
@@ -19,14 +21,36 @@ export default function AuthCompletePage() {
         localStorage.setItem("grit-on-logged-in", "true");
         localStorage.setItem("grit-on-user-id", user.id);
 
-        // 온보딩 완료 여부 확인
+        // 이미 온보딩 완료 → 홈으로
         const onboardingDone = localStorage.getItem("sempre-onboarding-done");
         if (onboardingDone) {
           router.replace("/");
-        } else {
-          // 온보딩이 아직이면 프로필 설정으로
-          router.replace("/onboarding/profile-setup");
+          return;
         }
+
+        // 서버에 프로필이 있는지 확인 (다른 기기에서 이미 가입한 사용자)
+        try {
+          const profile = await getProfile(user.id);
+          if (profile && profile.nickname) {
+            // 기존 사용자 → 프로필 복원 + 데이터 동기화 후 홈으로
+            localStorage.setItem("sempre-onboarding-done", "true");
+            localStorage.setItem("sempre-user-profile", JSON.stringify({
+              nickname: profile.nickname,
+              ageGroup: profile.level || "",
+              instruments: profile.instrument ? [profile.instrument] : [],
+              profileEmoji: "👤",
+              createdAt: profile.created_at || new Date().toISOString(),
+            }));
+            await pullUserData();
+            router.replace("/");
+            return;
+          }
+        } catch {
+          // 프로필 조회 실패 시 온보딩으로
+        }
+
+        // 새 사용자 → 온보딩
+        router.replace("/onboarding");
       } else {
         router.replace("/landing");
       }

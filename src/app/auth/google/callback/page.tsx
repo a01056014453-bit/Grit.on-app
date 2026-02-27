@@ -3,6 +3,8 @@
 import { useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
+import { getProfile } from "@/lib/queries/profiles";
+import { pullUserData } from "@/lib/sync-user-data";
 
 function GoogleCallbackHandler() {
   const router = useRouter();
@@ -53,9 +55,32 @@ function GoogleCallbackHandler() {
         localStorage.setItem("grit-on-logged-in", "true");
         localStorage.setItem("grit-on-user-id", authData.user.id);
 
-        // 리다이렉트
+        // 이미 온보딩 완료한 사용자 → 홈으로
         const onboardingDone = localStorage.getItem("sempre-onboarding-done");
-        router.replace(onboardingDone ? "/" : "/onboarding/profile-setup");
+        if (onboardingDone) {
+          router.replace("/");
+          return;
+        }
+
+        // 서버에 프로필이 있는지 확인 (다른 기기에서 이미 가입한 사용자)
+        const profile = await getProfile(authData.user.id);
+        if (profile && profile.nickname) {
+          // 기존 사용자 → 프로필 복원 + 데이터 동기화 후 홈으로
+          localStorage.setItem("sempre-onboarding-done", "true");
+          localStorage.setItem("sempre-user-profile", JSON.stringify({
+            nickname: profile.nickname,
+            ageGroup: profile.level || "",
+            instruments: profile.instrument ? [profile.instrument] : [],
+            profileEmoji: "👤",
+            createdAt: profile.created_at || new Date().toISOString(),
+          }));
+          await pullUserData();
+          router.replace("/");
+          return;
+        }
+
+        // 새 사용자 → 온보딩 진행
+        router.replace("/onboarding");
       } catch (err) {
         console.error("Google callback error:", err);
         router.replace("/onboarding/login");
