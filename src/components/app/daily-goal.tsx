@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { motion, animate } from "framer-motion";
 import { Target, Check, BarChart3 } from "lucide-react";
@@ -30,6 +31,8 @@ export function DailyGoal({ completed, target, onTargetChange }: DailyGoalProps)
   const remaining = Math.max(target - completed, 0);
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; right: number } | null>(null);
   const [displayProgress, setDisplayProgress] = useState(0);
   const [displayCompleted, setDisplayCompleted] = useState(0);
 
@@ -53,10 +56,21 @@ export function DailyGoal({ completed, target, onTargetChange }: DailyGoalProps)
   const hoursSinceEpoch = Math.floor(now.getTime() / (1000 * 60 * 60));
   const quote = quotes[hoursSinceEpoch % quotes.length];
 
+  const openDropdown = useCallback(() => {
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
+    }
+    setIsOpen(true);
+  }, []);
+
   // 외부 클릭 시 드롭다운 닫기
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current && !dropdownRef.current.contains(event.target as Node) &&
+        buttonRef.current && !buttonRef.current.contains(event.target as Node)
+      ) {
         setIsOpen(false);
       }
     }
@@ -82,16 +96,21 @@ export function DailyGoal({ completed, target, onTargetChange }: DailyGoalProps)
           <p className="text-xs text-gray-500 mt-1">매일 조금씩 성장하는 습관</p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="relative" ref={dropdownRef}>
+          <div>
             <button
-              onClick={() => setIsOpen(!isOpen)}
+              ref={buttonRef}
+              onClick={() => isOpen ? setIsOpen(false) : openDropdown()}
               className="p-2 bg-white/40 backdrop-blur-sm rounded-full hover:bg-white/60 transition-colors shadow-sm"
             >
               <Target className="w-5 h-5 text-violet-600" />
             </button>
 
-            {isOpen && (
-              <div className="absolute right-0 bottom-full mb-2 bg-white rounded-2xl shadow-lg border border-gray-100 py-2 z-50 min-w-[140px] max-h-[280px] overflow-y-auto">
+            {isOpen && dropdownPos && createPortal(
+              <div
+                ref={dropdownRef}
+                className="fixed bg-white rounded-2xl shadow-xl border border-gray-100 py-2 min-w-[160px] max-h-[300px] overflow-y-auto"
+                style={{ top: dropdownPos.top, right: dropdownPos.right, zIndex: 9999 }}
+              >
                 <p className="text-xs text-gray-500 px-4 py-1 border-b border-gray-100 mb-1">
                   목표 시간 설정
                 </p>
@@ -107,7 +126,8 @@ export function DailyGoal({ completed, target, onTargetChange }: DailyGoalProps)
                     {target === minutes && <Check className="w-4 h-4" />}
                   </button>
                 ))}
-              </div>
+              </div>,
+              document.body
             )}
           </div>
           <Link
