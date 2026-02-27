@@ -233,16 +233,23 @@ export function buildSessionsForDate(
         new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
     )
     .map((s) => {
+      const hasRecording = !!s.audioBlob;
       const durationMin = Math.round(s.totalTime / 60);
+      // "악보보기" 필터링
+      const rawDetail = s.todoNote || s.label || "";
+      const detail = rawDetail
+        .split(" · ")
+        .filter((part) => part !== "악보보기")
+        .join(" · ");
       return {
         id: idCounter++,
         dbId: s.id,
         pieceId: s.pieceId,
         time: formatTimeFromDate(new Date(s.startTime)),
         piece: s.pieceName,
-        detail: s.todoNote || s.label || "",
-        duration: `${durationMin}분`,
-        hasRecording: !!s.audioBlob,
+        detail,
+        duration: hasRecording ? `${durationMin}분` : "",
+        hasRecording,
         audioBlob: s.audioBlob,
       };
     });

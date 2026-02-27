@@ -310,7 +310,7 @@ export function TodayDrillList({ onDrillSelect, selectedDrillId, showPlayButton 
           startTime,
           endTime: now,
           totalTime: durationSec,
-          practiceTime: durationSec,
+          practiceTime: 0, // AI 분석 없는 드릴 완료 → 순연습시간 0
           synced: false,
           practiceType: "partial",
           label: "드릴 완료",

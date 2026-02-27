@@ -75,7 +75,7 @@ function FreeSessionRow({ session }: { session: import("@/lib/drill-records").Re
           {session.piece}
         </span>
         <span className="text-[11px] text-gray-400">
-          {session.time} · {session.duration}
+          {session.time}{session.duration ? ` · ${session.duration}` : ""}
         </span>
       </div>
     </div>
@@ -122,11 +122,13 @@ function TimelineSessionRow({ session }: { session: import("@/lib/drill-records"
         </div>
         <div className="flex items-center gap-2 mt-1">
           {session.detail && <span className="text-[12px] text-gray-400">{session.detail}</span>}
-          {session.detail && <span className="text-[12px] text-gray-400">·</span>}
-          <span className="text-[12px] text-gray-400 flex items-center gap-0.5">
-            <Clock className="w-3 h-3" />
-            {session.duration}
-          </span>
+          {session.detail && session.duration && <span className="text-[12px] text-gray-400">·</span>}
+          {session.duration && (
+            <span className="text-[12px] text-gray-400 flex items-center gap-0.5">
+              <Clock className="w-3 h-3" />
+              {session.duration}
+            </span>
+          )}
         </div>
         <span className="text-[11px] text-violet-400 mt-1 block">{session.time}</span>
       </div>
@@ -267,7 +269,7 @@ export default function RecordsPage() {
             startTime,
             endTime: now,
             totalTime: durationSec,
-            practiceTime: durationSec,
+            practiceTime: 0, // AI 분석 없는 드릴 완료 → 순연습시간 0
             synced: false,
             practiceType: "partial",
             label: "드릴 완료",
