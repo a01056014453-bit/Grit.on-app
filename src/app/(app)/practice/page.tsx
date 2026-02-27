@@ -90,37 +90,14 @@ function formatRelativeDate(d: Date): string {
 // ─── 타임라인 재생 가능 세션 ────────────────────────────────────────────────
 
 function PlayableTimelineSession({ session }: { session: import("@/lib/drill-records").RecordSession }) {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [localBlobUrl, setLocalBlobUrl] = useState<string | null>(null);
-  const [playing, setPlaying] = useState(false);
-
-  useEffect(() => {
-    return () => {
-      if (localBlobUrl) URL.revokeObjectURL(localBlobUrl);
-    };
-  }, [localBlobUrl]);
-
+  const router = useRouter();
   const canPlay = !!session.audioBlob || !!session.audioUrl;
 
-  const togglePlay = () => {
+  const handlePlay = () => {
     if (!canPlay) return;
-    if (playing && audioRef.current) {
-      audioRef.current.pause();
-      setPlaying(false);
-      return;
+    if (session.dbId != null) {
+      router.push(`/practice/recording/${session.dbId}`);
     }
-    let url: string;
-    if (session.audioBlob) {
-      url = localBlobUrl ?? URL.createObjectURL(session.audioBlob);
-      if (!localBlobUrl) setLocalBlobUrl(url);
-    } else {
-      url = session.audioUrl!;
-    }
-    const audio = new Audio(url);
-    audioRef.current = audio;
-    audio.onended = () => setPlaying(false);
-    audio.play();
-    setPlaying(true);
   };
 
   return (
@@ -150,14 +127,10 @@ function PlayableTimelineSession({ session }: { session: import("@/lib/drill-rec
             )}
             {canPlay && (
               <button
-                onClick={togglePlay}
+                onClick={handlePlay}
                 className="w-6 h-6 rounded-full bg-violet-500 flex items-center justify-center hover:bg-violet-600 transition-colors"
               >
-                {playing ? (
-                  <Square className="w-2.5 h-2.5 text-white" fill="white" />
-                ) : (
-                  <Play className="w-2.5 h-2.5 text-white ml-0.5" fill="white" />
-                )}
+                <Play className="w-2.5 h-2.5 text-white ml-0.5" fill="white" />
               </button>
             )}
           </div>

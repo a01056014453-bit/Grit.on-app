@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ChevronLeft,
@@ -15,7 +16,6 @@ import {
   ArrowLeft,
   Mic,
   Play,
-  Square,
   Plus,
   X,
 } from "lucide-react";
@@ -50,39 +50,12 @@ const dayNames = ["일", "월", "화", "수", "목", "금", "토"];
 // ─── Free Session Row ────────────────────────────────────────────────────────
 
 function FreeSessionRow({ session }: { session: import("@/lib/drill-records").RecordSession }) {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [localBlobUrl, setLocalBlobUrl] = useState<string | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const router = useRouter();
+  const canPlay = !!session.audioBlob || !!session.audioUrl;
 
-  useEffect(() => {
-    return () => {
-      if (localBlobUrl) URL.revokeObjectURL(localBlobUrl);
-    };
-  }, [localBlobUrl]);
-
-  const togglePlay = () => {
-    if (!session.audioBlob && !session.audioUrl) return;
-
-    if (isPlaying && audioRef.current) {
-      audioRef.current.pause();
-      setIsPlaying(false);
-      return;
-    }
-
-    // 로컬 Blob 우선, 없으면 Supabase URL 사용
-    let url: string;
-    if (session.audioBlob) {
-      url = localBlobUrl ?? URL.createObjectURL(session.audioBlob);
-      if (!localBlobUrl) setLocalBlobUrl(url);
-    } else {
-      url = session.audioUrl!;
-    }
-
-    const audio = new Audio(url);
-    audioRef.current = audio;
-    audio.onended = () => setIsPlaying(false);
-    audio.play();
-    setIsPlaying(true);
+  const handlePlay = () => {
+    if (!canPlay || session.dbId == null) return;
+    router.push(`/practice/recording/${session.dbId}`);
   };
 
   return (
@@ -104,16 +77,12 @@ function FreeSessionRow({ session }: { session: import("@/lib/drill-records").Re
           {session.time} · {session.duration}
         </span>
       </div>
-      {session.hasRecording && (
+      {canPlay && (
         <button
-          onClick={togglePlay}
+          onClick={handlePlay}
           className="w-7 h-7 rounded-full bg-violet-500 flex items-center justify-center hover:bg-violet-600 transition-colors shrink-0"
         >
-          {isPlaying ? (
-            <Square className="w-3 h-3 text-white" fill="white" />
-          ) : (
-            <Play className="w-3 h-3 text-white ml-0.5" fill="white" />
-          )}
+          <Play className="w-3 h-3 text-white ml-0.5" fill="white" />
         </button>
       )}
     </div>
@@ -123,40 +92,12 @@ function FreeSessionRow({ session }: { session: import("@/lib/drill-records").Re
 // ─── Timeline Session Row ────────────────────────────────────────────────────
 
 function TimelineSessionRow({ session }: { session: import("@/lib/drill-records").RecordSession }) {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [localBlobUrl, setLocalBlobUrl] = useState<string | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-
-  useEffect(() => {
-    return () => {
-      if (localBlobUrl) URL.revokeObjectURL(localBlobUrl);
-    };
-  }, [localBlobUrl]);
-
+  const router = useRouter();
   const canPlay = !!session.audioBlob || !!session.audioUrl;
 
-  const togglePlay = () => {
-    if (!canPlay) return;
-
-    if (isPlaying && audioRef.current) {
-      audioRef.current.pause();
-      setIsPlaying(false);
-      return;
-    }
-
-    let url: string;
-    if (session.audioBlob) {
-      url = localBlobUrl ?? URL.createObjectURL(session.audioBlob);
-      if (!localBlobUrl) setLocalBlobUrl(url);
-    } else {
-      url = session.audioUrl!;
-    }
-
-    const audio = new Audio(url);
-    audioRef.current = audio;
-    audio.onended = () => setIsPlaying(false);
-    audio.play();
-    setIsPlaying(true);
+  const handlePlay = () => {
+    if (!canPlay || session.dbId == null) return;
+    router.push(`/practice/recording/${session.dbId}`);
   };
 
   return (
@@ -186,14 +127,10 @@ function TimelineSessionRow({ session }: { session: import("@/lib/drill-records"
             )}
             {canPlay && (
               <button
-                onClick={togglePlay}
+                onClick={handlePlay}
                 className="w-6 h-6 rounded-full bg-violet-500 flex items-center justify-center hover:bg-violet-600 transition-colors"
               >
-                {isPlaying ? (
-                  <Square className="w-2.5 h-2.5 text-white" fill="white" />
-                ) : (
-                  <Play className="w-2.5 h-2.5 text-white ml-0.5" fill="white" />
-                )}
+                <Play className="w-2.5 h-2.5 text-white ml-0.5" fill="white" />
               </button>
             )}
           </div>

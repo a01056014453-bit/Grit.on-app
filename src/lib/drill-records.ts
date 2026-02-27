@@ -32,6 +32,7 @@ export interface RecordPiece {
 
 export interface RecordSession {
   id: number;
+  dbId?: number; // IndexedDB session ID (for navigation to player)
   pieceId: string;
   time: string;
   piece: string;
@@ -235,6 +236,7 @@ export function buildSessionsForDate(
       const durationMin = Math.round(s.totalTime / 60);
       return {
         id: idCounter++,
+        dbId: s.id,
         pieceId: s.pieceId,
         time: formatTimeFromDate(new Date(s.startTime)),
         piece: s.pieceName,
