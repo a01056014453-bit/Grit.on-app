@@ -877,6 +877,7 @@ function PracticePageContent() {
       pushUserDataDebounced(completedKey2);
       return newSet;
     });
+    setRefreshKey((k) => k + 1);
   };
 
   // Accept carry-over drills (add them to today's drills)
