@@ -1,45 +1,65 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase-server";
-import type { Json } from "@/types/database";
+
+const BUCKET = "recordings";
+const SYNC_FOLDER = "sync";
+
+/** Storage 경로: recordings/sync/{userId}.json */
+function syncPath(userId: string): string {
+  return `${SYNC_FOLDER}/${userId}.json`;
+}
 
 /**
- * POST: localStorage 데이터를 서버에 저장 (push)
- * Body: { userId, items: [{ key, value }] }
+ * POST: localStorage 데이터를 Storage에 저장 (push)
+ * Body: { userId, data: Record<string, unknown> }
+ *
+ * data는 키-값 객체. 기존 데이터와 병합(merge)하여 저장.
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const userId: string = body.userId;
-    const items: Array<{ key: string; value: Json }> = body.items ?? [];
+    const incoming: Record<string, unknown> = body.data ?? {};
 
-    if (!userId || items.length === 0) {
+    if (!userId || Object.keys(incoming).length === 0) {
       return NextResponse.json(
-        { error: "userId와 items가 필요합니다." },
+        { error: "userId와 data가 필요합니다." },
         { status: 400 }
       );
     }
 
-    // upsert (ON CONFLICT → UPDATE)
-    const rows = items.map((item) => ({
-      user_id: userId,
-      data_key: item.key,
-      data_value: item.value,
-      updated_at: new Date().toISOString(),
-    }));
+    const path = syncPath(userId);
 
-    const { error } = await supabaseServer
-      .from("user_data_sync")
-      .upsert(rows, { onConflict: "user_id,data_key" });
+    // 기존 데이터 로드 (있으면 병합)
+    let existing: Record<string, unknown> = {};
+    const { data: blob } = await supabaseServer.storage
+      .from(BUCKET)
+      .download(path);
+
+    if (blob) {
+      try {
+        existing = JSON.parse(await blob.text());
+      } catch { /* 파싱 실패 시 빈 객체 */ }
+    }
+
+    // 병합: incoming이 existing을 덮어씀
+    const merged = { ...existing, ...incoming, _updatedAt: new Date().toISOString() };
+    const jsonStr = JSON.stringify(merged);
+    const file = new Blob([jsonStr], { type: "application/json" });
+
+    const { error } = await supabaseServer.storage
+      .from(BUCKET)
+      .upload(path, file, { upsert: true, contentType: "application/json" });
 
     if (error) {
-      console.error("[sync-user-data] upsert 오류:", error);
+      console.error("[sync-user-data] upload 오류:", error);
       return NextResponse.json(
         { error: "데이터 저장 실패" },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ success: true, count: rows.length });
+    return NextResponse.json({ success: true, keys: Object.keys(incoming).length });
   } catch (error) {
     console.error("[sync-user-data] POST 오류:", error);
     return NextResponse.json(
@@ -50,7 +70,7 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * GET: 서버에서 사용자 데이터 가져오기 (pull)
+ * GET: Storage에서 사용자 데이터 가져오기 (pull)
  * Query: ?userId=xxx
  */
 export async function GET(request: NextRequest) {
@@ -64,26 +84,21 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { data, error } = await supabaseServer
-      .from("user_data_sync")
-      .select("data_key, data_value, updated_at")
-      .eq("user_id", userId);
+    const path = syncPath(userId);
 
-    if (error) {
-      console.error("[sync-user-data] GET 오류:", error);
-      return NextResponse.json(
-        { error: "데이터 조회 실패" },
-        { status: 500 }
-      );
+    const { data: blob, error } = await supabaseServer.storage
+      .from(BUCKET)
+      .download(path);
+
+    if (error || !blob) {
+      // 파일 없음 = 첫 동기화
+      return NextResponse.json({ success: true, data: {} });
     }
 
-    const items = (data || []).map((row) => ({
-      key: row.data_key,
-      value: row.data_value,
-      updatedAt: row.updated_at,
-    }));
+    const text = await blob.text();
+    const data = JSON.parse(text);
 
-    return NextResponse.json({ success: true, items });
+    return NextResponse.json({ success: true, data });
   } catch (error) {
     console.error("[sync-user-data] GET 오류:", error);
     return NextResponse.json(

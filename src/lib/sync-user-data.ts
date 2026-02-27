@@ -1,6 +1,6 @@
 /**
  * sync-user-data.ts
- * localStorage ↔ Supabase 동기화
+ * localStorage ↔ Supabase Storage 동기화
  * 동일 계정이면 기기가 달라도 같은 데이터를 보여줌
  */
 
@@ -39,25 +39,24 @@ export async function pushUserData(keys?: string[]): Promise<void> {
   const targetKeys = keys ?? collectAllSyncKeys();
   if (targetKeys.length === 0) return;
 
-  const items = targetKeys
-    .map((key) => {
-      const raw = localStorage.getItem(key);
-      if (raw === null) return null;
-      try {
-        return { key, value: JSON.parse(raw) };
-      } catch {
-        return { key, value: raw };
-      }
-    })
-    .filter((item): item is { key: string; value: unknown } => item !== null);
+  const data: Record<string, unknown> = {};
+  for (const key of targetKeys) {
+    const raw = localStorage.getItem(key);
+    if (raw === null) continue;
+    try {
+      data[key] = JSON.parse(raw);
+    } catch {
+      data[key] = raw;
+    }
+  }
 
-  if (items.length === 0) return;
+  if (Object.keys(data).length === 0) return;
 
   try {
     const res = await fetch("/api/sync-user-data", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, items }),
+      body: JSON.stringify({ userId, data }),
     });
 
     if (!res.ok) {
@@ -71,7 +70,7 @@ export async function pushUserData(keys?: string[]): Promise<void> {
 /** 특정 키가 변경되었을 때 호출 (debounced) */
 const pushTimers = new Map<string, NodeJS.Timeout>();
 
-export function pushUserDataDebounced(key: string, delayMs = 1000): void {
+export function pushUserDataDebounced(key: string, delayMs = 1500): void {
   const existing = pushTimers.get(key);
   if (existing) clearTimeout(existing);
 
@@ -100,21 +99,24 @@ export async function pullUserData(): Promise<boolean> {
       return false;
     }
 
-    const data = await res.json();
-    if (!data.success || !data.items) return false;
+    const result = await res.json();
+    if (!result.success || !result.data) return false;
 
-    const items: Array<{ key: string; value: unknown; updatedAt: string }> = data.items;
+    const serverData: Record<string, unknown> = result.data;
+    delete serverData._updatedAt; // 메타데이터 제외
 
-    for (const item of items) {
-      const serverValue = typeof item.value === "string"
-        ? item.value
-        : JSON.stringify(item.value);
+    let applied = 0;
+    for (const [key, value] of Object.entries(serverData)) {
+      const serverValue = typeof value === "string"
+        ? value
+        : JSON.stringify(value);
 
-      const localValue = localStorage.getItem(item.key);
+      const localValue = localStorage.getItem(key);
 
       // 로컬에 없으면 서버 값 적용
       if (localValue === null) {
-        localStorage.setItem(item.key, serverValue);
+        localStorage.setItem(key, serverValue);
+        applied++;
         continue;
       }
 
@@ -122,27 +124,33 @@ export async function pullUserData(): Promise<boolean> {
       if (localValue === serverValue) continue;
 
       // 날짜별 완료/스케줄 데이터는 병합 (union)
-      if (item.key.startsWith("grit-on-completed-")) {
-        mergeCompleted(item.key, item.value);
+      if (key.startsWith("grit-on-completed-")) {
+        mergeCompleted(key, value);
+        applied++;
         continue;
       }
-      if (item.key.startsWith("grit-on-scheduled-")) {
-        mergeScheduled(item.key, item.value);
+      if (key.startsWith("grit-on-scheduled-")) {
+        mergeScheduled(key, value);
+        applied++;
         continue;
       }
 
       // 커스텀 드릴은 병합 (ID 기준 union)
-      if (item.key === "grit-on-custom-drills") {
-        mergeCustomDrills(item.value);
+      if (key === "grit-on-custom-drills") {
+        mergeCustomDrills(value);
+        applied++;
         continue;
       }
 
-      // 그 외: 서버 값 우선 (최신)
-      localStorage.setItem(item.key, serverValue);
+      // 그 외: 서버 값 우선
+      localStorage.setItem(key, serverValue);
+      applied++;
     }
 
-    console.log(`[sync-user-data] pull 완료: ${items.length}개 키`);
-    return items.length > 0;
+    if (applied > 0) {
+      console.log(`[sync-user-data] pull 완료: ${applied}개 키 반영`);
+    }
+    return applied > 0;
   } catch (err) {
     console.error("[sync-user-data] pull 오류:", err);
     return false;
@@ -170,7 +178,9 @@ export async function syncUserData(): Promise<void> {
 function mergeCompleted(key: string, serverValue: unknown): void {
   try {
     const local = JSON.parse(localStorage.getItem(key) || "{}");
-    const server = typeof serverValue === "object" ? serverValue as Record<string, unknown> : JSON.parse(String(serverValue));
+    const server = typeof serverValue === "object" && serverValue !== null
+      ? serverValue as Record<string, unknown>
+      : JSON.parse(String(serverValue));
 
     const localIds: string[] = (local as { completedDrillIds?: string[] }).completedDrillIds || [];
     const serverIds: string[] = (server as { completedDrillIds?: string[] }).completedDrillIds || [];
@@ -182,7 +192,6 @@ function mergeCompleted(key: string, serverValue: unknown): void {
       completedDrillIds: merged,
     }));
   } catch {
-    // 병합 실패 시 서버 값 사용
     localStorage.setItem(key, JSON.stringify(serverValue));
   }
 }
