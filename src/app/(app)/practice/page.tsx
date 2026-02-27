@@ -18,11 +18,13 @@ import {
   buildSessionsForDate,
   buildCalendarData,
   buildScheduledDays,
+  buildPiecesForDate,
   formatDateStr as drillFormatDateStr,
   saveScheduledDrillIds,
   loadScheduledDrillIds,
   loadCompletedDrills,
   loadCustomDrills,
+  getAllAvailableDrills,
 } from "@/lib/drill-records";
 import type { PracticeType, Song, PracticeTodo } from "@/types";
 import Link from "next/link";
@@ -1147,24 +1149,37 @@ function PracticePageContent() {
   const recSessionsRaw = useMemo(() => calMounted ? buildSessionsForDate(recDateStr, recentSessions) : [], [recDateStr, recentSessions, refreshKey, calMounted]);
   const scheduledDays = useMemo(() => calMounted ? buildScheduledDays(calYear, calMonth) : new Set<number>(), [calYear, calMonth, refreshKey, calMounted]);
 
+  // 선택한 날짜의 미완료 투두 목록
+  const selectedDateIncompleteDrills = useMemo(() => {
+    if (!calMounted) return [];
+    const scheduled = loadScheduledDrillIds(recDateStr);
+    if (scheduled.size === 0) return [];
+    const completed = loadCompletedDrills(recDateStr);
+    const incompleteIds = [...scheduled].filter(id => !completed.has(id));
+    if (incompleteIds.length === 0) return [];
+    const allDrills = getAllAvailableDrills(dbDrillCards);
+    return incompleteIds.map(id => allDrills.find(d => d.id === id)).filter(Boolean) as DrillCard[];
+  }, [recDateStr, dbDrillCards, refreshKey, calMounted]);
+
   // 주간 뷰 날짜별 상태 (월 경계를 넘을 수 있으므로 별도 계산)
   const calWeekStatuses = useMemo(() => {
-    if (!calMounted) return new Map<string, { status: "none" | "complete" | "incomplete"; hasSchedule: boolean }>();
+    if (!calMounted) return new Map<string, { status: "none" | "complete" | "incomplete"; hasSchedule: boolean; remainingCount: number }>();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const result = new Map<string, { status: "none" | "complete" | "incomplete"; hasSchedule: boolean }>();
+    const result = new Map<string, { status: "none" | "complete" | "incomplete"; hasSchedule: boolean; remainingCount: number }>();
     for (const d of calWeekDays) {
       const key = drillFormatDateStr(d);
       const scheduled = loadScheduledDrillIds(key);
       const hasSchedule = scheduled.size > 0;
-      if (d > today) { result.set(key, { status: "none", hasSchedule }); continue; }
+      if (d > today) { result.set(key, { status: "none", hasSchedule, remainingCount: 0 }); continue; }
       const completed = loadCompletedDrills(key);
       const sessionKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
       const count = calSessionsByDate[sessionKey]?.length || 0;
       const hasDrills = scheduled.size > 0 || count > 0;
-      if (!hasDrills) { result.set(key, { status: "none", hasSchedule }); continue; }
+      if (!hasDrills) { result.set(key, { status: "none", hasSchedule, remainingCount: 0 }); continue; }
       const allDone = scheduled.size > 0 && scheduled.size === completed.size && [...scheduled].every(id => completed.has(id));
-      result.set(key, { status: allDone ? "complete" : "incomplete", hasSchedule });
+      const remainingCount = [...scheduled].filter(id => !completed.has(id)).length;
+      result.set(key, { status: allDone ? "complete" : "incomplete", hasSchedule, remainingCount });
     }
     return result;
   }, [calWeekDays, calSessionsByDate, refreshKey, calMounted]);
@@ -1198,23 +1213,24 @@ function PracticePageContent() {
 
   // 캘린더 날짜별 완료 상태 미리 계산 (렌더 중 localStorage 호출 방지)
   const calDayStatuses = useMemo(() => {
-    if (!calMounted) return new Map<number, "none" | "complete" | "incomplete">();
+    if (!calMounted) return new Map<number, { status: "none" | "complete" | "incomplete"; remainingCount: number }>();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const statuses = new Map<number, "none" | "complete" | "incomplete">();
+    const statuses = new Map<number, { status: "none" | "complete" | "incomplete"; remainingCount: number }>();
     for (let day = 1; day <= calDaysInMonth; day++) {
       const d = new Date(calYear, calMonth, day);
       const isFuture = d > today;
-      if (isFuture) { statuses.set(day, "none"); continue; }
+      if (isFuture) { statuses.set(day, { status: "none", remainingCount: 0 }); continue; }
       const dayDateStr = drillFormatDateStr(d);
       const dayScheduled = loadScheduledDrillIds(dayDateStr);
       const dayCompleted = loadCompletedDrills(dayDateStr);
       const dayKey = `${calYear}-${String(calMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
       const count = calSessionsByDate[dayKey]?.length || 0;
       const hasDrills = dayScheduled.size > 0 || count > 0;
-      if (!hasDrills) { statuses.set(day, "none"); continue; }
+      if (!hasDrills) { statuses.set(day, { status: "none", remainingCount: 0 }); continue; }
       const allDone = dayScheduled.size > 0 && dayScheduled.size === dayCompleted.size && [...dayScheduled].every(id => dayCompleted.has(id));
-      statuses.set(day, allDone ? "complete" : "incomplete");
+      const remainingCount = [...dayScheduled].filter(id => !dayCompleted.has(id)).length;
+      statuses.set(day, { status: allDone ? "complete" : "incomplete", remainingCount });
     }
     return statuses;
   }, [calYear, calMonth, calDaysInMonth, calSessionsByDate, refreshKey, calMounted]);
@@ -1484,6 +1500,7 @@ function PracticePageContent() {
                     const weekInfo = calWeekStatuses.get(dateStr);
                     const dayStatus = weekInfo?.status || "none";
                     const hasSchedule = weekInfo?.hasSchedule || false;
+                    const remainingCount = weekInfo?.remainingCount || 0;
                     const isOtherMonth = d.getMonth() !== calMonth;
 
                     const countStyle = isFuture && hasSchedule
@@ -1491,13 +1508,13 @@ function PracticePageContent() {
                       : isFuture
                       ? "bg-white/10 opacity-30"
                       : isToday && dayStatus === "complete"
-                      ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30"
+                      ? "bg-violet-300 text-violet-700 shadow-lg shadow-violet-300/30"
                       : isToday && dayStatus === "incomplete"
                       ? "bg-violet-600 text-white shadow-lg shadow-violet-500/30"
                       : isToday
                       ? "bg-violet-600 text-white shadow-lg shadow-violet-500/30"
                       : dayStatus === "complete"
-                      ? "bg-emerald-100 text-emerald-600"
+                      ? "bg-violet-200/60 text-violet-500"
                       : dayStatus === "incomplete"
                       ? "bg-violet-500/80 text-white"
                       : "bg-white/20 backdrop-blur-sm";
@@ -1505,7 +1522,7 @@ function PracticePageContent() {
                     return (
                       <button key={i} onClick={() => { setCalSelectedDate(new Date(d)); setCalMonth(d.getMonth()); setCalYear(d.getFullYear()); }} className="flex flex-col items-center py-0.5">
                         <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold transition-all ${countStyle} ${isSelected && !isToday ? "ring-2 ring-violet-400 ring-offset-1 ring-offset-transparent" : ""}`}>
-                          {dayStatus === "complete" ? "✓" : dayStatus === "incomplete" && !isToday ? count > 0 ? count : "·" : !isFuture && count > 0 ? count : isFuture && hasSchedule ? "·" : ""}
+                          {dayStatus === "complete" ? "✓" : remainingCount > 0 ? remainingCount : count > 0 ? count : isFuture && hasSchedule ? "·" : ""}
                         </div>
                         <span className={`text-[9px] mt-0.5 ${isOtherMonth ? "text-gray-300" : dow === 0 ? "text-red-400" : dow === 6 ? "text-blue-400" : "text-gray-500"}`}>{day}</span>
                       </button>
@@ -1527,20 +1544,22 @@ function PracticePageContent() {
                     const isSelected = day === calSelectedDate.getDate() && calMonth === calSelectedDate.getMonth() && calYear === calSelectedDate.getFullYear();
                     const dow = (calFirstDay + i) % 7;
                     const hasSchedule = scheduledDays.has(day);
-                    const dayStatus = calDayStatuses.get(day) || "none";
+                    const dayInfo = calDayStatuses.get(day);
+                    const dayStatus = dayInfo?.status || "none";
+                    const remainingCount = dayInfo?.remainingCount || 0;
 
                     const countStyle = isFuture && hasSchedule
                       ? "bg-violet-100/60 text-violet-400"
                       : isFuture
                       ? "bg-white/10 opacity-30"
                       : isToday && dayStatus === "complete"
-                      ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30"
+                      ? "bg-violet-300 text-violet-700 shadow-lg shadow-violet-300/30"
                       : isToday && dayStatus === "incomplete"
                       ? "bg-violet-600 text-white shadow-lg shadow-violet-500/30"
                       : isToday
                       ? "bg-violet-600 text-white shadow-lg shadow-violet-500/30"
                       : dayStatus === "complete"
-                      ? "bg-emerald-100 text-emerald-600"
+                      ? "bg-violet-200/60 text-violet-500"
                       : dayStatus === "incomplete"
                       ? "bg-violet-500/80 text-white"
                       : "bg-white/20 backdrop-blur-sm";
@@ -1548,7 +1567,7 @@ function PracticePageContent() {
                     return (
                       <button key={day} onClick={() => { setCalSelectedDate(new Date(calYear, calMonth, day)); }} className="flex flex-col items-center py-0.5">
                         <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold transition-all ${countStyle} ${isSelected && !isToday ? "ring-2 ring-violet-400 ring-offset-1 ring-offset-transparent" : ""}`}>
-                          {dayStatus === "complete" ? "✓" : dayStatus === "incomplete" && !isToday ? count > 0 ? count : "·" : !isFuture && count > 0 ? count : isFuture && hasSchedule ? "·" : ""}
+                          {dayStatus === "complete" ? "✓" : remainingCount > 0 ? remainingCount : count > 0 ? count : isFuture && hasSchedule ? "·" : ""}
                         </div>
                         <span className={`text-[9px] mt-0.5 ${dow === 0 ? "text-red-400" : dow === 6 ? "text-blue-400" : "text-gray-500"}`}>{day}</span>
                       </button>
@@ -1560,13 +1579,15 @@ function PracticePageContent() {
               {/* Legend */}
               <div className="flex items-center justify-end gap-3 mt-3">
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded-full bg-emerald-100 flex items-center justify-center">
-                    <span className="text-[6px] text-emerald-600">✓</span>
+                  <div className="w-3 h-3 rounded-full bg-violet-200/60 flex items-center justify-center">
+                    <span className="text-[6px] text-violet-500">✓</span>
                   </div>
                   <span className="text-[10px] text-gray-400">완료</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded-full bg-violet-500/80" />
+                  <div className="w-3 h-3 rounded-full bg-violet-500/80 flex items-center justify-center">
+                    <span className="text-[6px] text-white font-bold">2</span>
+                  </div>
                   <span className="text-[10px] text-gray-400">미완료</span>
                 </div>
               </div>
@@ -1609,6 +1630,32 @@ function PracticePageContent() {
                 <Plus className="w-4 h-4" />
                 연습 일정 추가
               </button>
+            </div>
+          )}
+
+          {/* 미완료 연습 목록 */}
+          {selectedDateIncompleteDrills.length > 0 && (
+            <div className="mt-3 pt-3" style={{ borderTop: "1px solid rgba(255,255,255,0.3)" }}>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-[13px] font-bold text-gray-900">미완료 연습</span>
+                <span className="text-[10px] text-white bg-violet-500 px-1.5 py-0.5 rounded-full font-semibold">
+                  {selectedDateIncompleteDrills.length}
+                </span>
+              </div>
+              <div className="space-y-2">
+                {selectedDateIncompleteDrills.map((drill) => (
+                  <div key={drill.id} className="flex items-center gap-3 bg-violet-50/60 rounded-xl px-3 py-2.5">
+                    <div className="w-5 h-5 rounded-full border-2 border-violet-300 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-800 truncate">{drill.song}</p>
+                      <p className="text-xs text-gray-400 truncate">
+                        {drill.measures && `${drill.measures}`}
+                        {drill.title && drill.title !== "연습" && ` · ${drill.title}`}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
