@@ -11,7 +11,6 @@ import {
   Bell,
   Globe,
   LogOut,
-  LogIn,
   ChevronRight,
   Crown,
   Check,
