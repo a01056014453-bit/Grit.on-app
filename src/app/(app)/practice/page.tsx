@@ -77,6 +77,16 @@ interface DailyCompletion {
   completedDrillIds: string[];
 }
 
+function formatRelativeDate(d: Date): string {
+  const diff = Date.now() - d.getTime();
+  const days = Math.floor(diff / 86400000);
+  if (days === 0) return "오늘";
+  if (days === 1) return "어제";
+  if (days < 7) return `${days}일 전`;
+  if (days < 30) return `${Math.floor(days / 7)}주 전`;
+  return `${Math.floor(days / 30)}달 전`;
+}
+
 // ─── 타임라인 재생 가능 세션 ────────────────────────────────────────────────
 
 function PlayableTimelineSession({ session }: { session: import("@/lib/drill-records").RecordSession }) {
@@ -400,7 +410,45 @@ function PracticePageContent() {
           getUserSongs(userId),
           getDrillCards(userId),
         ]);
-        setSongs(fetchedSongs);
+
+        // 연습 기록(IndexedDB)과 커스텀 드릴에서 곡 이름 수집
+        const allSessions = await getAllSessions();
+        const localSongNames = new Set<string>();
+        allSessions.forEach((s) => {
+          if (s.pieceName) localSongNames.add(s.pieceName);
+        });
+        const savedCustom = localStorage.getItem("grit-on-custom-drills");
+        if (savedCustom) {
+          try {
+            const customs = JSON.parse(savedCustom);
+            customs.forEach((d: { song?: string }) => {
+              if (d.song) localSongNames.add(d.song);
+            });
+          } catch {}
+        }
+
+        // Supabase songs에 없는 곡을 로컬 Song으로 추가
+        const existingTitles = new Set(fetchedSongs.map((s) => s.title));
+        const localSongs: Song[] = [];
+        localSongNames.forEach((name) => {
+          if (!existingTitles.has(name)) {
+            // 가장 최근 세션의 시간 찾기
+            const lastSession = allSessions
+              .filter((s) => s.pieceName === name)
+              .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())[0];
+            const lastPracticed = lastSession
+              ? formatRelativeDate(new Date(lastSession.startTime))
+              : "";
+            localSongs.push({
+              id: `local-${name}`,
+              title: name,
+              duration: "",
+              lastPracticed,
+            });
+          }
+        });
+
+        setSongs([...fetchedSongs, ...localSongs]);
         setDbDrillCards(fetchedCards);
       } catch (err) {
         console.error("Failed to load songs / drill cards:", err);
