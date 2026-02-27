@@ -67,12 +67,16 @@ export default function RecordingPlayerPage() {
     };
   }, [audioUrl]);
 
-  // Generate waveform data from audio blob
+  // Generate waveform data from audio blob (also extracts accurate duration)
   const generateWaveform = useCallback(async (blob: Blob) => {
     try {
       const arrayBuffer = await blob.arrayBuffer();
       const audioCtx = new AudioContext();
       const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+
+      // AudioBuffer.duration is always accurate (unlike HTMLAudioElement for WebM blobs)
+      setDuration(audioBuffer.duration);
+
       const channelData = audioBuffer.getChannelData(0);
 
       const bars = 200;
@@ -310,11 +314,11 @@ export default function RecordingPlayerPage() {
   const recordingDurationStr = duration > 0 ? formatTime(duration) : "";
 
   return (
-    <div className="min-h-[100dvh] bg-blob-violet relative flex flex-col">
+    <div className="min-h-[100dvh] bg-blob-violet relative flex flex-col items-center justify-center">
       <div className="bg-blob-extra" />
 
       {/* Header */}
-      <div className="px-4 pt-5 pb-1 relative z-10">
+      <div className="px-4 pt-5 pb-3 relative z-10 w-full max-w-lg">
         <div className="flex items-center gap-3">
           <button
             onClick={() => safeBack(router)}
@@ -335,7 +339,7 @@ export default function RecordingPlayerPage() {
       </div>
 
       {/* Waveform */}
-      <div className="flex-1 flex flex-col justify-center px-4 relative z-10">
+      <div className="px-4 relative z-10 w-full max-w-lg">
         <div
           className="rounded-2xl p-3"
           style={{
@@ -406,7 +410,7 @@ export default function RecordingPlayerPage() {
       </div>
 
       {/* Playback Controls */}
-      <div className="px-4 pb-8 pt-3 relative z-10">
+      <div className="px-4 pb-8 pt-3 relative z-10 w-full max-w-lg">
         {/* Speed selector */}
         <div className="flex items-center justify-center gap-1.5 mb-4">
           {SPEEDS.map((speed) => (
