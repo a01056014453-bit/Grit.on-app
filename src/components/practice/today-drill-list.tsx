@@ -371,8 +371,7 @@ export function TodayDrillList({ onDrillSelect, selectedDrillId, showPlayButton 
   const totalCount = allDrills.length;
   const completedCount = allDrills.filter(d => completedDrills.has(d.id)).length;
 
-  // 스케줄된 드릴이 없으면 표시하지 않음
-  if (totalCount === 0) return null;
+  // 과거 날짜에 완료 기록이 없으면 표시하지 않음
   if (completedOnly && completedCount === 0) return null;
   if (!completedOnly && !isToday && completedCount === 0) return null;
 
@@ -408,6 +407,21 @@ export function TodayDrillList({ onDrillSelect, selectedDrillId, showPlayButton 
       </div>
 
       {/* 단일 글래스카드 플랫 리스트 */}
+      {totalCount === 0 ? (
+        <div
+          className="rounded-2xl py-6 text-center"
+          style={{
+            background: "rgba(255,255,255,0.55)",
+            backdropFilter: "blur(16px)",
+            WebkitBackdropFilter: "blur(16px)",
+            border: "1px solid rgba(255,255,255,0.6)",
+            boxShadow: "0 8px 32px rgba(124,58,237,0.08)",
+          }}
+        >
+          <p className="text-[12px] text-gray-400">오늘 등록된 연습이 없습니다</p>
+          <p className="text-[11px] text-gray-300 mt-1">+ 버튼으로 연습을 추가해보세요</p>
+        </div>
+      ) : (
       <div
         className="rounded-2xl overflow-hidden"
         style={{
@@ -467,6 +481,7 @@ export function TodayDrillList({ onDrillSelect, selectedDrillId, showPlayButton 
           );
         })}
       </div>
+      )}
     </div>
   );
 }
