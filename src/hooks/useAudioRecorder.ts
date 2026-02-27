@@ -403,35 +403,11 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
           if (count > 0) {
             setState((prev) => ({ ...prev, calibrationCountdown: count }));
           } else {
-            // 카운트다운 종료 → 타이머 시작
+            // 카운트다운 종료 → "시작!" 표시 후 타이머 시작
             if (countdownIntervalRef.current) {
               clearInterval(countdownIntervalRef.current);
               countdownIntervalRef.current = null;
             }
-
-            timerStartTimeRef.current = Date.now();
-            accumulatedPracticeRef.current = 0;
-
-            totalTimeIntervalRef.current = setInterval(() => {
-              setState((prev) => ({
-                ...prev,
-                totalTime: Math.floor((Date.now() - timerStartTimeRef.current) / 1000),
-              }));
-            }, 1000);
-
-            lastPracticeCheckRef.current = Date.now();
-            practiceTimeIntervalRef.current = setInterval(() => {
-              const now = Date.now();
-              const delta = (now - lastPracticeCheckRef.current) / 1000;
-              lastPracticeCheckRef.current = now;
-              if (isActuallyPlayingRef.current) {
-                accumulatedPracticeRef.current += delta;
-                setState((prev) => ({
-                  ...prev,
-                  practiceTime: Math.floor(accumulatedPracticeRef.current),
-                }));
-              }
-            }, 100);
 
             setState((prev) => ({
               ...prev,
@@ -439,8 +415,38 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
               calibrationCountdown: 0,
             }));
 
-            // "시작!" 표시 0.8초 후 제거
+            // "시작!" 표시 0.8초 후 → 타이머 시작 (00:00이 충분히 보이도록)
             setTimeout(() => {
+              // 시작! 애니메이션 중 중지/일시정지한 경우
+              if (!isRecordingRef.current || isPausedRef.current) {
+                setState((prev) => ({ ...prev, calibrationCountdown: null }));
+                return;
+              }
+
+              timerStartTimeRef.current = Date.now();
+              accumulatedPracticeRef.current = 0;
+
+              totalTimeIntervalRef.current = setInterval(() => {
+                setState((prev) => ({
+                  ...prev,
+                  totalTime: Math.floor((Date.now() - timerStartTimeRef.current) / 1000),
+                }));
+              }, 1000);
+
+              lastPracticeCheckRef.current = Date.now();
+              practiceTimeIntervalRef.current = setInterval(() => {
+                const now = Date.now();
+                const delta = (now - lastPracticeCheckRef.current) / 1000;
+                lastPracticeCheckRef.current = now;
+                if (isActuallyPlayingRef.current) {
+                  accumulatedPracticeRef.current += delta;
+                  setState((prev) => ({
+                    ...prev,
+                    practiceTime: Math.floor(accumulatedPracticeRef.current),
+                  }));
+                }
+              }, 100);
+
               setState((prev) => ({ ...prev, calibrationCountdown: null }));
             }, 800);
           }

@@ -185,7 +185,7 @@ export function PracticeAnalysisModal({
   // 분석 중 화면
   if (isAnalyzing) {
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4">
         <div className="bg-white rounded-2xl p-8 w-full max-w-sm text-center animate-in zoom-in-95 duration-200">
           <div className="w-20 h-20 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <Loader2 className="w-10 h-10 text-violet-600 animate-spin" />
@@ -226,7 +226,7 @@ export function PracticeAnalysisModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex flex-col">
+    <div className="fixed inset-0 bg-black/50 z-[9999] flex flex-col">
       <div className="flex-1 overflow-y-auto">
         <div className="min-h-full flex items-start justify-center p-4 pt-6 pb-0">
           <div className="bg-white rounded-2xl w-full max-w-md animate-in zoom-in-95 duration-200">
