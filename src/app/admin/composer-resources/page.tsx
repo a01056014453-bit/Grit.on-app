@@ -16,7 +16,10 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { StatCard } from "@/components/admin/stat-card";
+import { createClient } from "@/lib/supabase-browser";
 import type { ComposerResource, ResourceType } from "@/types/composer-resource";
+
+const STORAGE_BUCKET = "composer-resources";
 
 // ── PDF 텍스트 추출 (클라이언트 사이드) ────────────────────
 
@@ -271,6 +274,43 @@ export default function ComposerResourcesPage() {
     setItems((prev) => prev.filter((item) => item.id !== id));
   };
 
+  // ── PDF를 브라우저에서 직접 Storage 업로드 ────────────
+
+  const uploadPdfToStorage = async (
+    file: File,
+    composer: string,
+    title: string,
+  ): Promise<string | null> => {
+    try {
+      // 버킷 존재 확인 (서버에서 생성)
+      await fetch("/api/composer-resources/ensure-bucket");
+
+      const supabase = createClient();
+      const normalize = (s: string) =>
+        s.trim().toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_.\-]/g, "");
+
+      const timestamp = Date.now();
+      const storagePath = `${normalize(composer)}/${timestamp}_${normalize(title)}.pdf`;
+
+      const { error } = await supabase.storage
+        .from(STORAGE_BUCKET)
+        .upload(storagePath, file, {
+          contentType: "application/pdf",
+          upsert: true,
+        });
+
+      if (error) {
+        console.error("PDF Storage 업로드 실패:", error.message);
+        return null;
+      }
+
+      return storagePath;
+    } catch (err) {
+      console.error("PDF 업로드 예외:", err);
+      return null;
+    }
+  };
+
   // ── 단일 저장 ──────────────────────────────────────────
 
   const saveOneItem = async (item: UploadItem): Promise<boolean> => {
@@ -278,21 +318,27 @@ export default function ComposerResourcesPage() {
     updateItem(item.id, { status: "saving" });
 
     try {
-      const metadata = {
+      // 1) PDF를 브라우저에서 직접 Storage에 업로드
+      const pdfPath = await uploadPdfToStorage(
+        item.file,
+        item.meta.composer,
+        item.meta.title,
+      );
+
+      // 2) 메타데이터만 JSON으로 API에 전송
+      const body = {
         ...item.meta,
         extracted_text: item.extractedText,
         page_count: item.pageCount,
         file_size_bytes: item.file.size,
         auto_translate: item.meta.language !== "ko",
+        pdf_storage_path: pdfPath || undefined,
       };
-
-      const formData = new FormData();
-      formData.append("metadata", JSON.stringify(metadata));
-      formData.append("pdf", item.file);
 
       const res = await fetch("/api/composer-resources", {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
       });
 
       const json = await res.json();
@@ -304,7 +350,7 @@ export default function ComposerResourcesPage() {
         return false;
       }
     } catch {
-      updateItem(item.id, { status: "error", error: "네트워크 오류" });
+      updateItem(item.id, { status: "error", error: "저장 중 오류 발생" });
       return false;
     }
   };
