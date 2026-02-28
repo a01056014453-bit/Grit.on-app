@@ -267,9 +267,10 @@ export default function RankingPage() {
     setLoadError(null);
     setIsLoading(true);
     try {
+      const uid = getUserId();
       const [rankings, my] = await Promise.all([
-        fetchTodayRankings(),
-        fetchMyRanking(getUserId()),
+        fetchTodayRankings(uid),
+        fetchMyRanking(uid),
       ]);
       setRankers(rankings);
       setMyRanking(my);

@@ -53,23 +53,21 @@ export async function GET(request: NextRequest) {
       }
     );
 
-    // 내 랭킹 조회
+    // 닉네임 업데이트 + 내 랭킹 조회
     let myRanking = null;
     const nickname = searchParams.get("nickname");
     if (userId) {
       // 닉네임이 전달된 경우 프로필 업데이트
-      if (nickname && nickname !== "연습생" && nickname !== "익명") {
-        const { data: profile } = await supabaseServer
+      if (nickname && nickname !== "연습생" && nickname !== "익명" && nickname !== "사용자") {
+        await supabaseServer
           .from("profiles")
-          .select("nickname")
-          .eq("id", userId)
-          .single();
+          .update({ nickname })
+          .eq("id", userId);
 
-        if (profile && (profile.nickname === "익명" || profile.nickname === "연습생" || !profile.nickname)) {
-          await supabaseServer
-            .from("profiles")
-            .update({ nickname })
-            .eq("id", userId);
+        // 전체 랭커 목록에서도 본인 닉네임 반영
+        const myInAll = rankers.find((r: { id: string }) => r.id === userId);
+        if (myInAll) {
+          myInAll.nickname = nickname;
         }
       }
 
@@ -77,10 +75,6 @@ export async function GET(request: NextRequest) {
         (r: { id: string }) => r.id === userId
       );
       if (myIndex !== -1) {
-        // 닉네임이 방금 업데이트된 경우 반영
-        if (nickname && nickname !== "연습생" && nickname !== "익명") {
-          rankers[myIndex].nickname = nickname;
-        }
         myRanking = rankers[myIndex];
       }
     }
