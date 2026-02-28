@@ -11,6 +11,7 @@ import {
   Sparkles,
   Check,
   Pencil,
+  Download,
 } from "lucide-react";
 import { StatCard } from "@/components/admin/stat-card";
 import type { ComposerResource, ResourceType } from "@/types/composer-resource";
@@ -223,10 +224,10 @@ export default function ComposerResourcesPage() {
   const handleSave = async () => {
     if (!meta) return;
     setStep("saving");
-    setStepMessage("저장 중...");
+    setStepMessage("PDF 업로드 및 저장 중...");
 
     try {
-      const body = {
+      const metadata = {
         ...meta,
         extracted_text: extractedText,
         page_count: pageCount,
@@ -234,10 +235,15 @@ export default function ComposerResourcesPage() {
         auto_translate: meta.language !== "ko",
       };
 
+      const formData = new FormData();
+      formData.append("metadata", JSON.stringify(metadata));
+      if (pdfFile) {
+        formData.append("pdf", pdfFile);
+      }
+
       const res = await fetch("/api/composer-resources", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: formData,
       });
 
       const json = await res.json();
@@ -253,6 +259,22 @@ export default function ComposerResourcesPage() {
     } catch {
       setStepMessage("네트워크 오류");
       setStep("review");
+    }
+  };
+
+  const handleDownloadPdf = async (storagePath: string) => {
+    try {
+      const res = await fetch(
+        `/api/composer-resources/download?path=${encodeURIComponent(storagePath)}`,
+      );
+      const json = await res.json();
+      if (json.success && json.url) {
+        window.open(json.url, "_blank");
+      } else {
+        alert("PDF를 불러올 수 없습니다.");
+      }
+    } catch {
+      alert("PDF 다운로드 실패");
     }
   };
 
@@ -579,7 +601,16 @@ export default function ComposerResourcesPage() {
                     {r.extracted_text.length.toLocaleString()}자
                     {r.page_count ? ` · ${r.page_count}p` : ""}
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-3 text-right flex items-center justify-end gap-1">
+                    {r.pdf_storage_path && (
+                      <button
+                        onClick={() => handleDownloadPdf(r.pdf_storage_path!)}
+                        className="p-1.5 text-gray-400 hover:text-violet-600 transition-colors"
+                        title="PDF 원본 보기"
+                      >
+                        <Download className="w-4 h-4" />
+                      </button>
+                    )}
                     <button
                       onClick={() => setDeleteTarget(r)}
                       className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"

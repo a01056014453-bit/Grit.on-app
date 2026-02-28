@@ -4,14 +4,63 @@ import {
   getAllComposerResources,
   deleteComposerResource,
 } from "@/lib/composer-resources";
+import { supabaseServer } from "@/lib/supabase-server";
 import type { ResourceType } from "@/types/composer-resource";
 import OpenAI from "openai";
 
-// ── POST: 새 학술자료 업로드 ─────────────────────────────────
+// ── Storage 버킷 ────────────────────────────────────────────
+
+const BUCKET_NAME = "composer-resources";
+
+async function ensureBucket() {
+  const { data: buckets } = await supabaseServer.storage.listBuckets();
+  if (!buckets?.find((b) => b.name === BUCKET_NAME)) {
+    await supabaseServer.storage.createBucket(BUCKET_NAME, {
+      public: false,
+      fileSizeLimit: 30 * 1024 * 1024, // 30MB
+    });
+  }
+}
+
+function normalizePath(str: string): string {
+  return str
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^a-z0-9_.\-]/g, "");
+}
+
+// ── POST: 새 학술자료 업로드 (FormData: PDF + 메타데이터) ────
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const formData = await request.formData();
+
+    // 메타데이터 JSON 파싱
+    const metaJson = formData.get("metadata") as string | null;
+    if (!metaJson) {
+      return NextResponse.json(
+        { error: "metadata 필드가 필요합니다." },
+        { status: 400 },
+      );
+    }
+
+    const body = JSON.parse(metaJson) as {
+      composer: string;
+      title: string;
+      resource_type?: ResourceType;
+      author?: string;
+      year?: string;
+      source?: string;
+      language?: string;
+      piece_title?: string;
+      extracted_text: string;
+      file_size_bytes?: number;
+      page_count?: number;
+      uploaded_by?: string;
+      tags?: string[];
+      auto_translate?: boolean;
+    };
 
     const {
       composer,
@@ -23,29 +72,12 @@ export async function POST(request: NextRequest) {
       language = "ko",
       piece_title,
       extracted_text,
-      pdf_storage_path,
       file_size_bytes,
       page_count,
       uploaded_by,
       tags,
       auto_translate = false,
-    } = body as {
-      composer: string;
-      title: string;
-      resource_type?: ResourceType;
-      author?: string;
-      year?: string;
-      source?: string;
-      language?: string;
-      piece_title?: string;
-      extracted_text: string;
-      pdf_storage_path?: string;
-      file_size_bytes?: number;
-      page_count?: number;
-      uploaded_by?: string;
-      tags?: string[];
-      auto_translate?: boolean;
-    };
+    } = body;
 
     if (!composer?.trim() || !title?.trim() || !extracted_text?.trim()) {
       return NextResponse.json(
@@ -54,7 +86,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 비한국어 자료 자동 번역/요약
+    // ── PDF 파일 업로드 ────────────────────────────────────
+    let pdf_storage_path: string | undefined;
+    const pdfFile = formData.get("pdf") as File | null;
+
+    if (pdfFile) {
+      await ensureBucket();
+
+      const timestamp = Date.now();
+      const storagePath = `${normalizePath(composer)}/${timestamp}_${normalizePath(title)}.pdf`;
+      const buffer = Buffer.from(await pdfFile.arrayBuffer());
+
+      const { error: uploadError } = await supabaseServer.storage
+        .from(BUCKET_NAME)
+        .upload(storagePath, buffer, {
+          contentType: "application/pdf",
+          upsert: true,
+        });
+
+      if (uploadError) {
+        console.error("[ComposerResources] PDF 업로드 실패:", uploadError.message);
+      } else {
+        pdf_storage_path = storagePath;
+      }
+    }
+
+    // ── 비한국어 자료 자동 번역/요약 ──────────────────────
     let summary_korean: string | undefined;
     if (auto_translate && language !== "ko") {
       const openaiKey = process.env.OPENAI_API_KEY;
