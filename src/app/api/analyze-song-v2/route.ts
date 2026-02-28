@@ -15,7 +15,8 @@ import {
   createExtraTechniquePrompt,
   isLargeWork,
 } from "@/lib/analysis-prompts";
-import { crawlMusicPapers } from "@/lib/paper-crawler";
+// TODO: paper-crawler는 pdf-parse Vercel 호환 확인 후 재활성화
+// import { crawlMusicPapers } from "@/lib/paper-crawler";
 import type {
   SongAnalysis,
   SongAnalysisContentV2,
@@ -465,7 +466,7 @@ async function runV2Pipeline(
   console.log("[Phase 0] 팩트 수집 시작 (레퍼런스 + 논문 병렬)...");
   const [referenceData, paperData] = await Promise.all([
     searchMusicReference(composer, title),
-    crawlMusicPapers(composer, title, forceRefresh),
+    Promise.resolve(null), // TODO: crawlMusicPapers(composer, title, forceRefresh) — pdf-parse Vercel 호환 확인 후 재활성화
   ]);
 
   // 두 소스를 합쳐서 enrichedReference 구성
