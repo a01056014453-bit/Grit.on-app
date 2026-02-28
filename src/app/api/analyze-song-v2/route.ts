@@ -15,6 +15,7 @@ import {
   createExtraTechniquePrompt,
   isLargeWork,
 } from "@/lib/analysis-prompts";
+import { crawlMusicPapers } from "@/lib/paper-crawler";
 import type {
   SongAnalysis,
   SongAnalysisContentV2,
@@ -31,19 +32,29 @@ import type {
   SongCharacteristics,
 } from "@/types/song-analysis";
 
-/** OpenAI 클라이언트 생성 */
+// ── 클라이언트 ──────────────────────────────────────────────────
+
 function getOpenAIClient(): OpenAI | null {
-  if (!process.env.OPENAI_API_KEY) {
-    return null;
-  }
+  if (!process.env.OPENAI_API_KEY) return null;
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
+
+function getPerplexityClient(): OpenAI | null {
+  if (!process.env.PERPLEXITY_API_KEY) return null;
   return new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
+    apiKey: process.env.PERPLEXITY_API_KEY,
+    baseURL: "https://api.perplexity.ai",
   });
 }
 
-/** JSON 블록 추출 (Perplexity citations [1][2] 등 제거) */
+// ── 유틸 ───────────────────────────────────────────────────────
+
+function generateId(): string {
+  return `analysis_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
+/** JSON 블록 추출 (Perplexity citations 제거) */
 function extractJSON(text: string): string {
-  // Perplexity citation 제거: [1], [2][3], [1][2][3] 등
   let cleaned = text.replace(/\[(\d+)\]/g, "");
 
   const jsonBlockMatch = cleaned.match(/```json\s*([\s\S]*?)```/);
@@ -54,14 +65,101 @@ function extractJSON(text: string): string {
     else cleaned = cleaned.trim();
   }
 
-  // JSON 내부 마크다운 서식 제거: **bold**, *italic*
   cleaned = cleaned.replace(/\*\*([^*]+)\*\*/g, "$1");
   cleaned = cleaned.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, "$1");
-
-  // 일본어 카타카나/히라가나 제거 (예: "カデンツ" → "")
   cleaned = cleaned.replace(/[\u3040-\u309F\u30A0-\u30FF]+/g, "");
 
   return cleaned;
+}
+
+/** "확인 필요" 문구 → undefined (조용히 제거) */
+function filterNeedsReview(text: string | undefined): string | undefined {
+  if (!text) return undefined;
+  if (
+    text.includes("확인 필요") ||
+    text.includes("문헌 확인") ||
+    text.includes("needs review") ||
+    text.includes("verify via") ||
+    text === "확인 필요"
+  ) {
+    return undefined;
+  }
+  return text;
+}
+
+/** sections의 measures 필드에서 "문헌 확인 필요" 등 제거 */
+function sanitizeSections(
+  sections: StructureAnalysisV2["sections"]
+): StructureAnalysisV2["sections"] {
+  return sections.map((s) => ({
+    ...s,
+    measures: filterNeedsReview(s.measures) ?? "",
+  }));
+}
+
+// ── AI 호출 ─────────────────────────────────────────────────────
+
+/**
+ * GPT-4o 호출 — 글쓰기 전용
+ * Perplexity가 수집한 팩트를 컨텍스트로 받아 글 작성만 담당
+ */
+async function callGPT(
+  openai: OpenAI,
+  prompt: string,
+  maxTokens: number = 8192,
+  temperature: number = 0.1,
+): Promise<string> {
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4o",
+    messages: [
+      {
+        role: "system",
+        content:
+          "반드시 한국어로만 응답하세요. 일본어, 중국어는 절대 사용하지 마세요. " +
+          "고유명사(인명, 지명, 작품명)는 원어 표기를 허용합니다. " +
+          "제공된 레퍼런스 데이터에 없는 구체적 수치(연도, 마디 번호, 작품번호)를 절대 생성하지 마세요. " +
+          "확실하지 않은 정보는 빈 문자열(\"\")로 반환하세요. JSON 외에 다른 텍스트는 출력하지 마세요.",
+      },
+      { role: "user", content: prompt },
+    ],
+    max_tokens: maxTokens,
+    temperature,
+    top_p: 0.2,
+  });
+  return completion.choices[0]?.message?.content || "";
+}
+
+/**
+ * Perplexity 호출 — 팩트 수집 전용
+ * Phase 0 레퍼런스 검색, Phase 0.5 URL 탐색, 교차검증에만 사용
+ */
+async function callPerplexity(
+  prompt: string,
+  maxTokens: number = 4096,
+): Promise<string | null> {
+  const perplexity = getPerplexityClient();
+  if (!perplexity) return null;
+
+  try {
+    const completion = await perplexity.chat.completions.create({
+      model: "sonar-pro",
+      messages: [
+        {
+          role: "system",
+          content:
+            "반드시 한국어로만 응답하세요. 일본어, 중국어는 절대 사용하지 마세요. " +
+            "확실하지 않은 정보는 빈 문자열(\"\")로 반환하세요. JSON 외에 다른 텍스트는 출력하지 마세요.",
+        },
+        { role: "user", content: prompt },
+      ],
+      max_tokens: maxTokens,
+      temperature: 0.1,
+    });
+    return completion.choices[0]?.message?.content || null;
+  } catch (error) {
+    console.error("[Perplexity] 호출 실패:", error instanceof Error ? error.message : error);
+    return null;
+  }
 }
 
 /** 안전한 JSON 파싱: 실패 시 GPT로 재포맷 */
@@ -69,7 +167,7 @@ async function safeParseJSON(
   text: string,
   openai: OpenAI,
   label: string,
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<Record<string, any>> {
   const jsonStr = extractJSON(text);
   try {
@@ -86,109 +184,16 @@ async function safeParseJSON(
   }
 }
 
-/** 고유 ID 생성 */
-function generateId(): string {
-  return `analysis_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-}
+// ── Phase 0: 팩트 수집 (Perplexity 전용) ─────────────────────────
 
-/** "확인 필요" 문구 필터링 */
-function filterNeedsReview(text: string | undefined): string | undefined {
-  if (!text) return undefined;
-  if (text.includes("확인 필요") || text.includes("문헌 확인") || text === "확인 필요") {
-    return undefined;
-  }
-  return text;
-}
-
-/** Perplexity 클라이언트 (메인 분석 엔진) */
-function getPerplexityClient(): OpenAI | null {
-  if (!process.env.PERPLEXITY_API_KEY) {
-    return null;
-  }
-  return new OpenAI({
-    apiKey: process.env.PERPLEXITY_API_KEY,
-    baseURL: "https://api.perplexity.ai",
-  });
-}
-
-/** GPT 호출 (보조/폴백용) */
-async function callGPT(
-  openai: OpenAI,
-  prompt: string,
-  maxTokens: number = 8192,
-  temperature: number = 0.1,
-): Promise<string> {
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4o",
-    messages: [
-      {
-        role: "system",
-        content: "반드시 한국어로만 응답하세요. 일본어, 중국어는 절대 사용하지 마세요. 고유명사(인명, 지명, 작품명)는 원어 표기를 허용합니다. 확실하지 않은 정보는 빈 문자열(\"\")로 반환하고 절대 추측하여 작성하지 마세요. JSON 외에 다른 텍스트는 출력하지 마세요.",
-      },
-      { role: "user", content: prompt },
-    ],
-    max_tokens: maxTokens,
-    temperature,
-    top_p: 0.2,
-  });
-  return completion.choices[0]?.message?.content || "";
-}
-
-/** Perplexity 호출 (메인) */
-async function callPerplexity(
-  prompt: string,
-  maxTokens: number = 8192,
-): Promise<string | null> {
-  const perplexity = getPerplexityClient();
-  if (!perplexity) return null;
-
-  try {
-    const completion = await perplexity.chat.completions.create({
-      model: "sonar-pro",
-      messages: [
-        {
-          role: "system",
-          content: "반드시 한국어로만 응답하세요. 일본어, 중국어는 절대 사용하지 마세요. 고유명사(인명, 지명, 작품명)는 원어 표기를 허용합니다. 확실하지 않은 정보는 빈 문자열(\"\")로 반환하고 절대 추측하여 작성하지 마세요. JSON 외에 다른 텍스트는 출력하지 마세요.",
-        },
-        { role: "user", content: prompt },
-      ],
-      max_tokens: maxTokens,
-      temperature: 0.1,
-    });
-    return completion.choices[0]?.message?.content || null;
-  } catch (error) {
-    console.error("[Perplexity] 호출 실패:", error instanceof Error ? error.message : error);
-    return null;
-  }
-}
-
-/** AI 호출: Perplexity 우선, 실패 시 GPT 폴백 */
-async function callAI(
-  openai: OpenAI,
-  prompt: string,
-  maxTokens: number = 8192,
-  label: string = "",
-): Promise<string> {
-  // 1차: Perplexity (웹 검색 기반, 정확도 높음)
-  const perplexityResult = await callPerplexity(prompt, maxTokens);
-  if (perplexityResult) {
-    console.log(`[${label}] Perplexity 응답 (${perplexityResult.length}자)`);
-    return perplexityResult;
-  }
-
-  // 2차: GPT 폴백
-  console.log(`[${label}] Perplexity 실패 → GPT 폴백`);
-  return callGPT(openai, prompt, maxTokens, 0.2);
-}
-
-/** Phase 0: 레퍼런스 데이터 검색 (Perplexity sonar-pro) */
+/** Phase 0: 레퍼런스 데이터 검색 */
 async function searchMusicReference(
   composer: string,
   title: string,
 ): Promise<string | null> {
   const perplexity = getPerplexityClient();
   if (!perplexity) {
-    console.log("[Phase 0] PERPLEXITY_API_KEY 미설정 — 레퍼런스 검색 건너뜀");
+    console.log("[Phase 0] PERPLEXITY_API_KEY 미설정 — 건너뜀");
     return null;
   }
 
@@ -201,30 +206,112 @@ async function searchMusicReference(
       max_tokens: 4096,
       temperature: 0.1,
     });
-
     const result = completion.choices[0]?.message?.content || null;
-    if (result) {
-      console.log(`[Phase 0] 레퍼런스 확보: ${result.length}자`);
-    }
+    if (result) console.log(`[Phase 0] 레퍼런스 확보: ${result.length}자`);
     return result;
   } catch (error) {
-    console.error("[Phase 0] Perplexity 검색 실패:", error instanceof Error ? error.message : error);
+    console.error("[Phase 0] 실패:", error instanceof Error ? error.message : error);
     return null;
   }
 }
 
-// ── 4-Phase 파이프라인 ──
+// ── 교차검증 (Perplexity 전용) ────────────────────────────────────
+
+/**
+ * Perplexity로 특정 사실 검증
+ * - true: 확인됨 → 유지
+ * - false: 불일치 → 제거
+ * - null: 확인 불가 → 조용히 제거 (미확인 표기 없음)
+ */
+async function verifyFactWithPerplexity(
+  field: string,
+  value: string,
+  composer: string,
+  title: string,
+): Promise<"confirmed" | "incorrect" | "unverifiable"> {
+  const prompt = `Verify this musical fact precisely:
+Composer: ${composer}
+Piece: ${title}
+Field: ${field}
+Claimed value: "${value}"
+
+Search IMSLP, Grove Music Online, Wikipedia, Henle Verlag.
+
+Reply ONLY with one of these exact strings:
+- "CONFIRMED" — authoritative source confirms this exact value
+- "INCORRECT" — authoritative source gives a different value
+- "UNVERIFIABLE" — authoritative sources do not mention this specifically
+
+Do NOT guess. Base your answer only on what you can confirm from authoritative sources.`;
+
+  const result = await callPerplexity(prompt, 512);
+  if (!result) return "unverifiable";
+
+  const upper = result.trim().toUpperCase();
+  if (upper.startsWith("CONFIRMED")) return "confirmed";
+  if (upper.startsWith("INCORRECT")) return "incorrect";
+  return "unverifiable";
+}
+
+/**
+ * Phase 1 meta 교차검증
+ * - 확인됨: 그대로
+ * - 불일치 or 확인 불가: 해당 필드를 빈 문자열로 제거 (조용히)
+ */
+async function crossVerifyMeta(
+  meta: SongAnalysis["meta"],
+): Promise<SongAnalysis["meta"]> {
+  const perplexity = getPerplexityClient();
+  if (!perplexity) {
+    console.log("[CrossVerify] Perplexity 없음 — 검증 건너뜀");
+    return meta;
+  }
+
+  const verifiedMeta = { ...meta };
+
+  // 검증 대상: opus, key (composer/title은 입력값이므로 검증 불필요)
+  const targets: Array<{ field: keyof typeof meta; value: string }> = [];
+
+  if (meta.opus) targets.push({ field: "opus", value: meta.opus });
+  if (meta.key) targets.push({ field: "key", value: meta.key });
+
+  console.log(`[CrossVerify] ${targets.length}개 항목 검증 시작`);
+
+  await Promise.allSettled(
+    targets.map(async ({ field, value }) => {
+      const result = await verifyFactWithPerplexity(
+        field,
+        value,
+        meta.composer,
+        meta.title,
+      );
+
+      if (result === "confirmed") {
+        console.log(`[CrossVerify] ✅ ${field}: "${value}" 확인됨`);
+      } else {
+        // 불일치 or 확인 불가 → 조용히 제거
+        console.log(`[CrossVerify] ❌ ${field}: "${value}" ${result} → 제거`);
+        (verifiedMeta as Record<string, string>)[field] = "";
+      }
+    }),
+  );
+
+  return verifiedMeta;
+}
+
+// ── Phase 1~4: GPT 전용 (글쓰기) ──────────────────────────────────
 
 async function runPhase1(
   openai: OpenAI,
   composer: string,
   title: string,
   musicXml?: string,
-  referenceData?: string | null,
+  enrichedReference?: string | null,
 ): Promise<{ meta: SongAnalysis["meta"]; song_overview: SongOverview }> {
   console.log("[Phase 1] 데이터 검증 + 곡 개요...");
-  const prompt = createPhase1Prompt(composer, title, musicXml, referenceData || undefined);
-  const text = await callAI(openai, prompt, 4096, "Phase 1");
+
+  const prompt = createPhase1Prompt(composer, title, musicXml, enrichedReference || undefined);
+  const text = await callGPT(openai, prompt, 4096, 0.1);
   const parsed = await safeParseJSON(text, openai, "Phase 1");
 
   const meta: SongAnalysis["meta"] = {
@@ -267,8 +354,9 @@ async function runPhase2(
   song_characteristics: SongCharacteristics;
 }> {
   console.log("[Phase 2] 인문학적 배경...");
+
   const prompt = createPhase2Prompt(composer, title, opus, verifiedMeta);
-  const text = await callAI(openai, prompt, 8192, "Phase 2");
+  const text = await callGPT(openai, prompt, 8192, 0.3);
   const parsed = await safeParseJSON(text, openai, "Phase 2");
 
   const composer_life: ComposerLife = {
@@ -291,7 +379,7 @@ async function runPhase2(
     conclusion: parsed.song_characteristics?.conclusion || "",
   };
 
-  console.log(`[Phase 2] Done`);
+  console.log("[Phase 2] Done");
   return { composer_life, historical_background, song_characteristics };
 }
 
@@ -301,18 +389,21 @@ async function runPhase3(
   title: string,
   opus: string,
   musicXml?: string,
-  referenceData?: string | null,
+  enrichedReference?: string | null,
   verifiedMeta?: { composer: string; title: string; opus: string; key: string },
 ): Promise<{ structure_analysis_v2: StructureAnalysisV2 }> {
   console.log("[Phase 3] 구조/화성 분석...");
-  const prompt = createPhase3Prompt(composer, title, opus, musicXml, referenceData || undefined, verifiedMeta);
-  const text = await callAI(openai, prompt, 8192, "Phase 3");
+
+  const prompt = createPhase3Prompt(composer, title, opus, musicXml, enrichedReference || undefined, verifiedMeta);
+  const text = await callGPT(openai, prompt, 8192, 0.1);
   const parsed = await safeParseJSON(text, openai, "Phase 3");
 
+  const rawSections = Array.isArray(parsed.structure_analysis_v2?.sections)
+    ? parsed.structure_analysis_v2.sections
+    : [];
+
   const structure_analysis_v2: StructureAnalysisV2 = {
-    sections: Array.isArray(parsed.structure_analysis_v2?.sections)
-      ? parsed.structure_analysis_v2.sections
-      : [],
+    sections: sanitizeSections(rawSections),
     harmony_table: Array.isArray(parsed.structure_analysis_v2?.harmony_table)
       ? parsed.structure_analysis_v2.harmony_table
       : [],
@@ -333,8 +424,9 @@ async function runPhase4(
   recommended_performances_v2: RecommendedPerformanceV2[];
 }> {
   console.log("[Phase 4] 연습법 + 4주 루틴 + 추천 연주...");
+
   const prompt = createPhase4Prompt(composer, title, opus, sectionNames);
-  const text = await callAI(openai, prompt, 8192, "Phase 4");
+  const text = await callGPT(openai, prompt, 8192, 0.3);
   const parsed = await safeParseJSON(text, openai, "Phase 4");
 
   const practice_method: PracticeMethod = {
@@ -350,7 +442,7 @@ async function runPhase4(
   };
 
   const recommended_performances_v2: RecommendedPerformanceV2[] = Array.isArray(
-    parsed.recommended_performances_v2
+    parsed.recommended_performances_v2,
   )
     ? parsed.recommended_performances_v2
     : [];
@@ -359,73 +451,54 @@ async function runPhase4(
   return { practice_method, recommended_performances_v2 };
 }
 
-/** Phase 1 meta와 Phase 2/3 결과의 교차검증 */
-function crossValidateMeta(
-  phase1Meta: SongAnalysis["meta"],
-  phase2Result: {
-    composer_life: ComposerLife;
-    historical_background: HistoricalBackground;
-    song_characteristics: SongCharacteristics;
-  },
-  phase3Result: { structure_analysis_v2: StructureAnalysisV2 },
-): void {
-  const fields: Array<{ name: string; phase1Value: string }> = [
-    { name: "composer", phase1Value: phase1Meta.composer },
-    { name: "title", phase1Value: phase1Meta.title },
-    { name: "opus", phase1Value: phase1Meta.opus },
-    { name: "key", phase1Value: phase1Meta.key },
-  ];
+// ── V2 파이프라인 ──────────────────────────────────────────────────
 
-  for (const { name, phase1Value } of fields) {
-    if (!phase1Value) continue;
-
-    // Phase 2 텍스트에서 불일치 검사
-    const phase2Texts = [
-      phase2Result.composer_life.summary,
-      phase2Result.composer_life.at_composition,
-      phase2Result.song_characteristics.composition_background,
-    ].join(" ");
-
-    // Phase 3 섹션에서 불일치 검사
-    const phase3Texts = phase3Result.structure_analysis_v2.sections
-      .map((s) => `${s.key_signature} ${s.tempo}`)
-      .join(" ");
-
-    const allTexts = `${phase2Texts} ${phase3Texts}`;
-
-    // opus/key 불일치 감지 (다른 작품번호나 조성이 언급된 경우)
-    if (name === "opus" && phase1Value && allTexts.includes("Op.") && !allTexts.includes(phase1Value)) {
-      console.warn(`[CrossValidate] ${name} 불일치 감지: Phase 1="${phase1Value}" — Phase 2/3 텍스트에서 다른 값 발견. Phase 1 값 우선 적용.`);
-    }
-  }
-
-  console.log(`[CrossValidate] Phase 1 meta 교차검증 완료: ${phase1Meta.composer} - ${phase1Meta.title} (${phase1Meta.opus}, ${phase1Meta.key})`);
-}
-
-/** 4-Phase 파이프라인 실행 (V2) */
 async function runV2Pipeline(
   openai: OpenAI,
   composer: string,
   title: string,
   musicXml?: string,
+  forceRefresh = false,
 ): Promise<SongAnalysis> {
-  // Phase 0: 레퍼런스 데이터 검색 (Perplexity)
-  const referenceData = await searchMusicReference(composer, title);
-
-  // Phase 1: 데이터 검증 + 곡 개요 (레퍼런스 데이터 주입)
-  const { meta, song_overview } = await runPhase1(openai, composer, title, musicXml, referenceData);
-
-  // Phase 2 & 3: 병렬 실행 (Phase 1 meta를 검증 기준값으로 주입)
-  const verifiedMeta = { composer: meta.composer, title: meta.title, opus: meta.opus, key: meta.key };
-  const [phase2Result, phase3Result] = await Promise.all([
-    runPhase2(openai, meta.composer, meta.title, meta.opus, verifiedMeta),
-    runPhase3(openai, meta.composer, meta.title, meta.opus, musicXml, referenceData, verifiedMeta),
+  // ── Phase 0: Perplexity — 팩트 수집
+  // Phase 0a: 레퍼런스 검색 + Phase 0b: 논문 크롤링 (병렬)
+  console.log("[Phase 0] 팩트 수집 시작 (레퍼런스 + 논문 병렬)...");
+  const [referenceData, paperData] = await Promise.all([
+    searchMusicReference(composer, title),
+    crawlMusicPapers(composer, title, forceRefresh),
   ]);
 
-  // Phase 1 meta와 Phase 2/3 결과 교차검증
-  crossValidateMeta(meta, phase2Result, phase3Result);
+  // 두 소스를 합쳐서 enrichedReference 구성
+  const enrichedReference = [
+    referenceData ? `[웹 검색 요약]\n${referenceData}` : null,
+    paperData ? `[학술 논문 크롤링]\n${paperData}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n\n========\n\n") || null;
 
-  // Phase 4: Phase 3 결과 기반
+  console.log(`[Phase 0] enrichedReference: ${enrichedReference?.length ?? 0}자`);
+
+  // ── Phase 1: GPT — enrichedReference 기반으로 메타 정리
+  const { meta: rawMeta, song_overview } = await runPhase1(
+    openai, composer, title, musicXml, enrichedReference,
+  );
+
+  // ── 교차검증: Perplexity로 Phase 1 meta 재검증
+  const meta = await crossVerifyMeta(rawMeta);
+  const verifiedMeta = {
+    composer: meta.composer,
+    title: meta.title,
+    opus: meta.opus,
+    key: meta.key,
+  };
+
+  // ── Phase 2 & 3: GPT — 검증된 meta + enrichedReference 주입, 병렬
+  const [phase2Result, phase3Result] = await Promise.all([
+    runPhase2(openai, meta.composer, meta.title, meta.opus, verifiedMeta),
+    runPhase3(openai, meta.composer, meta.title, meta.opus, musicXml, enrichedReference, verifiedMeta),
+  ]);
+
+  // ── Phase 4: GPT
   const sectionNames = phase3Result.structure_analysis_v2.sections.map((s) => s.section);
   const phase4Result = await runPhase4(
     openai,
@@ -435,7 +508,7 @@ async function runV2Pipeline(
     sectionNames.length > 0 ? sectionNames : ["전체"],
   );
 
-  // 하위 호환 필드 자동 생성
+  // ── 하위 호환 필드 자동 생성 (V1 타입 지원)
   const composer_background = phase2Result.composer_life.summary;
   const historical_context = phase2Result.historical_background.era_characteristics;
   const work_background = phase2Result.song_characteristics.composition_background;
@@ -464,17 +537,13 @@ async function runV2Pipeline(
     comment: p.comment,
   }));
 
-  // 희귀 작곡가 체크
   const rareComposers = [
     "alkan", "godowsky", "sorabji", "busoni", "thalberg",
-    "medtner", "lyapunov", "moszkowski", "scharwenka"
+    "medtner", "lyapunov", "moszkowski", "scharwenka",
   ];
-  const isRareComposer = rareComposers.some(
-    (rc) => composer.toLowerCase().includes(rc)
-  );
+  const isRareComposer = rareComposers.some((rc) => composer.toLowerCase().includes(rc));
 
   const content: SongAnalysisContentV2 = {
-    // 하위 호환 V1 필드
     composer_background,
     historical_context,
     work_background,
@@ -482,7 +551,6 @@ async function runV2Pipeline(
     technique_tips,
     musical_interpretation,
     recommended_performances,
-    // V2 신규 필드
     song_overview,
     composer_life: phase2Result.composer_life,
     historical_background: phase2Result.historical_background,
@@ -503,23 +571,21 @@ async function runV2Pipeline(
   };
 }
 
-// ── 기존 V1 파이프라인 (하위 호환) ──
+// ── V1 파이프라인 (하위 호환, 변경 없음) ──────────────────────────
 
 function parseAndValidateResponse(
   responseText: string,
   composer: string,
-  title: string
+  title: string,
 ): SongAnalysis {
   const jsonStr = extractJSON(responseText);
   const parsed = JSON.parse(jsonStr);
 
   const rareComposers = [
     "alkan", "godowsky", "sorabji", "busoni", "thalberg",
-    "medtner", "lyapunov", "moszkowski", "scharwenka"
+    "medtner", "lyapunov", "moszkowski", "scharwenka",
   ];
-  const isRareComposer = rareComposers.some(
-    (rc) => composer.toLowerCase().includes(rc)
-  );
+  const isRareComposer = rareComposers.some((rc) => composer.toLowerCase().includes(rc));
 
   const analysis: SongAnalysis = {
     id: generateId(),
@@ -529,20 +595,15 @@ function parseAndValidateResponse(
       opus: filterNeedsReview(parsed.meta?.opus) || "",
       key: filterNeedsReview(parsed.meta?.key) || "",
       difficulty_level: (
-        ["Beginner", "Intermediate", "Advanced", "Virtuoso"].includes(
-          parsed.meta?.difficulty_level
-        )
+        ["Beginner", "Intermediate", "Advanced", "Virtuoso"].includes(parsed.meta?.difficulty_level)
           ? parsed.meta.difficulty_level
           : "Intermediate"
       ) as DifficultyLevel,
     },
     content: {
-      composer_background:
-        parsed.content?.composer_background || "작곡가 정보를 확인할 수 없습니다.",
-      historical_context:
-        parsed.content?.historical_context || "시대적 배경 정보를 확인할 수 없습니다.",
-      work_background:
-        parsed.content?.work_background || "작품 배경 정보를 확인할 수 없습니다.",
+      composer_background: parsed.content?.composer_background || "작곡가 정보를 확인할 수 없습니다.",
+      historical_context: parsed.content?.historical_context || "시대적 배경 정보를 확인할 수 없습니다.",
+      work_background: parsed.content?.work_background || "작품 배경 정보를 확인할 수 없습니다.",
       structure_analysis: Array.isArray(parsed.content?.structure_analysis)
         ? parsed.content.structure_analysis.map((s: Record<string, string>) => ({
             section: s.section || "섹션",
@@ -559,19 +620,16 @@ function parseAndValidateResponse(
               : {
                   section: t.section || "전체",
                   problem: t.problem || "",
-                  category: ["Physiological", "Interpretative", "Structural"].includes(t.category)
-                    ? t.category as "Physiological" | "Interpretative" | "Structural"
-                    : undefined,
+                  category: (["Physiological", "Interpretative", "Structural"].includes(t.category)
+                    ? t.category
+                    : undefined) as "Physiological" | "Interpretative" | "Structural" | undefined,
                   solution: t.solution || "",
                   practice: t.practice || "",
-                }
+                },
           )
         : [{ section: "전체", problem: "", category: undefined, solution: "", practice: "" }],
-      musical_interpretation:
-        parsed.content?.musical_interpretation || "해석 가이드 정보 확인 필요",
-      recommended_performances: Array.isArray(
-        parsed.content?.recommended_performances
-      )
+      musical_interpretation: parsed.content?.musical_interpretation || "해석 가이드 정보 확인 필요",
+      recommended_performances: Array.isArray(parsed.content?.recommended_performances)
         ? parsed.content.recommended_performances
         : [],
     },
@@ -608,7 +666,6 @@ async function runV1Pipeline(
     return runV1LargeWorkPipeline(openai, composer, title);
   }
 
-  // 일반 작품
   const prompt = createMusicologistPrompt(composer, title);
 
   let messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[];
@@ -636,12 +693,14 @@ async function runV1Pipeline(
 
   let responseText = completion.choices[0]?.message?.content || "";
 
-  // Vision 거절 시 텍스트 전용으로 fallback
-  if (hasImages && (responseText.startsWith("I'm sorry") || responseText.startsWith("I can't") || responseText.startsWith("Sorry"))) {
+  if (
+    hasImages &&
+    (responseText.startsWith("I'm sorry") ||
+      responseText.startsWith("I can't") ||
+      responseText.startsWith("Sorry"))
+  ) {
     console.log("[V1 Vision Fallback] Retrying text-only...");
-    if (isLargeWork(title)) {
-      return runV1LargeWorkPipeline(openai, composer, title);
-    }
+    if (isLargeWork(title)) return runV1LargeWorkPipeline(openai, composer, title);
     const fallbackCompletion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [{ role: "user", content: prompt }],
@@ -660,27 +719,27 @@ async function runV1LargeWorkPipeline(
   composer: string,
   title: string,
 ): Promise<SongAnalysis> {
-  // Call 1: 구조 분석
   const structurePrompt = createStructureOnlyPrompt(composer, title);
   const structureText = await callGPT(openai, structurePrompt, 16384);
   const structureJson = JSON.parse(extractJSON(structureText));
-  const structureAnalysis: Array<{ section: string; measures?: string; key_tempo?: string; character?: string; description: string }> =
-    Array.isArray(structureJson.structure_analysis) ? structureJson.structure_analysis : [];
+  const structureAnalysis: Array<{
+    section: string;
+    measures?: string;
+    key_tempo?: string;
+    character?: string;
+    description: string;
+  }> = Array.isArray(structureJson.structure_analysis) ? structureJson.structure_analysis : [];
 
   console.log(`[V1 Large Call 1] ${structureAnalysis.length} sections`);
   const sectionNames = structureAnalysis.map((s) => s.section);
 
-  // Call 2: 상세 분석
   const detailPrompt = createDetailAnalysisPrompt(composer, title, sectionNames);
   const detailText = await callGPT(openai, detailPrompt, 16384);
   const detailJson = JSON.parse(extractJSON(detailText));
   let allTechniqueTips = detailJson.content?.technique_tips || [];
 
-  // 누락 섹션 보완
   const coveredSections = new Set(
-    allTechniqueTips.map((t: { section: string }) =>
-      t.section.replace(/\s*\(.*\)/, "").trim()
-    )
+    allTechniqueTips.map((t: { section: string }) => t.section.replace(/\s*\(.*\)/, "").trim()),
   );
   const missingSections = sectionNames.filter((s) => !coveredSections.has(s));
 
@@ -690,7 +749,9 @@ async function runV1LargeWorkPipeline(
     for (let i = 0; i < missingSections.length; i += BATCH_SIZE) {
       const batch = missingSections.slice(i, i + BATCH_SIZE);
       const extraPrompt = createExtraTechniquePrompt(
-        composer, title, batch, Math.floor(i / BATCH_SIZE), Math.ceil(missingSections.length / BATCH_SIZE)
+        composer, title, batch,
+        Math.floor(i / BATCH_SIZE),
+        Math.ceil(missingSections.length / BATCH_SIZE),
       );
       const extraText = await callGPT(openai, extraPrompt, 16384);
       try {
@@ -719,7 +780,7 @@ async function runV1LargeWorkPipeline(
   return parseAndValidateResponse(mergedResponse, composer, title);
 }
 
-// ── API 핸들러 ──
+// ── API 핸들러 ──────────────────────────────────────────────────
 
 export async function POST(request: Request) {
   try {
@@ -735,7 +796,6 @@ export async function POST(request: Request) {
       return NextResponse.json(response, { status: 400 });
     }
 
-    // ── 관리자: 저장된 악보로 재분석 ──
     let storedPdfPath: string | undefined = pdfStoragePath;
     let storedMusicxmlPath: string | undefined = musicxmlStoragePath;
 
@@ -767,8 +827,8 @@ export async function POST(request: Request) {
           if (data) {
             const pdfBuffer = await data.arrayBuffer();
             const pdfBlob = new Blob([pdfBuffer], { type: "application/pdf" });
-
             const OMR_URL = process.env.OMR_SERVER_URL;
+
             if (OMR_URL) {
               const formData = new FormData();
               formData.append("file", pdfBlob, "input.pdf");
@@ -818,7 +878,7 @@ export async function POST(request: Request) {
     const hasImages = sheetMusicImages && sheetMusicImages.length > 0;
     const hasMusicXml = musicXml && musicXml.length > 0;
 
-    // 1. 캐시 확인
+    // 캐시 확인
     if (!forceRefresh && !hasImages && !hasMusicXml) {
       const cachedAnalysis = await getCachedAnalysis(composer, title);
       if (cachedAnalysis) {
@@ -834,7 +894,6 @@ export async function POST(request: Request) {
 
     console.log(`[Cache MISS] ${composer} - ${title} - Calling AI (V2=${useV2})...`);
 
-    // 2. OpenAI API 호출
     const openai = getOpenAIClient();
     if (!openai) {
       const response: AnalyzeSongResponse = {
@@ -847,10 +906,14 @@ export async function POST(request: Request) {
     let analysis: SongAnalysis;
 
     if (useV2) {
-      // ── V2 4-Phase 파이프라인 ──
-      analysis = await runV2Pipeline(openai, composer, title, hasMusicXml ? musicXml : undefined);
+      analysis = await runV2Pipeline(
+        openai,
+        composer,
+        title,
+        hasMusicXml ? musicXml : undefined,
+        forceRefresh,
+      );
     } else {
-      // ── V1 기존 파이프라인 ──
       analysis = await runV1Pipeline(
         openai,
         composer,
@@ -861,23 +924,16 @@ export async function POST(request: Request) {
     }
 
     // 저장 경로 보존
-    if (storedPdfPath) {
-      analysis.pdf_storage_path = storedPdfPath;
-    }
-    if (storedMusicxmlPath) {
-      analysis.musicxml_storage_path = storedMusicxmlPath;
-    }
+    if (storedPdfPath) analysis.pdf_storage_path = storedPdfPath;
+    if (storedMusicxmlPath) analysis.musicxml_storage_path = storedMusicxmlPath;
     if (!analysis.pdf_storage_path || !analysis.musicxml_storage_path) {
       const existingForPaths = await getCachedAnalysis(composer, title);
-      if (!analysis.pdf_storage_path && existingForPaths?.pdf_storage_path) {
+      if (!analysis.pdf_storage_path && existingForPaths?.pdf_storage_path)
         analysis.pdf_storage_path = existingForPaths.pdf_storage_path;
-      }
-      if (!analysis.musicxml_storage_path && existingForPaths?.musicxml_storage_path) {
+      if (!analysis.musicxml_storage_path && existingForPaths?.musicxml_storage_path)
         analysis.musicxml_storage_path = existingForPaths.musicxml_storage_path;
-      }
     }
 
-    // 캐시 저장
     await saveCachedAnalysis(analysis, composer, title);
     console.log(`[Cache SAVED] ${composer} - ${title} (schema_version=${analysis.schema_version})`);
 
@@ -886,13 +942,10 @@ export async function POST(request: Request) {
       data: analysis,
       cached: false,
     };
-
     return NextResponse.json(response);
   } catch (error) {
     console.error("Song analysis API v2 error:", error);
-
-    const errorMessage =
-      error instanceof Error ? error.message : "알 수 없는 오류";
+    const errorMessage = error instanceof Error ? error.message : "알 수 없는 오류";
     const response: AnalyzeSongResponse = {
       success: false,
       error: `곡 분석 중 오류가 발생했습니다: ${errorMessage}`,
@@ -901,76 +954,46 @@ export async function POST(request: Request) {
   }
 }
 
-/** 분석 삭제 */
 export async function DELETE(request: Request) {
   try {
     const { id } = await request.json();
     if (!id) {
-      return NextResponse.json(
-        { success: false, error: "id가 필요합니다" },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: "id가 필요합니다" }, { status: 400 });
     }
     const result = await deleteCachedAnalysis(id);
-    if (result) {
-      return NextResponse.json({ success: true });
-    }
-    return NextResponse.json(
-      { success: false, error: "삭제 실패" },
-      { status: 500 }
-    );
+    if (result) return NextResponse.json({ success: true });
+    return NextResponse.json({ success: false, error: "삭제 실패" }, { status: 500 });
   } catch (error) {
     console.error("Delete analysis error:", error);
-    return NextResponse.json(
-      { success: false, error: "삭제 실패" },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: "삭제 실패" }, { status: 500 });
   }
 }
 
-/** 분석 데이터 직접 수정 (관리자용) */
 export async function PATCH(request: Request) {
   try {
     const { id, analysis } = await request.json();
     if (!id || !analysis) {
       return NextResponse.json(
         { success: false, error: "id와 analysis가 필요합니다" },
-        { status: 400 }
+        { status: 400 },
       );
     }
-
     const result = await updateAnalysisById(id, analysis);
-    if (result) {
-      return NextResponse.json({ success: true });
-    }
-    return NextResponse.json(
-      { success: false, error: "업데이트 실패" },
-      { status: 500 }
-    );
+    if (result) return NextResponse.json({ success: true });
+    return NextResponse.json({ success: false, error: "업데이트 실패" }, { status: 500 });
   } catch (error) {
     console.error("Patch analysis error:", error);
-    return NextResponse.json(
-      { success: false, error: "업데이트 실패" },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: "업데이트 실패" }, { status: 500 });
   }
 }
 
-/** 캐시된 분석 목록 조회 */
 export async function GET() {
   try {
     const { getAllCachedAnalyses } = await import("@/lib/song-analysis-db");
     const analyses = await getAllCachedAnalyses();
-    return NextResponse.json({
-      success: true,
-      data: analyses,
-      count: analyses.length,
-    });
+    return NextResponse.json({ success: true, data: analyses, count: analyses.length });
   } catch (error) {
     console.error("Get cached analyses error:", error);
-    return NextResponse.json(
-      { success: false, error: "캐시 조회 실패" },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: "캐시 조회 실패" }, { status: 500 });
   }
 }
