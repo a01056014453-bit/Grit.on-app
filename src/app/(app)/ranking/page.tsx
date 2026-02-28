@@ -387,13 +387,16 @@ export default function RankingPage() {
         </div>
       </div>
 
-      {/* 연습 시작 플로팅 버튼 */}
-      <Link
-        href="/practice"
-        className="fixed bottom-24 right-5 w-14 h-14 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/30 transition-transform active:scale-90 z-30"
-      >
-        <Play className="w-6 h-6 text-white fill-white ml-0.5" />
-      </Link>
+      {/* 연습 시작 버튼 */}
+      <div className="mt-6 mb-4">
+        <Link
+          href="/practice"
+          className="flex items-center justify-center gap-2 w-full py-4 rounded-full bg-gradient-to-r from-violet-500 to-purple-600 text-white font-bold shadow-lg shadow-violet-500/20 transition-transform active:scale-[0.98]"
+        >
+          <Play className="w-5 h-5 fill-white" />
+          연습 시작하고 순위 올리기
+        </Link>
+      </div>
     </div>
   );
 }
