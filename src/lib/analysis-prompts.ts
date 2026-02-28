@@ -22,12 +22,18 @@ const HALLUCINATION_GUARD = `🚨 핵심 규칙 — 거짓말 금지:
 // ── Phase 0: Perplexity 레퍼런스 검색 ──────────────────────────
 
 export function createReferenceSearchPrompt(composer: string, title: string): string {
-  return `I need accurate, verified musical reference data for this classical piano piece:
+  return `I need accurate musical reference data for this piano piece:
 
 Composer: ${composer}
 Title: ${title}
 
-Search IMSLP, Wikipedia, Henle Verlag, Grove Music Online, and music theory databases.
+Search broadly across the web: IMSLP, Wikipedia, Henle Verlag, Grove Music Online, AllMusic, MusicBrainz, piano forums, sheet music databases, YouTube descriptions, academic papers, composer society websites, and any other relevant source.
+
+For less mainstream composers (e.g., Kapustin, Medtner, Godowsky), also search:
+- "${composer} ${title} key" directly
+- Score preview sites (Scribd, IMSLP, Sheet Music Plus)
+- Piano competition repertoire lists
+- Recording liner notes and album descriptions
 
 CRITICAL: If the title contains "No.X", search for THAT SPECIFIC piece only.
 
@@ -36,7 +42,7 @@ Required output — fill every field for every movement:
 PIECE INFO:
 - Full title: [original language]
 - Opus/Catalogue: [e.g., Op.10 No.3]
-- Overall key: [e.g., D major]
+- Overall key: [e.g., F minor] ← THIS IS CRITICAL. Search specifically for the key.
 - Year composed: [verified only]
 - Number of movements:
 - Henle difficulty: [if available]
@@ -50,6 +56,7 @@ Per movement:
 - Notable modulations:
 
 CRITICAL RULES:
+- The KEY of the piece is the most important field. Search "${composer} ${title} key" if not immediately found.
 - Provide key, time signature, tempo for EVERY movement.
 - For time signatures of well-known repertoire: give the value directly (e.g., 2/2, 3/4). Do NOT write "not specified".
 - For measure counts: write "approx. 350" rather than "not found".

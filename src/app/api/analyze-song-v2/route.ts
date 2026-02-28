@@ -220,9 +220,9 @@ async function searchMusicReference(
 
 /**
  * Perplexity로 특정 사실 검증
- * - true: 확인됨 → 유지
- * - false: 불일치 → 제거
- * - null: 확인 불가 → 조용히 제거 (미확인 표기 없음)
+ * - confirmed: 확인됨 → 유지
+ * - incorrect: 명확히 불일치 → 제거
+ * - unverifiable: 확인 불가 → 기존 값 유지 (틀린 게 아님)
  */
 async function verifyFactWithPerplexity(
   field: string,
