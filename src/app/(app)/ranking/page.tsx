@@ -387,18 +387,13 @@ export default function RankingPage() {
         </div>
       </div>
 
-      {/* CTA - sticky: 스크롤 따라다님 */}
-      <div className="sticky bottom-20 z-30 mt-6">
-        <div className="bg-gradient-to-t from-white/80 via-white/40 to-transparent pt-4 pb-2">
-          <Link
-            href="/practice"
-            className="flex items-center justify-center gap-2 w-full py-4 rounded-2xl bg-gradient-to-r from-violet-500 to-violet-900 text-white font-bold shadow-lg shadow-violet-500/20 transition-transform active:scale-[0.98]"
-          >
-            <Play className="w-5 h-5 fill-white" />
-            연습 시작하고 순위 올리기
-          </Link>
-        </div>
-      </div>
+      {/* 연습 시작 플로팅 버튼 */}
+      <Link
+        href="/practice"
+        className="fixed bottom-24 right-5 w-14 h-14 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/30 transition-transform active:scale-90 z-30"
+      >
+        <Play className="w-6 h-6 text-white fill-white ml-0.5" />
+      </Link>
     </div>
   );
 }
