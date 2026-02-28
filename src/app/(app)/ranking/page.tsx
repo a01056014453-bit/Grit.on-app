@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   Trophy,
   Flame,
+  Play,
   Crown,
   Medal,
   Award,
@@ -386,6 +387,18 @@ export default function RankingPage() {
         </div>
       </div>
 
+      {/* CTA - sticky: 스크롤 따라다님 */}
+      <div className="sticky bottom-20 z-30 mt-6">
+        <div className="bg-gradient-to-t from-white/80 via-white/40 to-transparent pt-4 pb-2">
+          <Link
+            href="/practice"
+            className="flex items-center justify-center gap-2 w-full py-4 rounded-2xl bg-gradient-to-r from-violet-500 to-violet-900 text-white font-bold shadow-lg shadow-violet-500/20 transition-transform active:scale-[0.98]"
+          >
+            <Play className="w-5 h-5 fill-white" />
+            연습 시작하고 순위 올리기
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }
