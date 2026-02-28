@@ -5,8 +5,6 @@
  */
 
 import { supabaseServer } from "@/lib/supabase-server";
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const pdfParse = require("pdf-parse");
 import OpenAI from "openai";
 
 export interface PaperCacheRow {
@@ -175,6 +173,8 @@ async function extractTextFromUrl(
     if (isPdf) {
       const buffer = Buffer.from(await response.arrayBuffer());
       if (buffer.length < 1000) return null;
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const pdfParse = require("pdf-parse");
       const parsed = await pdfParse(buffer, { max: 15 });
       const text = parsed.text?.trim() || "";
       if (text.length < 300) return null;
