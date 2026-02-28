@@ -55,11 +55,32 @@ export async function GET(request: NextRequest) {
 
     // 내 랭킹 조회
     let myRanking = null;
+    const nickname = searchParams.get("nickname");
     if (userId) {
+      // 닉네임이 전달된 경우 프로필 업데이트
+      if (nickname && nickname !== "연습생" && nickname !== "익명") {
+        const { data: profile } = await supabaseServer
+          .from("profiles")
+          .select("nickname")
+          .eq("id", userId)
+          .single();
+
+        if (profile && (profile.nickname === "익명" || profile.nickname === "연습생" || !profile.nickname)) {
+          await supabaseServer
+            .from("profiles")
+            .update({ nickname })
+            .eq("id", userId);
+        }
+      }
+
       const myIndex = rankers.findIndex(
         (r: { id: string }) => r.id === userId
       );
       if (myIndex !== -1) {
+        // 닉네임이 방금 업데이트된 경우 반영
+        if (nickname && nickname !== "연습생" && nickname !== "익명") {
+          rankers[myIndex].nickname = nickname;
+        }
         myRanking = rankers[myIndex];
       }
     }
