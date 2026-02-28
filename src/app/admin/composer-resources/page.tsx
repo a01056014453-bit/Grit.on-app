@@ -533,11 +533,34 @@ export default function ComposerResourcesPage() {
   return (
     <div>
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">학술자료 DB</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          PDF를 여러 개 드래그해서 한번에 업로드
-        </p>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">학술자료 DB</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            PDF를 여러 개 드래그해서 한번에 업로드
+          </p>
+        </div>
+        {activeResources.some((r) => r.piece_title?.trim()) && !analyzing && (
+          <button
+            onClick={() => {
+              const targets = activeResources
+                .filter((r) => r.piece_title?.trim())
+                .map((r) => ({ composer: r.composer, pieceTitle: r.piece_title! }));
+              // 중복 제거
+              const unique = targets.filter(
+                (t, i, arr) =>
+                  arr.findIndex(
+                    (x) => x.composer === t.composer && x.pieceTitle === t.pieceTitle,
+                  ) === i,
+              );
+              runAutoAnalysis(unique);
+            }}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-violet-700 bg-violet-50 border border-violet-200 rounded-lg hover:bg-violet-100 transition-colors"
+          >
+            <Sparkles className="w-4 h-4" />
+            기존 자료 곡 분석 실행
+          </button>
+        )}
       </div>
 
       {/* Stats */}
