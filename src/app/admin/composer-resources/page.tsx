@@ -484,6 +484,12 @@ export default function ComposerResourcesPage() {
               </div>
             )}
 
+            {stepMessage && (
+              <p className="text-sm text-red-500 mb-3 bg-red-50 rounded-lg px-4 py-2">
+                {stepMessage}
+              </p>
+            )}
+
             <button
               onClick={handleSave}
               className="w-full flex items-center justify-center gap-2 py-3 bg-violet-600 text-white rounded-xl font-semibold hover:bg-violet-700 transition-colors"
