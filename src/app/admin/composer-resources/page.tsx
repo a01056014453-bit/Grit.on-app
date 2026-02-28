@@ -12,6 +12,8 @@ import {
   Check,
   Pencil,
   Download,
+  X,
+  AlertCircle,
 } from "lucide-react";
 import { StatCard } from "@/components/admin/stat-card";
 import type { ComposerResource, ResourceType } from "@/types/composer-resource";
@@ -59,9 +61,9 @@ const LANG_LABELS: Record<string, string> = {
   ja: "일본어",
 };
 
-// ── 업로드 단계 ────────────────────────────────────────────
+// ── 배치 업로드 아이템 ────────────────────────────────────
 
-type UploadStep = "idle" | "extracting" | "classifying" | "review" | "saving" | "done";
+type ItemStatus = "pending" | "extracting" | "classifying" | "ready" | "saving" | "done" | "error";
 
 interface ClassifiedMeta {
   composer: string;
@@ -75,6 +77,30 @@ interface ClassifiedMeta {
   tags: string[];
 }
 
+interface UploadItem {
+  id: string;
+  file: File;
+  status: ItemStatus;
+  extractedText: string;
+  pageCount: number;
+  meta: ClassifiedMeta | null;
+  error: string;
+  editMode: boolean;
+}
+
+function createUploadItem(file: File): UploadItem {
+  return {
+    id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    file,
+    status: "pending",
+    extractedText: "",
+    pageCount: 0,
+    meta: null,
+    error: "",
+    editMode: false,
+  };
+}
+
 // ── 메인 페이지 ────────────────────────────────────────────
 
 export default function ComposerResourcesPage() {
@@ -82,14 +108,10 @@ export default function ComposerResourcesPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // 업로드 상태
-  const [step, setStep] = useState<UploadStep>("idle");
-  const [stepMessage, setStepMessage] = useState("");
-  const [pdfFile, setPdfFile] = useState<File | null>(null);
-  const [extractedText, setExtractedText] = useState("");
-  const [pageCount, setPageCount] = useState(0);
-  const [meta, setMeta] = useState<ClassifiedMeta | null>(null);
-  const [editMode, setEditMode] = useState(false);
+  // 배치 업로드 상태
+  const [items, setItems] = useState<UploadItem[]>([]);
+  const [processing, setProcessing] = useState(false);
+  const [savingAll, setSavingAll] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
@@ -116,34 +138,38 @@ export default function ComposerResourcesPage() {
     fetchResources();
   }, [fetchResources]);
 
-  // ── PDF 처리 파이프라인 ────────────────────────────────
+  // ── 아이템 상태 업데이트 (불변) ────────────────────────
 
-  const processPdf = async (file: File) => {
-    setPdfFile(file);
-    setEditMode(false);
+  const updateItem = useCallback(
+    (id: string, patch: Partial<UploadItem>) => {
+      setItems((prev) => prev.map((item) => (item.id === id ? { ...item, ...patch } : item)));
+    },
+    [],
+  );
 
+  // ── 단일 PDF 처리 ─────────────────────────────────────
+
+  const processOneItem = async (item: UploadItem) => {
     // Step 1: 텍스트 추출
-    setStep("extracting");
-    setStepMessage("PDF에서 텍스트 추출 중...");
+    updateItem(item.id, { status: "extracting" });
 
     let text = "";
     let pages = 0;
     try {
-      const result = await extractTextFromPdf(file);
+      const result = await extractTextFromPdf(item.file);
       text = result.text;
       pages = result.pageCount;
-      setExtractedText(text);
-      setPageCount(pages);
+      updateItem(item.id, { extractedText: text, pageCount: pages });
     } catch (err) {
-      console.error("PDF 추출 실패:", err);
-      setStepMessage(`PDF 텍스트 추출 실패: ${err instanceof Error ? err.message : "알 수 없는 오류"}`);
-      setStep("idle");
+      updateItem(item.id, {
+        status: "error",
+        error: `텍스트 추출 실패: ${err instanceof Error ? err.message : "알 수 없는 오류"}`,
+      });
       return;
     }
 
     // Step 2: AI 자동 분류
-    setStep("classifying");
-    setStepMessage("AI가 논문 정보를 분석 중...");
+    updateItem(item.id, { status: "classifying" });
 
     try {
       const res = await fetch("/api/composer-resources/classify", {
@@ -155,58 +181,78 @@ export default function ComposerResourcesPage() {
       const json = await res.json();
 
       if (!res.ok) {
-        setStepMessage(`AI 분류 실패: ${json.error || res.statusText}`);
-        setStep("idle");
+        updateItem(item.id, {
+          status: "error",
+          error: `AI 분류 실패: ${json.error || res.statusText}`,
+        });
         return;
       }
+
       if (json.success && json.metadata) {
-        setMeta({
-          composer: json.metadata.composer || "",
-          title: json.metadata.title || "",
-          resource_type: json.metadata.resource_type || "paper",
-          author: json.metadata.author || "",
-          year: json.metadata.year || "",
-          source: json.metadata.source || "",
-          language: json.metadata.language || "ko",
-          piece_title: json.metadata.piece_title || "",
-          tags: Array.isArray(json.metadata.tags) ? json.metadata.tags : [],
+        updateItem(item.id, {
+          status: "ready",
+          meta: {
+            composer: json.metadata.composer || "",
+            title: json.metadata.title || "",
+            resource_type: json.metadata.resource_type || "paper",
+            author: json.metadata.author || "",
+            year: json.metadata.year || "",
+            source: json.metadata.source || "",
+            language: json.metadata.language || "ko",
+            piece_title: json.metadata.piece_title || "",
+            tags: Array.isArray(json.metadata.tags) ? json.metadata.tags : [],
+          },
         });
-        setStep("review");
-        setStepMessage("");
       } else {
-        setStepMessage("AI 분류 실패. 다시 시도해주세요.");
-        setStep("idle");
+        updateItem(item.id, { status: "error", error: "AI 분류 결과 없음" });
       }
     } catch {
-      setStepMessage("네트워크 오류. 다시 시도해주세요.");
-      setStep("idle");
+      updateItem(item.id, { status: "error", error: "네트워크 오류" });
     }
   };
 
-  // ── 파일 선택 / 드래그앤드롭 ──────────────────────────
+  // ── 전체 순차 처리 ─────────────────────────────────────
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.name.toLowerCase().endsWith(".pdf")) {
+  const processAllPending = async (newItems: UploadItem[]) => {
+    setProcessing(true);
+    for (const item of newItems) {
+      if (item.status === "pending") {
+        await processOneItem(item);
+      }
+    }
+    setProcessing(false);
+  };
+
+  // ── 파일 추가 ──────────────────────────────────────────
+
+  const addFiles = (files: FileList | File[]) => {
+    const pdfFiles = Array.from(files).filter((f) =>
+      f.name.toLowerCase().endsWith(".pdf"),
+    );
+    if (pdfFiles.length === 0) {
       alert("PDF 파일만 업로드 가능합니다.");
       return;
     }
-    processPdf(file);
+
+    const newItems = pdfFiles.map(createUploadItem);
+    setItems((prev) => [...prev, ...newItems]);
+    processAllPending(newItems);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      addFiles(e.target.files);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     dropZoneRef.current?.classList.remove("border-violet-400", "bg-violet-50/50");
-
-    const file = e.dataTransfer.files[0];
-    if (!file) return;
-    if (!file.name.toLowerCase().endsWith(".pdf")) {
-      alert("PDF 파일만 업로드 가능합니다.");
-      return;
+    if (e.dataTransfer.files.length > 0) {
+      addFiles(e.dataTransfer.files);
     }
-    processPdf(file);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -219,27 +265,30 @@ export default function ComposerResourcesPage() {
     dropZoneRef.current?.classList.remove("border-violet-400", "bg-violet-50/50");
   };
 
-  // ── 저장 ──────────────────────────────────────────────
+  // ── 아이템 제거 ────────────────────────────────────────
 
-  const handleSave = async () => {
-    if (!meta) return;
-    setStep("saving");
-    setStepMessage("PDF 업로드 및 저장 중...");
+  const removeItem = (id: string) => {
+    setItems((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  // ── 단일 저장 ──────────────────────────────────────────
+
+  const saveOneItem = async (item: UploadItem): Promise<boolean> => {
+    if (!item.meta) return false;
+    updateItem(item.id, { status: "saving" });
 
     try {
       const metadata = {
-        ...meta,
-        extracted_text: extractedText,
-        page_count: pageCount,
-        file_size_bytes: pdfFile?.size,
-        auto_translate: meta.language !== "ko",
+        ...item.meta,
+        extracted_text: item.extractedText,
+        page_count: item.pageCount,
+        file_size_bytes: item.file.size,
+        auto_translate: item.meta.language !== "ko",
       };
 
       const formData = new FormData();
       formData.append("metadata", JSON.stringify(metadata));
-      if (pdfFile) {
-        formData.append("pdf", pdfFile);
-      }
+      formData.append("pdf", item.file);
 
       const res = await fetch("/api/composer-resources", {
         method: "POST",
@@ -248,44 +297,41 @@ export default function ComposerResourcesPage() {
 
       const json = await res.json();
       if (json.success) {
-        setStep("done");
-        setStepMessage("저장 완료!");
-        fetchResources();
-        setTimeout(() => resetUpload(), 2000);
+        updateItem(item.id, { status: "done" });
+        return true;
       } else {
-        setStepMessage(`오류: ${json.error}`);
-        setStep("review");
+        updateItem(item.id, { status: "error", error: json.error || "저장 실패" });
+        return false;
       }
     } catch {
-      setStepMessage("네트워크 오류");
-      setStep("review");
+      updateItem(item.id, { status: "error", error: "네트워크 오류" });
+      return false;
     }
   };
 
-  const handleDownloadPdf = async (storagePath: string) => {
-    try {
-      const res = await fetch(
-        `/api/composer-resources/download?path=${encodeURIComponent(storagePath)}`,
-      );
-      const json = await res.json();
-      if (json.success && json.url) {
-        window.open(json.url, "_blank");
-      } else {
-        alert("PDF를 불러올 수 없습니다.");
-      }
-    } catch {
-      alert("PDF 다운로드 실패");
+  // ── 전체 저장 ──────────────────────────────────────────
+
+  const handleSaveAll = async () => {
+    const readyItems = items.filter((i) => i.status === "ready");
+    if (readyItems.length === 0) return;
+
+    setSavingAll(true);
+    for (const item of readyItems) {
+      await saveOneItem(item);
     }
+    setSavingAll(false);
+    fetchResources();
+
+    // 완료된 항목 2초 뒤 제거
+    setTimeout(() => {
+      setItems((prev) => prev.filter((i) => i.status !== "done"));
+    }, 2000);
   };
 
-  const resetUpload = () => {
-    setStep("idle");
-    setStepMessage("");
-    setPdfFile(null);
-    setExtractedText("");
-    setPageCount(0);
-    setMeta(null);
-    setEditMode(false);
+  // ── 전체 초기화 ────────────────────────────────────────
+
+  const clearAll = () => {
+    setItems([]);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -307,7 +353,23 @@ export default function ComposerResourcesPage() {
     }
   };
 
-  // ── 필터링 ────────────────────────────────────────────
+  const handleDownloadPdf = async (storagePath: string) => {
+    try {
+      const res = await fetch(
+        `/api/composer-resources/download?path=${encodeURIComponent(storagePath)}`,
+      );
+      const json = await res.json();
+      if (json.success && json.url) {
+        window.open(json.url, "_blank");
+      } else {
+        alert("PDF를 불러올 수 없습니다.");
+      }
+    } catch {
+      alert("PDF 다운로드 실패");
+    }
+  };
+
+  // ── 파생 데이터 ────────────────────────────────────────
 
   const activeResources = resources.filter((r) => r.is_active);
   const filtered = searchQuery.trim()
@@ -322,6 +384,15 @@ export default function ComposerResourcesPage() {
   const composerCount = new Set(activeResources.map((r) => r.composer_normalized)).size;
   const totalPages = activeResources.reduce((sum, r) => sum + (r.page_count || 0), 0);
 
+  const readyCount = items.filter((i) => i.status === "ready").length;
+  const processingCount = items.filter((i) =>
+    ["pending", "extracting", "classifying"].includes(i.status),
+  ).length;
+  const doneCount = items.filter((i) => i.status === "done").length;
+  const errorCount = items.filter((i) => i.status === "error").length;
+
+  const hasItems = items.length > 0;
+
   // ── 렌더링 ────────────────────────────────────────────
 
   return (
@@ -330,7 +401,7 @@ export default function ComposerResourcesPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">학술자료 DB</h1>
         <p className="text-sm text-gray-500 mt-1">
-          PDF를 올리면 AI가 자동으로 분류합니다
+          PDF를 여러 개 드래그해서 한번에 업로드
         </p>
       </div>
 
@@ -347,194 +418,94 @@ export default function ComposerResourcesPage() {
         />
       </div>
 
-      {/* Upload Zone — 항상 표시 */}
+      {/* Upload Zone */}
       <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-        {step === "idle" && (
-          <div
-            ref={dropZoneRef}
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            className="border-2 border-dashed border-gray-300 rounded-xl p-12 text-center transition-all cursor-pointer hover:border-violet-400 hover:bg-violet-50/30"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf"
-              onChange={handleFileSelect}
-              className="hidden"
-            />
-            <Upload className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <p className="text-base font-semibold text-gray-700 mb-1">
-              PDF 파일을 드래그하거나 클릭해서 선택
-            </p>
+        {/* 드롭존 — 항상 표시 (아이템 있어도 추가 가능) */}
+        <div
+          ref={dropZoneRef}
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          className={`border-2 border-dashed border-gray-300 rounded-xl text-center transition-all cursor-pointer hover:border-violet-400 hover:bg-violet-50/30 ${hasItems ? "p-6" : "p-12"}`}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf"
+            multiple
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+          <Upload className={`text-gray-300 mx-auto mb-2 ${hasItems ? "w-8 h-8" : "w-12 h-12 mb-4"}`} />
+          <p className={`font-semibold text-gray-700 ${hasItems ? "text-sm" : "text-base mb-1"}`}>
+            PDF 파일을 드래그하거나 클릭해서 선택 (여러 개 가능)
+          </p>
+          {!hasItems && (
             <p className="text-sm text-gray-400">
               AI가 작곡가, 제목, 저자, 대상곡 등을 자동으로 추출합니다
             </p>
-          </div>
-        )}
+          )}
+        </div>
 
-        {(step === "extracting" || step === "classifying") && (
-          <div className="py-12 text-center">
-            <div className="relative inline-block mb-4">
-              <div className="w-16 h-16 rounded-full bg-violet-100 flex items-center justify-center">
-                {step === "extracting" ? (
-                  <FileText className="w-8 h-8 text-violet-500" />
-                ) : (
-                  <Sparkles className="w-8 h-8 text-violet-500" />
-                )}
-              </div>
-              <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-white shadow flex items-center justify-center">
-                <Loader2 className="w-4 h-4 text-violet-600 animate-spin" />
-              </div>
-            </div>
-            <p className="font-semibold text-gray-800">{stepMessage}</p>
-            {pdfFile && (
-              <p className="text-sm text-gray-400 mt-2">{pdfFile.name}</p>
-            )}
-          </div>
-        )}
-
-        {step === "review" && meta && (
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-violet-500" />
-                <h3 className="text-lg font-bold text-gray-900">AI 자동 분류 결과</h3>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setEditMode(!editMode)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                  {editMode ? "미리보기" : "수정"}
-                </button>
-                <button
-                  onClick={resetUpload}
-                  className="px-3 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors"
-                >
-                  취소
-                </button>
-              </div>
-            </div>
-
-            {editMode ? (
-              /* 수정 모드 — 간결한 그리드 */
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                {[
-                  { label: "작곡가", key: "composer" as const },
-                  { label: "논문 제목", key: "title" as const },
-                  { label: "저자", key: "author" as const },
-                  { label: "연도", key: "year" as const },
-                  { label: "출처", key: "source" as const },
-                  { label: "대상곡", key: "piece_title" as const },
-                ].map(({ label, key }) => (
-                  <div key={key}>
-                    <label className="block text-xs text-gray-500 mb-1">{label}</label>
-                    <input
-                      type="text"
-                      value={meta[key]}
-                      onChange={(e) => setMeta({ ...meta, [key]: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
-                    />
-                  </div>
-                ))}
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">유형</label>
-                  <select
-                    value={meta.resource_type}
-                    onChange={(e) => setMeta({ ...meta, resource_type: e.target.value as ResourceType })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                  >
-                    {Object.entries(TYPE_LABELS).map(([k, v]) => (
-                      <option key={k} value={k}>{v}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">언어</label>
-                  <select
-                    value={meta.language}
-                    onChange={(e) => setMeta({ ...meta, language: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                  >
-                    {Object.entries(LANG_LABELS).map(([k, v]) => (
-                      <option key={k} value={k}>{v}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            ) : (
-              /* 미리보기 모드 — 카드 형태 */
-              <div className="bg-gray-50 rounded-xl p-5 mb-4">
-                <div className="grid grid-cols-2 gap-y-3 gap-x-8">
-                  {[
-                    { label: "작곡가", value: meta.composer },
-                    { label: "유형", value: TYPE_LABELS[meta.resource_type] || meta.resource_type },
-                    { label: "논문 제목", value: meta.title },
-                    { label: "언어", value: LANG_LABELS[meta.language] || meta.language },
-                    { label: "저자", value: meta.author || "-" },
-                    { label: "연도", value: meta.year || "-" },
-                    { label: "출처", value: meta.source || "-" },
-                    { label: "대상곡", value: meta.piece_title || "-" },
-                  ].map(({ label, value }) => (
-                    <div key={label}>
-                      <span className="text-xs text-gray-400">{label}</span>
-                      <p className="text-sm font-medium text-gray-900 truncate">{value}</p>
-                    </div>
-                  ))}
-                </div>
-                {meta.tags.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-gray-200 flex flex-wrap gap-1.5">
-                    {meta.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-700"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <div className="mt-3 pt-3 border-t border-gray-200">
-                  <span className="text-xs text-gray-400">
-                    {pdfFile?.name} · {pageCount}페이지 · {extractedText.length.toLocaleString()}자 추출
+        {/* 배치 아이템 목록 */}
+        {hasItems && (
+          <div className="mt-4 space-y-3">
+            {/* 상태 요약 바 */}
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-3 text-xs text-gray-500">
+                <span>총 {items.length}개</span>
+                {processingCount > 0 && (
+                  <span className="flex items-center gap-1 text-violet-600">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    분석 중 {processingCount}개
                   </span>
-                </div>
+                )}
+                {readyCount > 0 && (
+                  <span className="text-emerald-600">준비완료 {readyCount}개</span>
+                )}
+                {doneCount > 0 && (
+                  <span className="text-green-600">저장완료 {doneCount}개</span>
+                )}
+                {errorCount > 0 && (
+                  <span className="text-red-500">오류 {errorCount}개</span>
+                )}
               </div>
-            )}
-
-            {stepMessage && (
-              <p className="text-sm text-red-500 mb-3 bg-red-50 rounded-lg px-4 py-2">
-                {stepMessage}
-              </p>
-            )}
-
-            <button
-              onClick={handleSave}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-violet-600 text-white rounded-xl font-semibold hover:bg-violet-700 transition-colors"
-            >
-              <Check className="w-5 h-5" />
-              이대로 저장
-            </button>
-          </div>
-        )}
-
-        {step === "saving" && (
-          <div className="py-12 text-center">
-            <Loader2 className="w-10 h-10 text-violet-500 animate-spin mx-auto mb-3" />
-            <p className="font-semibold text-gray-800">{stepMessage}</p>
-          </div>
-        )}
-
-        {step === "done" && (
-          <div className="py-12 text-center">
-            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
-              <Check className="w-8 h-8 text-green-600" />
+              <div className="flex items-center gap-2">
+                {readyCount > 0 && (
+                  <button
+                    onClick={handleSaveAll}
+                    disabled={savingAll}
+                    className="flex items-center gap-1.5 px-4 py-1.5 text-sm font-semibold text-white bg-violet-600 rounded-lg hover:bg-violet-700 disabled:opacity-50 transition-colors"
+                  >
+                    {savingAll ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Check className="w-4 h-4" />
+                    )}
+                    {savingAll ? "저장 중..." : `${readyCount}개 전체 저장`}
+                  </button>
+                )}
+                <button
+                  onClick={clearAll}
+                  className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  전체 취소
+                </button>
+              </div>
             </div>
-            <p className="font-semibold text-gray-800">저장 완료!</p>
+
+            {/* 각 아이템 카드 */}
+            {items.map((item) => (
+              <BatchItemCard
+                key={item.id}
+                item={item}
+                onRemove={() => removeItem(item.id)}
+                onUpdateMeta={(meta) => updateItem(item.id, { meta })}
+                onToggleEdit={() => updateItem(item.id, { editMode: !item.editMode })}
+                onRetrySave={() => saveOneItem(item)}
+              />
+            ))}
           </div>
         )}
       </div>
@@ -649,6 +620,195 @@ export default function ComposerResourcesPage() {
             </div>
           </div>
         </div>
+      )}
+    </div>
+  );
+}
+
+// ── 배치 아이템 카드 컴포넌트 ─────────────────────────────
+
+function BatchItemCard({
+  item,
+  onRemove,
+  onUpdateMeta,
+  onToggleEdit,
+  onRetrySave,
+}: {
+  item: UploadItem;
+  onRemove: () => void;
+  onUpdateMeta: (meta: ClassifiedMeta) => void;
+  onToggleEdit: () => void;
+  onRetrySave: () => void;
+}) {
+  const { status, file, meta, error, editMode, pageCount, extractedText } = item;
+
+  // 상태별 아이콘 + 색상
+  const statusConfig: Record<
+    ItemStatus,
+    { icon: React.ReactNode; bg: string; text: string; label: string }
+  > = {
+    pending: {
+      icon: <Loader2 className="w-4 h-4 animate-spin" />,
+      bg: "bg-gray-50 border-gray-200",
+      text: "text-gray-500",
+      label: "대기 중",
+    },
+    extracting: {
+      icon: <FileText className="w-4 h-4" />,
+      bg: "bg-violet-50 border-violet-200",
+      text: "text-violet-600",
+      label: "텍스트 추출 중...",
+    },
+    classifying: {
+      icon: <Sparkles className="w-4 h-4" />,
+      bg: "bg-violet-50 border-violet-200",
+      text: "text-violet-600",
+      label: "AI 분류 중...",
+    },
+    ready: {
+      icon: <Check className="w-4 h-4" />,
+      bg: "bg-emerald-50 border-emerald-200",
+      text: "text-emerald-600",
+      label: "준비 완료",
+    },
+    saving: {
+      icon: <Loader2 className="w-4 h-4 animate-spin" />,
+      bg: "bg-blue-50 border-blue-200",
+      text: "text-blue-600",
+      label: "저장 중...",
+    },
+    done: {
+      icon: <Check className="w-4 h-4" />,
+      bg: "bg-green-50 border-green-200",
+      text: "text-green-600",
+      label: "저장 완료",
+    },
+    error: {
+      icon: <AlertCircle className="w-4 h-4" />,
+      bg: "bg-red-50 border-red-200",
+      text: "text-red-500",
+      label: "오류",
+    },
+  };
+
+  const cfg = statusConfig[status];
+
+  return (
+    <div className={`rounded-xl border p-4 transition-all ${cfg.bg}`}>
+      {/* 헤더: 파일명 + 상태 + 액션 */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <FileText className="w-4 h-4 text-gray-400 shrink-0" />
+          <span className="text-sm font-medium text-gray-800 truncate">{file.name}</span>
+          <span className="text-xs text-gray-400 shrink-0">
+            ({(file.size / 1024).toFixed(0)} KB)
+          </span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className={`flex items-center gap-1 text-xs font-medium ${cfg.text}`}>
+            {cfg.icon}
+            {cfg.label}
+          </span>
+          {status !== "saving" && status !== "done" && (
+            <button
+              onClick={onRemove}
+              className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* 에러 표시 */}
+      {status === "error" && error && (
+        <div className="flex items-center justify-between mt-1">
+          <p className="text-xs text-red-500">{error}</p>
+          {meta && (
+            <button
+              onClick={onRetrySave}
+              className="text-xs text-red-600 underline hover:text-red-700"
+            >
+              재시도
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* 분류 결과 (ready 상태) */}
+      {status === "ready" && meta && (
+        <div className="mt-2">
+          {editMode ? (
+            <div className="grid grid-cols-3 gap-2">
+              {(
+                [
+                  { label: "작곡가", key: "composer" },
+                  { label: "제목", key: "title" },
+                  { label: "저자", key: "author" },
+                  { label: "연도", key: "year" },
+                  { label: "출처", key: "source" },
+                  { label: "대상곡", key: "piece_title" },
+                ] as const
+              ).map(({ label, key }) => (
+                <div key={key}>
+                  <label className="block text-[10px] text-gray-400 mb-0.5">{label}</label>
+                  <input
+                    type="text"
+                    value={meta[key]}
+                    onChange={(e) => onUpdateMeta({ ...meta, [key]: e.target.value })}
+                    className="w-full px-2 py-1.5 border border-gray-200 rounded text-xs focus:ring-1 focus:ring-violet-500"
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs">
+              <span>
+                <span className="text-gray-400">작곡가</span>{" "}
+                <span className="font-medium text-gray-800">{meta.composer}</span>
+              </span>
+              <span>
+                <span className="text-gray-400">유형</span>{" "}
+                <span className="font-medium text-gray-800">
+                  {TYPE_LABELS[meta.resource_type] || meta.resource_type}
+                </span>
+              </span>
+              {meta.piece_title && (
+                <span>
+                  <span className="text-gray-400">대상곡</span>{" "}
+                  <span className="font-medium text-gray-800">{meta.piece_title}</span>
+                </span>
+              )}
+              <span>
+                <span className="text-gray-400">저자</span>{" "}
+                <span className="font-medium text-gray-800">{meta.author || "-"}</span>
+              </span>
+              <span>
+                <span className="text-gray-400">연도</span>{" "}
+                <span className="font-medium text-gray-800">{meta.year || "-"}</span>
+              </span>
+              <span className="text-gray-400">
+                {pageCount}p · {extractedText.length.toLocaleString()}자
+              </span>
+            </div>
+          )}
+          <div className="mt-2 flex items-center gap-2">
+            <button
+              onClick={onToggleEdit}
+              className="flex items-center gap-1 text-[11px] text-gray-500 hover:text-gray-700 transition-colors"
+            >
+              <Pencil className="w-3 h-3" />
+              {editMode ? "닫기" : "수정"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 완료 상태 */}
+      {status === "done" && meta && (
+        <p className="text-xs text-green-600 mt-1">
+          {meta.composer} — {meta.title} 저장됨
+        </p>
       )}
     </div>
   );
