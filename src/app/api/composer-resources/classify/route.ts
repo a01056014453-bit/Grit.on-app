@@ -73,9 +73,10 @@ ${extracted_text.substring(0, 8000)}
     const metadata = JSON.parse(match[0]);
     return NextResponse.json({ success: true, metadata });
   } catch (error) {
-    console.error("[Classify] 오류:", error);
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("[Classify] 오류:", msg, error);
     return NextResponse.json(
-      { error: "분류 중 오류가 발생했습니다." },
+      { error: `분류 중 오류: ${msg}` },
       { status: 500 },
     );
   }

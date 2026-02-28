@@ -21,10 +21,10 @@ async function extractTextFromPdf(
   file: File,
 ): Promise<{ text: string; pageCount: number }> {
   const pdfjsLib = await import("pdfjs-dist");
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 
   const arrayBuffer = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
   const pages: string[] = [];
 
   for (let i = 1; i <= pdf.numPages; i++) {
@@ -133,8 +133,9 @@ export default function ComposerResourcesPage() {
       pages = result.pageCount;
       setExtractedText(text);
       setPageCount(pages);
-    } catch {
-      setStepMessage("PDF 텍스트 추출 실패. 다른 파일을 시도해주세요.");
+    } catch (err) {
+      console.error("PDF 추출 실패:", err);
+      setStepMessage(`PDF 텍스트 추출 실패: ${err instanceof Error ? err.message : "알 수 없는 오류"}`);
       setStep("idle");
       return;
     }
@@ -149,8 +150,14 @@ export default function ComposerResourcesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ extracted_text: text }),
       });
+
       const json = await res.json();
 
+      if (!res.ok) {
+        setStepMessage(`AI 분류 실패: ${json.error || res.statusText}`);
+        setStep("idle");
+        return;
+      }
       if (json.success && json.metadata) {
         setMeta({
           composer: json.metadata.composer || "",
