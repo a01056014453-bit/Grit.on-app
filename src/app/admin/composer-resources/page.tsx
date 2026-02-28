@@ -67,6 +67,14 @@ const LANG_LABELS: Record<string, string> = {
 // ── 배치 업로드 아이템 ────────────────────────────────────
 
 type ItemStatus = "pending" | "extracting" | "classifying" | "ready" | "saving" | "done" | "error";
+type AnalysisStatus = "idle" | "analyzing" | "done" | "error";
+
+interface AnalysisJob {
+  composer: string;
+  pieceTitle: string;
+  status: AnalysisStatus;
+  error: string;
+}
 
 interface ClassifiedMeta {
   composer: string;
@@ -117,6 +125,10 @@ export default function ComposerResourcesPage() {
   const [savingAll, setSavingAll] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
+
+  // 자동 곡 분석 상태
+  const [analysisJobs, setAnalysisJobs] = useState<AnalysisJob[]>([]);
+  const [analyzing, setAnalyzing] = useState(false);
 
   // 삭제 확인
   const [deleteTarget, setDeleteTarget] = useState<ComposerResource | null>(null);
@@ -362,8 +374,18 @@ export default function ComposerResourcesPage() {
     if (readyItems.length === 0) return;
 
     setSavingAll(true);
+
+    // 저장 성공한 항목 중 piece_title 있는 것 수집
+    const savedWithPiece: { composer: string; pieceTitle: string }[] = [];
+
     for (const item of readyItems) {
-      await saveOneItem(item);
+      const ok = await saveOneItem(item);
+      if (ok && item.meta?.piece_title?.trim()) {
+        savedWithPiece.push({
+          composer: item.meta.composer,
+          pieceTitle: item.meta.piece_title,
+        });
+      }
     }
     setSavingAll(false);
     fetchResources();
@@ -372,6 +394,73 @@ export default function ComposerResourcesPage() {
     setTimeout(() => {
       setItems((prev) => prev.filter((i) => i.status !== "done"));
     }, 2000);
+
+    // piece_title 있는 항목 → 자동 곡 분석 실행
+    if (savedWithPiece.length > 0) {
+      // 중복 제거 (같은 작곡가 + 곡)
+      const unique = savedWithPiece.filter(
+        (item, idx, arr) =>
+          arr.findIndex(
+            (x) => x.composer === item.composer && x.pieceTitle === item.pieceTitle,
+          ) === idx,
+      );
+      runAutoAnalysis(unique);
+    }
+  };
+
+  // ── 자동 곡 분석 ──────────────────────────────────────
+
+  const runAutoAnalysis = async (
+    targets: { composer: string; pieceTitle: string }[],
+  ) => {
+    const jobs: AnalysisJob[] = targets.map((t) => ({
+      composer: t.composer,
+      pieceTitle: t.pieceTitle,
+      status: "idle" as AnalysisStatus,
+      error: "",
+    }));
+    setAnalysisJobs(jobs);
+    setAnalyzing(true);
+
+    for (let i = 0; i < jobs.length; i++) {
+      const job = jobs[i];
+      // 상태 업데이트: analyzing
+      setAnalysisJobs((prev) =>
+        prev.map((j, idx) => (idx === i ? { ...j, status: "analyzing" } : j)),
+      );
+
+      try {
+        const res = await fetch("/api/analyze-song-v2", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            composer: job.composer,
+            title: job.pieceTitle,
+            forceRefresh: true,
+          }),
+        });
+
+        const json = await res.json();
+        if (json.success) {
+          setAnalysisJobs((prev) =>
+            prev.map((j, idx) => (idx === i ? { ...j, status: "done" } : j)),
+          );
+        } else {
+          setAnalysisJobs((prev) =>
+            prev.map((j, idx) =>
+              idx === i ? { ...j, status: "error", error: json.error || "분석 실패" } : j,
+            ),
+          );
+        }
+      } catch {
+        setAnalysisJobs((prev) =>
+          prev.map((j, idx) =>
+            idx === i ? { ...j, status: "error", error: "네트워크 오류" } : j,
+          ),
+        );
+      }
+    }
+    setAnalyzing(false);
   };
 
   // ── 전체 초기화 ────────────────────────────────────────
@@ -555,6 +644,75 @@ export default function ComposerResourcesPage() {
           </div>
         )}
       </div>
+
+      {/* 자동 곡 분석 진행 상황 */}
+      {analysisJobs.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="w-5 h-5 text-violet-500" />
+            <h3 className="text-sm font-bold text-gray-900">곡 DB 자동 분석</h3>
+            {analyzing && (
+              <span className="flex items-center gap-1 text-xs text-violet-600">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                진행 중...
+              </span>
+            )}
+            {!analyzing && (
+              <button
+                onClick={() => setAnalysisJobs([])}
+                className="ml-auto text-xs text-gray-400 hover:text-gray-600"
+              >
+                닫기
+              </button>
+            )}
+          </div>
+          <div className="space-y-2">
+            {analysisJobs.map((job, idx) => (
+              <div
+                key={`${job.composer}-${job.pieceTitle}-${idx}`}
+                className={`flex items-center justify-between px-4 py-2.5 rounded-lg text-sm ${
+                  job.status === "done"
+                    ? "bg-green-50 border border-green-200"
+                    : job.status === "error"
+                      ? "bg-red-50 border border-red-200"
+                      : job.status === "analyzing"
+                        ? "bg-violet-50 border border-violet-200"
+                        : "bg-gray-50 border border-gray-200"
+                }`}
+              >
+                <div className="min-w-0">
+                  <span className="font-medium text-gray-800">{job.composer}</span>
+                  <span className="text-gray-400 mx-2">—</span>
+                  <span className="text-gray-700">{job.pieceTitle}</span>
+                </div>
+                <div className="shrink-0 ml-3">
+                  {job.status === "idle" && (
+                    <span className="text-xs text-gray-400">대기</span>
+                  )}
+                  {job.status === "analyzing" && (
+                    <span className="flex items-center gap-1 text-xs text-violet-600">
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      분석 중
+                    </span>
+                  )}
+                  {job.status === "done" && (
+                    <span className="flex items-center gap-1 text-xs text-green-600">
+                      <Check className="w-3 h-3" />
+                      곡 DB 등록 완료
+                    </span>
+                  )}
+                  {job.status === "error" && (
+                    <span className="flex items-center gap-1 text-xs text-red-500">
+                      <AlertCircle className="w-3 h-3" />
+                      {job.error}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Search */}
       <div className="relative mb-4">
