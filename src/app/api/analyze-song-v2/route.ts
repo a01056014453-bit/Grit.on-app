@@ -289,10 +289,13 @@ async function crossVerifyMeta(
 
       if (result === "confirmed") {
         console.log(`[CrossVerify] ✅ ${field}: "${value}" 확인됨`);
-      } else {
-        // 불일치 or 확인 불가 → 조용히 제거
-        console.log(`[CrossVerify] ❌ ${field}: "${value}" ${result} → 제거`);
+      } else if (result === "incorrect") {
+        // 명확히 틀린 경우만 제거
+        console.log(`[CrossVerify] ❌ ${field}: "${value}" 불일치 → 제거`);
         (verifiedMeta as Record<string, string>)[field] = "";
+      } else {
+        // unverifiable → 확인 불가일 뿐, 틀린 게 아니므로 기존 값 유지
+        console.log(`[CrossVerify] ⚠️ ${field}: "${value}" 확인 불가 → 기존 값 유지`);
       }
     }),
   );
