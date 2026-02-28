@@ -15,8 +15,7 @@ import {
   createExtraTechniquePrompt,
   isLargeWork,
 } from "@/lib/analysis-prompts";
-// TODO: paper-crawler는 pdf-parse Vercel 호환 확인 후 재활성화
-// import { crawlMusicPapers } from "@/lib/paper-crawler";
+import { findComposerResources } from "@/lib/composer-resources";
 import type {
   SongAnalysis,
   SongAnalysisContentV2,
@@ -464,23 +463,26 @@ async function runV2Pipeline(
   musicXml?: string,
   forceRefresh = false,
 ): Promise<SongAnalysis> {
-  // ── Phase 0: Perplexity — 팩트 수집
-  // Phase 0a: 레퍼런스 검색 + Phase 0b: 논문 크롤링 (병렬)
-  console.log("[Phase 0] 팩트 수집 시작 (레퍼런스 + 논문 병렬)...");
-  const [referenceData, paperData] = await Promise.all([
+  // ── Phase 0: 팩트 수집 (학술자료 DB + Perplexity 병렬)
+  console.log("[Phase 0] 팩트 수집 시작 (학술자료 DB + 웹 검색 병렬)...");
+  const [resourceResult, referenceData] = await Promise.all([
+    findComposerResources(composer, title),
     searchMusicReference(composer, title),
-    Promise.resolve(null), // TODO: crawlMusicPapers(composer, title, forceRefresh) — pdf-parse Vercel 호환 확인 후 재활성화
   ]);
 
-  // 두 소스를 합쳐서 enrichedReference 구성
+  // 학술자료 DB를 1차 출처로, 웹 검색을 보조로 구성
   const enrichedReference = [
-    referenceData ? `[웹 검색 요약]\n${referenceData}` : null,
-    paperData ? `[학술 논문 크롤링]\n${paperData}` : null,
+    resourceResult.totalRelevantText
+      ? `[학술 자료 DB (관리자 검증)]\n${resourceResult.totalRelevantText}`
+      : null,
+    referenceData
+      ? `[웹 검색 요약 (보조)]\n${referenceData}`
+      : null,
   ]
     .filter(Boolean)
     .join("\n\n========\n\n") || null;
 
-  console.log(`[Phase 0] enrichedReference: ${enrichedReference?.length ?? 0}자`);
+  console.log(`[Phase 0] 학술자료: ${resourceResult.resources.length}건, enrichedReference: ${enrichedReference?.length ?? 0}자`);
 
   // ── Phase 1: GPT — enrichedReference 기반으로 메타 정리
   const { meta: rawMeta, song_overview } = await runPhase1(
