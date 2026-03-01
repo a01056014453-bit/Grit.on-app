@@ -76,6 +76,41 @@ interface AnalysisJob {
   error: string;
 }
 
+/**
+ * 하나의 자료에서 개별 (작곡가, 곡) 쌍을 추출
+ * - piece_title: "곡A; 곡B; 곡C" → 세미콜론으로 분리
+ * - composer: "작곡가A, 작곡가B, 작곡가C" → 쉼표로 분리
+ * - 개수가 같으면 1:1 매칭, 다르면 각 곡에 전체 composer 사용
+ */
+function extractPiecePairs(
+  composerStr: string,
+  pieceTitleStr: string,
+): { composer: string; pieceTitle: string }[] {
+  const pieces = pieceTitleStr
+    .split(";")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (pieces.length === 0) return [];
+
+  const composers = composerStr
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  if (composers.length === pieces.length) {
+    // 1:1 매칭
+    return pieces.map((p, i) => ({ composer: composers[i], pieceTitle: p }));
+  }
+
+  // 작곡가 1명이면 모든 곡에 동일 적용
+  if (composers.length === 1) {
+    return pieces.map((p) => ({ composer: composers[0], pieceTitle: p }));
+  }
+
+  // 개수 불일치 — 각 곡에 전체 composer 문자열 사용
+  return pieces.map((p) => ({ composer: composerStr, pieceTitle: p }));
+}
+
 interface ClassifiedMeta {
   composer: string;
   title: string;
@@ -375,16 +410,14 @@ export default function ComposerResourcesPage() {
 
     setSavingAll(true);
 
-    // 저장 성공한 항목 중 piece_title 있는 것 수집
-    const savedWithPiece: { composer: string; pieceTitle: string }[] = [];
+    // 저장 성공한 항목 중 piece_title 있는 것 → 개별 곡 쌍 추출
+    const allPairs: { composer: string; pieceTitle: string }[] = [];
 
     for (const item of readyItems) {
       const ok = await saveOneItem(item);
       if (ok && item.meta?.piece_title?.trim()) {
-        savedWithPiece.push({
-          composer: item.meta.composer,
-          pieceTitle: item.meta.piece_title,
-        });
+        const pairs = extractPiecePairs(item.meta.composer, item.meta.piece_title);
+        allPairs.push(...pairs);
       }
     }
     setSavingAll(false);
@@ -395,14 +428,13 @@ export default function ComposerResourcesPage() {
       setItems((prev) => prev.filter((i) => i.status !== "done"));
     }, 2000);
 
-    // piece_title 있는 항목 → 자동 곡 분석 실행
-    if (savedWithPiece.length > 0) {
-      // 중복 제거 (같은 작곡가 + 곡)
-      const unique = savedWithPiece.filter(
-        (item, idx, arr) =>
+    // 개별 곡 분석 실행
+    if (allPairs.length > 0) {
+      const unique = allPairs.filter(
+        (t, i, arr) =>
           arr.findIndex(
-            (x) => x.composer === item.composer && x.pieceTitle === item.pieceTitle,
-          ) === idx,
+            (x) => x.composer === t.composer && x.pieceTitle === t.pieceTitle,
+          ) === i,
       );
       runAutoAnalysis(unique);
     }
@@ -554,37 +586,34 @@ export default function ComposerResourcesPage() {
       </div>
 
       {/* 기존 자료 곡 분석 버튼 */}
-      {activeResources.length > 0 && (
-        <div className="mb-4">
-          <button
-            onClick={() => {
-              const targets = activeResources
-                .filter((r) => r.piece_title?.trim())
-                .map((r) => ({ composer: r.composer, pieceTitle: r.piece_title! }));
-              const unique = targets.filter(
-                (t, i, arr) =>
-                  arr.findIndex(
-                    (x) => x.composer === t.composer && x.pieceTitle === t.pieceTitle,
-                  ) === i,
-              );
-              if (unique.length === 0) {
-                alert("대상곡이 있는 자료가 없습니다.");
-                return;
-              }
-              runAutoAnalysis(unique);
-            }}
-            disabled={analyzing}
-            className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-violet-600 rounded-xl hover:bg-violet-700 disabled:opacity-50 transition-colors shadow-sm"
-          >
-            {analyzing ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Sparkles className="w-4 h-4" />
-            )}
-            {analyzing ? "분석 진행 중..." : `기존 자료 곡 분석 실행 (${activeResources.filter((r) => r.piece_title?.trim()).length}곡)`}
-          </button>
-        </div>
-      )}
+      {activeResources.length > 0 && (() => {
+        // 모든 자료에서 개별 (작곡가, 곡) 쌍 추출
+        const allPairs = activeResources
+          .filter((r) => r.piece_title?.trim())
+          .flatMap((r) => extractPiecePairs(r.composer, r.piece_title!));
+        const uniquePairs = allPairs.filter(
+          (t, i, arr) =>
+            arr.findIndex(
+              (x) => x.composer === t.composer && x.pieceTitle === t.pieceTitle,
+            ) === i,
+        );
+        return uniquePairs.length > 0 ? (
+          <div className="mb-4">
+            <button
+              onClick={() => runAutoAnalysis(uniquePairs)}
+              disabled={analyzing}
+              className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-violet-600 rounded-xl hover:bg-violet-700 disabled:opacity-50 transition-colors shadow-sm"
+            >
+              {analyzing ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4" />
+              )}
+              {analyzing ? "분석 진행 중..." : `기존 자료 곡 분석 실행 (${uniquePairs.length}곡)`}
+            </button>
+          </div>
+        ) : null;
+      })()}
 
       {/* Upload Zone */}
       <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
