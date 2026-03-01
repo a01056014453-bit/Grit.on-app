@@ -503,6 +503,77 @@ async function runPhase4b(
   return weekly_routine;
 }
 
+/** YouTube URL 검색 (Perplexity) — 추천 연주자별 실제 영상 찾기 */
+async function searchYoutubeUrls(
+  composer: string,
+  title: string,
+  performances: RecommendedPerformanceV2[],
+): Promise<RecommendedPerformanceV2[]> {
+  const perplexity = getPerplexityClient();
+  if (!perplexity || performances.length === 0) return performances;
+
+  console.log(`[YouTube] ${performances.length}명 연주자 YouTube URL 검색 중...`);
+
+  const artistList = performances
+    .map((p, i) => `${i + 1}. ${p.artist}`)
+    .join("\n");
+
+  try {
+    const completion = await perplexity.chat.completions.create({
+      model: "sonar-pro",
+      messages: [
+        {
+          role: "user",
+          content: `Find YouTube video URLs for these pianists performing "${composer} - ${title}":
+
+${artistList}
+
+For each pianist, find ONE best YouTube video of them performing this specific piece.
+Search youtube.com for: "[artist name] ${composer} ${title}"
+
+Reply ONLY in this exact JSON format (no other text):
+{
+  "urls": [
+    { "artist": "artist name", "url": "https://www.youtube.com/watch?v=..." },
+    { "artist": "artist name", "url": "" }
+  ]
+}
+
+Rules:
+- Only include URLs from youtube.com or youtu.be
+- If no video found for a pianist, use empty string ""
+- Do NOT guess or fabricate URLs
+- Prefer official recordings, full performances (not excerpts)`,
+        },
+      ],
+      max_tokens: 1024,
+      temperature: 0.1,
+    });
+
+    const result = completion.choices[0]?.message?.content || "";
+    const jsonStr = extractJSON(result);
+    const parsed = JSON.parse(jsonStr);
+    const urls: Array<{ artist: string; url: string }> = Array.isArray(parsed.urls) ? parsed.urls : [];
+
+    // URL을 연주자에 매칭
+    return performances.map((p) => {
+      const match = urls.find(
+        (u) => u.artist && (
+          p.artist.toLowerCase().includes(u.artist.toLowerCase()) ||
+          u.artist.toLowerCase().includes(p.artist.toLowerCase())
+        ),
+      );
+      return {
+        ...p,
+        youtube_url: match?.url || p.youtube_url || "",
+      };
+    });
+  } catch (error) {
+    console.error("[YouTube] URL 검색 실패:", error instanceof Error ? error.message : error);
+    return performances;
+  }
+}
+
 // ── V2 파이프라인 ──────────────────────────────────────────────────
 
 async function runV2Pipeline(
@@ -558,6 +629,11 @@ async function runV2Pipeline(
   const phase4aResult = await runPhase4a(openai, meta.composer, meta.title, meta.opus, effectiveSections, enrichedReference);
   const phase4bResult = await runPhase4b(openai, meta.composer, meta.title, meta.opus, effectiveSections, enrichedReference);
 
+  // ── YouTube URL 검색 (Perplexity — Phase 4b와 독립적이므로 여기서 실행)
+  const performancesWithUrls = await searchYoutubeUrls(
+    meta.composer, meta.title, phase4aResult.recommended_performances_v2,
+  );
+
   // ── 하위 호환 필드 자동 생성 (V1 타입 지원)
   const composer_background = phase2Result.composer_life.summary;
   const historical_context = phase2Result.historical_background.era_characteristics;
@@ -581,7 +657,7 @@ async function runV2Pipeline(
 
   const musical_interpretation = phase2Result.song_characteristics.conclusion;
 
-  const recommended_performances = phase4aResult.recommended_performances_v2.map((p) => ({
+  const recommended_performances = performancesWithUrls.map((p) => ({
     artist: p.artist,
     year: p.year,
     comment: p.comment,
@@ -611,7 +687,7 @@ async function runV2Pipeline(
       section_guides: phase4aResult.section_guides,
       weekly_routine: phase4bResult,
     },
-    recommended_performances_v2: phase4aResult.recommended_performances_v2,
+    recommended_performances_v2: performancesWithUrls,
   };
 
   return {
