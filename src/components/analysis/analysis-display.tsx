@@ -276,34 +276,46 @@ function PerformancesSection({ content, analysis }: { content: SongAnalysisConte
 
   return (
     <div>
-      <p className="text-xs text-gray-500 mb-3">탭하면 YouTube에서 연주를 들을 수 있습니다</p>
       <div className="space-y-2">
         {perfs.map((perf, i) => {
-          const url = perf.youtube_url
-            ? perf.youtube_url
-            : `https://www.youtube.com/results?search_query=${encodeURIComponent(`${perf.artist} ${analysis.meta.title} ${analysis.meta.composer}`)}`;
+          const hasUrl = !!perf.youtube_url;
+          const Wrapper = hasUrl ? "a" : "div";
+          const linkProps = hasUrl
+            ? { href: perf.youtube_url, target: "_blank" as const, rel: "noopener noreferrer" }
+            : {};
 
           return (
-            <a
+            <Wrapper
               key={i}
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 p-3 rounded-xl bg-violet-50/40 hover:bg-violet-50/70 transition-colors border border-violet-100/30"
+              {...linkProps}
+              className={`flex items-center gap-3 p-3 rounded-xl border border-violet-100/30 ${
+                hasUrl
+                  ? "bg-violet-50/40 hover:bg-violet-50/70 transition-colors cursor-pointer"
+                  : "bg-gray-50/40"
+              }`}
             >
-              <div className="w-10 h-10 rounded-full bg-violet-200/50 flex items-center justify-center shrink-0">
-                <svg className="w-5 h-5 text-violet-600" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-                </svg>
-              </div>
+              {hasUrl && (
+                <div className="w-10 h-10 rounded-full bg-violet-200/50 flex items-center justify-center shrink-0">
+                  <svg className="w-5 h-5 text-violet-600" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                  </svg>
+                </div>
+              )}
+              {!hasUrl && (
+                <div className="w-10 h-10 rounded-full bg-gray-200/50 flex items-center justify-center shrink-0">
+                  <span className="text-sm font-medium text-gray-500">{i + 1}</span>
+                </div>
+              )}
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm text-gray-900">{perf.artist}</p>
-                <p className="text-xs text-gray-500 truncate">
-                  {perf.year && `${perf.year}년`} {perf.comment && `· ${perf.comment}`}
+                <p className="font-medium text-sm text-gray-900">{perf.artist}
+                  {perf.year && <span className="text-xs text-gray-400 ml-1.5">({perf.year})</span>}
                 </p>
+                {perf.comment && (
+                  <p className="text-xs text-gray-500 mt-0.5">{perf.comment}</p>
+                )}
               </div>
-              <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
-            </a>
+              {hasUrl && <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />}
+            </Wrapper>
           );
         })}
       </div>
@@ -406,31 +418,16 @@ function V1LegacyDisplay({ analysis, openSections, toggleSection }: {
       icon: <Users className="w-5 h-5 text-violet-600" />,
       title: "추천 연주",
       content: (
-        <div>
-          <p className="text-xs text-gray-500 mb-4">탭하면 YouTube에서 연주를 들을 수 있습니다</p>
-          <div className="space-y-3">
-            {content.recommended_performances.map((perf, i) => {
-              const q = encodeURIComponent(`${perf.artist} ${analysis.meta.title} ${analysis.meta.composer}`);
-              return (
-                <a key={i} href={`https://www.youtube.com/results?search_query=${q}`} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-4 p-4 rounded-xl bg-white/30 hover:bg-white/50 transition-colors border border-white/30"
-                >
-                  <div className="w-10 h-10 rounded-full bg-violet-200/50 flex items-center justify-center shrink-0">
-                    <svg className="w-5 h-5 text-violet-600" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-                    </svg>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900">{perf.artist}</p>
-                    <p className="text-sm text-gray-500 truncate">
-                      {perf.year && `${perf.year}년`} {perf.comment && `· ${perf.comment}`}
-                    </p>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
-                </a>
-              );
-            })}
-          </div>
+        <div className="space-y-3">
+          {content.recommended_performances.map((perf, i) => (
+            <div key={i} className="p-4 rounded-xl bg-white/30 border border-white/30">
+              <div className="flex items-center gap-2">
+                <p className="font-medium text-gray-900">{perf.artist}</p>
+                {perf.year && <span className="text-xs text-gray-400">({perf.year})</span>}
+              </div>
+              {perf.comment && <p className="text-sm text-gray-500 mt-1">{perf.comment}</p>}
+            </div>
+          ))}
         </div>
       ),
     },
@@ -817,14 +814,21 @@ export function AnalysisDetailModal({ analysis }: AnalysisDetailModalProps) {
           <div className="space-y-2">
             {v2.recommended_performances_v2.map((p, i) => (
               <div key={i} className="bg-gray-50 rounded-lg p-3">
-                <span className="font-semibold text-sm text-gray-900">{p.artist}</span>
-                <span className="text-xs text-gray-400 ml-2">({p.year})</span>
-                <p className="text-sm text-gray-600 mt-0.5">{p.comment}</p>
-                {p.youtube_url && (
-                  <a href={p.youtube_url} target="_blank" rel="noopener noreferrer" className="text-xs text-violet-600 hover:underline mt-1 inline-block">
-                    YouTube 링크
-                  </a>
-                )}
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-sm text-gray-900">{p.artist}</span>
+                  {p.year && <span className="text-xs text-gray-400">({p.year})</span>}
+                  {p.youtube_url && (
+                    <a href={p.youtube_url} target="_blank" rel="noopener noreferrer"
+                      className="ml-auto shrink-0 flex items-center gap-1 text-xs text-red-600 hover:text-red-700 font-medium"
+                    >
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                      </svg>
+                      YouTube
+                    </a>
+                  )}
+                </div>
+                {p.comment && <p className="text-sm text-gray-600 mt-1">{p.comment}</p>}
               </div>
             ))}
           </div>
