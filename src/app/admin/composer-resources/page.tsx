@@ -456,38 +456,67 @@ export default function ComposerResourcesPage() {
 
     for (let i = 0; i < jobs.length; i++) {
       const job = jobs[i];
-      // 상태 업데이트: analyzing
+
+      // 첫 번째가 아니면 10초 대기 (rate limit 방지)
+      if (i > 0) {
+        setAnalysisJobs((prev) =>
+          prev.map((j, idx) => (idx === i ? { ...j, status: "idle", error: "대기 중 (10초)..." } : j)),
+        );
+        await new Promise((r) => setTimeout(r, 10000));
+      }
+
       setAnalysisJobs((prev) =>
-        prev.map((j, idx) => (idx === i ? { ...j, status: "analyzing" } : j)),
+        prev.map((j, idx) => (idx === i ? { ...j, status: "analyzing", error: "" } : j)),
       );
 
-      try {
-        const res = await fetch("/api/analyze-song-v2", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            composer: job.composer,
-            title: job.pieceTitle,
-            forceRefresh: true,
-          }),
-        });
+      // 최대 2번 재시도 (429 대비)
+      let lastError = "";
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const res = await fetch("/api/analyze-song-v2", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              composer: job.composer,
+              title: job.pieceTitle,
+              forceRefresh: true,
+            }),
+          });
 
-        const json = await res.json();
-        if (json.success) {
-          setAnalysisJobs((prev) =>
-            prev.map((j, idx) => (idx === i ? { ...j, status: "done" } : j)),
-          );
-        } else {
-          setAnalysisJobs((prev) =>
-            prev.map((j, idx) =>
-              idx === i ? { ...j, status: "error", error: json.error || "분석 실패" } : j,
-            ),
-          );
+          const json = await res.json();
+          if (json.success) {
+            setAnalysisJobs((prev) =>
+              prev.map((j, idx) => (idx === i ? { ...j, status: "done" } : j)),
+            );
+            lastError = "";
+            break;
+          }
+
+          lastError = json.error || "분석 실패";
+
+          // 429 에러면 30초 대기 후 재시도
+          if (res.status === 429 || lastError.includes("429")) {
+            setAnalysisJobs((prev) =>
+              prev.map((j, idx) =>
+                idx === i ? { ...j, error: `Rate limit — ${30 * (attempt + 1)}초 후 재시도 (${attempt + 1}/3)` } : j,
+              ),
+            );
+            await new Promise((r) => setTimeout(r, 30000 * (attempt + 1)));
+            continue;
+          }
+
+          // 다른 에러는 즉시 중단
+          break;
+        } catch {
+          lastError = "네트워크 오류";
+          break;
         }
-      } catch {
+      }
+
+      if (lastError) {
         setAnalysisJobs((prev) =>
           prev.map((j, idx) =>
-            idx === i ? { ...j, status: "error", error: "네트워크 오류" } : j,
+            idx === i ? { ...j, status: "error", error: lastError } : j,
           ),
         );
       }
