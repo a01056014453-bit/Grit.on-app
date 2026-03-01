@@ -732,7 +732,7 @@ export default function ComposerResourcesPage() {
             {analysisJobs.map((job, idx) => (
               <div
                 key={`${job.composer}-${job.pieceTitle}-${idx}`}
-                className={`flex items-center justify-between px-4 py-2.5 rounded-lg text-sm ${
+                className={`px-4 py-2.5 rounded-lg text-sm ${
                   job.status === "done"
                     ? "bg-green-50 border border-green-200"
                     : job.status === "error"
@@ -742,34 +742,36 @@ export default function ComposerResourcesPage() {
                         : "bg-gray-50 border border-gray-200"
                 }`}
               >
-                <div className="min-w-0">
-                  <span className="font-medium text-gray-800">{job.composer}</span>
-                  <span className="text-gray-400 mx-2">—</span>
-                  <span className="text-gray-700">{job.pieceTitle}</span>
+                <div className="flex items-center justify-between">
+                  <p className="truncate">
+                    <span className="font-medium text-gray-800">{job.composer}</span>
+                    <span className="text-gray-400 mx-2">—</span>
+                    <span className="text-gray-700">{job.pieceTitle}</span>
+                  </p>
+                  <span className="shrink-0 ml-3">
+                    {job.status === "idle" && (
+                      <span className="text-xs text-gray-400">대기</span>
+                    )}
+                    {job.status === "analyzing" && (
+                      <span className="flex items-center gap-1 text-xs text-violet-600">
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        분석 중
+                      </span>
+                    )}
+                    {job.status === "done" && (
+                      <span className="flex items-center gap-1 text-xs text-green-600">
+                        <Check className="w-3 h-3" />
+                        완료
+                      </span>
+                    )}
+                    {job.status === "error" && (
+                      <span className="text-xs text-red-500">오류</span>
+                    )}
+                  </span>
                 </div>
-                <div className="shrink-0 ml-3">
-                  {job.status === "idle" && (
-                    <span className="text-xs text-gray-400">대기</span>
-                  )}
-                  {job.status === "analyzing" && (
-                    <span className="flex items-center gap-1 text-xs text-violet-600">
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                      분석 중
-                    </span>
-                  )}
-                  {job.status === "done" && (
-                    <span className="flex items-center gap-1 text-xs text-green-600">
-                      <Check className="w-3 h-3" />
-                      곡 DB 등록 완료
-                    </span>
-                  )}
-                  {job.status === "error" && (
-                    <span className="flex items-center gap-1 text-xs text-red-500">
-                      <AlertCircle className="w-3 h-3" />
-                      {job.error}
-                    </span>
-                  )}
-                </div>
+                {job.status === "error" && job.error && (
+                  <p className="text-xs text-red-500 mt-1 truncate">{job.error}</p>
+                )}
               </div>
             ))}
           </div>
