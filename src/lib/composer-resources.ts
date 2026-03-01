@@ -88,10 +88,10 @@ export async function findComposerResources(
     // 점수순 정렬
     scored.sort((a, b) => b.score - a.score);
 
-    // 상위 자료 선택 (총 30,000자 이내)
+    // 상위 자료 선택 (총 50,000자 이내 — 논문 데이터를 최대한 활용)
     const selected: ComposerResource[] = [];
     let totalLength = 0;
-    const MAX_TEXT_LENGTH = 30000;
+    const MAX_TEXT_LENGTH = 50000;
 
     for (const { resource } of scored) {
       const textToAdd = resource.summary_korean || resource.extracted_text;
@@ -114,7 +114,7 @@ export async function findComposerResources(
         ].filter(Boolean).join(", ");
 
         const content = r.summary_korean || r.extracted_text;
-        return `[학술자료 ${i + 1}] ${label} — ${r.title}\n${meta}\n\n${content.substring(0, 15000)}`;
+        return `[학술자료 ${i + 1}] ${label} — ${r.title}\n${meta}\n\n${content.substring(0, 25000)}`;
       })
       .join("\n\n" + "─".repeat(60) + "\n\n");
 

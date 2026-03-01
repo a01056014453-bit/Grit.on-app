@@ -7,7 +7,8 @@ import {
   createPhase1Prompt,
   createPhase2Prompt,
   createPhase3Prompt,
-  createPhase4Prompt,
+  createPhase4aPrompt,
+  createPhase4bPrompt,
   createMusicologistPrompt,
   createMusicXmlPrompt,
   createStructureOnlyPrompt,
@@ -351,6 +352,7 @@ async function runPhase2(
   title: string,
   opus: string,
   verifiedMeta?: { composer: string; title: string; opus: string; key: string },
+  enrichedReference?: string | null,
 ): Promise<{
   composer_life: ComposerLife;
   historical_background: HistoricalBackground;
@@ -358,7 +360,7 @@ async function runPhase2(
 }> {
   console.log("[Phase 2] 인문학적 배경...");
 
-  const prompt = createPhase2Prompt(composer, title, opus, verifiedMeta);
+  const prompt = createPhase2Prompt(composer, title, opus, verifiedMeta, enrichedReference || undefined);
   const text = await callGPT(openai, prompt, 8192, 0.3);
   const parsed = await safeParseJSON(text, openai, "Phase 2");
 
@@ -398,7 +400,7 @@ async function runPhase3(
   console.log("[Phase 3] 구조/화성 분석...");
 
   const prompt = createPhase3Prompt(composer, title, opus, musicXml, enrichedReference || undefined, verifiedMeta);
-  const text = await callGPT(openai, prompt, 8192, 0.1);
+  const text = await callGPT(openai, prompt, 12000, 0.1);
   const parsed = await safeParseJSON(text, openai, "Phase 3");
 
   const rawSections = Array.isArray(parsed.structure_analysis_v2?.sections)
@@ -416,42 +418,66 @@ async function runPhase3(
   return { structure_analysis_v2 };
 }
 
-async function runPhase4(
+/** Phase 4a: 연습법 (technique_summary + section_guides) + 추천 연주 */
+async function runPhase4a(
   openai: OpenAI,
   composer: string,
   title: string,
   opus: string,
   sectionNames: string[],
+  enrichedReference?: string | null,
 ): Promise<{
-  practice_method: PracticeMethod;
+  technique_summary: PracticeMethod["technique_summary"];
+  section_guides: PracticeMethod["section_guides"];
   recommended_performances_v2: RecommendedPerformanceV2[];
 }> {
-  console.log("[Phase 4] 연습법 + 4주 루틴 + 추천 연주...");
+  console.log("[Phase 4a] 연습법 + 추천 연주...");
 
-  const prompt = createPhase4Prompt(composer, title, opus, sectionNames);
+  const prompt = createPhase4aPrompt(composer, title, opus, sectionNames, enrichedReference || undefined);
   const text = await callGPT(openai, prompt, 8192, 0.3);
-  const parsed = await safeParseJSON(text, openai, "Phase 4");
+  const parsed = await safeParseJSON(text, openai, "Phase 4a");
 
-  const practice_method: PracticeMethod = {
-    technique_summary: Array.isArray(parsed.practice_method?.technique_summary)
-      ? parsed.practice_method.technique_summary
-      : [],
-    section_guides: Array.isArray(parsed.practice_method?.section_guides)
-      ? parsed.practice_method.section_guides
-      : [],
-    weekly_routine: Array.isArray(parsed.practice_method?.weekly_routine)
-      ? parsed.practice_method.weekly_routine
-      : [],
-  };
-
+  const technique_summary = Array.isArray(parsed.technique_summary)
+    ? parsed.technique_summary
+    : [];
+  const section_guides = Array.isArray(parsed.section_guides)
+    ? parsed.section_guides
+    : [];
   const recommended_performances_v2: RecommendedPerformanceV2[] = Array.isArray(
     parsed.recommended_performances_v2,
   )
     ? parsed.recommended_performances_v2
     : [];
 
-  console.log(`[Phase 4] Done: ${practice_method.section_guides.length} guides, ${practice_method.weekly_routine.length} weeks, ${recommended_performances_v2.length} performances`);
-  return { practice_method, recommended_performances_v2 };
+  console.log(`[Phase 4a] Done: ${section_guides.length} guides, ${recommended_performances_v2.length} performances`);
+  return { technique_summary, section_guides, recommended_performances_v2 };
+}
+
+/** Phase 4b: 4주 루틴 (별도 호출 — 28일 분량 토큰 확보) */
+async function runPhase4b(
+  openai: OpenAI,
+  composer: string,
+  title: string,
+  opus: string,
+  sectionNames: string[],
+  enrichedReference?: string | null,
+): Promise<PracticeMethod["weekly_routine"]> {
+  console.log("[Phase 4b] 4주 루틴...");
+
+  const prompt = createPhase4bPrompt(composer, title, opus, sectionNames, enrichedReference || undefined);
+  const text = await callGPT(openai, prompt, 12000, 0.3);
+  const parsed = await safeParseJSON(text, openai, "Phase 4b");
+
+  const weekly_routine = Array.isArray(parsed.weekly_routine)
+    ? parsed.weekly_routine
+    : [];
+
+  const totalDays = weekly_routine.reduce(
+    (sum: number, w: { days?: unknown[] }) => sum + (Array.isArray(w.days) ? w.days.length : 0),
+    0,
+  );
+  console.log(`[Phase 4b] Done: ${weekly_routine.length} weeks, ${totalDays} days total`);
+  return weekly_routine;
 }
 
 // ── V2 파이프라인 ──────────────────────────────────────────────────
@@ -500,19 +526,18 @@ async function runV2Pipeline(
 
   // ── Phase 2 & 3: GPT — 검증된 meta + enrichedReference 주입, 병렬
   const [phase2Result, phase3Result] = await Promise.all([
-    runPhase2(openai, meta.composer, meta.title, meta.opus, verifiedMeta),
+    runPhase2(openai, meta.composer, meta.title, meta.opus, verifiedMeta, enrichedReference),
     runPhase3(openai, meta.composer, meta.title, meta.opus, musicXml, enrichedReference, verifiedMeta),
   ]);
 
-  // ── Phase 4: GPT
+  // ── Phase 4a & 4b: GPT — 병렬 호출 (연습법 + 4주 루틴)
   const sectionNames = phase3Result.structure_analysis_v2.sections.map((s) => s.section);
-  const phase4Result = await runPhase4(
-    openai,
-    meta.composer,
-    meta.title,
-    meta.opus,
-    sectionNames.length > 0 ? sectionNames : ["전체"],
-  );
+  const effectiveSections = sectionNames.length > 0 ? sectionNames : ["전체"];
+
+  const [phase4aResult, phase4bResult] = await Promise.all([
+    runPhase4a(openai, meta.composer, meta.title, meta.opus, effectiveSections, enrichedReference),
+    runPhase4b(openai, meta.composer, meta.title, meta.opus, effectiveSections, enrichedReference),
+  ]);
 
   // ── 하위 호환 필드 자동 생성 (V1 타입 지원)
   const composer_background = phase2Result.composer_life.summary;
@@ -527,7 +552,7 @@ async function runV2Pipeline(
     description: s.description,
   }));
 
-  const technique_tips = phase4Result.practice_method.section_guides.map((g) => ({
+  const technique_tips = phase4aResult.section_guides.map((g) => ({
     section: g.section,
     problem: "",
     category: undefined as undefined,
@@ -537,7 +562,7 @@ async function runV2Pipeline(
 
   const musical_interpretation = phase2Result.song_characteristics.conclusion;
 
-  const recommended_performances = phase4Result.recommended_performances_v2.map((p) => ({
+  const recommended_performances = phase4aResult.recommended_performances_v2.map((p) => ({
     artist: p.artist,
     year: p.year,
     comment: p.comment,
@@ -562,8 +587,12 @@ async function runV2Pipeline(
     historical_background: phase2Result.historical_background,
     song_characteristics: phase2Result.song_characteristics,
     structure_analysis_v2: phase3Result.structure_analysis_v2,
-    practice_method: phase4Result.practice_method,
-    recommended_performances_v2: phase4Result.recommended_performances_v2,
+    practice_method: {
+      technique_summary: phase4aResult.technique_summary,
+      section_guides: phase4aResult.section_guides,
+      weekly_routine: phase4bResult,
+    },
+    recommended_performances_v2: phase4aResult.recommended_performances_v2,
   };
 
   return {

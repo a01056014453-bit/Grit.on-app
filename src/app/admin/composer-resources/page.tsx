@@ -82,32 +82,77 @@ interface AnalysisJob {
  * - composer: "작곡가A, 작곡가B, 작곡가C" → 쉼표로 분리
  * - 개수가 같으면 1:1 매칭, 다르면 각 곡에 전체 composer 사용
  */
+/**
+ * 쉼표로 분리된 곡 목록에서 "No. X" 같은 짧은 조각을
+ * 앞의 컬렉션 제목에 연결하여 확장한다.
+ * 예: "Preludes Book I - No. 2, No. 12" → ["Preludes Book I - No. 2", "Preludes Book I - No. 12"]
+ */
+function smartCommaSplit(pieceTitleStr: string): string[] {
+  const rawParts = pieceTitleStr.split(",").map((s) => s.trim()).filter(Boolean);
+  const result: string[] = [];
+  let lastCollectionBase = "";
+
+  for (const part of rawParts) {
+    // "No. X" 로 시작하는 짧은 조각이면 이전 컬렉션명에 연결
+    if (/^No\.\s*\d+/i.test(part) && lastCollectionBase) {
+      result.push(`${lastCollectionBase} - ${part}`);
+    } else {
+      result.push(part);
+      // 컬렉션 베이스 추출 (예: "Preludes Book I" from "Preludes Book I - No. 2")
+      const baseMatch = part.match(/^(.+?)\s*[-–]\s*No\.\s*\d+/i);
+      if (baseMatch) {
+        lastCollectionBase = baseMatch[1].trim();
+      } else {
+        lastCollectionBase = "";
+      }
+    }
+  }
+  return result;
+}
+
 function extractPiecePairs(
   composerStr: string,
   pieceTitleStr: string,
 ): { composer: string; pieceTitle: string }[] {
-  const pieces = pieceTitleStr
-    .split(";")
-    .map((s) => s.trim())
-    .filter(Boolean);
-  if (pieces.length === 0) return [];
-
   const composers = composerStr
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
 
+  // 1) 세미콜론 분리 우선 시도
+  let pieces = pieceTitleStr
+    .split(";")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  // 2) 세미콜론으로 1개만 나오면 쉼표 분리 시도
+  if (pieces.length <= 1 && (composers.length > 1 || pieceTitleStr.includes(","))) {
+    pieces = smartCommaSplit(pieceTitleStr);
+  }
+
+  if (pieces.length === 0) return [];
+
+  // 3) 작곡가:곡 매칭
   if (composers.length === pieces.length) {
-    // 1:1 매칭
     return pieces.map((p, i) => ({ composer: composers[i], pieceTitle: p }));
   }
 
-  // 작곡가 1명이면 모든 곡에 동일 적용
   if (composers.length === 1) {
     return pieces.map((p) => ({ composer: composers[0], pieceTitle: p }));
   }
 
-  // 개수 불일치 — 각 곡에 전체 composer 문자열 사용
+  // 작곡가 < 곡 수: 앞 작곡가들은 1곡씩, 마지막 작곡가가 나머지 전부
+  if (composers.length > 1 && composers.length < pieces.length) {
+    const result: { composer: string; pieceTitle: string }[] = [];
+    for (let i = 0; i < composers.length - 1; i++) {
+      result.push({ composer: composers[i], pieceTitle: pieces[i] });
+    }
+    for (let i = composers.length - 1; i < pieces.length; i++) {
+      result.push({ composer: composers[composers.length - 1], pieceTitle: pieces[i] });
+    }
+    return result;
+  }
+
   return pieces.map((p) => ({ composer: composerStr, pieceTitle: p }));
 }
 
