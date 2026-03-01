@@ -457,11 +457,12 @@ JSON만 출력:
   },
   "recommended_performances_v2": [
     {
-      "artist": "연주자 이름 (세계적 프로만)",
+      "artist": "연주자 이름",
       "year": "녹음 연도",
-      "comment": "해석 특징 + 추천 이유 2-3문장",
+      "comment": "이 연주자의 해석 특징 + 이 곡에서 특별한 이유 2-3문장",
       "youtube_url": "확실한 URL만, 불확실하면 빈 문자열"
     }
+    // 5-7명: 한국 거장 1-2명 + 레전드 1-2명 + 현대 거장 1-2명 + 차세대 1명
   ]
 }
 
@@ -471,10 +472,16 @@ JSON만 출력:
 - 시간(분) 표기 금지
 - 기교: 반드시 "양손 따로 연습 →"으로 시작
 
-추천 연주:
-- 세계적으로 인정받는 프로 연주자만 (Marc-André Hamelin, Daniil Trifonov, Yuja Wang 등)
+추천 연주 (5-7명, 다양성 필수):
+- 반드시 아래 카테고리에서 골고루 선정:
+  1) 한국 거장/신예 (백건우, 조성진, 임윤찬, 손열음, 김선욱, 선우예권, 김다솔 등 해당 곡과 관련 있는 한국 피아니스트 1-2명)
+  2) 20세기 레전드 (Horowitz, Richter, Arrau, Rubinstein, Brendel, Gilels, Michelangeli, Cortot, Gould 등)
+  3) 현대 세계적 거장 (Argerich, Pollini, Zimerman, Perahia, Lupu, Uchida, Sokolov, Schiff 등)
+  4) 차세대 스타 (Trifonov, Yuja Wang, Hamelin, Kissin, Lang Lang, Buniatishvili, Levit 등)
+- 해당 작곡가·곡을 특별히 잘 표현하는 것으로 정평 있는 연주자를 우선 선정
+- 같은 시대·스타일의 연주자만 나열하지 말고, 해석 스타일이 대비되는 연주자를 포함
 - 튜토리얼/레슨/아마추어 절대 금지
-- 3-5개, 다양한 해석 스타일 포함`;
+- comment에 "이 연주자가 이 곡을 어떻게 해석하는지" 구체적으로 서술`;
 }
 
 // ── 기존 호환 함수들 ───────────────────────────────────────────
@@ -560,7 +567,7 @@ JSON 출력:
       { "section": "", "problem": "", "category": "Physiological/Interpretative/Structural", "solution": "", "practice": "" }
     ],
     "musical_interpretation": "5-8문장",
-    "recommended_performances": [{ "artist": "", "year": "", "comment": "" }]
+    "recommended_performances": [{ "artist": "", "year": "", "comment": "" }]  // 5-7명: 한국(백건우/조성진/임윤찬/손열음 등) 1-2 + 레전드(Horowitz/Richter/Arrau 등) 1-2 + 현대거장(Argerich/Zimerman 등) 1-2 + 차세대(Trifonov/Yuja Wang 등) 1
   },
   "verification_status": "Verified/Needs Review"
 }
@@ -607,7 +614,7 @@ JSON 출력:
     "structure_analysis": [{ "section": "", "measures": "", "key_tempo": "", "character": "", "description": "" }],
     "technique_tips": [{ "section": "", "problem": "", "category": "Physiological/Interpretative/Structural", "solution": "", "practice": "" }],
     "musical_interpretation": "8-10문장",
-    "recommended_performances": [{ "artist": "", "year": "", "comment": "" }]
+    "recommended_performances": [{ "artist": "", "year": "", "comment": "" }]  // 5-7명: 한국(백건우/조성진/임윤찬/손열음 등) 1-2 + 레전드(Horowitz/Richter/Arrau 등) 1-2 + 현대거장(Argerich/Zimerman 등) 1-2 + 차세대(Trifonov/Yuja Wang 등) 1
   },
   "verification_status": "Verified/Needs Review"
 }`;
@@ -637,7 +644,7 @@ JSON 출력:
     "structure_analysis": [{ "section": "", "measures": "", "key_tempo": "", "character": "", "description": "" }],
     "technique_tips": [{ "section": "", "problem": "", "category": "Physiological/Interpretative/Structural", "solution": "", "practice": "" }],
     "musical_interpretation": "8-10문장",
-    "recommended_performances": [{ "artist": "", "year": "", "comment": "" }]
+    "recommended_performances": [{ "artist": "", "year": "", "comment": "" }]  // 5-7명: 한국(백건우/조성진/임윤찬/손열음 등) 1-2 + 레전드(Horowitz/Richter/Arrau 등) 1-2 + 현대거장(Argerich/Zimerman 등) 1-2 + 차세대(Trifonov/Yuja Wang 등) 1
   },
   "verification_status": "Verified"
 }`;
