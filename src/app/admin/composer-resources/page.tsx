@@ -533,34 +533,11 @@ export default function ComposerResourcesPage() {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">학술자료 DB</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            PDF를 여러 개 드래그해서 한번에 업로드
-          </p>
-        </div>
-        {activeResources.some((r) => r.piece_title?.trim()) && !analyzing && (
-          <button
-            onClick={() => {
-              const targets = activeResources
-                .filter((r) => r.piece_title?.trim())
-                .map((r) => ({ composer: r.composer, pieceTitle: r.piece_title! }));
-              // 중복 제거
-              const unique = targets.filter(
-                (t, i, arr) =>
-                  arr.findIndex(
-                    (x) => x.composer === t.composer && x.pieceTitle === t.pieceTitle,
-                  ) === i,
-              );
-              runAutoAnalysis(unique);
-            }}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-violet-700 bg-violet-50 border border-violet-200 rounded-lg hover:bg-violet-100 transition-colors"
-          >
-            <Sparkles className="w-4 h-4" />
-            기존 자료 곡 분석 실행
-          </button>
-        )}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">학술자료 DB</h1>
+        <p className="text-sm text-gray-500 mt-1">
+          PDF를 여러 개 드래그해서 한번에 업로드
+        </p>
       </div>
 
       {/* Stats */}
@@ -575,6 +552,39 @@ export default function ComposerResourcesPage() {
           iconColor="text-emerald-600"
         />
       </div>
+
+      {/* 기존 자료 곡 분석 버튼 */}
+      {activeResources.length > 0 && (
+        <div className="mb-4">
+          <button
+            onClick={() => {
+              const targets = activeResources
+                .filter((r) => r.piece_title?.trim())
+                .map((r) => ({ composer: r.composer, pieceTitle: r.piece_title! }));
+              const unique = targets.filter(
+                (t, i, arr) =>
+                  arr.findIndex(
+                    (x) => x.composer === t.composer && x.pieceTitle === t.pieceTitle,
+                  ) === i,
+              );
+              if (unique.length === 0) {
+                alert("대상곡이 있는 자료가 없습니다.");
+                return;
+              }
+              runAutoAnalysis(unique);
+            }}
+            disabled={analyzing}
+            className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-violet-600 rounded-xl hover:bg-violet-700 disabled:opacity-50 transition-colors shadow-sm"
+          >
+            {analyzing ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Sparkles className="w-4 h-4" />
+            )}
+            {analyzing ? "분석 진행 중..." : `기존 자료 곡 분석 실행 (${activeResources.filter((r) => r.piece_title?.trim()).length}곡)`}
+          </button>
+        </div>
+      )}
 
       {/* Upload Zone */}
       <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
