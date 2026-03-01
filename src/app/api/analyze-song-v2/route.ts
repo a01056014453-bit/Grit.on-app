@@ -100,9 +100,14 @@ function sanitizeSections(
 
 // ── AI 호출 ─────────────────────────────────────────────────────
 
+/** sleep 유틸 */
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 /**
  * GPT-4o 호출 — 글쓰기 전용
- * Perplexity가 수집한 팩트를 컨텍스트로 받아 글 작성만 담당
+ * 429 Rate Limit 시 자동 재시도 (최대 3회, 대기 후 재시도)
  */
 async function callGPT(
   openai: OpenAI,
@@ -110,24 +115,42 @@ async function callGPT(
   maxTokens: number = 8192,
   temperature: number = 0.1,
 ): Promise<string> {
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4o",
-    messages: [
-      {
-        role: "system",
-        content:
-          "반드시 한국어로만 응답하세요. 일본어, 중국어는 절대 사용하지 마세요. " +
-          "고유명사(인명, 지명, 작품명)는 원어 표기를 허용합니다. " +
-          "제공된 레퍼런스 데이터에 없는 구체적 수치(연도, 마디 번호, 작품번호)를 절대 생성하지 마세요. " +
-          "확실하지 않은 정보는 빈 문자열(\"\")로 반환하세요. JSON 외에 다른 텍스트는 출력하지 마세요.",
-      },
-      { role: "user", content: prompt },
-    ],
-    max_tokens: maxTokens,
-    temperature,
-    top_p: 0.2,
-  });
-  return completion.choices[0]?.message?.content || "";
+  const MAX_RETRIES = 3;
+
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    try {
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content:
+              "반드시 한국어로만 응답하세요. 일본어, 중국어는 절대 사용하지 마세요. " +
+              "고유명사(인명, 지명, 작품명)는 원어 표기를 허용합니다. " +
+              "제공된 레퍼런스 데이터에 없는 구체적 수치(연도, 마디 번호, 작품번호)를 절대 생성하지 마세요. " +
+              "확실하지 않은 정보는 빈 문자열(\"\")로 반환하세요. JSON 외에 다른 텍스트는 출력하지 마세요.",
+          },
+          { role: "user", content: prompt },
+        ],
+        max_tokens: maxTokens,
+        temperature,
+        top_p: 0.2,
+      });
+      return completion.choices[0]?.message?.content || "";
+    } catch (error) {
+      const is429 = error instanceof Error && (
+        error.message.includes("429") || error.message.includes("Rate limit")
+      );
+      if (is429 && attempt < MAX_RETRIES - 1) {
+        const waitSec = 15 * (attempt + 1); // 15s, 30s, 45s
+        console.log(`[callGPT] 429 Rate limit — ${waitSec}초 대기 후 재시도 (${attempt + 1}/${MAX_RETRIES})`);
+        await sleep(waitSec * 1000);
+        continue;
+      }
+      throw error;
+    }
+  }
+  return "";
 }
 
 /**
@@ -524,20 +547,16 @@ async function runV2Pipeline(
     key: meta.key,
   };
 
-  // ── Phase 2 & 3: GPT — 검증된 meta + enrichedReference 주입, 병렬
-  const [phase2Result, phase3Result] = await Promise.all([
-    runPhase2(openai, meta.composer, meta.title, meta.opus, verifiedMeta, enrichedReference),
-    runPhase3(openai, meta.composer, meta.title, meta.opus, musicXml, enrichedReference, verifiedMeta),
-  ]);
+  // ── Phase 2 → Phase 3: GPT — 순차 실행 (TPM 30K 제한 대응)
+  const phase2Result = await runPhase2(openai, meta.composer, meta.title, meta.opus, verifiedMeta, enrichedReference);
+  const phase3Result = await runPhase3(openai, meta.composer, meta.title, meta.opus, musicXml, enrichedReference, verifiedMeta);
 
-  // ── Phase 4a & 4b: GPT — 병렬 호출 (연습법 + 4주 루틴)
+  // ── Phase 4a → Phase 4b: GPT — 순차 실행 (TPM 제한 대응)
   const sectionNames = phase3Result.structure_analysis_v2.sections.map((s) => s.section);
   const effectiveSections = sectionNames.length > 0 ? sectionNames : ["전체"];
 
-  const [phase4aResult, phase4bResult] = await Promise.all([
-    runPhase4a(openai, meta.composer, meta.title, meta.opus, effectiveSections, enrichedReference),
-    runPhase4b(openai, meta.composer, meta.title, meta.opus, effectiveSections, enrichedReference),
-  ]);
+  const phase4aResult = await runPhase4a(openai, meta.composer, meta.title, meta.opus, effectiveSections, enrichedReference);
+  const phase4bResult = await runPhase4b(openai, meta.composer, meta.title, meta.opus, effectiveSections, enrichedReference);
 
   // ── 하위 호환 필드 자동 생성 (V1 타입 지원)
   const composer_background = phase2Result.composer_life.summary;

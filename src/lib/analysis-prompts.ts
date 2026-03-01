@@ -148,7 +148,7 @@ export function createPhase2Prompt(
     : "";
 
   const refSection = referenceData
-    ? `\n\n[🔍 레퍼런스 데이터 — 이 데이터를 1차 출처로 사용하십시오]\n${referenceData}\n\n🚨 위 학술자료에 작곡 배경, 시대적 맥락, 형식·구조, 기법 분석이 포함되어 있다면 반드시 해당 내용을 인용·반영하십시오.`
+    ? `\n\n[🔍 레퍼런스 데이터 — 이 데이터를 1차 출처로 사용하십시오]\n${referenceData.substring(0, 20000)}\n\n🚨 위 학술자료에 작곡 배경, 시대적 맥락, 형식·구조, 기법 분석이 포함되어 있다면 반드시 해당 내용을 인용·반영하십시오.`
     : "";
 
   return `당신은 세계적인 음악학자이자 피아노 교수법 전문가입니다.
@@ -387,7 +387,7 @@ export function createPhase4aPrompt(
   referenceData?: string,
 ): string {
   const refSection = referenceData
-    ? `\n\n[🔍 레퍼런스 데이터 — 연습법·연주 해석의 1차 출처]\n${referenceData}\n\n🚨 위 학술자료에 연주법, 테크닉, 페달링, 터치, 연습 방법, 해석 가이드, 추천 연주자 정보가 있으면 반드시 반영하십시오.`
+    ? `\n\n[🔍 레퍼런스 데이터 — 연습법·연주 해석의 1차 출처]\n${referenceData.substring(0, 20000)}\n\n🚨 위 학술자료에 연주법, 테크닉, 페달링, 터치, 연습 방법, 해석 가이드, 추천 연주자 정보가 있으면 반드시 반영하십시오.`
     : "";
 
   return `당신은 세계적인 피아노 교수법 전문가이자 연주 코치입니다.
