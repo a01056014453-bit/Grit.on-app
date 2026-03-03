@@ -1,14 +1,20 @@
 "use client";
 
-import { useEffect, Suspense } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
-import { getProfile } from "@/lib/queries/profiles";
+import { getProfile, getExistingProvider, upsertProfile } from "@/lib/queries/profiles";
 import { pullUserData } from "@/lib/sync-user-data";
+
+const PROVIDER_LABELS: Record<string, string> = {
+  google: "Google",
+  apple: "Apple",
+};
 
 function GoogleCallbackHandler() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [conflict, setConflict] = useState<string | null>(null);
 
   useEffect(() => {
     async function handleCallback() {
@@ -50,6 +56,17 @@ function GoogleCallbackHandler() {
           return;
         }
 
+        // 다른 소셜 로그인으로 이미 가입한 이메일인지 확인
+        const email = authData.user.email;
+        if (email) {
+          const existing = await getExistingProvider(email, authData.user.id);
+          if (existing && existing !== "google") {
+            await supabase.auth.signOut();
+            setConflict(existing);
+            return;
+          }
+        }
+
         // localStorage 설정
         localStorage.setItem("sempre-auth", "google");
         localStorage.setItem("grit-on-logged-in", "true");
@@ -65,6 +82,14 @@ function GoogleCallbackHandler() {
         // 서버에 프로필이 있는지 확인 (다른 기기에서 이미 가입한 사용자)
         const profile = await getProfile(authData.user.id);
         if (profile && profile.nickname) {
+          // email/auth_provider가 비어있으면 채워넣기
+          if (!profile.email || !profile.auth_provider) {
+            await upsertProfile(authData.user.id, {
+              nickname: profile.nickname,
+              email: email || undefined,
+              auth_provider: "google",
+            });
+          }
           // 기존 사용자 → 프로필 복원 + 데이터 동기화 후 홈으로
           localStorage.setItem("sempre-onboarding-done", "true");
           localStorage.setItem("sempre-user-profile", JSON.stringify({
@@ -89,6 +114,34 @@ function GoogleCallbackHandler() {
 
     handleCallback();
   }, [router, searchParams]);
+
+  if (conflict) {
+    const label = PROVIDER_LABELS[conflict] || conflict;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-amber-50 to-white px-6">
+        <div className="text-center max-w-sm">
+          <div className="w-14 h-14 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-2xl">!</span>
+          </div>
+          <p className="text-lg font-bold text-gray-900 mb-2">
+            이미 가입된 이메일이에요
+          </p>
+          <p className="text-sm text-gray-500 mb-6 leading-relaxed">
+            이 이메일은 <span className="font-semibold text-gray-900">{label}</span>로 가입되어 있어요.
+            <br />
+            {label}로 로그인해주세요.
+          </p>
+          <button
+            onClick={() => router.replace("/onboarding/login")}
+            className="w-full py-3 rounded-2xl font-semibold text-white text-sm"
+            style={{ backgroundColor: "#8B5CF6" }}
+          >
+            로그인 페이지로 돌아가기
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-violet-50 to-white">

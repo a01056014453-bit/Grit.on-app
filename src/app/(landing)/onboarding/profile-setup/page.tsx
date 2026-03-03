@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { RefreshCw, ChevronRight, Check, Loader2 } from "lucide-react";
 import { isNicknameAvailable, upsertProfile } from "@/lib/queries/profiles";
 import { getUserId } from "@/lib/user-id";
+import { createClient } from "@/lib/supabase-browser";
 
 /* ─── Constants ─── */
 
@@ -169,17 +170,30 @@ export default function ProfileSetupPage() {
     localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
     localStorage.setItem(ONBOARDING_KEY, "true");
 
-    // Supabase에 프로필 저장
+    // Supabase에 프로필 저장 (email, auth_provider 포함)
     const userId = getUserId();
     const primaryInstrument = instruments[0]
       ? (INSTRUMENT_TO_ENUM[instruments[0]] ?? "piano")
       : "piano";
+
+    let userEmail: string | undefined;
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      userEmail = user?.email ?? undefined;
+    } catch {
+      // 이메일 조회 실패 시 무시
+    }
+
+    const authProvider = localStorage.getItem("sempre-auth") || undefined;
 
     await upsertProfile(userId, {
       nickname: finalNickname,
       name: finalNickname,
       instrument: primaryInstrument as "piano",
       level: ageGroup,
+      email: userEmail,
+      auth_provider: authProvider,
     });
 
     setShowCelebration(true);

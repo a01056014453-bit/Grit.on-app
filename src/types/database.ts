@@ -660,9 +660,11 @@ export type Database = {
       }
       profiles: {
         Row: {
+          auth_provider: string | null
           created_at: string | null
           current_piece: string | null
           daily_goal: number | null
+          email: string | null
           grit_score: number | null
           id: string
           instrument: Database["public"]["Enums"]["instrument_type"]
@@ -675,9 +677,11 @@ export type Database = {
           weekly_goal: number | null
         }
         Insert: {
+          auth_provider?: string | null
           created_at?: string | null
           current_piece?: string | null
           daily_goal?: number | null
+          email?: string | null
           grit_score?: number | null
           id: string
           instrument?: Database["public"]["Enums"]["instrument_type"]
@@ -690,9 +694,11 @@ export type Database = {
           weekly_goal?: number | null
         }
         Update: {
+          auth_provider?: string | null
           created_at?: string | null
           current_piece?: string | null
           daily_goal?: number | null
+          email?: string | null
           grit_score?: number | null
           id?: string
           instrument?: Database["public"]["Enums"]["instrument_type"]

@@ -35,6 +35,28 @@ export async function upsertProfile(
   return data;
 }
 
+/** 이메일로 기존 가입 프로바이더 확인 (다른 소셜 로그인 차단용) */
+export async function getExistingProvider(
+  email: string,
+  excludeUserId?: string
+): Promise<string | null> {
+  if (!email) return null;
+
+  let query = supabase
+    .from("profiles")
+    .select("auth_provider")
+    .eq("email", email)
+    .not("auth_provider", "is", null);
+
+  if (excludeUserId) {
+    query = query.neq("id", excludeUserId);
+  }
+
+  const { data, error } = await query.limit(1).single();
+  if (error || !data) return null;
+  return data.auth_provider;
+}
+
 /** 닉네임 중복 체크 (자기 자신은 제외) */
 export async function isNicknameAvailable(
   nickname: string,
