@@ -28,7 +28,11 @@ function generateClientSecret(privateKey: string): string {
 
   const sign = crypto.createSign("SHA256");
   sign.update(signingInput);
-  const sig = sign.sign(privateKey, "base64").replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+  // ES256 JWT requires IEEE P1363 (raw R||S) format, not DER
+  const sig = sign.sign({ key: privateKey, dsaEncoding: "ieee-p1363" }, "base64")
+    .replace(/=/g, "")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_");
 
   return `${signingInput}.${sig}`;
 }
@@ -70,7 +74,10 @@ export async function POST(request: Request) {
 
     if (data.error) {
       console.error("[api/auth/apple] Token exchange error:", data.error, data.error_description);
-      return NextResponse.json({ error: data.error }, { status: 400 });
+      return NextResponse.json(
+        { error: data.error, description: data.error_description || "" },
+        { status: 400 }
+      );
     }
 
     return NextResponse.json({

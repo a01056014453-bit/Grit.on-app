@@ -34,7 +34,8 @@ function AppleCallbackHandler() {
 
         const data = await res.json();
         if (data.error || !data.id_token) {
-          setError(`토큰 교환 실패: ${data.error || "id_token 없음"}`);
+          const detail = data.description ? ` (${data.description})` : "";
+          setError(`토큰 교환 실패: ${data.error || "id_token 없음"}${detail}`);
           return;
         }
 
