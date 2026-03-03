@@ -226,10 +226,10 @@ export function PracticeAnalysisModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-[9999] flex flex-col">
-      <div className="flex-1 overflow-y-auto">
-        <div className="min-h-full flex items-start justify-center p-4 pt-6 pb-0">
-          <div className="bg-white rounded-2xl w-full max-w-md animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl w-full max-w-md max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-200">
+        <div className="flex-1 overflow-y-auto min-h-0">
+          <div>
             {/* Header - 컴팩트 */}
             <div className="px-5 py-4 text-center bg-gradient-to-br from-violet-500 to-purple-600 rounded-t-2xl">
               {songName && (
@@ -393,10 +393,9 @@ export function PracticeAnalysisModal({
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Actions - 하단 고정 */}
-      <div className="shrink-0 bg-white border-t border-gray-100 p-4 flex gap-3 max-w-md mx-auto w-full">
+        {/* Actions - 하단 고정 */}
+        <div className="shrink-0 bg-white border-t border-gray-100 p-4 flex gap-3 rounded-b-2xl">
         <button
           onClick={onDiscard}
           className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
@@ -409,6 +408,7 @@ export function PracticeAnalysisModal({
         >
           저장하기
         </button>
+        </div>
       </div>
     </div>
   );
