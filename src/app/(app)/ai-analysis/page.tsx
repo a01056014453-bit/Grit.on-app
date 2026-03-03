@@ -25,6 +25,7 @@ import {
 } from "@/lib/queries/pieces";
 import type { Piece, PieceAnalysis, PiecePracticeData } from "@/lib/queries/pieces";
 import { getUserId } from "@/lib/user-id";
+import { getUserAnalyses, type UserAnalysis } from "@/lib/user-analyses";
 
 interface SectionData {
   startMeasure: number;
@@ -67,11 +68,13 @@ export default function AIAnalysisPage() {
   const [pieces, setPieces] = useState<Piece[]>([]);
   const [analysisData, setAnalysisData] = useState<Record<string, PieceAnalysis>>({});
   const [practiceData, setPracticeData] = useState<Record<string, PiecePracticeData>>({});
+  const [userAnalyses, setUserAnalyses] = useState<UserAnalysis[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       const userId = getUserId();
+      setUserAnalyses(getUserAnalyses());
       const fetchedPieces = await getAnalyzedPieces();
       setPieces(fetchedPieces);
 
@@ -106,6 +109,14 @@ export default function AIAnalysisPage() {
       piece.composerShortName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       piece.composerFullName.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const filteredUserAnalyses = userAnalyses.filter(
+    (a) =>
+      a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      a.composer.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const totalCount = userAnalyses.length + pieces.length;
 
   const formatDuration = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
@@ -156,7 +167,7 @@ export default function AIAnalysisPage() {
         </button>
         <div className="flex-1">
           <h1 className="text-lg font-bold text-black">내 분석 보관함</h1>
-          <p className="text-xs text-gray-500">AI 분석 완료된 곡 {pieces.length}개</p>
+          <p className="text-xs text-gray-500">AI 분석 완료된 곡 {totalCount}개</p>
         </div>
         <div className="w-10 h-10 rounded-full bg-violet-100 flex items-center justify-center">
           <Folder className="w-5 h-5 text-violet-600" />
@@ -184,11 +195,44 @@ export default function AIAnalysisPage() {
         새로운 곡 분석 요청
       </Link>
 
+      {/* User AI Analyses */}
+      {filteredUserAnalyses.length > 0 && (
+        <div className="mb-6">
+          <h2 className="text-sm font-semibold text-black flex items-center gap-2 mb-3">
+            <Sparkles className="w-4 h-4 text-violet-500" />
+            AI 분석한 곡
+          </h2>
+          <div className="space-y-2">
+            {filteredUserAnalyses.map((a) => (
+              <Link
+                key={a.id}
+                href={`/ai-analysis/${a.id}`}
+                className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-gray-200 hover:border-violet-300 transition-colors"
+              >
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-100 to-primary/10 flex items-center justify-center shrink-0">
+                  <Sparkles className="w-5 h-5 text-violet-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-black truncate">
+                    {a.composer} - {a.title}
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    {new Date(a.analyzedAt).toLocaleDateString("ko-KR")} 분석
+                  </p>
+                </div>
+                <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Analyzed Pieces List */}
+      {pieces.length > 0 && (
       <div>
         <h2 className="text-sm font-semibold text-black flex items-center gap-2 mb-3">
           <Music2 className="w-4 h-4 text-gray-500" />
-          분석된 곡 리스트
+          마디별 분석 곡
         </h2>
 
         <div className="space-y-3">
@@ -362,6 +406,14 @@ export default function AIAnalysisPage() {
           )}
         </div>
       </div>
+      )}
+
+      {/* Empty State */}
+      {filteredUserAnalyses.length === 0 && filteredPieces.length === 0 && (
+        <div className="py-12 text-center text-gray-500 text-sm">
+          {searchQuery ? "검색 결과가 없습니다" : "아직 분석한 곡이 없습니다"}
+        </div>
+      )}
 
       {/* Legend */}
       <div className="mt-6 p-4 bg-gray-50 rounded-xl">

@@ -18,56 +18,7 @@ interface ComposerEntry {
   fullName: string;
 }
 
-// 분석 가능한 곡 데이터
-const availableAnalysis = [
-  {
-    id: "1",
-    composer: "F. Chopin",
-    keywords: ["ballade", "op.23", "op 23", "no.1", "no 1", "발라드"],
-  },
-  {
-    id: "2",
-    composer: "L. v. Beethoven",
-    keywords: ["sonata no.8", "sonata no 8", "op.13", "op 13", "pathétique", "pathetique", "비창"],
-  },
-  {
-    id: "3",
-    composer: "C. Debussy",
-    keywords: ["clair de lune", "bergamasque", "달빛", "클레르 드 륀"],
-  },
-  {
-    id: "4",
-    composer: "F. Liszt",
-    keywords: ["campanella", "la campanella", "s.141", "etude", "종"],
-  },
-];
-
-// 분석 ID 찾기
-const findAnalysisId = (composer: string, title: string): string | null => {
-  const lowerComposer = composer.toLowerCase();
-  const lowerTitle = title.toLowerCase();
-
-  for (const analysis of availableAnalysis) {
-    // 작곡가 매칭 확인
-    const composerMatch =
-      lowerComposer.includes(analysis.composer.toLowerCase()) ||
-      analysis.composer.toLowerCase().includes(lowerComposer) ||
-      (lowerComposer.includes("chopin") && analysis.composer.includes("Chopin")) ||
-      (lowerComposer.includes("beethoven") && analysis.composer.includes("Beethoven")) ||
-      (lowerComposer.includes("debussy") && analysis.composer.includes("Debussy"));
-
-    if (composerMatch) {
-      // 키워드 매칭 확인
-      for (const keyword of analysis.keywords) {
-        if (lowerTitle.includes(keyword)) {
-          return analysis.id;
-        }
-      }
-    }
-  }
-
-  return null;
-};
+import type { AnalyzeSongResponse } from "@/types/song-analysis";
 
 export default function NewAnalysisPage() {
   const router = useRouter();
@@ -204,26 +155,39 @@ export default function NewAnalysisPage() {
     filterTitles(value);
   };
 
+  const [analyzeError, setAnalyzeError] = useState("");
+  const [analyzePhase, setAnalyzePhase] = useState("");
+
   const handleAnalyze = async () => {
     if (!title || !composer) return;
 
     setIsAnalyzing(true);
+    setAnalyzeError("");
+    setAnalyzePhase("AI 분석 요청 중...");
 
-    // 분석 ID 찾기
-    const analysisId = findAnalysisId(composer, title);
+    try {
+      const res = await fetch("/api/analyze-song-v2", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ composer, title, useV2: true }),
+      });
 
-    // 짧은 로딩 효과 (500ms)
-    await new Promise((resolve) => setTimeout(resolve, 500));
+      const result: AnalyzeSongResponse = await res.json();
 
-    if (analysisId) {
+      if (!result.success || !result.data) {
+        setAnalyzeError(result.error || "분석에 실패했습니다. 다시 시도해주세요.");
+        setIsAnalyzing(false);
+        return;
+      }
+
       // 사용자 분석 기록에 추가
-      addUserAnalysis({ id: analysisId, composer, title });
-      // 분석 데이터가 있으면 해당 페이지로 이동
-      router.push(`/ai-analysis/${analysisId}`);
-    } else {
-      // 분석 데이터가 없으면 알림
+      addUserAnalysis({ id: result.data.id, composer, title });
+
+      setAnalyzePhase("분석 완료! 이동 중...");
+      router.push(`/ai-analysis/${result.data.id}`);
+    } catch {
+      setAnalyzeError("네트워크 오류가 발생했습니다. 다시 시도해주세요.");
       setIsAnalyzing(false);
-      alert(`"${composer} - ${title}" 곡의 분석 데이터가 아직 준비되지 않았습니다.\n\n현재 분석 가능한 곡:\n• F. Chopin - Ballade No.1 Op.23\n• L. v. Beethoven - Piano Sonata No.8 Op.13\n• C. Debussy - Clair de Lune\n• F. Liszt - Etude S.141 No.3`);
     }
   };
 
@@ -369,6 +333,13 @@ export default function NewAnalysisPage() {
         </p>
       </div>
 
+      {/* Error */}
+      {analyzeError && (
+        <div className="bg-red-50 rounded-xl border border-red-200 p-4 mb-4">
+          <p className="text-sm text-red-700">{analyzeError}</p>
+        </div>
+      )}
+
       {/* Analyze Button */}
       <button
         onClick={handleAnalyze}
@@ -378,7 +349,7 @@ export default function NewAnalysisPage() {
         {isAnalyzing ? (
           <>
             <Loader2 className="w-5 h-5 animate-spin" />
-            분석 중...
+            {analyzePhase || "분석 중..."}
           </>
         ) : (
           <>
@@ -387,6 +358,12 @@ export default function NewAnalysisPage() {
           </>
         )}
       </button>
+
+      {isAnalyzing && (
+        <p className="text-xs text-center text-gray-400 mt-2">
+          첫 분석은 1~2분 정도 소요됩니다. 이미 분석된 곡은 즉시 표시됩니다.
+        </p>
+      )}
     </div>
   );
 }
