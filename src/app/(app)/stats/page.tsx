@@ -44,7 +44,7 @@ function calculateStreak(sessions: PracticeSession[]): number {
   const practiceDays = new Set<string>();
   sessions.forEach(s => {
     const date = new Date(s.startTime);
-    practiceDays.add(`${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`);
+    practiceDays.add(`${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`);
   });
 
   const today = new Date();
@@ -54,7 +54,7 @@ function calculateStreak(sessions: PracticeSession[]): number {
   let checkDate = new Date(today);
 
   for (let i = 0; i < 365; i++) {
-    const key = `${checkDate.getFullYear()}-${checkDate.getMonth()}-${checkDate.getDate()}`;
+    const key = `${checkDate.getFullYear()}-${checkDate.getMonth() + 1}-${checkDate.getDate()}`;
     if (practiceDays.has(key)) {
       streak++;
       checkDate.setDate(checkDate.getDate() - 1);

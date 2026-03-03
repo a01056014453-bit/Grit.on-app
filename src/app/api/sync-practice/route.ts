@@ -60,7 +60,8 @@ export async function POST(request: NextRequest) {
 
     // 세션 동기화
     const syncedIds: number[] = [];
-    for (const session of sessions) {
+    for (let i = 0; i < sessions.length; i++) {
+      const session = sessions[i];
       const { error } = await supabaseServer
         .from("practice_sessions")
         .insert({
@@ -85,7 +86,7 @@ export async function POST(request: NextRequest) {
         });
 
       if (!error) {
-        syncedIds.push(syncedIds.length);
+        syncedIds.push(i);
       }
     }
 

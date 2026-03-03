@@ -25,7 +25,9 @@ export async function syncPracticeSessions(): Promise<void> {
           instrument = instMap[profile.instruments[0]] || "piano";
         }
       }
-    } catch {}
+    } catch (err) {
+      console.warn("[sync-practice] Failed to parse profile:", err);
+    }
 
     const sessions = unsynced.map((session) => ({
       pieceId: session.pieceId || undefined,
