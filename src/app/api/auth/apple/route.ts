@@ -1,19 +1,59 @@
 import { NextResponse } from "next/server";
+import crypto from "crypto";
+
+const TEAM_ID = "5F62DDJA3X";
+const KEY_ID = "96H644W2K9";
+const CLIENT_ID = "com.5F62DDJA3X.sempre.web";
+
+function generateClientSecret(privateKey: string): string {
+  const now = Math.floor(Date.now() / 1000);
+
+  const header = { alg: "ES256", kid: KEY_ID };
+  const payload = {
+    iss: TEAM_ID,
+    iat: now,
+    exp: now + 86400 * 180,
+    aud: "https://appleid.apple.com",
+    sub: CLIENT_ID,
+  };
+
+  function base64url(data: string | Buffer): string {
+    const buf = typeof data === "string" ? Buffer.from(data) : data;
+    return buf.toString("base64").replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+  }
+
+  const headerB64 = base64url(JSON.stringify(header));
+  const payloadB64 = base64url(JSON.stringify(payload));
+  const signingInput = `${headerB64}.${payloadB64}`;
+
+  const sign = crypto.createSign("SHA256");
+  sign.update(signingInput);
+  const sig = sign.sign(privateKey, "base64").replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+
+  return `${signingInput}.${sig}`;
+}
 
 export async function POST(request: Request) {
   try {
     const { code, redirectUri } = await request.json();
 
-    const clientId = "com.5F62DDJA3X.sempre.web";
-    const clientSecret = process.env.APPLE_CLIENT_SECRET;
+    // .p8 키에서 JWT 동적 생성 (base64로 저장된 키 지원)
+    const keyBase64 = process.env.APPLE_PRIVATE_KEY_BASE64;
+    let privateKey = process.env.APPLE_PRIVATE_KEY;
 
-    if (!clientSecret) {
-      console.error("[api/auth/apple] APPLE_CLIENT_SECRET not configured");
-      return NextResponse.json({ error: "Apple client secret not configured" }, { status: 500 });
+    if (keyBase64) {
+      privateKey = Buffer.from(keyBase64, "base64").toString("utf-8");
+    } else if (privateKey) {
+      privateKey = privateKey.replace(/\\n/g, "\n");
+    } else {
+      console.error("[api/auth/apple] No Apple private key configured");
+      return NextResponse.json({ error: "Apple private key not configured" }, { status: 500 });
     }
 
+    const clientSecret = generateClientSecret(privateKey);
+
     const params = new URLSearchParams({
-      client_id: clientId,
+      client_id: CLIENT_ID,
       client_secret: clientSecret,
       code,
       grant_type: "authorization_code",
