@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { safeBack } from "@/lib/navigation";
+import { getUserId } from "@/lib/user-id";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -12,103 +13,15 @@ import {
   Coins,
   MessageSquare,
   User,
-  Award,
   CheckCircle,
   Star,
   Music,
   Target,
-  ChevronRight,
   Lock,
   Send,
-  ThumbsUp,
 } from "lucide-react";
-
-// Mock request data
-const mockRequest = {
-  id: "1",
-  composer: "F. Chopin",
-  piece: "Ballade No.1 Op.23",
-  measures: "33-40",
-  problemType: "양손 합",
-  description: "왼손 아르페지오와 오른손 멜로디 타이밍이 안 맞아요. 특히 36마디에서 왼손이 빨라지면서 오른손 멜로디가 묻혀버립니다.",
-  status: "reviewing", // open, reviewing, closed
-  deadline: "2025-01-20T18:00:00",
-  credit: 3,
-  videoUrl: "/sample-video.mp4",
-  videoLength: 45,
-  createdAt: "2025-01-19T10:00:00",
-  isAnonymous: true,
-  studentName: "익명의 학생",
-};
-
-// Mock proposals (마감 후에만 보임)
-const mockProposals = [
-  {
-    id: "p1",
-    expertId: "e1",
-    expertName: "김OO 선생님",
-    expertBadge: "전문가",
-    trustScore: 4.8,
-    completedCount: 45,
-    comments: [
-      { measure: "33-34", text: "왼손이 선행하는 느낌으로 치세요. 오른손은 왼손 3번째 음과 함께 들어갑니다." },
-      { measure: "35-36", text: "여기서 왼손 아르페지오가 빨라지는데, 메트로놈 없이 천천히 양손 따로 연습 후 합치세요." },
-      { measure: "37-38", text: "크레센도 구간이니 왼손도 조금씩 세게, 하지만 오른손 멜로디가 항상 위에 있어야 해요." },
-    ],
-    demoVideoUrl: "/demo-video-1.mp4",
-    demoVideoLength: 78,
-    practiceCard: {
-      section: "33-40마디",
-      tempo: "♩= 40 → 60 → 목표템포",
-      steps: ["양손 따로 느린 템포", "왼손 3번째 음에 오른손 맞추기", "점진적 템포 증가"],
-      dailyTime: "15분",
-    },
-    submittedAt: "2025-01-19T14:30:00",
-  },
-  {
-    id: "p2",
-    expertId: "e2",
-    expertName: "박OO",
-    expertBadge: "상급생",
-    trustScore: 4.5,
-    completedCount: 12,
-    comments: [
-      { measure: "33-36", text: "왼손 첫 음을 페달과 함께 깊게 누르고, 나머지 음은 가볍게 굴리세요." },
-      { measure: "36-40", text: "오른손 멜로디 음만 따로 연습해서 노래하듯이 익힌 후 양손 합치면 됩니다." },
-    ],
-    demoVideoUrl: "/demo-video-2.mp4",
-    demoVideoLength: 65,
-    practiceCard: {
-      section: "33-40마디",
-      tempo: "♩= 50 → 72",
-      steps: ["멜로디만 노래하며 연습", "왼손 첫 음 강조", "양손 합"],
-      dailyTime: "10분",
-    },
-    submittedAt: "2025-01-19T16:00:00",
-  },
-  {
-    id: "p3",
-    expertId: "e3",
-    expertName: "이OO 교수",
-    expertBadge: "전문가",
-    trustScore: 4.9,
-    completedCount: 128,
-    comments: [
-      { measure: "33", text: "시작 전 호흡을 하고, 왼손 베이스음(G)을 충분히 울린 후 오른손 진입." },
-      { measure: "34-35", text: "왼손 아르페지오의 최고음이 오른손과 겹치지 않게, 최고음 직전에 오른손을 넣으세요." },
-      { measure: "36-38", text: "이 구간은 '말하듯이' 연주하세요. 왼손은 반주, 오른손은 이야기하는 사람." },
-    ],
-    demoVideoUrl: "/demo-video-3.mp4",
-    demoVideoLength: 88,
-    practiceCard: {
-      section: "33-40마디",
-      tempo: "♩= 36 → 48 → 60 → 목표",
-      steps: ["베이스음-멜로디 2성부만 연습", "아르페지오 추가", "표현과 다이나믹 추가"],
-      dailyTime: "20분",
-    },
-    submittedAt: "2025-01-19T15:20:00",
-  },
-];
+import type { HelpRequest, HelpProposal } from "@/types/help";
+import { HELP_PROBLEM_TYPE_LABELS } from "@/types/help";
 
 function getTimeRemaining(deadline: string) {
   const now = new Date();
@@ -130,26 +43,99 @@ function getTimeRemaining(deadline: string) {
 export default function HelpRequestDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const requestId = params.id as string;
+  const userId = getUserId();
+
+  const [request, setRequest] = useState<HelpRequest | null>(null);
+  const [proposals, setProposals] = useState<HelpProposal[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [selectedProposal, setSelectedProposal] = useState<string | null>(null);
   const [showAcceptDialog, setShowAcceptDialog] = useState(false);
+  const [isAccepting, setIsAccepting] = useState(false);
 
-  const request = mockRequest;
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await fetch(`/api/help-requests/${requestId}`);
+        if (!res.ok) throw new Error("요청을 불러올 수 없습니다.");
+        const data = await res.json();
+        setRequest(data.request);
+        setProposals(data.proposals ?? []);
+      } catch (err) {
+        console.error("[help/[id]] 로드 실패:", err);
+        setLoadError(err instanceof Error ? err.message : "데이터를 불러올 수 없습니다.");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    load();
+  }, [requestId]);
+
+  if (isLoading) {
+    return (
+      <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-violet flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-10 h-10 border-3 border-violet-300 border-t-violet-600 rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm text-muted-foreground">불러오는 중...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError || !request) {
+    return (
+      <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-violet">
+        <div className="bg-blob-extra" />
+        <div className="text-center py-12 bg-card rounded-xl border border-border">
+          <p className="text-muted-foreground">{loadError ?? "요청을 찾을 수 없습니다."}</p>
+          <button
+            onClick={() => router.push("/help")}
+            className="mt-4 px-4 py-2 bg-primary text-white rounded-lg text-sm"
+          >
+            목록으로 돌아가기
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const timeRemaining = getTimeRemaining(request.deadline);
   const isDeadlinePassed = !timeRemaining;
-  const isOwner = true; // 실제로는 로그인 유저와 비교
-  const isExpert = false; // 전문가 여부
+  const isOwner = request.studentId === userId;
+  const typeLabel = HELP_PROBLEM_TYPE_LABELS[request.problemType] ?? request.problemType;
 
   const handleAccept = (proposalId: string) => {
     setSelectedProposal(proposalId);
     setShowAcceptDialog(true);
   };
 
-  const confirmAccept = () => {
-    // TODO: 채택 API 호출
-    alert("제안이 채택되었습니다! 연습 플랜에 추가되었습니다.");
-    setShowAcceptDialog(false);
-    router.push("/practice");
+  const confirmAccept = async () => {
+    if (!selectedProposal) return;
+    setIsAccepting(true);
+
+    try {
+      const res = await fetch(`/api/help-requests/${requestId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "accept", proposalId: selectedProposal }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error ?? "채택에 실패했습니다.");
+      }
+
+      setShowAcceptDialog(false);
+      router.push("/practice");
+    } catch (err) {
+      console.error("[help/[id]] 채택 실패:", err);
+      alert(err instanceof Error ? err.message : "채택에 실패했습니다.");
+    } finally {
+      setIsAccepting(false);
+    }
   };
 
   return (
@@ -186,10 +172,10 @@ export default function HelpRequestDetailPage() {
             <p className="text-sm text-muted-foreground">{request.piece}</p>
             <div className="flex items-center gap-2 mt-1">
               <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-mono">
-                {request.measures} 마디
+                {request.measureStart}-{request.measureEnd} 마디
               </span>
               <span className="text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">
-                {request.problemType}
+                {typeLabel}
               </span>
             </div>
           </div>
@@ -198,23 +184,27 @@ export default function HelpRequestDetailPage() {
         <p className="text-sm text-muted-foreground mb-3">{request.description}</p>
 
         {/* Video Player Placeholder */}
-        <div className="relative bg-black rounded-xl overflow-hidden aspect-video mb-3">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <button
-              onClick={() => setIsPlaying(!isPlaying)}
-              className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center"
-            >
-              {isPlaying ? (
-                <Pause className="w-8 h-8 text-white" />
-              ) : (
-                <Play className="w-8 h-8 text-white ml-1" />
-              )}
-            </button>
+        {request.videoUrl && (
+          <div className="relative bg-black rounded-xl overflow-hidden aspect-video mb-3">
+            <div className="absolute inset-0 flex items-center justify-center">
+              <button
+                onClick={() => setIsPlaying(!isPlaying)}
+                className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center"
+              >
+                {isPlaying ? (
+                  <Pause className="w-8 h-8 text-white" />
+                ) : (
+                  <Play className="w-8 h-8 text-white ml-1" />
+                )}
+              </button>
+            </div>
+            {request.videoLength && (
+              <div className="absolute bottom-2 right-2 px-2 py-1 rounded bg-black/60 text-white text-xs">
+                {request.videoLength}초
+              </div>
+            )}
           </div>
-          <div className="absolute bottom-2 right-2 px-2 py-1 rounded bg-black/60 text-white text-xs">
-            {request.videoLength}초
-          </div>
-        </div>
+        )}
 
         {/* Deadline / Status */}
         {timeRemaining ? (
@@ -224,7 +214,7 @@ export default function HelpRequestDetailPage() {
               <span className="text-sm font-medium">마감까지 {timeRemaining}</span>
             </div>
             <span className="text-xs text-muted-foreground">
-              {mockProposals.length}개 제안 접수
+              {proposals.length}개 제안 접수
             </span>
           </div>
         ) : (
@@ -234,14 +224,14 @@ export default function HelpRequestDetailPage() {
               <span className="text-sm font-medium">모집 마감</span>
             </div>
             <span className="text-xs text-amber-600">
-              {mockProposals.length}개 제안 검토 가능
+              {proposals.length}개 제안 검토 가능
             </span>
           </div>
         )}
       </div>
 
       {/* Expert Submit CTA (if not owner and deadline not passed) */}
-      {!isOwner && !isDeadlinePassed && (
+      {!isOwner && !isDeadlinePassed && request.status === "open" && (
         <Link
           href={`/help/${request.id}/submit`}
           className="block w-full mb-4 py-4 rounded-xl bg-gradient-to-r from-violet-600 to-primary text-white font-semibold text-center"
@@ -256,7 +246,7 @@ export default function HelpRequestDetailPage() {
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
             <MessageSquare className="w-4 h-4 text-primary" />
-            제안 목록 ({mockProposals.length})
+            제안 목록 ({proposals.length})
           </h3>
           {!isDeadlinePassed && (
             <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -272,21 +262,36 @@ export default function HelpRequestDetailPage() {
             <Lock className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
             <p className="text-muted-foreground">제안은 마감 후에 공개됩니다</p>
             <p className="text-xs text-muted-foreground mt-1">
-              현재 {mockProposals.length}개의 제안이 접수되었습니다
+              현재 {proposals.length}개의 제안이 접수되었습니다
             </p>
+          </div>
+        ) : proposals.length === 0 ? (
+          <div className="bg-card rounded-xl border border-border p-8 text-center">
+            <MessageSquare className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
+            <p className="text-muted-foreground">아직 제안이 없습니다</p>
           </div>
         ) : (
           // 마감 후 or 소유자: 제안 목록 표시
           <div className="space-y-3">
-            {mockProposals.map((proposal) => (
+            {proposals.map((proposal) => (
               <div
                 key={proposal.id}
                 className={`bg-card rounded-xl border p-4 transition-all ${
                   selectedProposal === proposal.id
                     ? "border-primary shadow-lg"
-                    : "border-border hover:border-primary/30"
+                    : request.acceptedProposalId === proposal.id
+                      ? "border-green-500 bg-green-50/30"
+                      : "border-border hover:border-primary/30"
                 }`}
               >
+                {/* Accepted Badge */}
+                {request.acceptedProposalId === proposal.id && (
+                  <div className="flex items-center gap-1 text-green-600 mb-2 text-xs font-medium">
+                    <CheckCircle className="w-3.5 h-3.5" />
+                    채택됨
+                  </div>
+                )}
+
                 {/* Expert Info */}
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-2">
@@ -338,18 +343,22 @@ export default function HelpRequestDetailPage() {
                       <Play className="w-3 h-3" />
                       시연 영상
                     </div>
-                    <span className="text-sm font-medium text-foreground">{proposal.demoVideoLength}초</span>
+                    <span className="text-sm font-medium text-foreground">
+                      {proposal.demoVideoLength ? `${proposal.demoVideoLength}초` : "-"}
+                    </span>
                   </div>
                   <div className="flex-1 p-2 bg-secondary/50 rounded-lg">
                     <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
                       <Target className="w-3 h-3" />
                       연습 카드
                     </div>
-                    <span className="text-sm font-medium text-foreground">{proposal.practiceCard.dailyTime}/일</span>
+                    <span className="text-sm font-medium text-foreground">
+                      {proposal.practiceCard.dailyTime ? `${proposal.practiceCard.dailyTime}/일` : "-"}
+                    </span>
                   </div>
                 </div>
 
-                {/* Accept Button (for owner) */}
+                {/* Accept Button (for owner, when status is not closed) */}
                 {isOwner && request.status !== "closed" && (
                   <button
                     onClick={() => handleAccept(proposal.id)}
@@ -383,22 +392,26 @@ export default function HelpRequestDetailPage() {
               <p className="text-xs text-muted-foreground mb-1">크레딧 분배</p>
               <div className="flex justify-between text-sm">
                 <span>채택 보너스</span>
-                <span className="text-primary font-bold">2.1 크레딧 지급</span>
+                <span className="text-primary font-bold">
+                  {(request.credit * 0.7).toFixed(1)} 크레딧 지급
+                </span>
               </div>
             </div>
 
             <div className="flex gap-2">
               <button
                 onClick={() => setShowAcceptDialog(false)}
+                disabled={isAccepting}
                 className="flex-1 py-3 rounded-xl border border-border text-foreground font-medium"
               >
                 취소
               </button>
               <button
                 onClick={confirmAccept}
-                className="flex-1 py-3 rounded-xl bg-primary text-white font-medium"
+                disabled={isAccepting}
+                className="flex-1 py-3 rounded-xl bg-primary text-white font-medium disabled:opacity-50"
               >
-                채택하기
+                {isAccepting ? "처리 중..." : "채택하기"}
               </button>
             </div>
           </div>

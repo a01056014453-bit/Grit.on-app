@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { safeBack } from "@/lib/navigation";
+import { getUserId } from "@/lib/user-id";
 import { ComposerAutocomplete, TitleAutocomplete } from "@/components/ui/composer-autocomplete";
 import {
   ArrowLeft,
@@ -53,21 +54,66 @@ export default function NewHelpRequestPage() {
   const [anonymous, setAnonymous] = useState(true);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [step, setStep] = useState(1); // 1: 정보 입력, 2: 영상 업로드, 3: 결제 확인
 
   const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Check video duration (would need actual implementation)
       setVideoFile(file);
     }
   };
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
-    // TODO: 실제 API 호출
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    router.push("/help/1"); // 생성된 요청 페이지로 이동
+    setSubmitError(null);
+
+    try {
+      const userId = getUserId();
+
+      // 비디오 업로드는 별도 처리 (향후 Supabase storage 연동)
+      let videoUrl: string | undefined;
+      let videoLength: number | undefined;
+      if (videoFile) {
+        // TODO: 실제 비디오 스토리지 업로드
+        videoUrl = undefined;
+        videoLength = undefined;
+      }
+
+      const res = await fetch("/api/help-requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentId: userId,
+          composer,
+          piece,
+          measureStart: Number(measureStart),
+          measureEnd: Number(measureEnd),
+          problemType,
+          description,
+          videoUrl,
+          videoLength,
+          faceBlurred: faceBlur,
+          isAnonymous: anonymous,
+          deadlineHours: deadline,
+          credit,
+          maxProposals: 5,
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error ?? "요청 생성에 실패했습니다.");
+      }
+
+      const data = await res.json();
+      router.push(`/help/${data.request.id}`);
+    } catch (err) {
+      console.error("[help/new] 제출 실패:", err);
+      setSubmitError(err instanceof Error ? err.message : "요청 생성에 실패했습니다.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const canProceed = () => {
@@ -75,7 +121,7 @@ export default function NewHelpRequestPage() {
       return composer && piece && measureStart && measureEnd && problemType && description;
     }
     if (step === 2) {
-      return videoFile !== null;
+      return true; // 영상은 선택사항으로 변경
     }
     return true;
   };
@@ -113,6 +159,13 @@ export default function NewHelpRequestPage() {
           />
         ))}
       </div>
+
+      {/* Error Banner */}
+      {submitError && (
+        <div className="mb-4 p-3 bg-red-50 rounded-xl border border-red-200">
+          <p className="text-sm text-red-700">{submitError}</p>
+        </div>
+      )}
 
       {/* Step 1: 정보 입력 */}
       {step === 1 && (
@@ -219,6 +272,7 @@ export default function NewHelpRequestPage() {
             <h2 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-3">
               <Video className="w-4 h-4 text-primary" />
               문제 영상 업로드
+              <span className="text-xs text-muted-foreground font-normal">(선택)</span>
             </h2>
 
             <div
@@ -310,8 +364,7 @@ export default function NewHelpRequestPage() {
           {/* Next Button */}
           <button
             onClick={() => setStep(3)}
-            disabled={!canProceed()}
-            className="w-full py-4 rounded-xl bg-primary text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-4 rounded-xl bg-primary text-white font-semibold"
           >
             다음: 크레딧 설정
           </button>

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { safeBack } from "@/lib/navigation";
+import { getUserId } from "@/lib/user-id";
 import {
   ArrowLeft,
   Upload,
@@ -11,14 +12,19 @@ import {
   Target,
   Plus,
   Trash2,
-  Clock,
   CheckCircle,
   Info,
 } from "lucide-react";
+import type { HelpRequest } from "@/types/help";
+import { HELP_PROBLEM_TYPE_LABELS } from "@/types/help";
 
 export default function SubmitProposalPage() {
   const params = useParams();
   const router = useRouter();
+  const requestId = params.id as string;
+
+  const [request, setRequest] = useState<HelpRequest | null>(null);
+  const [isLoadingRequest, setIsLoadingRequest] = useState(true);
 
   // Form states
   const [comments, setComments] = useState([
@@ -32,6 +38,24 @@ export default function SubmitProposalPage() {
     dailyTime: "15",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // 요청 정보 로드
+  useEffect(() => {
+    async function loadRequest() {
+      try {
+        const res = await fetch(`/api/help-requests/${requestId}`);
+        if (!res.ok) throw new Error("요청을 불러올 수 없습니다.");
+        const data = await res.json();
+        setRequest(data.request);
+      } catch (err) {
+        console.error("[help/submit] 요청 로드 실패:", err);
+      } finally {
+        setIsLoadingRequest(false);
+      }
+    }
+    loadRequest();
+  }, [requestId]);
 
   const addComment = () => {
     if (comments.length < 5) {
@@ -46,9 +70,9 @@ export default function SubmitProposalPage() {
   };
 
   const updateComment = (index: number, field: "measure" | "text", value: string) => {
-    const newComments = [...comments];
-    newComments[index][field] = value;
-    setComments(newComments);
+    setComments(
+      comments.map((c, i) => (i === index ? { ...c, [field]: value } : c))
+    );
   };
 
   const addStep = () => {
@@ -61,19 +85,67 @@ export default function SubmitProposalPage() {
   };
 
   const updateStep = (index: number, value: string) => {
-    const newSteps = [...practiceCard.steps];
-    newSteps[index] = value;
-    setPracticeCard({ ...practiceCard, steps: newSteps });
+    setPracticeCard({
+      ...practiceCard,
+      steps: practiceCard.steps.map((s, i) => (i === index ? value : s)),
+    });
   };
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
-    // TODO: API 호출
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    router.push(`/help/${params.id}`);
+    setSubmitError(null);
+
+    try {
+      const userId = getUserId();
+      const validComments = comments.filter((c) => c.measure && c.text);
+
+      if (validComments.length < 2) {
+        throw new Error("마디별 코멘트가 최소 2개 필요합니다.");
+      }
+
+      // TODO: 시연 비디오 스토리지 업로드
+      const demoVideoUrl: string | undefined = undefined;
+      const demoVideoLength: number | undefined = undefined;
+
+      const res = await fetch("/api/help-proposals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          requestId,
+          expertId: userId,
+          comments: validComments,
+          demoVideoUrl,
+          demoVideoLength,
+          practiceCard: {
+            section: request
+              ? `${request.measureStart}-${request.measureEnd}마디`
+              : "",
+            tempo: practiceCard.tempo,
+            steps: practiceCard.steps.filter(Boolean),
+            dailyTime: `${practiceCard.dailyTime}분`,
+          },
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error ?? "제안 제출에 실패했습니다.");
+      }
+
+      router.push(`/help/${requestId}`);
+    } catch (err) {
+      console.error("[help/submit] 제출 실패:", err);
+      setSubmitError(err instanceof Error ? err.message : "제안 제출에 실패했습니다.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const isValid = comments.filter((c) => c.measure && c.text).length >= 2 && demoVideo;
+  const isValid = comments.filter((c) => c.measure && c.text).length >= 2;
+
+  const typeLabel = request
+    ? HELP_PROBLEM_TYPE_LABELS[request.problemType] ?? request.problemType
+    : "";
 
   return (
     <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
@@ -94,9 +166,28 @@ export default function SubmitProposalPage() {
 
       {/* Request Summary */}
       <div className="bg-secondary/50 rounded-xl p-4 mb-6">
-        <p className="text-sm font-medium text-foreground">F. Chopin - Ballade No.1 Op.23</p>
-        <p className="text-xs text-muted-foreground">33-40 마디 · 양손 합 문제</p>
+        {isLoadingRequest ? (
+          <p className="text-sm text-muted-foreground">요청 정보 로딩 중...</p>
+        ) : request ? (
+          <>
+            <p className="text-sm font-medium text-foreground">
+              {request.composer} - {request.piece}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {request.measureStart}-{request.measureEnd} 마디 · {typeLabel} 문제
+            </p>
+          </>
+        ) : (
+          <p className="text-sm text-muted-foreground">요청 정보를 불러올 수 없습니다.</p>
+        )}
       </div>
+
+      {/* Error Banner */}
+      {submitError && (
+        <div className="mb-4 p-3 bg-red-50 rounded-xl border border-red-200">
+          <p className="text-sm text-red-700">{submitError}</p>
+        </div>
+      )}
 
       {/* Comments Section */}
       <div className="mb-6">
@@ -154,7 +245,7 @@ export default function SubmitProposalPage() {
         <h2 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-3">
           <Video className="w-4 h-4 text-primary" />
           시연 영상
-          <span className="text-xs text-muted-foreground">(최대 90초)</span>
+          <span className="text-xs text-muted-foreground">(최대 90초, 선택)</span>
         </h2>
 
         <div

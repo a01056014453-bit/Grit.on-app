@@ -9,3 +9,4 @@ export * from "./ranking";
 export * from "./piece";
 export * from "./teacher-mode";
 export * from "./notification";
+export * from "./help";

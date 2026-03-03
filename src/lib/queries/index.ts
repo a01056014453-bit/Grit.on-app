@@ -9,3 +9,4 @@ export * from "./rooms";
 export * from "./pieces";
 export * from "./teacher-students";
 export * from "./composers";
+export * from "./help";
