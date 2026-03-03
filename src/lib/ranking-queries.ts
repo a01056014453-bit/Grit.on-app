@@ -6,25 +6,31 @@ interface RankingsResponse {
   error?: string;
 }
 
-export async function fetchTodayRankings(userId?: string): Promise<RankingUser[]> {
+/** 랭킹 데이터 한 번에 조회 (rankers + myRanking) */
+export async function fetchRankingsData(
+  userId?: string
+): Promise<{ rankers: RankingUser[]; myRanking: RankingUser | null }> {
   const nickname = getLocalNickname();
   let url = "/api/rankings";
   const params: string[] = [];
   if (userId) params.push(`userId=${encodeURIComponent(userId)}`);
   if (nickname) params.push(`nickname=${encodeURIComponent(nickname)}`);
   if (params.length > 0) url += `?${params.join("&")}`;
+
   const res = await fetch(url);
   if (!res.ok) {
     throw new Error(`랭킹 조회 실패: ${res.status}`);
   }
   const data: RankingsResponse = await res.json();
-  return data.rankers ?? [];
+  return {
+    rankers: data.rankers ?? [],
+    myRanking: data.myRanking ?? null,
+  };
 }
 
 function getLocalNickname(): string | null {
   if (typeof window === "undefined") return null;
   try {
-    // sempre-user-profile 우선 (온보딩에서 설정), 그 다음 grit-on-profile (편집 시 저장)
     const sempre = localStorage.getItem("sempre-user-profile");
     if (sempre) {
       const sp = JSON.parse(sempre);
@@ -39,21 +45,4 @@ function getLocalNickname(): string | null {
   } catch {
     return null;
   }
-}
-
-export async function fetchMyRanking(
-  userId: string
-): Promise<RankingUser | null> {
-  if (!userId) return null;
-  const nickname = getLocalNickname();
-  let url = `/api/rankings?userId=${encodeURIComponent(userId)}`;
-  if (nickname) {
-    url += `&nickname=${encodeURIComponent(nickname)}`;
-  }
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`내 랭킹 조회 실패: ${res.status}`);
-  }
-  const data: RankingsResponse = await res.json();
-  return data.myRanking ?? null;
 }

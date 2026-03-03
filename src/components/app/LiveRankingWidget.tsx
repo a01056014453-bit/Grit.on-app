@@ -9,7 +9,7 @@ import {
   getGritLevel,
   GRIT_LEVEL_COLORS,
 } from "@/types/ranking";
-import { fetchTodayRankings, fetchMyRanking } from "@/lib/ranking-queries";
+import { fetchRankingsData } from "@/lib/ranking-queries";
 import { getUserId } from "@/lib/user-id";
 import { cn } from "@/lib/utils";
 
@@ -98,11 +98,8 @@ export function LiveRankingWidget() {
 
   const fetchRankers = useCallback(async () => {
     try {
-      const [topRankers, myRank] = await Promise.all([
-        fetchTodayRankings(),
-        fetchMyRanking(getUserId()),
-      ]);
-      setRankers(topRankers.slice(0, 5));
+      const { rankers: allRankers, myRanking: myRank } = await fetchRankingsData(getUserId());
+      setRankers(allRankers.slice(0, 5));
       setMyRanking(myRank);
     } catch {
       setRankers([]);

@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import type { RankingUser } from "@/types";
 import { INSTRUMENT_EMOJIS, INSTRUMENT_LABELS } from "@/types/ranking";
-import { fetchTodayRankings, fetchMyRanking } from "@/lib/ranking-queries";
+import { fetchRankingsData } from "@/lib/ranking-queries";
 import { getUserId } from "@/lib/user-id";
 import { cn } from "@/lib/utils";
 import dynamic from "next/dynamic";
@@ -268,10 +268,7 @@ export default function RankingPage() {
     setIsLoading(true);
     try {
       const uid = getUserId();
-      const [rankings, my] = await Promise.all([
-        fetchTodayRankings(uid),
-        fetchMyRanking(uid),
-      ]);
+      const { rankers: rankings, myRanking: my } = await fetchRankingsData(uid);
       setRankers(rankings);
       setMyRanking(my);
       setElapsedSeconds(0);

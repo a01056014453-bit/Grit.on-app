@@ -5,7 +5,10 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get("userId");
-    const today = new Date().toISOString().split("T")[0];
+    // KST 기준 오늘 날짜
+    const now = new Date();
+    const kstOffset = 9 * 60 * 60 * 1000;
+    const today = new Date(now.getTime() + kstOffset).toISOString().split("T")[0];
 
     // 전체 랭킹 조회
     const { data: rankings, error: rankingsError } = await supabaseServer
@@ -64,10 +67,10 @@ export async function GET(request: NextRequest) {
           .update({ nickname })
           .eq("id", userId);
 
-        // 전체 랭커 목록에서도 본인 닉네임 반영
-        const myInAll = rankers.find((r: { id: string }) => r.id === userId);
-        if (myInAll) {
-          myInAll.nickname = nickname;
+        // 전체 랭커 목록에서도 본인 닉네임 반영 (불변 업데이트)
+        const myIdx = rankers.findIndex((r: { id: string }) => r.id === userId);
+        if (myIdx !== -1) {
+          rankers[myIdx] = { ...rankers[myIdx], nickname };
         }
       }
 
