@@ -49,18 +49,11 @@ export default function LoginRequiredPage() {
     window.location.href = url;
   };
 
-  const handleAppleLogin = async () => {
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "apple",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-    if (error) {
-      console.error("Apple login error:", error.message);
-      alert("로그인에 실패했습니다. 다시 시도해주세요.");
-    }
+  const handleAppleLogin = () => {
+    const clientId = "com.5F62DDJA3X.sempre.web";
+    const redirectUri = `${window.location.origin}/auth/apple/callback`;
+    const url = `https://appleid.apple.com/auth/authorize?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&response_mode=query`;
+    window.location.href = url;
   };
 
   return (
