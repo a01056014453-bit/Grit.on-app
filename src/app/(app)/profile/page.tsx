@@ -500,9 +500,23 @@ export default function ProfilePage() {
     } catch {
       // Supabase 로그아웃 실패해도 로컬 정리는 진행
     }
+    // 인증 관련
     localStorage.removeItem("sempre-auth");
     localStorage.removeItem("grit-on-logged-in");
     localStorage.removeItem("grit-on-user-id");
+    // 프로필 및 온보딩
+    localStorage.removeItem("sempre-onboarding-done");
+    localStorage.removeItem("sempre-user-profile");
+    localStorage.removeItem("grit-on-profile");
+    // 연습 데이터
+    localStorage.removeItem("grit-on-custom-drills");
+    localStorage.removeItem("grit-on-hidden-drills");
+    localStorage.removeItem("grit-on-daily-goal");
+    localStorage.removeItem("griton_practice_todos");
+    localStorage.removeItem("grit-on-my-library");
+    localStorage.removeItem("grit-on-routines");
+    localStorage.removeItem("grit-on-notifications");
+    localStorage.removeItem("grit-on-active-drill");
     setAuthUser(null);
     router.push("/onboarding/login");
   };

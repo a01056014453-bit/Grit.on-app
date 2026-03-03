@@ -18,7 +18,7 @@ export default function LoginRequiredPage() {
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-          localStorage.setItem("sempre-auth", "google");
+          localStorage.setItem("sempre-auth", user.app_metadata?.provider || "google");
           localStorage.setItem("grit-on-logged-in", "true");
           localStorage.setItem("grit-on-user-id", user.id);
           router.replace("/");
