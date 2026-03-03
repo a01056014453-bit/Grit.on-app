@@ -22,6 +22,7 @@ export async function fetchTodayRankings(userId?: string): Promise<RankingUser[]
 }
 
 function getLocalNickname(): string | null {
+  if (typeof window === "undefined") return null;
   try {
     // sempre-user-profile 우선 (온보딩에서 설정), 그 다음 grit-on-profile (편집 시 저장)
     const sempre = localStorage.getItem("sempre-user-profile");
@@ -43,6 +44,7 @@ function getLocalNickname(): string | null {
 export async function fetchMyRanking(
   userId: string
 ): Promise<RankingUser | null> {
+  if (!userId) return null;
   const nickname = getLocalNickname();
   let url = `/api/rankings?userId=${encodeURIComponent(userId)}`;
   if (nickname) {

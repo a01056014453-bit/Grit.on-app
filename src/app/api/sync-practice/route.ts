@@ -90,8 +90,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 일일 랭킹 업데이트
-    const today = new Date().toISOString().split("T")[0];
+    // 일일 랭킹 업데이트 (KST 기준)
+    const now = new Date();
+    const kstOffset = 9 * 60 * 60 * 1000;
+    const today = new Date(now.getTime() + kstOffset).toISOString().split("T")[0];
     const { data: todaySessions } = await supabaseServer
       .from("practice_sessions")
       .select("practice_time, piece_name")

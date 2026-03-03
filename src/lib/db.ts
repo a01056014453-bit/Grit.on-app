@@ -171,7 +171,7 @@ export async function getUnsyncedSessions(): Promise<PracticeSession[]> {
     const transaction = db.transaction([SESSIONS_STORE], "readonly");
     const store = transaction.objectStore(SESSIONS_STORE);
     const index = store.index("synced");
-    const request = index.getAll(IDBKeyRange.only(0));
+    const request = index.getAll(IDBKeyRange.only(false));
 
     request.onsuccess = () => {
       resolve(request.result);

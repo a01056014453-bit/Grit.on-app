@@ -851,7 +851,7 @@ async function runV1LargeWorkPipeline(
 ): Promise<SongAnalysis> {
   const structurePrompt = createStructureOnlyPrompt(composer, title);
   const structureText = await callGPT(openai, structurePrompt, 16384);
-  const structureJson = JSON.parse(extractJSON(structureText));
+  const structureJson = await safeParseJSON(extractJSON(structureText), openai, "V1 Large structure") || {};
   const structureAnalysis: Array<{
     section: string;
     measures?: string;
@@ -865,7 +865,7 @@ async function runV1LargeWorkPipeline(
 
   const detailPrompt = createDetailAnalysisPrompt(composer, title, sectionNames);
   const detailText = await callGPT(openai, detailPrompt, 16384);
-  const detailJson = JSON.parse(extractJSON(detailText));
+  const detailJson = await safeParseJSON(extractJSON(detailText), openai, "V1 Large detail") || {};
   let allTechniqueTips = detailJson.content?.technique_tips || [];
 
   const coveredSections = new Set(
@@ -1075,10 +1075,10 @@ export async function POST(request: Request) {
     return NextResponse.json(response);
   } catch (error) {
     console.error("Song analysis API v2 error:", error);
-    const errorMessage = error instanceof Error ? error.message : "알 수 없는 오류";
+    console.error("Song analysis detail:", error instanceof Error ? error.message : error);
     const response: AnalyzeSongResponse = {
       success: false,
-      error: `곡 분석 중 오류가 발생했습니다: ${errorMessage}`,
+      error: "곡 분석 중 오류가 발생했습니다. 다시 시도해주세요.",
     };
     return NextResponse.json(response, { status: 500 });
   }

@@ -47,8 +47,8 @@ export async function getCachedAnalysis(
     }
 
     return reconstructAnalysis(data);
-  } catch {
-    console.error("[Supabase] getCachedAnalysis error");
+  } catch (err) {
+    console.error("[Supabase] getCachedAnalysis error:", err);
     return null;
   }
 }
@@ -70,17 +70,16 @@ function reconstructAnalysis(row: {
   const content = row.content as Record<string, unknown>;
 
   if (content && content.meta && content.content) {
-    const restored = content as unknown as SongAnalysis;
-    // Supabase row ID를 사용 (content 내부 자체 생성 ID 대신)
-    restored.id = row.id;
-    restored.updated_at = row.updated_at || restored.updated_at;
-    restored.created_at = row.created_at || restored.created_at;
-    // schema_version이 저장되어 있으면 유지, 없으면 V2 필드 존재 여부로 판단
-    if (!restored.schema_version) {
-      const c = restored.content as unknown as Record<string, unknown>;
-      restored.schema_version = (c && ('song_overview' in c || 'composer_life' in c)) ? 2 : 1;
-    }
-    return restored;
+    const base = content as unknown as SongAnalysis;
+    const c = base.content as unknown as Record<string, unknown>;
+    const schemaVersion = base.schema_version || ((c && ('song_overview' in c || 'composer_life' in c)) ? 2 : 1);
+    return {
+      ...base,
+      id: row.id,
+      updated_at: row.updated_at || base.updated_at,
+      created_at: row.created_at || base.created_at,
+      schema_version: schemaVersion,
+    };
   }
 
   // 개별 컬럼에서 복원 (fallback)
