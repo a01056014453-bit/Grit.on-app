@@ -65,9 +65,9 @@ export default function LoginRequiredPage() {
 
   return (
     <div className="min-h-[100dvh] flex flex-col bg-gradient-to-br from-violet-50 via-white to-purple-50">
-      {/* 상단: 프로필 인사 */}
+      {/* 상단: 브랜딩 + 프로필 인사 */}
       <div className="flex-1 flex flex-col items-center justify-center px-6">
-        {profile && (
+        {profile ? (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -81,8 +81,24 @@ export default function LoginRequiredPage() {
               안녕하세요, {profile.nickname}님!
             </h1>
           </motion.div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="text-center"
+          >
+            <div className="w-20 h-20 rounded-3xl bg-violet-600 flex items-center justify-center mx-auto mb-6 shadow-lg">
+              <span className="text-3xl font-black text-white">S</span>
+            </div>
+            <h1 className="text-3xl font-black text-gray-900 mb-3">
+              Grit.on
+            </h1>
+            <p className="text-base text-gray-500 leading-relaxed">
+              클래식 연주자를 위한<br />AI 연습 코치
+            </p>
+          </motion.div>
         )}
-
       </div>
 
       {/* 하단: 로그인 버튼 */}
