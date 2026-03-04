@@ -350,6 +350,7 @@ function PracticePageContent() {
       setCompletedDrills(new Set(data.completedDrillIds || []));
     }
 
+    // 어제 미완료 드릴만 carryOver 표시 (이미 carry된 드릴은 제외하여 무한 누적 방지)
     const yesterdayStr = getYesterdayStr();
     const yesterdayCompletion = localStorage.getItem(`grit-on-completed-${yesterdayStr}`);
     const yesterdayDrills = localStorage.getItem(`grit-on-drills-${yesterdayStr}`);
@@ -360,7 +361,10 @@ function PracticePageContent() {
         ? new Set(JSON.parse(yesterdayCompletion).completedDrillIds || [])
         : new Set();
 
-      const incomplete = allYesterdayDrills.filter(d => !completedIds.has(d.id));
+      // 이전에 carry-over로 추가된 드릴은 다시 carry하지 않음
+      const incomplete = allYesterdayDrills.filter(
+        d => !completedIds.has(d.id) && !d.id.startsWith("carryover-")
+      );
       if (incomplete.length > 0) {
         const dismissedCarryOver = localStorage.getItem(`grit-on-carryover-dismissed-${todayStr}`);
         if (!dismissedCarryOver) {
@@ -918,6 +922,25 @@ function PracticePageContent() {
     }));
     if (drillsToSave.length > 0) {
       localStorage.setItem(`grit-on-drills-${todayStr}`, JSON.stringify(drillsToSave));
+    }
+
+    // 7일 이전의 carry-over 관련 localStorage 키 정리
+    try {
+      const keysToCheck = Object.keys(localStorage);
+      const drillKeyRegex = /^grit-on-(drills|completed|carryover-dismissed)-(\d{4}-\d{2}-\d{2})$/;
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      for (const key of keysToCheck) {
+        const match = key.match(drillKeyRegex);
+        if (match) {
+          const keyDate = new Date(match[2]);
+          if (keyDate < sevenDaysAgo) {
+            localStorage.removeItem(key);
+          }
+        }
+      }
+    } catch {
+      // localStorage 정리 실패 무시
     }
   }, [customDrills]);
 
