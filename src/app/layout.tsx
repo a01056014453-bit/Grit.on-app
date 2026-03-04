@@ -51,6 +51,9 @@ export const metadata: Metadata = {
     description: "AI 기반 클래식 음악 연습 지원 앱. 체계적인 연습 계획과 실시간 분석으로 실력을 향상시키세요.",
     images: ["https://withsempre.com/og-image.png"],
   },
+  verification: {
+    google: "63odlgaGdt4Q_LHdQkbnyxYneAaZ9YaSf3_3qpvHVro",
+  },
   other: {
     "mobile-web-app-capable": "yes",
   },
