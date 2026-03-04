@@ -85,7 +85,7 @@ export default function LoginRequiredPage() {
               <span className="text-3xl font-black text-white">S</span>
             </div>
             <h1 className="text-3xl font-black text-gray-900 mb-3">
-              Grit.on
+              Sempre
             </h1>
             <p className="text-base text-gray-500 leading-relaxed">
               클래식 연주자를 위한<br />AI 연습 코치
