@@ -81,8 +81,8 @@ export default function LoginRequiredPage() {
             transition={{ duration: 0.5 }}
             className="text-center"
           >
-            <div className="w-20 h-20 rounded-3xl bg-violet-600 flex items-center justify-center mx-auto mb-6 shadow-lg">
-              <span className="text-3xl font-black text-white">S</span>
+            <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center mx-auto mb-6 shadow-lg">
+              <span className="text-[15px] font-black text-white tracking-tight" style={{ fontFamily: "var(--font-montserrat), Montserrat, sans-serif" }}>sempre</span>
             </div>
             <h1 className="text-3xl font-black text-gray-900 mb-3">
               Sempre
