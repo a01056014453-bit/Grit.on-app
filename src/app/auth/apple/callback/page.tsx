@@ -20,29 +20,41 @@ function AppleCallbackHandler() {
 
   useEffect(() => {
     async function handleCallback() {
+      const nativeIdToken = searchParams.get("id_token");
+      const isNative = searchParams.get("native") === "1";
       const code = searchParams.get("code");
-      if (!code) {
+
+      if (!code && !nativeIdToken) {
         setError("Apple에서 인증 코드를 받지 못했습니다.");
         return;
       }
 
       try {
-        // Step 1: 서버에서 code → token 교환
-        setStatus("1/3 토큰 교환 중...");
-        const res = await fetch("/api/auth/apple", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            code,
-            redirectUri: `${window.location.origin}/auth/apple/callback`,
-          }),
-        });
+        let idToken: string;
 
-        const data = await res.json();
-        if (data.error || !data.id_token) {
-          const detail = data.description ? ` (${data.description})` : "";
-          setError(`토큰 교환 실패: ${data.error || "id_token 없음"}${detail}`);
-          return;
+        if (isNative && nativeIdToken) {
+          // Native Apple Sign In: id_token is already available
+          idToken = nativeIdToken;
+          setStatus("1/3 토큰 확인 완료...");
+        } else {
+          // Web Apple Sign In: exchange code for token
+          setStatus("1/3 토큰 교환 중...");
+          const res = await fetch("/api/auth/apple", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              code,
+              redirectUri: `${window.location.origin}/auth/apple/callback`,
+            }),
+          });
+
+          const data = await res.json();
+          if (data.error || !data.id_token) {
+            const detail = data.description ? ` (${data.description})` : "";
+            setError(`토큰 교환 실패: ${data.error || "id_token 없음"}${detail}`);
+            return;
+          }
+          idToken = data.id_token;
         }
 
         // Step 2: Supabase에 ID Token으로 로그인
@@ -50,7 +62,7 @@ function AppleCallbackHandler() {
         const supabase = createClient();
         const { data: authData, error: authError } = await supabase.auth.signInWithIdToken({
           provider: "apple",
-          token: data.id_token,
+          token: idToken,
         });
 
         if (authError || !authData.user) {
