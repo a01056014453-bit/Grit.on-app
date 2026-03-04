@@ -32,13 +32,13 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "ko_KR",
-    url: "https://griton-app.vercel.app",
+    url: "https://withsempre.com",
     siteName: "Sempre",
     title: "Sempre - 클래식 연습 코치",
     description: "AI 기반 클래식 음악 연습 지원 앱. 체계적인 연습 계획과 실시간 분석으로 실력을 향상시키세요.",
     images: [
       {
-        url: "https://griton-app.vercel.app/og-image.png",
+        url: "https://withsempre.com/og-image.png",
         width: 1200,
         height: 630,
         alt: "Sempre - 클래식 연습 코치",
@@ -49,7 +49,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Sempre - 클래식 연습 코치",
     description: "AI 기반 클래식 음악 연습 지원 앱. 체계적인 연습 계획과 실시간 분석으로 실력을 향상시키세요.",
-    images: ["https://griton-app.vercel.app/og-image.png"],
+    images: ["https://withsempre.com/og-image.png"],
   },
   other: {
     "mobile-web-app-capable": "yes",
