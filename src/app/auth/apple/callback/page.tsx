@@ -22,6 +22,7 @@ function AppleCallbackHandler() {
     async function handleCallback() {
       const nativeIdToken = searchParams.get("id_token");
       const isNative = searchParams.get("native") === "1";
+      const nonce = searchParams.get("nonce");
       const code = searchParams.get("code");
 
       if (!code && !nativeIdToken) {
@@ -60,10 +61,14 @@ function AppleCallbackHandler() {
         // Step 2: Supabase에 ID Token으로 로그인
         setStatus("2/3 Supabase 로그인 중...");
         const supabase = createClient();
-        const { data: authData, error: authError } = await supabase.auth.signInWithIdToken({
+        const signInOptions: { provider: "apple"; token: string; nonce?: string } = {
           provider: "apple",
           token: idToken,
-        });
+        };
+        if (nonce) {
+          signInOptions.nonce = nonce;
+        }
+        const { data: authData, error: authError } = await supabase.auth.signInWithIdToken(signInOptions);
 
         if (authError || !authData.user) {
           setError(`Supabase 로그인 실패: ${authError?.message || "user 없음"}`);
