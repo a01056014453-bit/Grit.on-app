@@ -542,7 +542,7 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
       analyserRef.current = analyser;
 
       // ── 네이티브 앱 환경 vs 웹 환경 분기 ──
-      if (isNativeApp()) {
+      if (isNativeApp() && !(window as unknown as Record<string, unknown>).__USE_WEB_RECORDER__) {
         // 네이티브 앱: MediaRecorder 대신 브릿지 메시지로 녹음 파일 수신
         setupNativeBridge();
       } else {
