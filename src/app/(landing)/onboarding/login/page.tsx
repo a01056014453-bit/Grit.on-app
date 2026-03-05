@@ -39,6 +39,26 @@ export default function LoginRequiredPage() {
         });
       }
     } catch {}
+
+    // iOS 네이티브 Apple Sign In 결과 수신
+    function handleNativeMessage(event: MessageEvent) {
+      try {
+        const data = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+        if (data.type === "APPLE_SIGN_IN_RESULT" && data.identityToken) {
+          const params = new URLSearchParams({
+            native: "1",
+            id_token: data.identityToken,
+          });
+          if (data.nonce) {
+            params.set("nonce", data.nonce);
+          }
+          router.replace(`/auth/apple/callback?${params.toString()}`);
+        }
+      } catch {}
+    }
+
+    window.addEventListener("message", handleNativeMessage);
+    return () => window.removeEventListener("message", handleNativeMessage);
   }, [router]);
 
   const handleGoogleLogin = () => {
