@@ -3,6 +3,7 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { pushUserDataDebounced } from "@/lib/sync-user-data";
 import {
   ChevronLeft,
   ChevronRight,
@@ -249,10 +250,12 @@ export default function RecordsPage() {
       } else {
         completedIds.add(drillId);
       }
+      const completedKey = `grit-on-completed-${dateStr}`;
       localStorage.setItem(
-        `grit-on-completed-${dateStr}`,
+        completedKey,
         JSON.stringify({ date: dateStr, completedDrillIds: Array.from(completedIds) })
       );
+      pushUserDataDebounced(completedKey);
 
       const allDrills = getAllAvailableDrills();
       const drill = allDrills.find((d) => d.id === drillId);

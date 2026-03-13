@@ -148,6 +148,7 @@ export default function RoutinesPage() {
     const updatedRoutines = [...routines, routine];
     setRoutines(updatedRoutines);
     localStorage.setItem("grit-on-routines", JSON.stringify(updatedRoutines));
+    pushUserDataDebounced("grit-on-routines");
     setNewRoutine({ name: "", days: [], drills: [] });
     setIsRoutineModalOpen(false);
   };
@@ -156,6 +157,7 @@ export default function RoutinesPage() {
     const updatedRoutines = routines.filter((r) => r.id !== routineId);
     setRoutines(updatedRoutines);
     localStorage.setItem("grit-on-routines", JSON.stringify(updatedRoutines));
+    pushUserDataDebounced("grit-on-routines");
   };
 
   const handleApplyRoutine = (routine: Routine) => {

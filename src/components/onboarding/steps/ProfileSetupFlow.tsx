@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight } from "lucide-react";
 import dynamic from "next/dynamic";
+import { pushUserDataDebounced } from "@/lib/sync-user-data";
 
 const BlurText = dynamic(() => import("@/components/reactbits/BlurText"), {
   ssr: false,
@@ -407,6 +408,7 @@ export function ProfileSetupFlow({ onComplete }: ProfileSetupFlowProps) {
       birthday,
     };
     localStorage.setItem("grit-on-profile", JSON.stringify(profileToSave));
+    pushUserDataDebounced("grit-on-profile");
 
     onComplete({
       nickname,

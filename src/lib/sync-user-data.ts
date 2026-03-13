@@ -16,6 +16,7 @@ const SINGLE_KEYS = [
   "griton_practice_todos",
   "grit-on-my-library",
   "grit-on-profile",
+  "grit-on-routines",
 ] as const;
 
 /** 날짜별 키 접두사 */

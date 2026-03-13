@@ -41,7 +41,7 @@ import GradientText from "@/components/reactbits/GradientText";
 import { getUserAnalyses } from "@/lib/user-analyses";
 import { getAnalyzedPieces } from "@/lib/queries/pieces";
 import { createClient } from "@/lib/supabase-browser";
-import { upsertProfile } from "@/lib/queries/profiles";
+import { upsertProfile, isNicknameAvailable } from "@/lib/queries/profiles";
 
 /* ─── Animation variants ─── */
 const listContainer: Variants = {
@@ -149,6 +149,20 @@ function saveProfile(data: Partial<typeof defaultUser>) {
     const current = loadProfile();
     const updated = { ...current, ...data };
     localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
+
+    // sempre-user-profile도 동기화 (loadProfile이 이 키를 우선 읽으므로)
+    const sempreRaw = localStorage.getItem(SEMPRE_PROFILE_KEY);
+    if (sempreRaw) {
+      const sempre = JSON.parse(sempreRaw);
+      if (data.nickname !== undefined) sempre.nickname = data.nickname;
+      if (data.instrument !== undefined) {
+        sempre.instruments = [data.instrument, ...(sempre.instruments || []).filter((i: string) => i !== data.instrument)];
+      }
+      if (data.grade !== undefined) sempre.ageGroup = data.grade;
+      if (data.profileEmoji !== undefined) sempre.profileEmoji = data.profileEmoji;
+      localStorage.setItem(SEMPRE_PROFILE_KEY, JSON.stringify(sempre));
+    }
+
     return updated;
   } catch {}
   return { ...defaultUser, ...data };
@@ -219,6 +233,8 @@ export default function ProfilePage() {
   const [editGrade, setEditGrade] = useState("");
   const [editType, setEditType] = useState("");
   const [editInstrument, setEditInstrument] = useState("");
+  const [nicknameStatus, setNicknameStatus] = useState<"idle" | "checking" | "available" | "taken">("idle");
+  const nicknameTimerRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 데이터 상태
@@ -433,18 +449,48 @@ export default function ProfilePage() {
     ];
   }
 
+  // 닉네임 변경 + 중복 확인 (debounced)
+  const handleEditNicknameChange = (value: string) => {
+    setEditNickname(value);
+    const trimmed = value.trim();
+
+    // 원래 닉네임과 같으면 체크 불필요
+    if (trimmed === profile.nickname) {
+      setNicknameStatus("idle");
+      return;
+    }
+    if (trimmed.length < 2) {
+      setNicknameStatus("idle");
+      return;
+    }
+
+    setNicknameStatus("checking");
+    if (nicknameTimerRef.current) clearTimeout(nicknameTimerRef.current);
+    nicknameTimerRef.current = setTimeout(async () => {
+      try {
+        const userId = localStorage.getItem("grit-on-user-id") || undefined;
+        const available = await isNicknameAvailable(trimmed, userId);
+        setNicknameStatus(available ? "available" : "taken");
+      } catch {
+        setNicknameStatus("available"); // 에러 시 허용 (UX 우선)
+      }
+    }, 500);
+  };
+
   // 프로필 편집 모달 열기
   const openEditProfile = () => {
     setEditNickname(profile.nickname);
     setEditGrade(profile.grade);
     setEditType(profile.type);
     setEditInstrument(profile.instrument);
+    setNicknameStatus("idle");
     setIsEditProfileOpen(true);
   };
 
   // 프로필 저장
   const handleSaveProfile = async () => {
     if (!editNickname.trim()) return;
+    if (nicknameStatus === "taken" || nicknameStatus === "checking") return;
     const updated = saveProfile({
       nickname: editNickname.trim(),
       grade: editGrade,
@@ -1234,12 +1280,25 @@ export default function ProfilePage() {
             <input
               type="text"
               value={editNickname}
-              onChange={(e) => setEditNickname(e.target.value)}
+              onChange={(e) => handleEditNicknameChange(e.target.value)}
               maxLength={20}
               placeholder="닉네임을 입력하세요"
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+              className={`w-full px-4 py-3 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:border-transparent ${
+                nicknameStatus === "taken"
+                  ? "border-red-300 focus:ring-red-500"
+                  : nicknameStatus === "available"
+                  ? "border-green-300 focus:ring-green-500"
+                  : "border-gray-200 focus:ring-violet-500"
+              }`}
             />
-            <p className="text-xs text-gray-400 mt-1 text-right">{editNickname.length}/20</p>
+            <div className="flex items-center justify-between mt-1">
+              <p className="text-xs">
+                {nicknameStatus === "checking" && <span className="text-gray-400">확인 중...</span>}
+                {nicknameStatus === "available" && <span className="text-green-500">사용 가능한 닉네임입니다</span>}
+                {nicknameStatus === "taken" && <span className="text-red-500">이미 사용 중인 닉네임입니다</span>}
+              </p>
+              <p className="text-xs text-gray-400">{editNickname.length}/20</p>
+            </div>
           </div>
 
           {/* 학년 */}
@@ -1306,7 +1365,7 @@ export default function ProfilePage() {
           {/* 저장 버튼 */}
           <button
             onClick={handleSaveProfile}
-            disabled={!editNickname.trim()}
+            disabled={!editNickname.trim() || nicknameStatus === "taken" || nicknameStatus === "checking"}
             className="w-full py-3.5 bg-violet-600 text-white rounded-xl font-semibold text-sm hover:bg-violet-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             저장하기
