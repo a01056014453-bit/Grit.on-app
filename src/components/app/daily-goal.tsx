@@ -7,6 +7,8 @@ import { motion, animate } from "framer-motion";
 import { Target, Check, BarChart3 } from "lucide-react";
 import { ProgressRing } from "./progress-ring";
 import { pushUserDataDebounced } from "@/lib/sync-user-data";
+import { createClient } from "@/lib/supabase-browser";
+import { upsertProfile } from "@/lib/queries/profiles";
 
 interface DailyGoalProps {
   completed: number;
@@ -81,11 +83,22 @@ export function DailyGoal({ completed, target, onTargetChange }: DailyGoalProps)
     }
   }, [isOpen]);
 
-  const handleSelectGoal = (minutes: number) => {
+  const handleSelectGoal = async (minutes: number) => {
     localStorage.setItem('grit-on-daily-goal', minutes.toString());
     pushUserDataDebounced("grit-on-daily-goal");
     onTargetChange?.(minutes);
     setIsOpen(false);
+
+    // Supabase profiles.daily_goal 동기화
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await upsertProfile(user.id, { daily_goal: minutes });
+      }
+    } catch (err) {
+      console.error("[DailyGoal] Supabase sync failed:", err);
+    }
   };
 
   return (

@@ -412,4 +412,45 @@ export function getTeacherProfileData(): TeacherProfileData {
 export function saveTeacherProfileData(data: TeacherProfileData): void {
   if (typeof window === "undefined") return;
   localStorage.setItem(TEACHER_PROFILE_DATA_KEY, JSON.stringify(data));
+  // Supabase teachers 테이블 동기화
+  syncTeacherProfileToSupabase(data).catch((err) =>
+    console.error("[saveTeacherProfileData] Supabase sync failed:", err)
+  );
+}
+
+async function syncTeacherProfileToSupabase(data: TeacherProfileData): Promise<void> {
+  const userId = getUserId();
+  if (!userId) return;
+
+  // 현재 사용자의 teacher row 찾기
+  const { data: row } = await supabase
+    .from("teachers")
+    .select("id, career")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!row) return;
+
+  const existingCareer = (row.career as Record<string, unknown>) ?? {};
+
+  await supabase
+    .from("teachers")
+    .update({
+      bio: data.bio || null,
+      title: data.title || null,
+      specialty: data.specialty.length > 0 ? data.specialty : null,
+      price_credits: data.priceCredits,
+      career: {
+        ...existingCareer,
+        education: data.career.education,
+        awards: data.career.awards,
+        performances: data.career.performances,
+        teachingExperience: data.career.teachingExperience,
+        lessonTarget: data.lessonTarget,
+        availableDays: data.availableDays,
+      },
+    })
+    .eq("id", row.id);
 }

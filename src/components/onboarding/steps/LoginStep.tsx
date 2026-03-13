@@ -82,6 +82,13 @@ function GlowPulse() {
 
 export function LoginStep({ onLogin }: LoginStepProps) {
   const [phase, setPhase] = useState<Phase>("typing");
+  const [hideApple, setHideApple] = useState(false);
+
+  useEffect(() => {
+    if ((window as any).__HIDE_APPLE_SIGN_IN__) {
+      setHideApple(true);
+    }
+  }, []);
 
   const handleTypingComplete = useCallback(() => {
     setTimeout(() => setPhase("fadeOut"), 600);
@@ -296,7 +303,7 @@ export function LoginStep({ onLogin }: LoginStepProps) {
             {/* Bottom - Login Buttons (staggered) */}
             <div className="px-6 pb-12">
               <div className="flex flex-col gap-3">
-                {loginButtons.map((btn, i) => (
+                {loginButtons.filter(btn => !(hideApple && btn.key === "apple")).map((btn, i) => (
                   <motion.button
                     key={btn.key}
                     onClick={btn.onClick}

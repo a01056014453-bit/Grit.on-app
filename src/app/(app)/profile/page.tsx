@@ -41,6 +41,7 @@ import GradientText from "@/components/reactbits/GradientText";
 import { getUserAnalyses } from "@/lib/user-analyses";
 import { getAnalyzedPieces } from "@/lib/queries/pieces";
 import { createClient } from "@/lib/supabase-browser";
+import { upsertProfile } from "@/lib/queries/profiles";
 
 /* ─── Animation variants ─── */
 const listContainer: Variants = {
@@ -108,6 +109,17 @@ const defaultUser = {
 
 const PROFILE_STORAGE_KEY = "grit-on-profile";
 const SEMPRE_PROFILE_KEY = "sempre-user-profile";
+
+const INSTRUMENT_TO_ENUM: Record<string, string> = {
+  "피아노": "piano",
+  "바이올린": "violin",
+  "첼로": "cello",
+  "비올라": "violin",
+  "플루트": "flute",
+  "클라리넷": "clarinet",
+  "기타": "guitar",
+  "성악": "vocal",
+};
 
 function loadProfile() {
   if (typeof window === "undefined") return defaultUser;
@@ -431,7 +443,7 @@ export default function ProfilePage() {
   };
 
   // 프로필 저장
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
     if (!editNickname.trim()) return;
     const updated = saveProfile({
       nickname: editNickname.trim(),
@@ -441,6 +453,21 @@ export default function ProfilePage() {
     });
     setProfile(updated);
     setIsEditProfileOpen(false);
+
+    // Supabase DB에도 동기화
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await upsertProfile(user.id, {
+          nickname: editNickname.trim(),
+          instrument: (INSTRUMENT_TO_ENUM[editInstrument] ?? "piano") as any,
+          level: editGrade || null,
+        });
+      }
+    } catch (err) {
+      console.error("[handleSaveProfile] Supabase sync failed:", err);
+    }
   };
 
   // 프로필 사진 선택
@@ -991,9 +1018,21 @@ export default function ProfilePage() {
           {goalOptions.map((goal) => (
             <button
               key={goal}
-              onClick={() => {
+              onClick={async () => {
                 setDailyGoal(goal);
+                saveProfile({ dailyGoal: goal });
+                localStorage.setItem('grit-on-daily-goal', goal.toString());
                 setIsGoalModalOpen(false);
+                // Supabase profiles.daily_goal 동기화
+                try {
+                  const supabase = createClient();
+                  const { data: { user } } = await supabase.auth.getUser();
+                  if (user) {
+                    await upsertProfile(user.id, { daily_goal: goal });
+                  }
+                } catch (err) {
+                  console.error("[ProfilePage] daily_goal sync failed:", err);
+                }
               }}
               className={`w-full p-4 rounded-xl border transition-all text-left flex items-center justify-between ${
                 dailyGoal === goal
