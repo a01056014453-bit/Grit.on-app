@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { dbMutate } from "@/lib/db-mutate";
 import type { Tables } from "@/types/database";
 
 type SchoolRow = Tables<"schools">;
@@ -194,15 +195,13 @@ export async function joinRoom(
   userId: string,
   roomId: string
 ): Promise<boolean> {
-  const { error } = await supabase
-    .from("room_memberships")
-    .insert({ user_id: userId, room_id: roomId });
+  const result = await dbMutate({
+    table: "room_memberships",
+    operation: "insert",
+    data: { user_id: userId, room_id: roomId },
+  });
 
-  if (error) {
-    console.error("[joinRoom]", error.message);
-    return false;
-  }
-  return true;
+  return result.success;
 }
 
 function pieceRowToDesignated(row: DesignatedPieceRow): DesignatedPiece {

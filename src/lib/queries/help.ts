@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { dbMutate } from "@/lib/db-mutate";
 import type { Json } from "@/types/database";
 import type {
   HelpRequest,
@@ -107,9 +108,10 @@ interface CreateHelpRequestInput {
 export async function createHelpRequest(
   input: CreateHelpRequestInput
 ): Promise<HelpRequest | null> {
-  const { data, error } = await db
-    .from("help_requests")
-    .insert({
+  const result = await dbMutate<Record<string, unknown>>({
+    table: "help_requests",
+    operation: "insert",
+    data: {
       student_id: input.studentId,
       composer: input.composer,
       piece: input.piece,
@@ -124,41 +126,31 @@ export async function createHelpRequest(
       deadline: input.deadline,
       credit: input.credit,
       max_proposals: input.maxProposals ?? 5,
-    } as Record<string, unknown>)
-    .select(
-      `*, profiles!help_requests_student_id_fkey(nickname), help_proposals(count)`
-    )
-    .single();
+    },
+    returnData: true,
+  });
 
-  if (error) {
-    console.error("[createHelpRequest]", error.message);
-    return null;
-  }
+  if (!result.success || !result.data) return null;
 
-  const profiles = data.profiles as { nickname?: string } | null;
-  const proposalAgg = data.help_proposals as
-    | [{ count: number }]
-    | undefined;
-  return rowToHelpRequest(data, profiles, proposalAgg);
+  // 생성된 row에 추가 정보가 없으므로 기본값으로 변환
+  return rowToHelpRequest(result.data, null, undefined);
 }
 
 export async function acceptProposal(
   requestId: string,
   proposalId: string
 ): Promise<boolean> {
-  const { error } = await db
-    .from("help_requests")
-    .update({
+  const result = await dbMutate({
+    table: "help_requests",
+    operation: "update",
+    data: {
       status: "closed",
       accepted_proposal_id: proposalId,
-    } as Record<string, unknown>)
-    .eq("id", requestId);
+    },
+    filters: { id: requestId },
+  });
 
-  if (error) {
-    console.error("[acceptProposal]", error.message);
-    return false;
-  }
-  return true;
+  return result.success;
 }
 
 // ─── Help Proposals ────────────────────────────────────────
@@ -212,34 +204,33 @@ export async function createHelpProposal(
   if (request.status !== "open") return null;
   if (request.proposalCount >= request.maxProposals) return null;
 
-  const { data, error } = await db
-    .from("help_proposals")
-    .insert({
+  const result = await dbMutate<Record<string, unknown>>({
+    table: "help_proposals",
+    operation: "insert",
+    data: {
       request_id: input.requestId,
       expert_id: input.expertId,
       comments: input.comments as unknown as Json,
       demo_video_url: input.demoVideoUrl ?? null,
       demo_video_length: input.demoVideoLength ?? null,
       practice_card: input.practiceCard as unknown as Json,
-    } as Record<string, unknown>)
-    .select(`*, profiles!help_proposals_expert_id_fkey(nickname)`)
-    .single();
+    },
+    returnData: true,
+  });
 
-  if (error) {
-    console.error("[createHelpProposal]", error.message);
-    return null;
-  }
+  if (!result.success || !result.data) return null;
 
   // max_proposals에 도달하면 자동으로 reviewing 상태로 전환
   if (request.proposalCount + 1 >= request.maxProposals) {
-    await db
-      .from("help_requests")
-      .update({ status: "reviewing" } as Record<string, unknown>)
-      .eq("id", input.requestId);
+    await dbMutate({
+      table: "help_requests",
+      operation: "update",
+      data: { status: "reviewing" },
+      filters: { id: input.requestId },
+    });
   }
 
-  const profiles = data.profiles as { nickname?: string } | null;
-  return rowToHelpProposal(data, profiles, 0);
+  return rowToHelpProposal(result.data, null, 0);
 }
 
 // ─── Stats ─────────────────────────────────────────────────
@@ -354,7 +345,7 @@ function rowToHelpProposal(
     expertId: row.expert_id as string,
     expertName: profiles?.nickname ?? "전문가",
     expertBadge: completedCount >= 10 ? "전문가" : "상급생",
-    trustScore: 4.5 + Math.min(completedCount / 50, 0.4), // 간단 계산
+    trustScore: 4.5 + Math.min(completedCount / 50, 0.4),
     completedCount,
     comments,
     demoVideoUrl: (row.demo_video_url as string) ?? undefined,

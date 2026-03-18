@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { dbMutate } from "@/lib/db-mutate";
 import type { Tables, Json } from "@/types/database";
 import type { FeedbackRequest, FeedbackRequestStatus, Feedback, FeedbackComment, PracticeCard } from "@/types";
 
@@ -52,31 +53,29 @@ export async function getTeacherFeedbackRequests(
 export async function createFeedbackRequest(
   request: Pick<FeedbackRequest, "studentId" | "teacherId" | "piece" | "composer" | "description" | "problemType" | "measureStart" | "measureEnd" | "videoUrl" | "faceBlurred" | "creditAmount" | "paymentStatus" | "status">
 ): Promise<FeedbackRequest | null> {
-  const { data, error } = await supabase
-    .from("feedback_requests")
-    .insert({
+  const result = await dbMutate<FeedbackRequestRow>({
+    table: "feedback_requests",
+    operation: "insert",
+    data: {
       student_id: request.studentId,
       teacher_id: request.teacherId,
       piece: request.piece,
       composer: request.composer,
       description: request.description,
-      problem_type: request.problemType as any,
+      problem_type: request.problemType,
       measure_start: request.measureStart,
       measure_end: request.measureEnd,
       video_url: request.videoUrl ?? null,
-      status: request.status as any,
+      status: request.status,
       face_blurred: request.faceBlurred,
       credit_amount: request.creditAmount,
-      payment_status: request.paymentStatus as any,
-    })
-    .select()
-    .single();
+      payment_status: request.paymentStatus,
+    },
+    returnData: true,
+  });
 
-  if (error) {
-    console.error("[createFeedbackRequest]", error.message);
-    return null;
-  }
-  return rowToRequest(data);
+  if (!result.success || !result.data) return null;
+  return rowToRequest(result.data);
 }
 
 export async function updateFeedbackRequestStatus(
@@ -104,16 +103,14 @@ export async function updateFeedbackRequestStatus(
   if (status === "EXPIRED") updates.payment_status = "refunded";
   if (status === "REFUNDED") updates.payment_status = "refunded";
 
-  const { error } = await supabase
-    .from("feedback_requests")
-    .update(updates as any)
-    .eq("id", id);
+  const result = await dbMutate({
+    table: "feedback_requests",
+    operation: "update",
+    data: updates,
+    filters: { id },
+  });
 
-  if (error) {
-    console.error("[updateFeedbackRequestStatus]", error.message);
-    return false;
-  }
-  return true;
+  return result.success;
 }
 
 export async function getFeedback(requestId: string): Promise<Feedback | null> {
@@ -137,18 +134,18 @@ export async function getFeedback(requestId: string): Promise<Feedback | null> {
 export async function saveFeedback(
   feedback: Omit<Feedback, "id" | "submittedAt">
 ): Promise<boolean> {
-  const { error } = await supabase.from("feedbacks").insert({
-    request_id: feedback.requestId,
-    comments: feedback.comments as unknown as Json,
-    demo_video_url: feedback.demoVideoUrl ?? null,
-    practice_card: feedback.practiceCard as unknown as Json,
+  const result = await dbMutate({
+    table: "feedbacks",
+    operation: "insert",
+    data: {
+      request_id: feedback.requestId,
+      comments: feedback.comments as unknown as Json,
+      demo_video_url: feedback.demoVideoUrl ?? null,
+      practice_card: feedback.practiceCard as unknown as Json,
+    },
   });
 
-  if (error) {
-    console.error("[saveFeedback]", error.message);
-    return false;
-  }
-  return true;
+  return result.success;
 }
 
 /** DB row → FeedbackRequest (null → undefined 변환) */

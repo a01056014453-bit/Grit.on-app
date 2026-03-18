@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { dbMutate } from "@/lib/db-mutate";
 import type { Tables } from "@/types/database";
 import type { Song } from "@/types";
 
@@ -22,32 +23,31 @@ export async function addSong(
   userId: string,
   song: { title: string; composer?: string; opus?: string; duration?: string }
 ): Promise<Song | null> {
-  const { data, error } = await supabase
-    .from("songs")
-    .insert({
+  const result = await dbMutate<SongRow>({
+    table: "songs",
+    operation: "insert",
+    data: {
       user_id: userId,
       title: song.title,
       composer: song.composer ?? null,
       opus: song.opus ?? null,
       duration: song.duration ?? null,
-    })
-    .select()
-    .single();
+    },
+    returnData: true,
+  });
 
-  if (error) {
-    console.error("[addSong]", error.message);
-    return null;
-  }
-  return songRowToSong(data);
+  if (!result.success || !result.data) return null;
+  return songRowToSong(result.data);
 }
 
 export async function deleteSong(songId: string): Promise<boolean> {
-  const { error } = await supabase.from("songs").delete().eq("id", songId);
-  if (error) {
-    console.error("[deleteSong]", error.message);
-    return false;
-  }
-  return true;
+  const result = await dbMutate({
+    table: "songs",
+    operation: "delete",
+    filters: { id: songId },
+  });
+
+  return result.success;
 }
 
 function songRowToSong(row: SongRow): Song {

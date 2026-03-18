@@ -10,6 +10,7 @@ import {
   TeacherProfileData,
 } from "@/types";
 import { supabase } from "./supabase";
+import { dbMutate } from "./db-mutate";
 import { getUserId } from "./user-id";
 
 const PROFILE_KEY = "grit-on-profile";
@@ -125,20 +126,24 @@ export function submitVerification(documents: TeacherDocument[], aiReview?: AIRe
 
 async function submitVerificationToSupabase(v: TeacherVerification): Promise<void> {
   const userId = getUserId();
-  await supabase.from("teachers").upsert({
-    id: v.id,
-    name: v.applicantName,
-    specialty: v.specialty,
-    verified: false,
-    user_id: userId || null,
-    career: JSON.parse(JSON.stringify({
-      verification: {
-        status: v.status,
-        documents: v.documents.map((d) => ({ id: d.id, type: d.type, fileName: d.fileName, uploadedAt: d.uploadedAt })),
-        aiReview: v.aiReview ?? null,
-        appliedAt: v.appliedAt,
-      },
-    })),
+  await dbMutate({
+    table: "teachers",
+    operation: "upsert",
+    data: {
+      id: v.id,
+      name: v.applicantName,
+      specialty: v.specialty,
+      verified: false,
+      user_id: userId || null,
+      career: JSON.parse(JSON.stringify({
+        verification: {
+          status: v.status,
+          documents: v.documents.map((d) => ({ id: d.id, type: d.type, fileName: d.fileName, uploadedAt: d.uploadedAt })),
+          aiReview: v.aiReview ?? null,
+          appliedAt: v.appliedAt,
+        },
+      })),
+    },
   });
 }
 
@@ -282,10 +287,15 @@ async function approveVerificationInSupabase(id: string): Promise<void> {
   if (!row) return;
   const career = (row.career as Record<string, unknown>) ?? {};
   const verification = (career.verification as Record<string, unknown>) ?? {};
-  await supabase.from("teachers").update({
-    verified: true,
-    career: { ...career, verification: { ...verification, status: "approved", reviewedAt: new Date().toISOString() } },
-  }).eq("id", id);
+  await dbMutate({
+    table: "teachers",
+    operation: "update",
+    data: {
+      verified: true,
+      career: { ...career, verification: { ...verification, status: "approved", reviewedAt: new Date().toISOString() } },
+    },
+    filters: { id },
+  });
 }
 
 async function rejectVerificationInSupabase(id: string, reason: string): Promise<void> {
@@ -293,9 +303,14 @@ async function rejectVerificationInSupabase(id: string, reason: string): Promise
   if (!row) return;
   const career = (row.career as Record<string, unknown>) ?? {};
   const verification = (career.verification as Record<string, unknown>) ?? {};
-  await supabase.from("teachers").update({
-    career: { ...career, verification: { ...verification, status: "rejected", reviewedAt: new Date().toISOString(), rejectReason: reason } },
-  }).eq("id", id);
+  await dbMutate({
+    table: "teachers",
+    operation: "update",
+    data: {
+      career: { ...career, verification: { ...verification, status: "rejected", reviewedAt: new Date().toISOString(), rejectReason: reason } },
+    },
+    filters: { id },
+  });
 }
 
 // ─── Supabase → localStorage 동기화 ───
@@ -435,9 +450,10 @@ async function syncTeacherProfileToSupabase(data: TeacherProfileData): Promise<v
 
   const existingCareer = (row.career as Record<string, unknown>) ?? {};
 
-  await supabase
-    .from("teachers")
-    .update({
+  await dbMutate({
+    table: "teachers",
+    operation: "update",
+    data: {
       bio: data.bio || null,
       title: data.title || null,
       specialty: data.specialty.length > 0 ? data.specialty : null,
@@ -451,6 +467,7 @@ async function syncTeacherProfileToSupabase(data: TeacherProfileData): Promise<v
         lessonTarget: data.lessonTarget,
         availableDays: data.availableDays,
       },
-    })
-    .eq("id", row.id);
+    },
+    filters: { id: row.id },
+  });
 }

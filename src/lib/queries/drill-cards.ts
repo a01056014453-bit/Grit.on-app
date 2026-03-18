@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { dbMutate } from "@/lib/db-mutate";
 import type { Tables } from "@/types/database";
 import type { DrillCard, DrillType } from "@/types";
 
@@ -22,9 +23,10 @@ export async function createDrillCard(
   userId: string,
   card: Omit<DrillCard, "id">
 ): Promise<DrillCard | null> {
-  const { data, error } = await supabase
-    .from("drill_cards")
-    .insert({
+  const result = await dbMutate<DrillCardRow>({
+    table: "drill_cards",
+    operation: "insert",
+    data: {
       user_id: userId,
       type: card.type,
       icon: card.icon,
@@ -36,45 +38,41 @@ export async function createDrillCard(
       duration: card.duration,
       recurrence: card.recurrence,
       confidence: card.confidence,
-    })
-    .select()
-    .single();
+    },
+    returnData: true,
+  });
 
-  if (error) {
-    console.error("[createDrillCard]", error.message);
-    return null;
-  }
-  return rowToDrillCard(data);
+  if (!result.success || !result.data) return null;
+  return rowToDrillCard(result.data);
 }
 
 export async function updateDrillCard(
   cardId: string,
   updates: Partial<DrillCard>
 ): Promise<boolean> {
-  const { error } = await supabase
-    .from("drill_cards")
-    .update({
+  const result = await dbMutate({
+    table: "drill_cards",
+    operation: "update",
+    data: {
       confidence: updates.confidence,
       duration: updates.duration,
       tempo: updates.tempo,
       action: updates.action,
-    })
-    .eq("id", cardId);
+    },
+    filters: { id: cardId },
+  });
 
-  if (error) {
-    console.error("[updateDrillCard]", error.message);
-    return false;
-  }
-  return true;
+  return result.success;
 }
 
 export async function deleteDrillCard(cardId: string): Promise<boolean> {
-  const { error } = await supabase.from("drill_cards").delete().eq("id", cardId);
-  if (error) {
-    console.error("[deleteDrillCard]", error.message);
-    return false;
-  }
-  return true;
+  const result = await dbMutate({
+    table: "drill_cards",
+    operation: "delete",
+    filters: { id: cardId },
+  });
+
+  return result.success;
 }
 
 function rowToDrillCard(row: DrillCardRow): DrillCard {

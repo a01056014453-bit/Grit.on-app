@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { dbMutate } from "@/lib/db-mutate";
 import type { Tables } from "@/types/database";
 import type { User, Stats } from "@/types";
 
@@ -22,17 +23,15 @@ export async function upsertProfile(
   userId: string,
   profile: Partial<Profile>
 ): Promise<Profile | null> {
-  const { data, error } = await supabase
-    .from("profiles")
-    .upsert({ id: userId, nickname: profile.nickname ?? "연습생", ...profile })
-    .select()
-    .single();
+  const result = await dbMutate<Profile>({
+    table: "profiles",
+    operation: "upsert",
+    data: { id: userId, nickname: profile.nickname ?? "연습생", ...profile },
+    returnData: true,
+  });
 
-  if (error) {
-    console.error("[upsertProfile]", error.message);
-    return null;
-  }
-  return data;
+  if (!result.success) return null;
+  return result.data;
 }
 
 /** 이메일로 기존 가입 프로바이더 확인 (다른 소셜 로그인 차단용) */
