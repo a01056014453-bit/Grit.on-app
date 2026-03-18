@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
+import { pdfConvertLimiter } from "@/lib/rate-limiters";
+import { getClientIdentifier, rateLimitResponse } from "@/lib/api-utils";
 
 const OMR_SERVER_URL = process.env.OMR_SERVER_URL;
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate Limit 체크 (시간당 10회)
+    const identifier = getClientIdentifier(request);
+    const limit = pdfConvertLimiter(identifier);
+    if (!limit.success) return rateLimitResponse(limit.resetAt);
+
     if (!OMR_SERVER_URL) {
       return NextResponse.json(
         { success: false, error: "OMR_SERVER_URL이 설정되지 않았습니다." },

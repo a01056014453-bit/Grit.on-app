@@ -1,5 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
+import { songAnalysisV2Limiter } from "@/lib/rate-limiters";
+import { getClientIdentifier, rateLimitResponse } from "@/lib/api-utils";
 import { getCachedAnalysis, saveCachedAnalysis, deleteCachedAnalysis, updateAnalysisById } from "@/lib/song-analysis-db";
 import { supabaseServer } from "@/lib/supabase-server";
 import {
@@ -912,8 +914,13 @@ async function runV1LargeWorkPipeline(
 
 // ── API 핸들러 ──────────────────────────────────────────────────
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    // Rate Limit 체크 (시간당 5회)
+    const identifier = getClientIdentifier(request);
+    const limit = songAnalysisV2Limiter(identifier);
+    if (!limit.success) return rateLimitResponse(limit.resetAt);
+
     const body: AnalyzeSongRequest = await request.json();
     let { composer, title, forceRefresh = false, sheetMusicImages, musicXml } = body;
     const { pdfStoragePath, musicxmlStoragePath, useStoredSource, useV2 = true } = body;

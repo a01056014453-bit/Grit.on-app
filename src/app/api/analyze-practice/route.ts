@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { practiceAnalysisLimiter } from "@/lib/rate-limiters";
+import { getClientIdentifier, rateLimitResponse } from "@/lib/api-utils";
 
 /**
  * 연습 세션 분석 API
@@ -48,6 +50,11 @@ const LABEL_TO_TYPE: Record<string, PracticeSegment["type"]> = {
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate Limit 체크 (시간당 10회)
+    const identifier = getClientIdentifier(request);
+    const limit = practiceAnalysisLimiter(identifier);
+    if (!limit.success) return rateLimitResponse(limit.resetAt);
+
     const body = await request.json();
     const entries: ClassificationEntry[] = body.entries ?? [];
     const totalDuration: number = body.totalDuration ?? 0;

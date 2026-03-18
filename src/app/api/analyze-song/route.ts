@@ -1,5 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
+import { songAnalysisV1Limiter } from "@/lib/rate-limiters";
+import { getClientIdentifier, rateLimitResponse } from "@/lib/api-utils";
 import type { SongAIInfo } from "@/types/song-analysis";
 
 // OpenAI 클라이언트를 런타임에 생성 (빌드 시 에러 방지)
@@ -77,8 +79,13 @@ function validateSongAIInfo(
   };
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    // Rate Limit 체크 (시간당 10회)
+    const identifier = getClientIdentifier(request);
+    const limit = songAnalysisV1Limiter(identifier);
+    if (!limit.success) return rateLimitResponse(limit.resetAt);
+
     const { composer, title, id } = await request.json();
 
     if (!composer || !title) {

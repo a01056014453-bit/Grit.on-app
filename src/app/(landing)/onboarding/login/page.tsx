@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { createClient } from "@/lib/supabase-browser";
 
@@ -161,8 +162,15 @@ export default function LoginRequiredPage() {
           transition={{ delay: 1 }}
           className="mt-6 text-center text-xs text-gray-400"
         >
-          계속하면 <span className="underline">서비스 약관</span> 및{" "}
-          <span className="underline">개인정보 처리방침</span>에 동의하게 됩니다.
+          계속하면{" "}
+          <Link href="/terms" className="underline hover:text-gray-300 transition-colors">
+            서비스 약관
+          </Link>{" "}
+          및{" "}
+          <Link href="/privacy" className="underline hover:text-gray-300 transition-colors">
+            개인정보 처리방침
+          </Link>
+          에 동의하게 됩니다.
         </motion.p>
       </div>
     </div>

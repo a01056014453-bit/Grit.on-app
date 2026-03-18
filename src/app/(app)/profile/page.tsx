@@ -26,6 +26,8 @@ import {
   Pencil,
   Trash2,
   GraduationCap,
+  FileText,
+  HelpCircle,
   Shield,
   ToggleLeft,
   ToggleRight,
@@ -1084,6 +1086,23 @@ export default function ProfilePage() {
               <Trash2 className="w-3.5 h-3.5" />
               회원탈퇴
             </button>
+            {/* 약관 · 지원 링크 */}
+            <div className="flex items-center justify-center gap-3 pt-1 text-xs text-gray-400">
+              <Link href="/terms" className="flex items-center gap-1 hover:text-gray-600 transition-colors">
+                <FileText className="w-3 h-3" />
+                이용약관
+              </Link>
+              <span>·</span>
+              <Link href="/privacy" className="flex items-center gap-1 hover:text-gray-600 transition-colors">
+                <Shield className="w-3 h-3" />
+                개인정보처리방침
+              </Link>
+              <span>·</span>
+              <Link href="/support" className="flex items-center gap-1 hover:text-gray-600 transition-colors">
+                <HelpCircle className="w-3 h-3" />
+                고객지원
+              </Link>
+            </div>
           </>
         ) : (
           <>
