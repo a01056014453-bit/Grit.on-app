@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     // Rate Limit 체크 (시간당 10회)
     const identifier = getClientIdentifier(request);
     const limit = songAnalysisV1Limiter(identifier);
-    if (!limit.success) return rateLimitResponse(limit.resetAt);
+    if (!limit.success) return rateLimitResponse(limit.resetAt, "곡 분석은 하루에 1회만 가능합니다. 내일 다시 시도해주세요.");
 
     const { composer, title, id } = await request.json();
 

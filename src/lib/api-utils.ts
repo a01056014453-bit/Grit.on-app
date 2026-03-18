@@ -10,11 +10,14 @@ export function getClientIdentifier(request: NextRequest): string {
 }
 
 /** Rate Limit 초과 시 429 응답 */
-export function rateLimitResponse(resetAt: number): NextResponse {
+export function rateLimitResponse(
+  resetAt: number,
+  message?: string
+): NextResponse {
   return NextResponse.json(
     {
       success: false,
-      error: "요청이 너무 많습니다. 잠시 후 다시 시도해주세요.",
+      error: message ?? "요청이 너무 많습니다. 잠시 후 다시 시도해주세요.",
     },
     {
       status: 429,

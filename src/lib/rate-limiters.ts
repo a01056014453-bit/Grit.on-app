@@ -1,18 +1,19 @@
 import { createRateLimiter } from "./rate-limit";
 
+const ONE_DAY = 24 * 60 * 60 * 1000;
 const ONE_HOUR = 60 * 60 * 1000;
 const TEN_MINUTES = 10 * 60 * 1000;
 
-/** AI 곡 분석 v2 (GPT-4o + Perplexity — 고비용) */
+/** AI 곡 분석 v2 (GPT-4o + Perplexity — 고비용, 하루 1회) */
 export const songAnalysisV2Limiter = createRateLimiter({
-  interval: ONE_HOUR,
-  maxRequests: 5,
+  interval: ONE_DAY,
+  maxRequests: 1,
 });
 
-/** AI 곡 분석 v1 */
+/** AI 곡 분석 v1 (하루 1회) */
 export const songAnalysisV1Limiter = createRateLimiter({
-  interval: ONE_HOUR,
-  maxRequests: 10,
+  interval: ONE_DAY,
+  maxRequests: 1,
 });
 
 /** AI 연습 분석 */
