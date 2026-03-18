@@ -227,6 +227,8 @@ export default function ProfilePage() {
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [isPhotoMenuOpen, setIsPhotoMenuOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // 프로필 편집 상태
   const [editNickname, setEditNickname] = useState("");
@@ -592,6 +594,50 @@ export default function ProfilePage() {
     localStorage.removeItem("grit-on-active-drill");
     setAuthUser(null);
     router.push("/onboarding/login");
+  };
+
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+    try {
+      // 서버에서 쿠키 기반으로 인증 확인하므로 userId 전송 불필요
+      const res = await fetch("/api/delete-account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!res.ok) {
+        let errorMsg = "회원탈퇴 중 오류가 발생했습니다.";
+        try {
+          const data = await res.json();
+          errorMsg = data.error || errorMsg;
+        } catch {
+          // JSON 파싱 실패 시 기본 메시지 사용
+        }
+        alert(errorMsg);
+        setIsDeleting(false);
+        return;
+      }
+
+      // 로컬 데이터 전부 정리
+      localStorage.clear();
+      sessionStorage.clear();
+      indexedDB.deleteDatabase("griton_db");
+
+      // Supabase 세션 정리
+      try {
+        const supabase = createClient();
+        await supabase.auth.signOut();
+      } catch {
+        // 이미 삭제된 계정이므로 실패해도 무시
+      }
+
+      setAuthUser(null);
+      setIsDeleteModalOpen(false);
+      router.push("/onboarding/login");
+    } catch {
+      alert("회원탈퇴 중 오류가 발생했습니다. 다시 시도해주세요.");
+      setIsDeleting(false);
+    }
   };
 
   const handleGoogleLogin = () => {
@@ -1030,6 +1076,14 @@ export default function ProfilePage() {
               <LogOut className="w-4 h-4" />
               로그아웃
             </button>
+            {/* 회원탈퇴 버튼 */}
+            <button
+              onClick={() => setIsDeleteModalOpen(true)}
+              className="w-full flex items-center justify-center gap-2 py-2.5 text-gray-400 text-xs hover:text-red-400 transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              회원탈퇴
+            </button>
           </>
         ) : (
           <>
@@ -1423,6 +1477,46 @@ export default function ProfilePage() {
             <Sparkles className="w-4 h-4" />
             Pro 시작하기
           </button>
+        </div>
+      </Modal>
+
+      {/* 회원탈퇴 확인 모달 */}
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => !isDeleting && setIsDeleteModalOpen(false)}
+        title="회원탈퇴"
+      >
+        <div className="p-4">
+          <div className="text-center mb-5">
+            <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <Trash2 className="w-7 h-7 text-red-500" />
+            </div>
+            <p className="text-sm text-gray-700 font-medium mb-1">
+              정말 탈퇴하시겠습니까?
+            </p>
+            <p className="text-xs text-gray-500 leading-relaxed">
+              탈퇴 시 모든 연습 기록, 분석 데이터, 녹음 파일이
+              <br />
+              <span className="text-red-500 font-medium">영구적으로 삭제</span>되며 복구할 수 없습니다.
+            </p>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={() => setIsDeleteModalOpen(false)}
+              disabled={isDeleting}
+              className="flex-1 py-3 text-sm font-medium text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
+            >
+              취소
+            </button>
+            <button
+              onClick={handleDeleteAccount}
+              disabled={isDeleting}
+              className="flex-1 py-3 text-sm font-medium text-white bg-red-500 rounded-xl hover:bg-red-600 transition-colors disabled:opacity-50"
+            >
+              {isDeleting ? "처리 중..." : "탈퇴하기"}
+            </button>
+          </div>
         </div>
       </Modal>
     </div>
