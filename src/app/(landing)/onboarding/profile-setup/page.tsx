@@ -4,9 +4,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { RefreshCw, ChevronRight, Check, Loader2 } from "lucide-react";
-import { isNicknameAvailable, upsertProfile } from "@/lib/queries/profiles";
+import { isNicknameAvailable } from "@/lib/queries/profiles";
 import { getUserId } from "@/lib/user-id";
-import { createClient } from "@/lib/supabase-browser";
 
 /* ─── Constants ─── */
 
@@ -170,31 +169,33 @@ export default function ProfileSetupPage() {
     localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
     localStorage.setItem(ONBOARDING_KEY, "true");
 
-    // Supabase에 프로필 저장 (email, auth_provider 포함)
-    const userId = getUserId();
+    // 서버 API로 프로필 저장 (service_role로 RLS 우회)
     const primaryInstrument = instruments[0]
       ? (INSTRUMENT_TO_ENUM[instruments[0]] ?? "piano")
       : "piano";
 
-    let userEmail: string | undefined;
-    try {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      userEmail = user?.email ?? undefined;
-    } catch {
-      // 이메일 조회 실패 시 무시
-    }
-
     const authProvider = localStorage.getItem("sempre-auth") || undefined;
 
-    await upsertProfile(userId, {
-      nickname: finalNickname,
-      name: finalNickname,
-      instrument: primaryInstrument as "piano",
-      level: ageGroup,
-      email: userEmail,
-      auth_provider: authProvider,
-    });
+    try {
+      const res = await fetch("/api/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nickname: finalNickname,
+          name: finalNickname,
+          instrument: primaryInstrument,
+          level: ageGroup,
+          auth_provider: authProvider,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        console.error("[profile-setup] 프로필 저장 실패:", data.error);
+      }
+    } catch (err) {
+      console.error("[profile-setup] 프로필 저장 오류:", err);
+    }
 
     setShowCelebration(true);
 
