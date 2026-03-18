@@ -1,10 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
 import { supabaseServer } from "@/lib/supabase-server";
 
 export async function GET(request: NextRequest) {
   try {
+    // 인증 확인 (닉네임 업데이트 보호용)
+    const supabaseAuth = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll();
+          },
+          setAll() {},
+        },
+      }
+    );
+
+    const {
+      data: { user },
+    } = await supabaseAuth.auth.getUser();
+
+    // 인증된 유저 ID (없으면 읽기만 허용)
+    const authUserId = user?.id ?? null;
+
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
+
     // KST 기준 오늘 날짜
     const now = new Date();
     const kstOffset = 9 * 60 * 60 * 1000;
@@ -59,23 +81,31 @@ export async function GET(request: NextRequest) {
     // 닉네임 업데이트 + 내 랭킹 조회
     let myRanking = null;
     const nickname = searchParams.get("nickname");
-    if (userId) {
-      // 닉네임이 전달된 경우 프로필 업데이트
+    if (authUserId) {
+      // 인증된 유저만 자기 닉네임 업데이트 가능 (중복 체크 포함)
       if (nickname && nickname !== "연습생" && nickname !== "익명" && nickname !== "사용자") {
-        await supabaseServer
+        const { count } = await supabaseServer
           .from("profiles")
-          .update({ nickname })
-          .eq("id", userId);
+          .select("id", { count: "exact", head: true })
+          .eq("nickname", nickname)
+          .neq("id", authUserId);
+
+        if ((count ?? 0) === 0) {
+          await supabaseServer
+            .from("profiles")
+            .update({ nickname })
+            .eq("id", authUserId);
+        }
 
         // 전체 랭커 목록에서도 본인 닉네임 반영 (불변 업데이트)
-        const myIdx = rankers.findIndex((r: { id: string }) => r.id === userId);
+        const myIdx = rankers.findIndex((r: { id: string }) => r.id === authUserId);
         if (myIdx !== -1) {
           rankers[myIdx] = { ...rankers[myIdx], nickname };
         }
       }
 
       const myIndex = rankers.findIndex(
-        (r: { id: string }) => r.id === userId
+        (r: { id: string }) => r.id === authUserId
       );
       if (myIndex !== -1) {
         myRanking = rankers[myIndex];

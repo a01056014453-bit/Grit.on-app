@@ -92,6 +92,22 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 3-1. profiles 테이블 닉네임 중복 체크
+    if (table === "profiles" && safeData.nickname && (operation === "insert" || operation === "upsert" || operation === "update")) {
+      const { count } = await supabaseServer
+        .from("profiles")
+        .select("id", { count: "exact", head: true })
+        .eq("nickname", safeData.nickname as string)
+        .neq("id", user.id);
+
+      if ((count ?? 0) > 0) {
+        return NextResponse.json(
+          { error: "이미 사용 중인 닉네임입니다." },
+          { status: 409 }
+        );
+      }
+    }
+
     // 4. 실행 (동적 테이블명이므로 타입 캐스팅 필요)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db = supabaseServer as any;

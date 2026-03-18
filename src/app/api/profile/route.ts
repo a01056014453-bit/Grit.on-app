@@ -44,7 +44,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 2. service_role로 프로필 upsert (RLS 우회)
+    // 2. 닉네임 중복 체크 (서버 사이드 — 동시 요청 방지)
+    const { count: duplicateCount } = await supabaseServer
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("nickname", nickname.trim())
+      .neq("id", user.id);
+
+    if ((duplicateCount ?? 0) > 0) {
+      return NextResponse.json(
+        { error: "이미 사용 중인 닉네임입니다." },
+        { status: 409 }
+      );
+    }
+
+    // 3. service_role로 프로필 upsert (RLS 우회)
     const { data, error } = await supabaseServer
       .from("profiles")
       .upsert({

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
 import { supabaseServer } from "@/lib/supabase-server";
 
 interface SyncSession {
@@ -17,18 +18,38 @@ interface SyncSession {
 
 export async function POST(request: NextRequest) {
   try {
+    // 1. 인증 확인
+    const supabaseAuth = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll();
+          },
+          setAll() {},
+        },
+      }
+    );
+
+    const {
+      data: { user },
+    } = await supabaseAuth.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "인증이 필요합니다." },
+        { status: 401 }
+      );
+    }
+
+    // 인증된 유저의 ID를 사용 (body의 userId 무시)
+    const userId = user.id;
+
     const body = await request.json();
-    const userId: string = body.userId;
     const sessions: SyncSession[] = body.sessions ?? [];
     const nickname: string = body.nickname ?? "연습생";
     const instrument: string = body.instrument ?? "piano";
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: "userId가 필요합니다." },
-        { status: 400 }
-      );
-    }
 
     // 프로필 확인/생성
     const { data: existingProfile } = await supabaseServer
