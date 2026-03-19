@@ -85,6 +85,18 @@ export default function TeacherRegisterPage() {
 
   // If pending
   if (verification.status === "pending") {
+    const handleResubmit = () => {
+      // localStorage 인증 데이터 초기화
+      localStorage.removeItem("grit-on-teacher-verification");
+      setVerification({
+        id: "",
+        applicantName: "",
+        specialty: [],
+        status: "none",
+        documents: [],
+      });
+    };
+
     return (
       <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-orange">
       <div className="bg-blob-orange-extra" />
@@ -104,6 +116,12 @@ export default function TeacherRegisterPage() {
             신청일: {new Date(verification.appliedAt!).toLocaleDateString("ko-KR")}
           </p>
 
+          <button
+            onClick={handleResubmit}
+            className="w-full max-w-xs mx-auto py-3 bg-orange-600 text-white rounded-xl font-semibold text-sm mb-3"
+          >
+            다시 제출하기
+          </button>
           <button
             onClick={() => router.push("/profile")}
             className="text-sm text-gray-500 underline"
