@@ -3,6 +3,52 @@ import { createServerClient } from "@supabase/ssr";
 import { supabaseServer } from "@/lib/supabase-server";
 
 /**
+ * GET /api/teacher-verification?userId=xxx
+ * 선생님 인증 상태 조회 (서버사이드, RLS 무관)
+ */
+export async function GET(request: NextRequest) {
+  try {
+    const userId = request.nextUrl.searchParams.get("userId");
+    if (!userId) {
+      return NextResponse.json({ error: "userId 필수" }, { status: 400 });
+    }
+
+    const { data, error } = await supabaseServer
+      .from("teachers")
+      .select("id, name, specialty, verified, career")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    if (!data) {
+      return NextResponse.json({ found: false });
+    }
+
+    const career = data.career as Record<string, unknown> | null;
+    const verification = career && "verification" in career
+      ? (career as { verification: Record<string, unknown> }).verification
+      : null;
+
+    return NextResponse.json({
+      found: true,
+      id: data.id,
+      name: data.name,
+      specialty: data.specialty,
+      verified: data.verified,
+      verification,
+    });
+  } catch (err) {
+    console.error("[teacher-verification GET]", err);
+    return NextResponse.json({ error: "서버 오류" }, { status: 500 });
+  }
+}
+
+/**
  * POST /api/teacher-verification
  * 선생님 인증 신청을 Supabase에 저장
  * cookie 인증 우선, 실패 시 Authorization 헤더 사용

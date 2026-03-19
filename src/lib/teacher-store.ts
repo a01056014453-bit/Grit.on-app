@@ -334,65 +334,57 @@ async function rejectVerificationInSupabase(id: string, reason: string): Promise
  */
 export async function syncVerificationFromSupabase(): Promise<TeacherVerificationStatus> {
   const userId = await getAuthUserId();
-  if (!userId) return "none";
+  if (!userId) return getVerification().status;
 
-  // user_id로 검색
-  const { data, error } = await supabase
-    .from("teachers")
-    .select("id, name, specialty, verified, career")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  try {
+    // 서버 API를 통해 조회 (RLS 무관, service role key 사용)
+    const res = await fetch(`/api/teacher-verification?userId=${userId}`);
+    if (!res.ok) return getVerification().status;
 
-  // Supabase에 데이터가 없지만 localStorage에 pending 인증이 있으면 → push
-  if ((!data || error) && typeof window !== "undefined") {
-    const local = getVerification();
-    if (local.status === "pending" && local.documents.length > 0) {
-      console.log("[syncVerification] Supabase에 데이터 없음, localStorage에서 push 시도");
-      await submitVerificationToSupabase(local);
-      return "pending";
+    const result = await res.json();
+
+    if (!result.found) {
+      // Supabase에 데이터 없음 → localStorage에 pending 있으면 push
+      const local = getVerification();
+      if (local.status === "pending" && local.documents.length > 0) {
+        await submitVerificationToSupabase(local);
+      }
+      return local.status;
     }
-    return local.status;
+
+    const v = result.verification;
+    const remoteStatus: TeacherVerificationStatus = result.verified
+      ? "approved"
+      : ((v?.status as string) || "pending") as TeacherVerificationStatus;
+
+    // localStorage에 최신 상태 반영
+    const localVerification = getVerification();
+    if (localVerification.status !== remoteStatus) {
+      const updated: TeacherVerification = {
+        id: result.id,
+        applicantName: result.name,
+        specialty: result.specialty ?? [],
+        status: remoteStatus,
+        documents: (v?.documents as TeacherDocument[]) ?? [],
+        appliedAt: v?.appliedAt as string | undefined,
+        reviewedAt: v?.reviewedAt as string | undefined,
+        rejectReason: v?.rejectReason as string | undefined,
+        aiReview: v?.aiReview as AIReview | undefined,
+      };
+      saveVerification(updated);
+
+      if (remoteStatus === "approved") {
+        updateTeacherProfile({ isTeacher: true, teacherProfileId: result.id });
+      }
+      if (remoteStatus === "rejected" || remoteStatus === "none") {
+        updateTeacherProfile({ isTeacher: false, teacherMode: false });
+      }
+    }
+
+    return remoteStatus;
+  } catch {
+    return getVerification().status;
   }
-
-  if (!data) return getVerification().status;
-
-  const career = data.career as Record<string, unknown> | null;
-  if (!career || !("verification" in career)) return "none";
-
-  const v = (career as { verification: Record<string, unknown> }).verification;
-  const remoteStatus: TeacherVerificationStatus = data.verified
-    ? "approved"
-    : ((v.status as string) || "pending") as TeacherVerificationStatus;
-
-  // localStorage에 최신 상태 반영
-  const localVerification = getVerification();
-  if (localVerification.status !== remoteStatus) {
-    const updated: TeacherVerification = {
-      id: data.id,
-      applicantName: data.name,
-      specialty: data.specialty ?? [],
-      status: remoteStatus,
-      documents: (v.documents as TeacherDocument[]) ?? [],
-      appliedAt: v.appliedAt as string | undefined,
-      reviewedAt: v.reviewedAt as string | undefined,
-      rejectReason: v.rejectReason as string | undefined,
-      aiReview: v.aiReview as AIReview | undefined,
-    };
-    saveVerification(updated);
-
-    // 승인됐으면 프로필도 업데이트
-    if (remoteStatus === "approved") {
-      updateTeacherProfile({ isTeacher: true, teacherProfileId: data.id });
-    }
-    // 반려나 미인증이면 선생님 모드 OFF
-    if (remoteStatus === "rejected" || remoteStatus === "none") {
-      updateTeacherProfile({ isTeacher: false, teacherMode: false });
-    }
-  }
-
-  return remoteStatus;
 }
 
 // ─── Managed Students ───
