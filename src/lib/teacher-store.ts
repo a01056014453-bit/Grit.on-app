@@ -336,7 +336,18 @@ export async function syncVerificationFromSupabase(): Promise<TeacherVerificatio
     .limit(1)
     .maybeSingle();
 
-  if (error || !data) return getVerification().status;
+  // Supabase에 데이터가 없지만 localStorage에 pending 인증이 있으면 → push
+  if ((!data || error) && typeof window !== "undefined") {
+    const local = getVerification();
+    if (local.status === "pending" && local.documents.length > 0) {
+      console.log("[syncVerification] Supabase에 데이터 없음, localStorage에서 push 시도");
+      await submitVerificationToSupabase(local);
+      return "pending";
+    }
+    return local.status;
+  }
+
+  if (!data) return getVerification().status;
 
   const career = data.career as Record<string, unknown> | null;
   if (!career || !("verification" in career)) return "none";
