@@ -8,7 +8,7 @@ import { BentoGrid, BentoCard } from "@/components/ui/bento-grid";
 import { StatsCard, DailyGoal } from "@/components/app";
 import { getGreeting } from "@/lib/utils-practice";
 import { getProfile, profileToUser } from "@/lib/queries";
-import { getUserId } from "@/lib/user-id";
+import { getAuthUserId } from "@/lib/user-id";
 import { syncPracticeSessions } from "@/lib/sync-practice";
 import { syncUserData } from "@/lib/sync-user-data";
 import { usePracticeSessions } from "@/hooks/usePracticeSessions";
@@ -28,7 +28,7 @@ export default function HomePage() {
   useEffect(() => {
     async function loadProfile() {
       try {
-        const userId = getUserId();
+        const userId = await getAuthUserId();
         const profile = await getProfile(userId);
         if (profile) {
           const user = profileToUser(profile);
@@ -98,16 +98,14 @@ export default function HomePage() {
   const dailyMessage = dailyMessages[dayOfYear % dailyMessages.length];
 
   const userName = (() => {
-    if (userProfile?.name) return userProfile.name;
+    // 1. localStorage 닉네임 우선 (온보딩에서 설정한 값)
     if (typeof window !== "undefined") {
       try {
-        // sempre-user-profile 우선
         const sempre = localStorage.getItem("sempre-user-profile");
         if (sempre) {
           const p = JSON.parse(sempre);
           if (p.nickname) return p.nickname;
         }
-        // 기존 grit-on-profile 폴백
         const saved = localStorage.getItem("grit-on-profile");
         if (saved) {
           const profile = JSON.parse(saved);
@@ -115,6 +113,8 @@ export default function HomePage() {
         }
       } catch {}
     }
+    // 2. DB 프로필 폴백
+    if (userProfile?.name) return userProfile.name;
     return "사용자";
   })();
 
