@@ -106,7 +106,7 @@ function getApplicantInstrument(): string {
 }
 
 export function submitVerification(documents: TeacherDocument[], aiReview?: AIReview): TeacherVerification {
-  const id = `v-${Date.now()}`;
+  const id = crypto.randomUUID();
   const verification: TeacherVerification = {
     id,
     applicantName: getApplicantName(),
