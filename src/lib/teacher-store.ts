@@ -11,7 +11,7 @@ import {
 } from "@/types";
 import { supabase } from "./supabase";
 import { dbMutate } from "./db-mutate";
-import { getAuthUserId } from "./user-id";
+import { getAuthUserId, getUserId } from "./user-id";
 
 const PROFILE_KEY = "grit-on-profile";
 const VERIFICATION_KEY = "grit-on-teacher-verification";
@@ -336,9 +336,16 @@ export async function syncVerificationFromSupabase(): Promise<TeacherVerificatio
   const userId = await getAuthUserId();
   if (!userId) return getVerification().status;
 
+  // 로컬 ID도 함께 전송 (듀얼 계정 대응)
+  const localId = getUserId();
+  const params = new URLSearchParams({ userId });
+  if (localId && localId !== userId) {
+    params.set("localId", localId);
+  }
+
   try {
     // 서버 API를 통해 조회 (RLS 무관, service role key 사용)
-    const res = await fetch(`/api/teacher-verification?userId=${userId}`);
+    const res = await fetch(`/api/teacher-verification?${params.toString()}`);
     if (!res.ok) return getVerification().status;
 
     const result = await res.json();

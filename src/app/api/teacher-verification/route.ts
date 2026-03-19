@@ -3,43 +3,53 @@ import { createServerClient } from "@supabase/ssr";
 import { supabaseServer } from "@/lib/supabase-server";
 
 /**
- * GET /api/teacher-verification?userId=xxx
+ * GET /api/teacher-verification?userId=xxx&localId=yyy
  * 선생님 인증 상태 조회 (서버사이드, RLS 무관)
+ * userId와 localId 모두로 검색 시도
  */
 export async function GET(request: NextRequest) {
   try {
     const userId = request.nextUrl.searchParams.get("userId");
-    if (!userId) {
-      return NextResponse.json({ error: "userId 필수" }, { status: 400 });
+    const localId = request.nextUrl.searchParams.get("localId");
+
+    if (!userId && !localId) {
+      return NextResponse.json({ error: "userId 또는 localId 필수" }, { status: 400 });
     }
 
-    const { data, error } = await supabaseServer
-      .from("teachers")
-      .select("id, name, specialty, verified, career")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    // 여러 ID로 검색 시도
+    const idsToTry = [userId, localId].filter(Boolean) as string[];
+    let found = null;
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    for (const id of idsToTry) {
+      const { data } = await supabaseServer
+        .from("teachers")
+        .select("id, name, specialty, verified, career")
+        .eq("user_id", id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (data) {
+        found = data;
+        break;
+      }
     }
 
-    if (!data) {
+    if (!found) {
       return NextResponse.json({ found: false });
     }
 
-    const career = data.career as Record<string, unknown> | null;
+    const career = found.career as Record<string, unknown> | null;
     const verification = career && "verification" in career
       ? (career as { verification: Record<string, unknown> }).verification
       : null;
 
     return NextResponse.json({
       found: true,
-      id: data.id,
-      name: data.name,
-      specialty: data.specialty,
-      verified: data.verified,
+      id: found.id,
+      name: found.name,
+      specialty: found.specialty,
+      verified: found.verified,
       verification,
     });
   } catch (err) {
