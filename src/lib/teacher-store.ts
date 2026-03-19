@@ -11,7 +11,7 @@ import {
 } from "@/types";
 import { supabase } from "./supabase";
 import { dbMutate } from "./db-mutate";
-import { getUserId } from "./user-id";
+import { getAuthUserId } from "./user-id";
 
 const PROFILE_KEY = "grit-on-profile";
 const VERIFICATION_KEY = "grit-on-teacher-verification";
@@ -120,13 +120,14 @@ export function submitVerification(documents: TeacherDocument[], aiReview?: AIRe
   // Also add to admin-visible list
   addToVerificationsList(verification);
   // Supabase에도 저장 (기기 간 공유)
-  submitVerificationToSupabase(verification).catch(() => {});
+  submitVerificationToSupabase(verification).catch((err) =>
+    console.error("[submitVerification] Supabase 저장 실패:", err)
+  );
   return verification;
 }
 
 async function submitVerificationToSupabase(v: TeacherVerification): Promise<void> {
-  const userId = getUserId();
-  await dbMutate({
+  const result = await dbMutate({
     table: "teachers",
     operation: "upsert",
     data: {
@@ -134,7 +135,6 @@ async function submitVerificationToSupabase(v: TeacherVerification): Promise<voi
       name: v.applicantName,
       specialty: v.specialty,
       verified: false,
-      user_id: userId || null,
       career: JSON.parse(JSON.stringify({
         verification: {
           status: v.status,
@@ -145,6 +145,10 @@ async function submitVerificationToSupabase(v: TeacherVerification): Promise<voi
       })),
     },
   });
+
+  if (!result.success) {
+    console.error("[submitVerificationToSupabase] 실패:", result.error);
+  }
 }
 
 export function approveVerification(): void {
@@ -320,7 +324,7 @@ async function rejectVerificationInSupabase(id: string, reason: string): Promise
  * 관리자가 Supabase에서 승인/반려했을 때 사용자 기기에 반영됨.
  */
 export async function syncVerificationFromSupabase(): Promise<TeacherVerificationStatus> {
-  const userId = getUserId();
+  const userId = await getAuthUserId();
   if (!userId) return "none";
 
   // user_id로 검색
@@ -434,7 +438,7 @@ export function saveTeacherProfileData(data: TeacherProfileData): void {
 }
 
 async function syncTeacherProfileToSupabase(data: TeacherProfileData): Promise<void> {
-  const userId = getUserId();
+  const userId = await getAuthUserId();
   if (!userId) return;
 
   // 현재 사용자의 teacher row 찾기
