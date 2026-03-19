@@ -127,27 +127,36 @@ export function submitVerification(documents: TeacherDocument[], aiReview?: AIRe
 }
 
 async function submitVerificationToSupabase(v: TeacherVerification): Promise<void> {
-  const result = await dbMutate({
-    table: "teachers",
-    operation: "upsert",
-    data: {
+  // Supabase auth 토큰 가져오기
+  const { data: { session } } = await supabase.auth.getSession();
+  const userId = await getAuthUserId();
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (session?.access_token) {
+    headers["Authorization"] = `Bearer ${session.access_token}`;
+  }
+
+  const res = await fetch("/api/teacher-verification", {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
       id: v.id,
       name: v.applicantName,
       specialty: v.specialty,
-      verified: false,
-      career: JSON.parse(JSON.stringify({
-        verification: {
-          status: v.status,
-          documents: v.documents.map((d) => ({ id: d.id, type: d.type, fileName: d.fileName, uploadedAt: d.uploadedAt })),
-          aiReview: v.aiReview ?? null,
-          appliedAt: v.appliedAt,
-        },
-      })),
-    },
+      documents: v.documents.map((d) => ({ id: d.id, type: d.type, fileName: d.fileName, uploadedAt: d.uploadedAt })),
+      aiReview: v.aiReview ?? null,
+      appliedAt: v.appliedAt,
+      userId: userId || undefined,
+    }),
   });
 
-  if (!result.success) {
+  const result = await res.json();
+  if (!res.ok) {
     console.error("[submitVerificationToSupabase] 실패:", result.error);
+  } else {
+    console.log("[submitVerificationToSupabase] 성공:", result);
   }
 }
 
