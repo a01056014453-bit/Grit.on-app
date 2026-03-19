@@ -47,7 +47,6 @@ export default function NewHelpRequestPage() {
   const [problemType, setProblemType] = useState("");
   const [description, setDescription] = useState("");
   const [deadline, setDeadline] = useState(48);
-  const credit = 0; // 무료 서비스
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [faceBlur, setFaceBlur] = useState(true);
   const [anonymous, setAnonymous] = useState(true);
@@ -95,7 +94,7 @@ export default function NewHelpRequestPage() {
           faceBlurred: faceBlur,
           isAnonymous: anonymous,
           deadlineHours: deadline,
-          credit,
+          credit: 0,
           maxProposals: 5,
         }),
       });
@@ -124,11 +123,6 @@ export default function NewHelpRequestPage() {
     }
     return true;
   };
-
-  // 크레딧 분배 계산
-  const participationReward = 0.3;
-  const maxParticipants = Math.min(Math.floor((credit * 0.3) / participationReward), 5);
-  const bonusReward = credit - (participationReward * maxParticipants);
 
   return (
     <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
@@ -370,7 +364,7 @@ export default function NewHelpRequestPage() {
         </div>
       )}
 
-      {/* Step 3: 결제 확인 */}
+      {/* Step 3: 요청 확인 */}
       {step === 3 && (
         <div className="space-y-5">
           {/* Deadline */}

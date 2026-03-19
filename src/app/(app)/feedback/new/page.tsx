@@ -103,8 +103,8 @@ function NewFeedbackRequestContent() {
         videoUrl: "/videos/sample.mp4",
         faceBlurred: faceBlur,
         status: "DRAFT",
-        creditAmount: teacher.priceCredits,
-        paymentStatus: "pending",
+        creditAmount: 0,
+        paymentStatus: "released",
       });
 
       if (request) {

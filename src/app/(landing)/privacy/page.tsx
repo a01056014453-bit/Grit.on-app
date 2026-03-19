@@ -96,16 +96,6 @@ export default function PrivacyPage() {
                     </td>
                   </tr>
                   <tr>
-                    <td className={`${tdClass} font-semibold`}>결제 및 정산</td>
-                    <td className={tdClass}>유료 서비스 결제 및 환불</td>
-                    <td className={tdClass}>
-                      결제 수단 식별정보(빌링키), 구매 내역
-                    </td>
-                    <td className={`${tdClass} font-semibold`}>
-                      5년 (전자상거래법)
-                    </td>
-                  </tr>
-                  <tr>
                     <td className={`${tdClass} font-semibold`}>
                       로그/품질 분석
                     </td>
@@ -192,10 +182,6 @@ export default function PrivacyPage() {
                 <strong>Supabase, Inc.</strong> — 데이터베이스 운영, 사용자
                 인증(Auth), 파일 저장(Storage) |{" "}
                 <strong>회원 탈퇴 시 또는 위탁 계약 종료 시까지</strong>
-              </li>
-              <li>
-                <strong>토스페이먼츠 / 포트원 (선택시)</strong> — 유료 결제 승인
-                및 정산 처리 | 결제 완료 후 5년 (전자상거래법)
               </li>
               <li>
                 <strong>알림톡/이메일 발송 업체</strong> (예: 비즈톡, 스티비 등) —
