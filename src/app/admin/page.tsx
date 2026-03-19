@@ -2,44 +2,20 @@
 
 import { useEffect, useState } from 'react';
 import { Users, Activity, Music, Brain, GraduationCap, Clock, TrendingUp, BarChart3 } from 'lucide-react';
-import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { StatCard } from '@/components/admin/stat-card';
 import { ChartCard } from '@/components/admin/chart-card';
-import { DataTable, type Column } from '@/components/admin/data-table';
-import { getDashboardStats } from '@/lib/admin/queries';
-import { mockWAUTrend, mockAIModelStats } from '@/lib/admin/mock-data';
-import type { DashboardStats, AIModelStats } from '@/lib/admin/types';
+import { getDashboardStats, getWAUTrend } from '@/lib/admin/queries';
+import type { DashboardStats } from '@/lib/admin/types';
 
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [wauTrend, setWauTrend] = useState<{ week: string; users: number }[]>([]);
 
   useEffect(() => {
     getDashboardStats().then(setStats);
+    getWAUTrend().then(setWauTrend);
   }, []);
-
-  const aiColumns: Column<AIModelStats>[] = [
-    { key: 'model', header: '모델' },
-    {
-      key: 'requests',
-      header: '요청 수',
-      render: (row) => <span className="font-number">{row.requests.toLocaleString()}</span>,
-    },
-    {
-      key: 'avgLatency',
-      header: '평균 지연(초)',
-      render: (row) => <span className="font-number">{row.avgLatency}s</span>,
-    },
-    {
-      key: 'successRate',
-      header: '성공률',
-      render: (row) => <span className="font-number text-green-600">{row.successRate}%</span>,
-    },
-    {
-      key: 'cost',
-      header: '비용(USD)',
-      render: (row) => <span className="font-number">${row.cost.toLocaleString()}</span>,
-    },
-  ];
 
   return (
     <div className="space-y-6">
@@ -49,29 +25,21 @@ export default function AdminDashboardPage() {
         <StatCard
           title="전체 사용자"
           value={stats?.totalUsers ?? '-'}
-          change="+12% 전월 대비"
-          changeType="positive"
           icon={Users}
         />
         <StatCard
           title="오늘 활성 사용자"
           value={stats?.activeUsersToday ?? '-'}
-          change="WAU 기준"
-          changeType="neutral"
           icon={Activity}
         />
         <StatCard
           title="총 연습 세션"
           value={stats?.totalPracticeSessions ?? '-'}
-          change="+8% 전주 대비"
-          changeType="positive"
           icon={Clock}
         />
         <StatCard
           title="AI 분석 건수"
           value={stats?.totalSongAnalyses ?? '-'}
-          change="+15% 전월 대비"
-          changeType="positive"
           icon={Brain}
         />
       </div>
@@ -95,17 +63,17 @@ export default function AdminDashboardPage() {
         <StatCard
           title="검증 대기"
           value={stats?.pendingVerifications ?? '-'}
-          change="처리 필요"
-          changeType="negative"
+          change={stats && stats.pendingVerifications > 0 ? '처리 필요' : undefined}
+          changeType={stats && stats.pendingVerifications > 0 ? 'negative' : undefined}
           icon={Music}
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
-        <ChartCard title="주간 활성 사용자 추이" description="최근 8주">
-          <div className="h-64">
+      <ChartCard title="주간 활성 사용자 추이" description="최근 8주 (실제 데이터)">
+        <div className="h-64">
+          {wauTrend.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={mockWAUTrend}>
+              <AreaChart data={wauTrend}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
                 <XAxis dataKey="week" tick={{ fontSize: 12 }} stroke="#9ca3af" />
                 <YAxis tick={{ fontSize: 12 }} stroke="#9ca3af" />
@@ -113,26 +81,12 @@ export default function AdminDashboardPage() {
                 <Area type="monotone" dataKey="users" stroke="#7c3aed" fill="#ede9fe" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
-          </div>
-        </ChartCard>
-
-        <ChartCard title="AI 모델별 요청량" description="월간 누적">
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={mockAIModelStats}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                <XAxis dataKey="model" tick={{ fontSize: 11 }} stroke="#9ca3af" />
-                <YAxis tick={{ fontSize: 12 }} stroke="#9ca3af" />
-                <Tooltip />
-                <Bar dataKey="requests" fill="#7c3aed" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </ChartCard>
-      </div>
-
-      <ChartCard title="AI 모델 상세 통계">
-        <DataTable columns={aiColumns} data={mockAIModelStats} />
+          ) : (
+            <div className="h-full flex items-center justify-center text-gray-400 text-sm">
+              데이터를 불러오는 중...
+            </div>
+          )}
+        </div>
       </ChartCard>
     </div>
   );

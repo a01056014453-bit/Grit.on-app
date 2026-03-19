@@ -188,6 +188,65 @@ export async function getFeedbacks() {
   return data ?? [];
 }
 
+// WAU 추이 (최근 8주)
+export async function getWAUTrend(): Promise<{ week: string; users: number }[]> {
+  const weeks: { week: string; users: number }[] = [];
+
+  for (let i = 7; i >= 0; i--) {
+    const weekEnd = new Date(Date.now() - i * 7 * 24 * 60 * 60 * 1000);
+    const weekStart = new Date(weekEnd.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    const startStr = weekStart.toISOString().split('T')[0];
+    const endStr = weekEnd.toISOString().split('T')[0];
+
+    const { data } = await supabase
+      .from('daily_rankings')
+      .select('user_id')
+      .gte('date', startStr)
+      .lt('date', endStr);
+
+    const uniqueUsers = new Set(data?.map((r) => r.user_id) ?? []).size;
+
+    const month = weekEnd.getMonth() + 1;
+    const weekNum = Math.ceil(weekEnd.getDate() / 7);
+    weeks.push({ week: `${month}월 ${weekNum}주`, users: uniqueUsers });
+  }
+
+  return weeks;
+}
+
+// CS - 피드백 요청 통계
+export async function getSupportStats() {
+  const { data: requests } = await supabase
+    .from('feedback_requests')
+    .select('id, status, created_at, student_id, profiles:student_id(nickname)')
+    .order('created_at', { ascending: false })
+    .limit(100);
+
+  return requests ?? [];
+}
+
+// 콘텐츠 통계 (녹음 + 영상)
+export async function getContentStats() {
+  const [{ data: recordings }, { data: videos }] = await Promise.all([
+    supabase
+      .from('recordings')
+      .select('id, piece_title, user_id, created_at, duration, profiles:user_id(nickname)')
+      .order('created_at', { ascending: false })
+      .limit(50),
+    supabase
+      .from('room_videos')
+      .select('id, piece_title, piece_composer, user_id, uploaded_at, user_name')
+      .order('uploaded_at', { ascending: false })
+      .limit(50),
+  ]);
+
+  return {
+    recordings: recordings ?? [],
+    videos: videos ?? [],
+  };
+}
+
 // 6. 저작권 - 녹음 & 영상
 export async function getRecordings() {
   const { data } = await supabase

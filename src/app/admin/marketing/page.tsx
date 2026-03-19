@@ -1,142 +1,120 @@
 'use client';
 
-import { useState } from 'react';
-import { Megaphone, MousePointer, UserPlus, Share2 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useEffect, useState } from 'react';
+import { Users, TrendingUp, Calendar, UserPlus } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { StatCard } from '@/components/admin/stat-card';
 import { ChartCard } from '@/components/admin/chart-card';
-import { DataTable, type Column } from '@/components/admin/data-table';
-import { StatusBadge, getStatusVariant } from '@/components/admin/status-badge';
-import { mockMarketingCampaigns, mockReferralCodes } from '@/lib/admin/mock-data';
-import type { MarketingCampaign, ReferralCode } from '@/lib/admin/types';
-import { cn } from '@/lib/utils';
+import { supabase } from '@/lib/supabase';
+
+interface SignupTrend {
+  date: string;
+  count: number;
+}
 
 export default function MarketingPage() {
-  const [tab, setTab] = useState<'campaigns' | 'referrals'>('campaigns');
+  const [totalUsers, setTotalUsers] = useState<number>(0);
+  const [thisWeekSignups, setThisWeekSignups] = useState<number>(0);
+  const [thisMonthSignups, setThisMonthSignups] = useState<number>(0);
+  const [signupTrend, setSignupTrend] = useState<SignupTrend[]>([]);
 
-  const totalImpressions = mockMarketingCampaigns.reduce((s, c) => s + c.impressions, 0);
-  const totalClicks = mockMarketingCampaigns.reduce((s, c) => s + c.clicks, 0);
-  const totalConversions = mockMarketingCampaigns.reduce((s, c) => s + c.conversions, 0);
-  const avgCTR = totalImpressions > 0 ? ((totalClicks / totalImpressions) * 100).toFixed(1) : '0';
+  useEffect(() => {
+    async function load() {
+      // 전체 사용자 수
+      const { count } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true });
+      setTotalUsers(count ?? 0);
 
-  const campaignColumns: Column<MarketingCampaign>[] = [
-    { key: 'name', header: '캠페인명', render: (row) => <span className="font-medium">{row.name}</span> },
-    {
-      key: 'channel',
-      header: '채널',
-      render: (row) => {
-        const labels: Record<string, string> = { utm: 'UTM', referral: '추천', push: '푸시', email: '이메일' };
-        return <StatusBadge label={labels[row.channel]} variant="purple" />;
-      },
-    },
-    {
-      key: 'status',
-      header: '상태',
-      render: (row) => (
-        <StatusBadge
-          label={row.status === 'active' ? '진행중' : row.status === 'paused' ? '일시정지' : '완료'}
-          variant={getStatusVariant(row.status)}
-        />
-      ),
-    },
-    { key: 'impressions', header: '노출', render: (row) => <span className="font-number">{row.impressions.toLocaleString()}</span> },
-    { key: 'clicks', header: '클릭', render: (row) => <span className="font-number">{row.clicks.toLocaleString()}</span> },
-    { key: 'conversions', header: '전환', render: (row) => <span className="font-number">{row.conversions.toLocaleString()}</span> },
-    {
-      key: 'ctr',
-      header: 'CTR',
-      render: (row) => (
-        <span className="font-number text-violet-600">
-          {row.impressions > 0 ? ((row.clicks / row.impressions) * 100).toFixed(1) : '0'}%
-        </span>
-      ),
-    },
-  ];
+      // 이번 주 가입
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const { count: weekCount } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', weekAgo);
+      setThisWeekSignups(weekCount ?? 0);
 
-  const referralColumns: Column<ReferralCode>[] = [
-    { key: 'code', header: '코드', render: (row) => <span className="font-mono font-medium text-violet-600">{row.code}</span> },
-    { key: 'ownerName', header: '소유자', render: (row) => row.ownerName },
-    { key: 'usageCount', header: '사용', render: (row) => <span className="font-number">{row.usageCount}</span> },
-    { key: 'conversionCount', header: '전환', render: (row) => <span className="font-number">{row.conversionCount}</span> },
-    {
-      key: 'conversionRate',
-      header: '전환율',
-      render: (row) => (
-        <span className="font-number text-green-600">
-          {row.usageCount > 0 ? ((row.conversionCount / row.usageCount) * 100).toFixed(0) : '0'}%
-        </span>
-      ),
-    },
-    {
-      key: 'isActive',
-      header: '상태',
-      render: (row) => <StatusBadge label={row.isActive ? '활성' : '비활성'} variant={row.isActive ? 'success' : 'neutral'} />,
-    },
-  ];
+      // 이번 달 가입
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+      const { count: monthCount } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', monthStart.toISOString());
+      setThisMonthSignups(monthCount ?? 0);
 
-  const chartData = mockMarketingCampaigns.map((c) => ({
-    name: c.name.length > 12 ? c.name.slice(0, 12) + '...' : c.name,
-    클릭: c.clicks,
-    전환: c.conversions,
-  }));
+      // 최근 30일 가입 추이
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const { data: recentUsers } = await supabase
+        .from('profiles')
+        .select('created_at')
+        .gte('created_at', thirtyDaysAgo)
+        .order('created_at', { ascending: true });
+
+      const byDate: Record<string, number> = {};
+      (recentUsers ?? []).forEach((u) => {
+        if (!u.created_at) return;
+        const date = new Date(u.created_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
+        byDate[date] = (byDate[date] ?? 0) + 1;
+      });
+
+      setSignupTrend(
+        Object.entries(byDate).map(([date, count]) => ({ date, count }))
+      );
+    }
+    load();
+  }, []);
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-bold text-gray-900">마케팅</h1>
+      <h1 className="text-xl font-bold text-gray-900">사용자 성장</h1>
 
-      <div className="flex gap-2">
-        {(['campaigns', 'referrals'] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={cn(
-              'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
-              tab === t ? 'bg-violet-100 text-violet-700' : 'text-gray-500 hover:bg-gray-100',
-            )}
-          >
-            {t === 'campaigns' ? '캠페인' : '추천 코드'}
-          </button>
-        ))}
+      <div className="grid grid-cols-4 gap-4">
+        <StatCard
+          title="전체 사용자"
+          value={totalUsers}
+          icon={Users}
+        />
+        <StatCard
+          title="이번 주 가입"
+          value={thisWeekSignups}
+          icon={UserPlus}
+          changeType={thisWeekSignups > 0 ? 'positive' : undefined}
+        />
+        <StatCard
+          title="이번 달 가입"
+          value={thisMonthSignups}
+          icon={Calendar}
+        />
+        <StatCard
+          title="일 평균 가입"
+          value={signupTrend.length > 0
+            ? Math.round(signupTrend.reduce((s, d) => s + d.count, 0) / signupTrend.length)
+            : '-'}
+          icon={TrendingUp}
+        />
       </div>
 
-      {tab === 'campaigns' && (
-        <>
-          <div className="grid grid-cols-4 gap-4">
-            <StatCard title="총 노출" value={totalImpressions.toLocaleString()} icon={Megaphone} />
-            <StatCard title="총 클릭" value={totalClicks.toLocaleString()} icon={MousePointer} />
-            <StatCard title="총 전환" value={totalConversions.toLocaleString()} icon={UserPlus} changeType="positive" />
-            <StatCard title="평균 CTR" value={`${avgCTR}%`} icon={MousePointer} />
-          </div>
-
-          <ChartCard title="캠페인별 클릭/전환">
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                  <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#9ca3af" />
-                  <YAxis tick={{ fontSize: 12 }} stroke="#9ca3af" />
-                  <Tooltip />
-                  <Bar dataKey="클릭" fill="#7c3aed" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="전환" fill="#22c55e" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+      <ChartCard title="최근 30일 가입 추이" description="실제 데이터">
+        <div className="h-64">
+          {signupTrend.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={signupTrend}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="#9ca3af" />
+                <YAxis tick={{ fontSize: 12 }} stroke="#9ca3af" allowDecimals={false} />
+                <Tooltip />
+                <Area type="monotone" dataKey="count" stroke="#7c3aed" fill="#ede9fe" strokeWidth={2} name="가입자" />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-full flex items-center justify-center text-gray-400 text-sm">
+              데이터를 불러오는 중...
             </div>
-          </ChartCard>
-
-          <DataTable columns={campaignColumns} data={mockMarketingCampaigns} />
-        </>
-      )}
-
-      {tab === 'referrals' && (
-        <>
-          <div className="grid grid-cols-3 gap-4">
-            <StatCard title="활성 코드" value={mockReferralCodes.filter((r) => r.isActive).length} icon={Share2} />
-            <StatCard title="총 사용" value={mockReferralCodes.reduce((s, r) => s + r.usageCount, 0)} icon={UserPlus} />
-            <StatCard title="총 전환" value={mockReferralCodes.reduce((s, r) => s + r.conversionCount, 0)} icon={UserPlus} changeType="positive" />
-          </div>
-          <DataTable columns={referralColumns} data={mockReferralCodes} />
-        </>
-      )}
+          )}
+        </div>
+      </ChartCard>
     </div>
   );
 }

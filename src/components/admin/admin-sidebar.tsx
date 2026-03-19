@@ -22,11 +22,11 @@ const navItems = [
   { label: '사용자 관리', href: '/admin/users', icon: Users },
   { label: '곡 DB / AI', href: '/admin/music-db', icon: Music },
   { label: '학술자료 DB', href: '/admin/composer-resources', icon: BookOpen },
-  { label: '랭킹 / 경제', href: '/admin/ranking-economy', icon: Trophy },
-  { label: '저작권', href: '/admin/copyright', icon: Shield },
+  { label: '랭킹', href: '/admin/ranking-economy', icon: Trophy },
+  { label: '콘텐츠 관리', href: '/admin/copyright', icon: Shield },
   { label: 'CS 지원', href: '/admin/support', icon: Headphones },
   { label: '보안', href: '/admin/security', icon: Lock },
-  { label: '마케팅', href: '/admin/marketing', icon: Megaphone },
+  { label: '사용자 성장', href: '/admin/marketing', icon: Megaphone },
 ];
 
 export function AdminSidebar() {
