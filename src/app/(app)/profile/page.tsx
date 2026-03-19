@@ -12,9 +12,7 @@ import {
   Globe,
   LogOut,
   ChevronRight,
-  Crown,
   Check,
-  Sparkles,
   Clock,
   Flame,
   Trophy,
@@ -39,7 +37,6 @@ import { useTeacherMode } from "@/hooks/useTeacherMode";
 import { updateTeacherProfile } from "@/lib/teacher-store";
 import { TeacherVerificationStatus } from "@/types";
 import BlurText from "@/components/reactbits/BlurText";
-import GradientText from "@/components/reactbits/GradientText";
 import { getUserAnalyses } from "@/lib/user-analyses";
 import { getAnalyzedPieces } from "@/lib/queries/pieces";
 import { createClient } from "@/lib/supabase-browser";
@@ -226,7 +223,6 @@ export default function ProfilePage() {
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
-  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [isPhotoMenuOpen, setIsPhotoMenuOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -763,41 +759,6 @@ export default function ProfilePage() {
         </div>
       </motion.div>
 
-      {/* ─── Subscription Card ─── */}
-      <motion.div
-        className="bg-gradient-to-r from-primary to-purple-600 rounded-3xl p-4 mb-6 text-white"
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.05, ease: "easeOut" }}
-      >
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <Crown className="w-4 h-4" />
-              <GradientText
-                colors={["#ffffff", "#e9d5ff", "#ffffff"]}
-                animationSpeed={5}
-                className="text-sm font-medium !mx-0"
-              >
-                {profile.plan === "free" ? "무료 플랜" : "Pro 플랜"}
-              </GradientText>
-            </div>
-            <p className="text-xs text-white/80 mt-1">
-              {profile.plan === "free"
-                ? "Pro로 업그레이드하여 무제한 분석을 이용하세요"
-                : "무제한 분석 이용 중"}
-            </p>
-          </div>
-          {profile.plan === "free" && (
-            <button
-              onClick={() => setIsUpgradeModalOpen(true)}
-              className="bg-white text-primary text-xs font-semibold px-3 py-1.5 rounded-full shadow-sm hover:bg-gray-50 transition-colors"
-            >
-              업그레이드
-            </button>
-          )}
-        </div>
-      </motion.div>
 
       {/* ─── Teacher Section ─── */}
       <motion.div
@@ -1446,58 +1407,6 @@ export default function ProfilePage() {
         </div>
       </Modal>
 
-      {/* Upgrade Modal */}
-      <Modal
-        isOpen={isUpgradeModalOpen}
-        onClose={() => setIsUpgradeModalOpen(false)}
-        title="Pro 플랜"
-      >
-        <div className="p-4">
-          <div className="text-center mb-6">
-            <div className="w-16 h-16 bg-gradient-to-r from-primary to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <Crown className="w-8 h-8 text-white" />
-            </div>
-            <h3 className="text-xl font-bold text-gray-900">Sempre Pro</h3>
-            <p className="text-gray-500 mt-1">무제한 AI 분석으로 실력을 높이세요</p>
-          </div>
-
-          <div className="space-y-3 mb-6">
-            {[
-              "무제한 AI 연습 분석",
-              "상세 진도 리포트",
-              "맞춤형 연습 계획",
-              "클라우드 녹음 저장",
-              "광고 제거",
-            ].map((feature, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
-                  <Check className="w-3 h-3 text-green-600" />
-                </div>
-                <span className="text-sm text-gray-700">{feature}</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="bg-gray-50 rounded-xl p-4 mb-4">
-            <div className="flex items-baseline justify-center gap-1">
-              <span className="text-3xl font-bold text-gray-900">₩9,900</span>
-              <span className="text-gray-500">/월</span>
-            </div>
-            <p className="text-xs text-gray-500 text-center mt-1">언제든지 취소 가능</p>
-          </div>
-
-          <button
-            onClick={() => {
-              alert("결제 기능은 추후 구현 예정입니다.");
-              setIsUpgradeModalOpen(false);
-            }}
-            className="w-full py-3 bg-gradient-to-r from-primary to-purple-600 text-white rounded-xl font-semibold flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
-          >
-            <Sparkles className="w-4 h-4" />
-            Pro 시작하기
-          </button>
-        </div>
-      </Modal>
 
       {/* 회원탈퇴 확인 모달 */}
       <Modal
