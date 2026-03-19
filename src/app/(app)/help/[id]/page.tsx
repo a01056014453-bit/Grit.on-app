@@ -10,7 +10,6 @@ import {
   Play,
   Pause,
   Clock,
-  Coins,
   MessageSquare,
   User,
   CheckCircle,
@@ -155,10 +154,9 @@ export default function HelpRequestDetailPage() {
             {request.status === "open" ? "모집 중" : request.status === "reviewing" ? "검토 중" : "완료"}
           </p>
         </div>
-        <div className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-amber-100 text-amber-700">
-          <Coins className="w-4 h-4" />
-          <span className="text-sm font-bold">{request.credit}</span>
-        </div>
+        <span className="text-xs font-medium text-green-600 bg-green-50 px-2.5 py-1 rounded-full">
+          무료
+        </span>
       </div>
 
       {/* Request Info */}
@@ -386,16 +384,6 @@ export default function HelpRequestDetailPage() {
               <p className="text-sm text-muted-foreground">
                 채택한 제안의 연습 카드가 오늘의 연습 플랜에 자동으로 추가됩니다.
               </p>
-            </div>
-
-            <div className="bg-secondary/50 rounded-xl p-3 mb-4">
-              <p className="text-xs text-muted-foreground mb-1">크레딧 분배</p>
-              <div className="flex justify-between text-sm">
-                <span>채택 보너스</span>
-                <span className="text-primary font-bold">
-                  {(request.credit * 0.7).toFixed(1)} 크레딧 지급
-                </span>
-              </div>
             </div>
 
             <div className="flex gap-2">

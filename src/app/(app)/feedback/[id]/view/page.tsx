@@ -254,7 +254,7 @@ export default function FeedbackViewPage() {
               )}
             </button>
             <p className="text-xs text-center text-muted-foreground mt-2">
-              확인 완료 시 선생님에게 크레딧이 지급됩니다
+              확인 완료 시 피드백이 마무리됩니다
             </p>
           </div>
         </div>
@@ -265,7 +265,7 @@ export default function FeedbackViewPage() {
           <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2" />
           <p className="font-medium text-green-700">피드백이 완료되었습니다</p>
           <p className="text-sm text-green-600 mt-1">
-            선생님에게 {request.creditAmount} 크레딧이 지급되었습니다
+            연습 처방전을 참고해서 연습해보세요!
           </p>
         </div>
       )}

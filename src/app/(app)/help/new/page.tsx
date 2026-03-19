@@ -11,7 +11,6 @@ import {
   Video,
   Music,
   Clock,
-  Coins,
   Shield,
   Eye,
   EyeOff,
@@ -48,14 +47,14 @@ export default function NewHelpRequestPage() {
   const [problemType, setProblemType] = useState("");
   const [description, setDescription] = useState("");
   const [deadline, setDeadline] = useState(48);
-  const [credit, setCredit] = useState(3);
+  const credit = 0; // 무료 서비스
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [faceBlur, setFaceBlur] = useState(true);
   const [anonymous, setAnonymous] = useState(true);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [step, setStep] = useState(1); // 1: 정보 입력, 2: 영상 업로드, 3: 결제 확인
+  const [step, setStep] = useState(1); // 1: 정보 입력, 2: 영상 업로드, 3: 확인
 
   const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -366,7 +365,7 @@ export default function NewHelpRequestPage() {
             onClick={() => setStep(3)}
             className="w-full py-4 rounded-xl bg-primary text-white font-semibold"
           >
-            다음: 크레딧 설정
+            다음: 요청 확인
           </button>
         </div>
       )}
@@ -398,52 +397,6 @@ export default function NewHelpRequestPage() {
             </div>
           </div>
 
-          {/* Credit */}
-          <div>
-            <h2 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-3">
-              <Coins className="w-4 h-4 text-amber-500" />
-              예치 크레딧
-            </h2>
-
-            <div className="bg-card rounded-xl border border-border p-4">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-3xl font-bold text-foreground">{credit}</span>
-                <span className="text-sm text-muted-foreground">크레딧</span>
-              </div>
-
-              <input
-                type="range"
-                min={2}
-                max={5}
-                value={credit}
-                onChange={(e) => setCredit(Number(e.target.value))}
-                className="w-full h-2 bg-secondary rounded-full appearance-none cursor-pointer accent-primary"
-              />
-
-              <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-                <span>2</span>
-                <span>3</span>
-                <span>4</span>
-                <span>5</span>
-              </div>
-            </div>
-
-            {/* Credit Distribution */}
-            <div className="mt-3 p-4 bg-secondary/50 rounded-xl">
-              <p className="text-xs font-medium text-foreground mb-2">크레딧 분배 예상</p>
-              <div className="space-y-1.5 text-xs text-muted-foreground">
-                <div className="flex justify-between">
-                  <span>참여 보상 (최대 {maxParticipants}명)</span>
-                  <span>각 {participationReward} 크레딧</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>채택 보너스</span>
-                  <span className="text-primary font-medium">{bonusReward.toFixed(1)} 크레딧</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
           {/* Summary */}
           <div className="bg-card rounded-xl border border-border p-4">
             <h3 className="text-sm font-semibold text-foreground mb-3">요청 요약</h3>
@@ -466,20 +419,7 @@ export default function NewHelpRequestPage() {
                 <span className="text-muted-foreground">마감</span>
                 <span className="text-foreground font-medium">{deadline}시간</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">예치 크레딧</span>
-                <span className="text-amber-600 font-bold">{credit} 크레딧</span>
-              </div>
             </div>
-          </div>
-
-          {/* Info */}
-          <div className="p-3 bg-blue-50 rounded-xl border border-blue-200">
-            <p className="text-xs text-blue-800 flex items-start gap-2">
-              <Info className="w-4 h-4 shrink-0 mt-0.5" />
-              크레딧은 에스크로에 보관되며, 채택 완료 시 전문가에게 지급됩니다.
-              마감 후 1건은 반드시 채택해야 합니다.
-            </p>
           </div>
 
           {/* Submit Button */}
@@ -488,7 +428,7 @@ export default function NewHelpRequestPage() {
             disabled={isSubmitting}
             className="w-full py-4 rounded-xl bg-gradient-to-r from-primary to-violet-600 text-white font-semibold disabled:opacity-50"
           >
-            {isSubmitting ? "요청 생성 중..." : `${credit} 크레딧으로 요청 생성`}
+            {isSubmitting ? "요청 생성 중..." : "도움 요청 생성"}
           </button>
         </div>
       )}

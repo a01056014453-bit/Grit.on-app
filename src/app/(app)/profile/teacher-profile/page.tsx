@@ -20,7 +20,6 @@ import {
   Star,
   Clock,
   MapPin,
-  CreditCard,
 } from "lucide-react";
 import { TeacherProfileData } from "@/types";
 import {
@@ -69,7 +68,7 @@ export default function TeacherProfileEditPage() {
   const [bio, setBio] = useState("");
   const [lessonTarget, setLessonTarget] = useState<string[]>([]);
   const [availableDays, setAvailableDays] = useState<string[]>([]);
-  const [priceCredits, setPriceCredits] = useState(30);
+  const priceCredits = 0;
   const [education, setEducation] = useState<{ school: string; degree: string; major: string; year?: number }[]>([]);
   const [awards, setAwards] = useState<{ competition: string; prize: string; year: number }[]>([]);
   const [performances, setPerformances] = useState<{ title: string; venue?: string; year: number }[]>([]);
@@ -88,7 +87,6 @@ export default function TeacherProfileEditPage() {
     setBio(data.bio);
     setLessonTarget(data.lessonTarget);
     setAvailableDays(data.availableDays);
-    setPriceCredits(data.priceCredits);
     setEducation(data.career.education);
     setAwards(data.career.awards);
     setPerformances(data.career.performances);
@@ -224,8 +222,8 @@ export default function TeacherProfileEditPage() {
               {/* Stats Row */}
               <div className="grid grid-cols-3 gap-3 mt-4 py-3 border-y border-gray-100">
                 <div className="text-center">
-                  <p className="text-lg font-bold text-gray-900">{priceCredits}</p>
-                  <p className="text-xs text-gray-500">크레딧/회</p>
+                  <p className="text-lg font-bold text-green-600">무료</p>
+                  <p className="text-xs text-gray-500">피드백</p>
                 </div>
                 <div className="text-center">
                   <p className="text-lg font-bold text-gray-900">{teachingExperience}</p>
@@ -688,29 +686,6 @@ export default function TeacherProfileEditPage() {
           </div>
         </div>
 
-        {/* Price */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-1.5">
-            <CreditCard className="w-4 h-4 text-orange-600" />
-            레슨 비용
-          </h3>
-          <div className="space-y-3">
-            <input
-              type="range"
-              min={10}
-              max={200}
-              step={5}
-              value={priceCredits}
-              onChange={(e) => setPriceCredits(parseInt(e.target.value))}
-              className="w-full accent-orange-600"
-            />
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-400">10 크레딧</span>
-              <span className="text-lg font-bold text-orange-600">{priceCredits} 크레딧</span>
-              <span className="text-xs text-gray-400">200 크레딧</span>
-            </div>
-          </div>
-        </div>
 
         {/* Bio / Lesson Philosophy */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">

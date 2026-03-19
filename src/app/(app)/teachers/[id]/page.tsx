@@ -12,7 +12,6 @@ import {
   BadgeCheck,
   Zap,
   Award,
-  Coins,
   MessageSquare,
   Play,
   Quote,
@@ -400,19 +399,11 @@ export default function TeacherDetailPage() {
 
       <div className="fixed bottom-20 left-0 right-0 px-4 py-3 bg-background/80 backdrop-blur-lg border-t border-border">
         <div className="max-w-lg mx-auto">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-muted-foreground">피드백 요청 비용</span>
-            <div className="flex items-center gap-1 text-primary">
-              <Coins className="w-5 h-5" />
-              <span className="text-lg font-bold">{teacher.priceCredits}</span>
-              <span className="text-sm">크레딧</span>
-            </div>
-          </div>
           <Link
             href={`/feedback/new?teacherId=${teacher.id}`}
             className="block w-full py-4 rounded-xl bg-gradient-to-r from-primary to-violet-600 text-white font-semibold text-center shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-shadow"
           >
-            이 선생님에게 요청하기
+            이 선생님에게 피드백 요청하기
           </Link>
         </div>
       </div>

@@ -13,7 +13,6 @@ import {
   MessageSquare,
   Send,
   AlertCircle,
-  Coins,
 } from "lucide-react";
 import { RequestStatusChip } from "@/components/feedback/request-status-chip";
 import { getFeedbackRequestById, updateFeedbackRequestStatus } from "@/lib/queries";
@@ -261,16 +260,9 @@ export default function InboxDetailPage() {
       </div>
 
       <div className="bg-gradient-to-br from-primary/5 to-violet-500/5 rounded-xl p-4 border border-primary/10 mb-4">
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">피드백 보상</span>
-          <div className="flex items-center gap-1 text-primary">
-            <Coins className="w-5 h-5" />
-            <span className="text-xl font-bold">{request.creditAmount}</span>
-            <span className="text-sm">크레딧</span>
-          </div>
-        </div>
-        <p className="text-xs text-muted-foreground mt-2">
-          피드백 완료 확인 후 크레딧이 지급됩니다
+        <p className="text-sm text-foreground font-medium">무료 피드백</p>
+        <p className="text-xs text-muted-foreground mt-1">
+          피드백 완료 시 학생에게 알림이 전송됩니다
         </p>
       </div>
 

@@ -46,7 +46,7 @@ const SLIDES: Slide[] = [
     bgLight: "#FDF2F8",
     title: "어려운 구간,\n전문가에게 물어보세요",
     desc: "막히는 부분을 짧게 녹화해서 전송하면 48시간 내에 전문 선생님의 코멘트를 받을 수 있어요.",
-    badge: "크레딧 1개 사용",
+    badge: "무료",
     visual: "feedback",
   },
   {
@@ -209,9 +209,8 @@ function FeedbackFlowVisual() {
                 <span className="text-[8px] text-gray-400">4.9</span>
               </div>
             </div>
-            <div className="ml-auto flex items-center gap-0.5 text-violet-600">
-              <span className="text-[9px] font-bold">3</span>
-              <span className="text-[8px]">크레딧</span>
+            <div className="ml-auto flex items-center gap-0.5 text-green-600">
+              <span className="text-[9px] font-bold">무료</span>
             </div>
           </div>
           <p className="text-[9px] text-gray-500 leading-relaxed">왼손 터치를 좀 더 가볍게, 손목 힘을 빼보세요</p>

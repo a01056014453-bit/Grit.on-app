@@ -10,7 +10,6 @@ import {
   Zap,
   Award,
   ChevronRight,
-  Coins,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -67,11 +66,10 @@ export function TeacherCard({ teacher, showCTA = true }: TeacherCardProps) {
           </p>
         </div>
 
-        {/* Price */}
-        <div className="flex items-center gap-1 text-primary shrink-0">
-          <Coins className="w-4 h-4" />
-          <span className="font-bold">{teacher.priceCredits}</span>
-        </div>
+        {/* Free badge */}
+        <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full shrink-0">
+          무료
+        </span>
       </div>
 
       {/* Badges */}

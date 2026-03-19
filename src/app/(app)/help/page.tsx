@@ -8,7 +8,6 @@ import {
   Clock,
   CheckCircle,
   Users,
-  Coins,
   ChevronRight,
   Play,
   MessageSquare,
@@ -190,10 +189,6 @@ export default function HelpRequestPage() {
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 font-medium">
                       {typeLabel}
                     </span>
-                  </div>
-                  <div className="flex items-center gap-1 text-amber-600">
-                    <Coins className="w-3.5 h-3.5" />
-                    <span className="text-xs font-bold">{request.credit}</span>
                   </div>
                 </div>
 

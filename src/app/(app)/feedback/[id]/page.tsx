@@ -224,7 +224,7 @@ export default function FeedbackDetailPage() {
                 <p className="text-sm text-red-600 mt-1">{request.declineReason}</p>
               )}
               <p className="text-sm text-red-600 mt-2">
-                크레딧이 자동으로 환불되었습니다.
+                다른 선생님에게 다시 요청할 수 있습니다.
               </p>
             </div>
           </div>
@@ -333,34 +333,6 @@ export default function FeedbackDetailPage() {
         </Link>
       )}
 
-      <div className="mt-4 p-3 bg-secondary/50 rounded-xl">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">결제 금액</span>
-          <span className="font-bold text-foreground">{request.creditAmount} 크레딧</span>
-        </div>
-        <div className="flex items-center justify-between text-xs mt-1">
-          <span className="text-muted-foreground">결제 상태</span>
-          <span
-            className={
-              request.paymentStatus === "held"
-                ? "text-amber-600"
-                : request.paymentStatus === "released"
-                ? "text-green-600"
-                : request.paymentStatus === "refunded"
-                ? "text-blue-600"
-                : "text-muted-foreground"
-            }
-          >
-            {request.paymentStatus === "held"
-              ? "에스크로 보관중"
-              : request.paymentStatus === "released"
-              ? "지급 완료"
-              : request.paymentStatus === "refunded"
-              ? "환불 완료"
-              : "대기중"}
-          </span>
-        </div>
-      </div>
     </div>
   );
 }

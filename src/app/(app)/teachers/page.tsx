@@ -4,18 +4,17 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { safeBack } from "@/lib/navigation";
 import Link from "next/link";
-import { Users, Search, SlidersHorizontal, Star, Clock, Coins, X, ArrowLeft, Inbox, ChevronRight } from "lucide-react";
+import { Users, Search, SlidersHorizontal, Star, Clock, X, ArrowLeft, Inbox, ChevronRight } from "lucide-react";
 import { TeacherCard } from "@/components/feedback/teacher-card";
 import { getTeachers } from "@/lib/queries";
 import { Teacher } from "@/types";
 
-type SortOption = "rating" | "price" | "responseTime" | "completedCount";
+type SortOption = "rating" | "responseTime" | "completedCount";
 
 const sortOptions: { value: SortOption; label: string }[] = [
   { value: "rating", label: "평점순" },
   { value: "completedCount", label: "인기순" },
   { value: "responseTime", label: "응답속도순" },
-  { value: "price", label: "가격순" },
 ];
 
 const specialtyFilters = [
@@ -35,7 +34,7 @@ export default function TeachersPage() {
   const [sortBy, setSortBy] = useState<SortOption>("rating");
   const [showFilters, setShowFilters] = useState(false);
   const [minRating, setMinRating] = useState<number | undefined>(undefined);
-  const [maxPrice, setMaxPrice] = useState<number | undefined>(undefined);
+  // maxPrice removed — app is free
   const [allTeachers, setAllTeachers] = useState<Teacher[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -69,10 +68,6 @@ export default function TeachersPage() {
       result = result.filter((t) => t.rating >= minRating);
     }
 
-    if (maxPrice) {
-      result = result.filter((t) => t.priceCredits <= maxPrice);
-    }
-
     if (searchQuery) {
       const lowerQuery = searchQuery.toLowerCase();
       result = result.filter(
@@ -87,9 +82,6 @@ export default function TeachersPage() {
       case "rating":
         result.sort((a, b) => b.rating - a.rating);
         break;
-      case "price":
-        result.sort((a, b) => a.priceCredits - b.priceCredits);
-        break;
       case "responseTime":
         result.sort((a, b) => a.avgResponseTime - b.avgResponseTime);
         break;
@@ -99,16 +91,15 @@ export default function TeachersPage() {
     }
 
     return result;
-  }, [allTeachers, selectedSpecialty, sortBy, minRating, maxPrice, searchQuery]);
+  }, [allTeachers, selectedSpecialty, sortBy, minRating, searchQuery]);
 
   const clearFilters = () => {
     setMinRating(undefined);
-    setMaxPrice(undefined);
     setSelectedSpecialty("전체");
     setSearchQuery("");
   };
 
-  const hasActiveFilters = minRating || maxPrice || selectedSpecialty !== "전체";
+  const hasActiveFilters = minRating || selectedSpecialty !== "전체";
 
   // 실제 통계 계산
   const avgRating = useMemo(() => {
@@ -233,29 +224,6 @@ export default function TeachersPage() {
             </div>
           </div>
 
-          <div>
-            <label className="text-xs text-gray-500 mb-1.5 block">
-              최대 가격
-            </label>
-            <div className="flex gap-2">
-              {[30, 50, 70].map((price) => (
-                <button
-                  key={price}
-                  onClick={() =>
-                    setMaxPrice(maxPrice === price ? undefined : price)
-                  }
-                  className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                    maxPrice === price
-                      ? "bg-violet-100 text-violet-700 border border-violet-200"
-                      : "bg-white/40 text-gray-600 hover:bg-white/60"
-                  }`}
-                >
-                  <Coins className="w-3 h-3" />
-                  {price} 이하
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
       )}
 

@@ -155,8 +155,8 @@ export default function InboxPage() {
                       {PROBLEM_TYPE_LABELS[request.problemType]}
                     </span>
                   </div>
-                  <span className="text-xs text-muted-foreground">
-                    {request.creditAmount} 크레딧
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-medium">
+                    무료
                   </span>
                 </div>
 

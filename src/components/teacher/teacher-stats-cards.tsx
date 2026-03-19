@@ -1,6 +1,6 @@
 "use client";
 
-import { Users, Inbox, CheckCircle, Coins } from "lucide-react";
+import { Users, Inbox, CheckCircle, Star } from "lucide-react";
 import { TeacherDashboardStats } from "@/types";
 
 interface TeacherStatsCardsProps {
@@ -35,10 +35,10 @@ export function TeacherStatsCards({ stats }: TeacherStatsCardsProps) {
       bg: "bg-green-100/60",
     },
     {
-      icon: Coins,
-      label: "총 수익",
-      value: stats.totalCreditsEarned,
-      unit: "C",
+      icon: Star,
+      label: "평균 평점",
+      value: stats.totalCreditsEarned > 0 ? "4.8" : "-",
+      unit: "",
       color: "text-amber-600",
       bg: "bg-amber-100/60",
     },

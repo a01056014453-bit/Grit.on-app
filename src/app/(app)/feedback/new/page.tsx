@@ -9,7 +9,6 @@ import {
   Upload,
   Video,
   Music,
-  Coins,
   Shield,
   Eye,
   EyeOff,
@@ -71,7 +70,7 @@ function NewFeedbackRequestContent() {
   const [faceBlur, setFaceBlur] = useState(true);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [step, setStep] = useState(1); // 1: 선생님 확인, 2: 곡 정보, 3: 영상 업로드, 4: 결제 확인
+  const [step, setStep] = useState(1); // 1: 선생님 확인, 2: 곡 정보, 3: 영상 업로드
 
   useEffect(() => {
     if (teacherId) {
@@ -233,12 +232,7 @@ function NewFeedbackRequestContent() {
             </div>
 
             <div className="flex items-center justify-between pt-3 border-t border-border">
-              <span className="text-sm text-muted-foreground">피드백 비용</span>
-              <div className="flex items-center gap-1 text-primary">
-                <Coins className="w-4 h-4" />
-                <span className="font-bold">{teacher.priceCredits}</span>
-                <span className="text-sm">크레딧</span>
-              </div>
+              <span className="text-xs text-green-600 font-medium bg-green-50 px-2 py-0.5 rounded-full">무료 피드백</span>
             </div>
           </div>
 
@@ -444,94 +438,11 @@ function NewFeedbackRequestContent() {
           </div>
 
           <button
-            onClick={() => setStep(4)}
-            disabled={!canProceed()}
-            className="w-full py-4 rounded-xl bg-primary text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            다음: 결제 확인
-          </button>
-        </div>
-      )}
-
-      {/* Step 4: 결제 확인 */}
-      {step === 4 && teacher && (
-        <div className="space-y-5">
-          {/* Summary */}
-          <div className="bg-card rounded-xl border border-border p-4">
-            <h3 className="text-sm font-semibold text-foreground mb-3">요청 요약</h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">선생님</span>
-                <span className="text-foreground font-medium">{teacher.name}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">곡</span>
-                <span className="text-foreground font-medium">
-                  {composer} - {piece}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">구간</span>
-                <span className="text-foreground font-medium">
-                  {measureStart}-{measureEnd} 마디
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">문제 유형</span>
-                <span className="text-foreground font-medium">
-                  {problemType && PROBLEM_TYPE_LABELS[problemType as ProblemType]}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Payment Info */}
-          <div className="bg-gradient-to-br from-primary/5 to-violet-500/5 rounded-xl p-4 border border-primary/10">
-            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-              <Lock className="w-4 h-4 text-primary" />
-              에스크로 결제
-            </h3>
-
-            <div className="flex items-center justify-between p-3 bg-white/60 rounded-lg mb-3">
-              <span className="text-sm text-muted-foreground">결제 금액</span>
-              <div className="flex items-center gap-1 text-primary">
-                <Coins className="w-5 h-5" />
-                <span className="text-xl font-bold">{teacher.priceCredits}</span>
-                <span className="text-sm">크레딧</span>
-              </div>
-            </div>
-
-            <div className="space-y-2 text-xs text-muted-foreground">
-              <div className="flex items-start gap-2">
-                <CheckCircle className="w-3.5 h-3.5 text-green-500 mt-0.5 shrink-0" />
-                <span>선생님 수락 시까지 크레딧이 안전하게 보관됩니다</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <CheckCircle className="w-3.5 h-3.5 text-green-500 mt-0.5 shrink-0" />
-                <span>선생님이 거절하거나 12시간 내 응답이 없으면 자동 환불됩니다</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <CheckCircle className="w-3.5 h-3.5 text-green-500 mt-0.5 shrink-0" />
-                <span>피드백 완료 확인 후 선생님에게 크레딧이 지급됩니다</span>
-              </div>
-            </div>
-          </div>
-
-          {/* SLA Info */}
-          <div className="p-3 bg-blue-50 rounded-xl border border-blue-200">
-            <p className="text-xs text-blue-800 flex items-start gap-2">
-              <Info className="w-4 h-4 shrink-0 mt-0.5" />
-              선생님은 요청 수신 후 12시간 내에 수락/거절하며, 수락 시 48시간 내에 피드백을 제출합니다.
-            </p>
-          </div>
-
-          {/* Submit Button */}
-          <button
             onClick={handleSubmit}
-            disabled={isSubmitting}
-            className="w-full py-4 rounded-xl bg-gradient-to-r from-primary to-violet-600 text-white font-semibold disabled:opacity-50"
+            disabled={isSubmitting || !canProceed()}
+            className="w-full py-4 rounded-xl bg-gradient-to-r from-primary to-violet-600 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSubmitting ? "요청 전송 중..." : `${teacher.priceCredits} 크레딧으로 요청 보내기`}
+            {isSubmitting ? "요청 전송 중..." : "피드백 요청 보내기"}
           </button>
         </div>
       )}

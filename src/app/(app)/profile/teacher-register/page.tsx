@@ -226,7 +226,7 @@ export default function TeacherRegisterPage() {
             </h2>
             <p className="text-gray-500 text-sm">
               학생들에게 원포인트 레슨을 제공하고<br />
-              크레딧을 받을 수 있습니다.
+              피드백으로 도움을 줄 수 있습니다.
             </p>
           </div>
 

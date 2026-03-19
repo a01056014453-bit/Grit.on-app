@@ -46,8 +46,8 @@ export function LessonRequestCard({ request }: LessonRequestCardProps) {
             {PROBLEM_TYPE_LABELS[request.problemType]}
           </span>
         </div>
-        <span className="text-xs text-gray-400 font-medium">
-          {request.creditAmount}C
+        <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-100/80 text-green-700 font-medium">
+          무료
         </span>
       </div>
 
