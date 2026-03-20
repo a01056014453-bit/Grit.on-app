@@ -108,16 +108,26 @@ function getApplicantInstrument(): string {
   return "피아노";
 }
 
-export function submitVerification(documents: TeacherDocument[], aiReview?: AIReview): TeacherVerification {
+export interface SubmitVerificationInput {
+  documents: TeacherDocument[];
+  realName: string;
+  specialty: string[];
+  phone?: string;
+  aiReview?: AIReview;
+}
+
+export function submitVerification(input: SubmitVerificationInput): TeacherVerification {
+  const { documents, realName, specialty, aiReview } = input;
   const id = crypto.randomUUID();
   const verification: TeacherVerification = {
     id,
-    applicantName: getApplicantName(),
-    specialty: [getApplicantInstrument()],
+    applicantName: realName || getApplicantName(),
+    specialty: specialty.length > 0 ? specialty : [getApplicantInstrument()],
     status: "pending",
     documents,
     appliedAt: new Date().toISOString(),
     aiReview,
+    phone: input.phone,
   };
   saveVerification(verification);
   // Also add to admin-visible list
@@ -148,6 +158,7 @@ async function submitVerificationToSupabase(v: TeacherVerification): Promise<voi
       id: v.id,
       name: v.applicantName,
       specialty: v.specialty,
+      phone: v.phone ?? null,
       documents: v.documents.map((d) => ({ id: d.id, type: d.type, fileName: d.fileName, uploadedAt: d.uploadedAt })),
       aiReview: v.aiReview ?? null,
       appliedAt: v.appliedAt,

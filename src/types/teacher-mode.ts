@@ -34,6 +34,7 @@ export interface TeacherVerification {
   id: string;
   applicantName: string;
   specialty: string[];
+  phone?: string;
   status: TeacherVerificationStatus;
   documents: TeacherDocument[];
   appliedAt?: string;
