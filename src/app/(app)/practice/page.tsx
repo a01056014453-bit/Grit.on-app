@@ -350,7 +350,9 @@ function PracticePageContent() {
       setCompletedDrills(new Set(data.completedDrillIds || []));
     }
 
-    // 어제 미완료 드릴만 carryOver 표시 (이미 carry된 드릴은 제외하여 무한 누적 방지)
+    // 어제 미완료 드릴만 carryOver 표시
+    // - 이미 carry된 드릴은 제외 (무한 누적 방지)
+    // - 오늘도 여전히 존재하는 상시 드릴은 제외 (매일 반복 표시 방지)
     const yesterdayStr = getYesterdayStr();
     const yesterdayCompletion = localStorage.getItem(`grit-on-completed-${yesterdayStr}`);
     const yesterdayDrills = localStorage.getItem(`grit-on-drills-${yesterdayStr}`);
@@ -361,9 +363,15 @@ function PracticePageContent() {
         ? new Set(JSON.parse(yesterdayCompletion).completedDrillIds || [])
         : new Set();
 
-      // 이전에 carry-over로 추가된 드릴은 다시 carry하지 않음
+      // 오늘 customDrills에 있는 상시 드릴 ID 수집
+      const todayDrillIds = new Set(
+        savedDrills ? (JSON.parse(savedDrills) as { id: string }[]).map(d => d.id) : []
+      );
+
       const incomplete = allYesterdayDrills.filter(
-        d => !completedIds.has(d.id) && !d.id.startsWith("carryover-")
+        d => !completedIds.has(d.id)
+          && !d.id.startsWith("carryover-")
+          && !todayDrillIds.has(d.id) // 오늘도 있는 상시 드릴은 carry-over 불필요
       );
       if (incomplete.length > 0) {
         const dismissedCarryOver = localStorage.getItem(`grit-on-carryover-dismissed-${todayStr}`);
