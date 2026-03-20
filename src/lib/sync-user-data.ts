@@ -143,6 +143,13 @@ export async function pullUserData(): Promise<boolean> {
         continue;
       }
 
+      // 프로필은 병합 (로컬 우선 — 선생님 모드 등 로컬 변경 보존)
+      if (key === "grit-on-profile") {
+        mergeProfile(value);
+        applied++;
+        continue;
+      }
+
       // 그 외: 서버 값 우선
       localStorage.setItem(key, serverValue);
       applied++;
@@ -226,6 +233,21 @@ function mergeCustomDrills(serverValue: unknown): void {
     localStorage.setItem("grit-on-custom-drills", JSON.stringify(merged));
   } catch {
     localStorage.setItem("grit-on-custom-drills", JSON.stringify(serverValue));
+  }
+}
+
+function mergeProfile(serverValue: unknown): void {
+  try {
+    const local = JSON.parse(localStorage.getItem("grit-on-profile") || "{}");
+    const server = typeof serverValue === "object" && serverValue !== null
+      ? serverValue as Record<string, unknown>
+      : JSON.parse(String(serverValue));
+
+    // 서버 기반 + 로컬 덮어쓰기 (로컬 우선)
+    const merged = { ...server, ...local };
+    localStorage.setItem("grit-on-profile", JSON.stringify(merged));
+  } catch {
+    // 병합 실패 시 로컬 유지 (덮어쓰지 않음)
   }
 }
 

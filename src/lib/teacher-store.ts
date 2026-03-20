@@ -12,6 +12,7 @@ import {
 import { supabase } from "./supabase";
 import { dbMutate } from "./db-mutate";
 import { getAuthUserId, getUserId } from "./user-id";
+import { pushUserDataDebounced } from "./sync-user-data";
 
 const PROFILE_KEY = "grit-on-profile";
 const VERIFICATION_KEY = "grit-on-teacher-verification";
@@ -46,6 +47,8 @@ export function updateTeacherProfile(updates: Partial<TeacherProfile>): void {
     const current = saved ? JSON.parse(saved) : {};
     const updated = { ...current, ...updates };
     localStorage.setItem(PROFILE_KEY, JSON.stringify(updated));
+    // 서버에도 반영 (다른 기기 동기화 + pull 시 덮어쓰기 방지)
+    pushUserDataDebounced("grit-on-profile");
   } catch {}
 }
 
