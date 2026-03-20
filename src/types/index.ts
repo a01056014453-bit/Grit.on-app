@@ -10,3 +10,4 @@ export * from "./piece";
 export * from "./teacher-mode";
 export * from "./notification";
 export * from "./help";
+export * from "./invitation";

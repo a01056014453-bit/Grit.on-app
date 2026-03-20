@@ -42,6 +42,13 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       // 2. 온보딩 완료 여부 확인
       const onboardingDone = localStorage.getItem("sempre-onboarding-done");
       if (onboardingDone) {
+        // 대기 중인 초대가 있으면 초대 페이지로 이동
+        const pendingInvite = localStorage.getItem("grit-on-pending-invite-token");
+        if (pendingInvite) {
+          localStorage.removeItem("grit-on-pending-invite-token");
+          router.replace(`/invite/${pendingInvite}`);
+          return;
+        }
         setReady(true);
         return;
       }

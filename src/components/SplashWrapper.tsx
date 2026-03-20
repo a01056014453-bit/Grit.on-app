@@ -49,6 +49,12 @@ export default function SplashWrapper({
   const [splashDone, setSplashDone] = useState(false);
 
   useEffect(() => {
+    // mockups 경로는 스플래시 건너뛰기
+    if (window.location.pathname.startsWith("/mockups")) {
+      setSplashDone(true);
+      return;
+    }
+
     // 데이터 마이그레이션 (1회 실행)
     runDataMigration();
 

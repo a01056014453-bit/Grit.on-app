@@ -5,3 +5,5 @@ export { LessonRequestCard } from "./lesson-request-card";
 export { VerificationBadge } from "./verification-badge";
 export { StudentCard } from "./student-card";
 export { StudentList } from "./student-list";
+export { InviteStudentModal } from "./invite-student-modal";
+export { SentInvitations } from "./sent-invitations";
