@@ -21,9 +21,11 @@ import {
 } from "@/types";
 import {
   getVerification,
+  getTeacherProfile,
   submitVerification,
   syncVerificationFromSupabase,
 } from "@/lib/teacher-store";
+import { supabase } from "@/lib/supabase";
 
 const SPECIALTY_OPTIONS = [
   "피아노", "바이올린", "첼로", "비올라", "플루트",
@@ -53,12 +55,73 @@ export default function TeacherRegisterPage() {
 
   // 유효성
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [editMode, setEditMode] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   useEffect(() => {
     syncVerificationFromSupabase()
       .then(() => setVerification(getVerification()))
       .catch(() => setVerification(getVerification()));
   }, []);
+
+  // 승인된 선생님이 정보 수정 시 기존 데이터 로드
+  const loadExistingTeacherInfo = async () => {
+    const profile = getTeacherProfile();
+    if (!profile.teacherProfileId) return;
+    try {
+      const { data } = await (supabase as any)
+        .from("teachers")
+        .select("name, specialty, career")
+        .eq("id", profile.teacherProfileId)
+        .single();
+      if (data) {
+        if (data.name) setRealName(data.name);
+        if (data.specialty?.length) setSelectedSpecialty(data.specialty);
+        const career = data.career as Record<string, unknown> | null;
+        if (career?.phone) setPhone(career.phone as string);
+      }
+    } catch {}
+    setEditMode(true);
+  };
+
+  const handleSaveTeacherInfo = async () => {
+    if (!validatePersonalInfo()) return;
+    setIsSaving(true);
+    const profile = getTeacherProfile();
+    if (!profile.teacherProfileId) return;
+
+    try {
+      // 기존 career 데이터 유지하면서 업데이트
+      const { data: existing } = await (supabase as any)
+        .from("teachers")
+        .select("career")
+        .eq("id", profile.teacherProfileId)
+        .single();
+
+      const existingCareer = (existing?.career as Record<string, unknown>) ?? {};
+
+      await (supabase as any)
+        .from("teachers")
+        .update({
+          name: realName.trim(),
+          specialty: selectedSpecialty,
+          career: { ...existingCareer, phone: phone.trim() || null },
+        })
+        .eq("id", profile.teacherProfileId);
+
+      setSaveSuccess(true);
+      setTimeout(() => {
+        setSaveSuccess(false);
+        setEditMode(false);
+      }, 1500);
+    } catch (err) {
+      console.error("Failed to update teacher info:", err);
+      setErrors({ save: "저장에 실패했습니다. 다시 시도해주세요." });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   if (!verification) {
     return (
@@ -72,7 +135,7 @@ export default function TeacherRegisterPage() {
   }
 
   // 이미 승인됨
-  if (verification.status === "approved") {
+  if (verification.status === "approved" && !editMode) {
     return (
       <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-orange">
         <div className="bg-blob-orange-extra" />
@@ -90,11 +153,122 @@ export default function TeacherRegisterPage() {
           </p>
           <button
             onClick={() => router.push("/profile")}
-            className="px-6 py-3 bg-orange-600 text-white rounded-xl font-semibold"
+            className="w-full max-w-xs mx-auto py-3 bg-orange-600 text-white rounded-xl font-semibold text-sm mb-3"
           >
             프로필로 돌아가기
           </button>
+          <button
+            onClick={loadExistingTeacherInfo}
+            className="text-sm text-gray-500 underline"
+          >
+            선생님 정보 수정하기
+          </button>
         </div>
+      </div>
+    );
+  }
+
+  // 승인된 선생님 정보 수정 모드
+  if (verification.status === "approved" && editMode) {
+    return (
+      <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-orange">
+        <div className="bg-blob-orange-extra" />
+        <div className="flex items-center gap-3 mb-6">
+          <button onClick={() => setEditMode(false)}>
+            <ArrowLeft className="w-6 h-6 text-gray-700" />
+          </button>
+          <h1 className="text-lg font-bold text-gray-900">선생님 정보 수정</h1>
+        </div>
+
+        {saveSuccess ? (
+          <div className="text-center py-16">
+            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="w-10 h-10 text-green-600" />
+            </div>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">저장 완료</h2>
+            <p className="text-gray-500">정보가 업데이트되었습니다.</p>
+          </div>
+        ) : (
+          <>
+            {/* 실명 */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                실명 <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={realName}
+                onChange={(e) => { setRealName(e.target.value); setErrors((p) => ({ ...p, realName: "" })); }}
+                placeholder="홍길동"
+                className={`w-full px-3.5 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent ${errors.realName ? "border-red-300" : "border-gray-200"}`}
+              />
+              {errors.realName && <p className="text-xs text-red-500 mt-1">{errors.realName}</p>}
+              <p className="text-[11px] text-gray-400 mt-1">학생들에게 표시되는 이름입니다.</p>
+            </div>
+
+            {/* 연락처 */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                연락처 <span className="text-gray-400 font-normal">(선택)</span>
+              </label>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => { setPhone(e.target.value); setErrors((p) => ({ ...p, phone: "" })); }}
+                placeholder="010-1234-5678"
+                className={`w-full px-3.5 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent ${errors.phone ? "border-red-300" : "border-gray-200"}`}
+              />
+              {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone}</p>}
+            </div>
+
+            {/* 전공 분야 */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                전공 분야 <span className="text-red-500">*</span>
+                <span className="text-gray-400 font-normal ml-1">(복수 선택 가능)</span>
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {SPECIALTY_OPTIONS.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => toggleSpecialty(s)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      selectedSpecialty.includes(s)
+                        ? "bg-orange-600 text-white"
+                        : "bg-gray-100 text-gray-600"
+                    }`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+              {errors.specialty && <p className="text-xs text-red-500 mt-1.5">{errors.specialty}</p>}
+            </div>
+
+            {errors.save && (
+              <div className="mb-4 px-3 py-2 bg-red-50 border border-red-100 rounded-lg">
+                <p className="text-sm text-red-600">{errors.save}</p>
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setEditMode(false)}
+                className="flex-1 py-3 border border-gray-200 text-gray-700 rounded-xl font-semibold text-sm"
+                disabled={isSaving}
+              >
+                취소
+              </button>
+              <button
+                onClick={handleSaveTeacherInfo}
+                disabled={isSaving}
+                className="flex-1 py-3 bg-orange-600 text-white rounded-xl font-semibold text-sm disabled:opacity-50"
+              >
+                {isSaving ? "저장 중..." : "저장하기"}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     );
   }
