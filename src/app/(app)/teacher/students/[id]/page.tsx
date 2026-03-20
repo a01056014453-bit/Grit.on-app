@@ -12,23 +12,57 @@ import {
   Target,
   Award,
   BookOpen,
+  Flame,
+  BarChart3,
 } from "lucide-react";
-import { getTeacherStudentById } from "@/lib/queries";
-import { ManagedStudent } from "@/types";
+
+interface StudentDetail {
+  id: string;
+  studentId: string;
+  nickname: string;
+  instrument: string;
+  grade: string;
+  type: "전공" | "취미";
+  joinedAt: string;
+  totalLessons: number;
+  completedLessons: number;
+  stats: {
+    weeklyPracticeMinutes: number;
+    totalPracticeMinutes: number;
+    avgDailyMinutes: number;
+    practiceDays: number;
+    streakDays: number;
+    currentPieces: string[];
+    lastPracticeDate: string | null;
+  };
+  weeklyChart: { date: string; minutes: number }[];
+  recentSessions: {
+    id: number;
+    pieceName: string;
+    composer: string | null;
+    startTime: string;
+    practiceMinutes: number;
+    practiceType: string | null;
+    label: string | null;
+  }[];
+}
 
 export default function StudentDetailPage() {
   const router = useRouter();
   const params = useParams();
   const studentId = params.id as string;
-  const [student, setStudent] = useState<ManagedStudent | null>(null);
+  const [student, setStudent] = useState<StudentDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const load = async () => {
       setIsLoading(true);
       try {
-        const data = await getTeacherStudentById(studentId);
-        setStudent(data);
+        const res = await fetch(`/api/teacher/students/${studentId}`);
+        if (res.ok) {
+          const data = await res.json();
+          setStudent(data.student);
+        }
       } catch (err) {
         console.error("Failed to load student:", err);
       } finally {
@@ -53,7 +87,7 @@ export default function StudentDetailPage() {
   if (!student) {
     return (
       <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-orange">
-      <div className="bg-blob-orange-extra" />
+        <div className="bg-blob-orange-extra" />
         <button onClick={() => safeBack(router)} className="mb-6">
           <ArrowLeft className="w-6 h-6 text-slate-700" />
         </button>
@@ -64,7 +98,8 @@ export default function StudentDetailPage() {
     );
   }
 
-  const weeklyHours = Math.round((student.weeklyPracticeMinutes / 60) * 10) / 10;
+  const { stats } = student;
+  const weeklyHours = Math.round((stats.weeklyPracticeMinutes / 60) * 10) / 10;
   const joinDate = new Date(student.joinedAt).toLocaleDateString("ko-KR", {
     year: "numeric",
     month: "long",
@@ -74,6 +109,7 @@ export default function StudentDetailPage() {
     student.totalLessons > 0
       ? Math.round((student.completedLessons / student.totalLessons) * 100)
       : 0;
+  const maxChartMinutes = Math.max(...student.weeklyChart.map((d) => d.minutes), 1);
 
   return (
     <div className="px-4 py-6 max-w-lg mx-auto min-h-screen pb-24 bg-blob-orange">
@@ -85,6 +121,7 @@ export default function StudentDetailPage() {
         <h1 className="text-lg font-bold text-slate-900">학생 상세</h1>
       </div>
 
+      {/* 프로필 카드 */}
       <div className="bg-white rounded-xl p-5 border border-slate-100 mb-4">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center shrink-0">
@@ -95,9 +132,11 @@ export default function StudentDetailPage() {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <h2 className="text-lg font-bold text-slate-900">{student.nickname}</h2>
-              <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full">
-                {student.grade}
-              </span>
+              {student.grade && (
+                <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full">
+                  {student.grade}
+                </span>
+              )}
               <span
                 className={`text-xs px-2 py-0.5 rounded-full ${
                   student.type === "전공"
@@ -113,11 +152,12 @@ export default function StudentDetailPage() {
         </div>
       </div>
 
+      {/* 핵심 통계 */}
       <div className="grid grid-cols-2 gap-3 mb-4">
         <div className="bg-white rounded-xl p-4 border border-slate-100">
           <div className="flex items-center gap-2 mb-2">
             <Clock className="w-4 h-4 text-blue-500" />
-            <span className="text-xs text-slate-500">주간 연습</span>
+            <span className="text-xs text-slate-500">이번 주 연습</span>
           </div>
           <div className="flex items-baseline gap-1">
             <span className="text-xl font-bold text-slate-900">{weeklyHours}</span>
@@ -132,7 +172,7 @@ export default function StudentDetailPage() {
           </div>
           <div className="flex items-baseline gap-1">
             <span className="text-xl font-bold text-slate-900">
-              {Math.round(student.weeklyPracticeMinutes / 7)}
+              {stats.avgDailyMinutes}
             </span>
             <span className="text-sm text-slate-400">분</span>
           </div>
@@ -140,55 +180,164 @@ export default function StudentDetailPage() {
 
         <div className="bg-white rounded-xl p-4 border border-slate-100">
           <div className="flex items-center gap-2 mb-2">
-            <Target className="w-4 h-4 text-orange-500" />
-            <span className="text-xs text-slate-500">레슨 완료율</span>
+            <Flame className="w-4 h-4 text-red-500" />
+            <span className="text-xs text-slate-500">연속 연습</span>
           </div>
           <div className="flex items-baseline gap-1">
-            <span className="text-xl font-bold text-slate-900">{lessonCompletion}</span>
-            <span className="text-sm text-slate-400">%</span>
-          </div>
-          <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2">
-            <div
-              className="bg-orange-500 rounded-full h-1.5 transition-all"
-              style={{ width: `${lessonCompletion}%` }}
-            />
+            <span className="text-xl font-bold text-slate-900">{stats.streakDays}</span>
+            <span className="text-sm text-slate-400">일</span>
           </div>
         </div>
 
         <div className="bg-white rounded-xl p-4 border border-slate-100">
           <div className="flex items-center gap-2 mb-2">
-            <Award className="w-4 h-4 text-amber-500" />
-            <span className="text-xs text-slate-500">총 레슨</span>
+            <Calendar className="w-4 h-4 text-purple-500" />
+            <span className="text-xs text-slate-500">30일 중 연습일</span>
           </div>
           <div className="flex items-baseline gap-1">
-            <span className="text-xl font-bold text-slate-900">
-              {student.completedLessons}
-            </span>
-            <span className="text-sm text-slate-400">/ {student.totalLessons}</span>
+            <span className="text-xl font-bold text-slate-900">{stats.practiceDays}</span>
+            <span className="text-sm text-slate-400">일</span>
           </div>
         </div>
       </div>
 
+      {/* 주간 연습 차트 */}
       <div className="bg-white rounded-xl p-4 border border-slate-100 mb-4">
         <h3 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
-          <Music className="w-4 h-4 text-orange-600" />
-          현재 연습곡
+          <BarChart3 className="w-4 h-4 text-orange-600" />
+          최근 7일 연습
         </h3>
-        <div className="space-y-2">
-          {student.currentPieces.map((piece, i) => (
-            <div
-              key={i}
-              className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg"
-            >
-              <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center shrink-0">
-                <BookOpen className="w-4 h-4 text-orange-600" />
+        <div className="flex items-end gap-1.5 h-24">
+          {student.weeklyChart.map((day) => {
+            const height = maxChartMinutes > 0 ? (day.minutes / maxChartMinutes) * 100 : 0;
+            const dayLabel = new Date(day.date).toLocaleDateString("ko-KR", { weekday: "short" });
+            return (
+              <div key={day.date} className="flex-1 flex flex-col items-center gap-1">
+                <span className="text-[9px] text-slate-400">
+                  {day.minutes > 0 ? `${day.minutes}분` : ""}
+                </span>
+                <div
+                  className={`w-full rounded-t-md transition-all ${
+                    day.minutes > 0 ? "bg-orange-400" : "bg-slate-100"
+                  }`}
+                  style={{ height: `${Math.max(height, 4)}%` }}
+                />
+                <span className="text-[10px] text-slate-400">{dayLabel}</span>
               </div>
-              <span className="text-sm text-slate-700 font-medium">{piece}</span>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
+      {/* 레슨 진행률 */}
+      {student.totalLessons > 0 && (
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="bg-white rounded-xl p-4 border border-slate-100">
+            <div className="flex items-center gap-2 mb-2">
+              <Target className="w-4 h-4 text-orange-500" />
+              <span className="text-xs text-slate-500">레슨 완료율</span>
+            </div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-xl font-bold text-slate-900">{lessonCompletion}</span>
+              <span className="text-sm text-slate-400">%</span>
+            </div>
+            <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2">
+              <div
+                className="bg-orange-500 rounded-full h-1.5 transition-all"
+                style={{ width: `${lessonCompletion}%` }}
+              />
+            </div>
+          </div>
+          <div className="bg-white rounded-xl p-4 border border-slate-100">
+            <div className="flex items-center gap-2 mb-2">
+              <Award className="w-4 h-4 text-amber-500" />
+              <span className="text-xs text-slate-500">총 레슨</span>
+            </div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-xl font-bold text-slate-900">
+                {student.completedLessons}
+              </span>
+              <span className="text-sm text-slate-400">/ {student.totalLessons}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 현재 연습곡 */}
+      {stats.currentPieces.length > 0 && (
+        <div className="bg-white rounded-xl p-4 border border-slate-100 mb-4">
+          <h3 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
+            <Music className="w-4 h-4 text-orange-600" />
+            이번 주 연습곡
+          </h3>
+          <div className="space-y-2">
+            {stats.currentPieces.map((piece, i) => (
+              <div
+                key={i}
+                className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg"
+              >
+                <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center shrink-0">
+                  <BookOpen className="w-4 h-4 text-orange-600" />
+                </div>
+                <span className="text-sm text-slate-700 font-medium">{piece}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 최근 연습 기록 */}
+      {student.recentSessions.length > 0 && (
+        <div className="bg-white rounded-xl p-4 border border-slate-100 mb-4">
+          <h3 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
+            <Clock className="w-4 h-4 text-orange-600" />
+            최근 연습 기록
+          </h3>
+          <div className="space-y-2">
+            {student.recentSessions.map((session) => {
+              const date = new Date(session.startTime);
+              const dateStr = date.toLocaleDateString("ko-KR", {
+                month: "short",
+                day: "numeric",
+              });
+              const timeStr = date.toLocaleTimeString("ko-KR", {
+                hour: "2-digit",
+                minute: "2-digit",
+              });
+
+              return (
+                <div
+                  key={session.id}
+                  className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-slate-700 truncate">
+                      {session.pieceName}
+                    </p>
+                    <p className="text-[11px] text-slate-400">
+                      {dateStr} {timeStr}
+                      {session.practiceType && (
+                        <span className="ml-1.5 px-1.5 py-0.5 bg-white rounded text-[10px]">
+                          {session.practiceType === "partial"
+                            ? "부분연습"
+                            : session.practiceType === "routine"
+                              ? "루틴"
+                              : "통주"}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  <span className="text-sm font-semibold text-orange-600 shrink-0 ml-2">
+                    {session.practiceMinutes}분
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 기본 정보 */}
       <div className="bg-white rounded-xl p-4 border border-slate-100">
         <h3 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
           <Calendar className="w-4 h-4 text-orange-600" />
@@ -199,11 +348,11 @@ export default function StudentDetailPage() {
             <span className="text-sm text-slate-500">등록일</span>
             <span className="text-sm font-medium text-slate-700">{joinDate}</span>
           </div>
-          {student.lastPracticeDate && (
+          {stats.lastPracticeDate && (
             <div className="flex items-center justify-between">
               <span className="text-sm text-slate-500">마지막 연습</span>
               <span className="text-sm font-medium text-slate-700">
-                {new Date(student.lastPracticeDate).toLocaleDateString("ko-KR", {
+                {new Date(stats.lastPracticeDate).toLocaleDateString("ko-KR", {
                   month: "long",
                   day: "numeric",
                 })}

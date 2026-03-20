@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Users } from "lucide-react";
 import { StudentList, InviteStudentModal, SentInvitations } from "@/components/teacher";
-import { getTeacherStudents } from "@/lib/queries/teacher-students";
 import { useTeacherMode } from "@/hooks/useTeacherMode";
 import type { ManagedStudent, Invitation } from "@/types";
 
@@ -15,20 +14,28 @@ export default function TeacherStudentsPage() {
 
   const loadStudents = useCallback(async () => {
     if (!teacherProfileId) return;
-    const data = await getTeacherStudents(teacherProfileId);
-    setStudents(data.map((s) => ({
-      id: s.id,
-      nickname: s.nickname,
-      instrument: s.instrument,
-      grade: s.grade,
-      type: s.type,
-      weeklyPracticeMinutes: s.weeklyPracticeMinutes,
-      currentPieces: s.currentPieces,
-      lastPracticeDate: s.lastPracticeDate,
-      joinedAt: s.joinedAt,
-      totalLessons: s.totalLessons,
-      completedLessons: s.completedLessons,
-    })));
+    try {
+      const res = await fetch("/api/teacher/students");
+      if (!res.ok) return;
+      const data = await res.json();
+      setStudents(
+        (data.students ?? []).map((s: any) => ({
+          id: s.id,
+          nickname: s.nickname,
+          instrument: s.instrument,
+          grade: s.grade,
+          type: s.type,
+          weeklyPracticeMinutes: s.weeklyPracticeMinutes,
+          currentPieces: s.currentPieces,
+          lastPracticeDate: s.lastPracticeDate,
+          joinedAt: s.joinedAt,
+          totalLessons: s.totalLessons,
+          completedLessons: s.completedLessons,
+        })),
+      );
+    } catch (err) {
+      console.error("[loadStudents]", err);
+    }
   }, [teacherProfileId]);
 
   const loadInvitations = useCallback(async () => {
