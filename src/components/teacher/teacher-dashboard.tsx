@@ -15,7 +15,7 @@ import { LessonRequestCard } from "./lesson-request-card";
 import { TeacherModeToggle } from "./teacher-mode-toggle";
 import { getTeacherStudents } from "@/lib/queries/teacher-students";
 import { getTeacherFeedbackRequests, type FeedbackRequest } from "@/lib/queries/feedback";
-import { getUserId } from "@/lib/user-id";
+import { supabase } from "@/lib/supabase";
 import type { TeacherDashboardStats, ManagedStudent } from "@/types";
 
 interface TeacherDashboardProps {
@@ -69,17 +69,32 @@ export function TeacherDashboard({ teacherProfileId, onToggleMode }: TeacherDash
     loadData();
   }, [teacherProfileId]);
 
-  // Get profile name
-  const [userName, setUserName] = useState("선생님");
+  // 선생님 실명 가져오기 (teachers 테이블)
+  const [userName, setUserName] = useState("");
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("grit-on-profile");
-      if (saved) {
-        const profile = JSON.parse(saved);
-        if (profile.nickname) setUserName(profile.nickname);
-      }
-    } catch {}
-  }, []);
+    async function loadTeacherName() {
+      try {
+        const { data } = await (supabase as any)
+          .from("teachers")
+          .select("name")
+          .eq("id", teacherProfileId)
+          .single();
+        if (data?.name) {
+          setUserName(data.name);
+          return;
+        }
+      } catch {}
+      // fallback: localStorage 닉네임
+      try {
+        const saved = localStorage.getItem("grit-on-profile");
+        if (saved) {
+          const profile = JSON.parse(saved);
+          if (profile.nickname) setUserName(profile.nickname);
+        }
+      } catch {}
+    }
+    loadTeacherName();
+  }, [teacherProfileId]);
 
   if (!stats) {
     return (
