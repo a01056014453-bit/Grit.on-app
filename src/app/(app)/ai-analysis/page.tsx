@@ -415,28 +415,6 @@ export default function AIAnalysisPage() {
         </div>
       )}
 
-      {/* Legend */}
-      <div className="mt-6 p-4 bg-gray-50 rounded-xl">
-        <p className="text-xs font-semibold text-gray-600 mb-2">진행도 표시</p>
-        <div className="flex items-center gap-4 text-xs text-gray-500">
-          <div className="flex items-center gap-1.5">
-            <div className={`w-3 h-3 rounded-full ${masteryColors.not_started}`} />
-            <span>시작 전</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className={`w-3 h-3 rounded-full ${masteryColors.learning}`} />
-            <span>학습 중</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className={`w-3 h-3 rounded-full ${masteryColors.practicing}`} />
-            <span>연습 중</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className={`w-3 h-3 rounded-full ${masteryColors.mastered}`} />
-            <span>완성</span>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
