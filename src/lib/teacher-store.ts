@@ -113,6 +113,7 @@ export interface SubmitVerificationInput {
   realName: string;
   specialty: string[];
   phone?: string;
+  kakaoId?: string;
   aiReview?: AIReview;
 }
 
@@ -128,6 +129,7 @@ export function submitVerification(input: SubmitVerificationInput): TeacherVerif
     appliedAt: new Date().toISOString(),
     aiReview,
     phone: input.phone,
+    kakaoId: input.kakaoId,
   };
   saveVerification(verification);
   // Also add to admin-visible list
@@ -159,6 +161,7 @@ async function submitVerificationToSupabase(v: TeacherVerification): Promise<voi
       name: v.applicantName,
       specialty: v.specialty,
       phone: v.phone ?? null,
+      kakaoId: v.kakaoId ?? null,
       documents: v.documents.map((d) => ({ id: d.id, type: d.type, fileName: d.fileName, uploadedAt: d.uploadedAt })),
       aiReview: v.aiReview ?? null,
       appliedAt: v.appliedAt,

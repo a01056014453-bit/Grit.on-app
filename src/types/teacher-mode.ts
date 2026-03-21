@@ -35,6 +35,7 @@ export interface TeacherVerification {
   applicantName: string;
   specialty: string[];
   phone?: string;
+  kakaoId?: string;
   status: TeacherVerificationStatus;
   documents: TeacherDocument[];
   appliedAt?: string;

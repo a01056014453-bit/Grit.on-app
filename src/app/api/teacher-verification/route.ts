@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, name, specialty, phone, documents, aiReview, appliedAt } = body;
+    const { id, name, specialty, phone, kakaoId, documents, aiReview, appliedAt } = body;
 
     if (!id || !name) {
       return NextResponse.json({ error: "id, name 필수" }, { status: 400 });
@@ -135,6 +135,7 @@ export async function POST(request: NextRequest) {
         user_id: userId,
         career: {
           phone: phone ?? null,
+          kakaoId: kakaoId ?? null,
           verification: {
             status: "pending",
             documents: documents ?? [],

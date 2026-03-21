@@ -53,6 +53,11 @@ export default function TeacherRegisterPage() {
   const [submitStatus, setSubmitStatus] = useState("");
   const [verification, setVerification] = useState<TeacherVerification | null>(null);
 
+  // 카카오 인증
+  const [kakaoVerified, setKakaoVerified] = useState(false);
+  const [kakaoId, setKakaoId] = useState("");
+  const [isKakaoLoading, setIsKakaoLoading] = useState(false);
+
   // 유효성
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [editMode, setEditMode] = useState(false);
@@ -64,6 +69,73 @@ export default function TeacherRegisterPage() {
       .then(() => setVerification(getVerification()))
       .catch(() => setVerification(getVerification()));
   }, []);
+
+  // 카카오 팝업 결과 수신
+  useEffect(() => {
+    const handleMessage = (e: MessageEvent) => {
+      if (e.origin !== window.location.origin) return;
+      if (e.data?.type !== "kakao-verify-result") return;
+
+      setIsKakaoLoading(false);
+
+      if (e.data.success && e.data.user) {
+        const user = e.data.user;
+        // 카카오에서 받은 정보로 자동 채우기
+        if (user.name) {
+          setRealName(user.name);
+        } else if (user.nickname && !realName) {
+          setRealName(user.nickname);
+        }
+        if (user.phone) {
+          // 카카오 전화번호 형식: +82 10-1234-5678 → 010-1234-5678
+          const cleaned = user.phone.replace(/^\+82\s?/, "0");
+          setPhone(cleaned);
+        }
+        if (user.email) {
+          // 이메일은 참고용으로 저장 가능
+        }
+        setKakaoId(user.kakaoId);
+        setKakaoVerified(true);
+        setErrors((prev) => ({ ...prev, kakao: "" }));
+      } else {
+        setErrors((prev) => ({ ...prev, kakao: e.data.error || "카카오 인증에 실패했습니다." }));
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, [realName]);
+
+  const startKakaoVerify = () => {
+    const kakaoKey = process.env.NEXT_PUBLIC_KAKAO_REST_API_KEY;
+    if (!kakaoKey) {
+      setErrors((prev) => ({ ...prev, kakao: "카카오 인증이 아직 설정되지 않았습니다." }));
+      return;
+    }
+
+    setIsKakaoLoading(true);
+    const redirectUri = `${window.location.origin}/auth/kakao/callback`;
+    const kakaoUrl = `https://kauth.kakao.com/oauth/authorize?client_id=${kakaoKey}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=profile_nickname,account_email`;
+
+    const width = 480;
+    const height = 700;
+    const left = window.screenX + (window.outerWidth - width) / 2;
+    const top = window.screenY + (window.outerHeight - height) / 2;
+
+    const popup = window.open(
+      kakaoUrl,
+      "kakao-verify",
+      `width=${width},height=${height},left=${left},top=${top},scrollbars=yes`,
+    );
+
+    // 팝업이 닫혔는데 결과가 안 온 경우
+    const timer = setInterval(() => {
+      if (popup?.closed) {
+        clearInterval(timer);
+        setIsKakaoLoading(false);
+      }
+    }, 500);
+  };
 
   // 승인된 선생님이 정보 수정 시 기존 데이터 로드
   const loadExistingTeacherInfo = async () => {
@@ -417,6 +489,7 @@ export default function TeacherRegisterPage() {
       realName: realName.trim(),
       specialty: selectedSpecialty,
       phone: phone.trim() || undefined,
+      kakaoId: kakaoId || undefined,
       aiReview,
     });
     setStep(4);
@@ -511,11 +584,47 @@ export default function TeacherRegisterPage() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <User className="w-5 h-5 text-orange-600" />
-            <h2 className="text-lg font-bold text-gray-900">개인정보 입력</h2>
+            <h2 className="text-lg font-bold text-gray-900">본인인증 및 개인정보</h2>
           </div>
           <p className="text-sm text-gray-500 mb-6">
-            선생님 활동에 사용될 정보를 입력해주세요.
+            카카오 인증으로 본인 확인 후 정보를 입력해주세요.
           </p>
+
+          {/* 카카오 본인인증 */}
+          <div className="mb-5">
+            {kakaoVerified ? (
+              <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-xl">
+                <CheckCircle className="w-5 h-5 text-green-600 shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-green-800">카카오 인증 완료</p>
+                  <p className="text-xs text-green-600">본인 확인이 완료되었습니다.</p>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={startKakaoVerify}
+                disabled={isKakaoLoading}
+                className="w-full flex items-center justify-center gap-2 py-3.5 bg-[#FEE500] text-[#191919] rounded-xl font-semibold text-sm disabled:opacity-50"
+              >
+                {isKakaoLoading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-[#191919] border-t-transparent rounded-full animate-spin" />
+                    인증 중...
+                  </>
+                ) : (
+                  <>
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                      <path d="M9 1.5C4.86 1.5 1.5 4.14 1.5 7.38C1.5 9.42 2.88 11.22 4.95 12.24L4.14 15.18C4.08 15.36 4.29 15.51 4.44 15.39L7.89 13.08C8.25 13.14 8.61 13.17 9 13.17C13.14 13.17 16.5 10.53 16.5 7.29C16.5 4.14 13.14 1.5 9 1.5Z" fill="#191919"/>
+                    </svg>
+                    카카오로 본인인증
+                  </>
+                )}
+              </button>
+            )}
+            {errors.kakao && (
+              <p className="text-xs text-red-500 mt-1.5">{errors.kakao}</p>
+            )}
+          </div>
 
           {/* 실명 */}
           <div className="mb-4">
