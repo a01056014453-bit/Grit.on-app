@@ -1,4 +1,6 @@
-/** 사용자가 실제로 분석한 곡 ID를 localStorage에서 관리 */
+/** 사용자가 실제로 분석한 곡 ID를 localStorage에서 관리 + Supabase 동기화 */
+
+import { pushUserDataDebounced } from "./sync-user-data";
 
 const USER_ANALYSES_KEY = "sempre-user-analyses";
 
@@ -30,10 +32,12 @@ export function addUserAnalysis(analysis: Omit<UserAnalysis, "analyzedAt">): voi
     ...list,
   ];
   localStorage.setItem(USER_ANALYSES_KEY, JSON.stringify(updated));
+  pushUserDataDebounced(USER_ANALYSES_KEY);
 }
 
 export function removeUserAnalysis(id: string): void {
   if (typeof window === "undefined") return;
   const list = getUserAnalyses().filter((a) => a.id !== id);
   localStorage.setItem(USER_ANALYSES_KEY, JSON.stringify(list));
+  pushUserDataDebounced(USER_ANALYSES_KEY);
 }

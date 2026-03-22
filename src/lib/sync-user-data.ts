@@ -17,6 +17,7 @@ const SINGLE_KEYS = [
   "grit-on-my-library",
   "grit-on-profile",
   "grit-on-routines",
+  "sempre-user-analyses",
 ] as const;
 
 /** 날짜별 키 접두사 */
