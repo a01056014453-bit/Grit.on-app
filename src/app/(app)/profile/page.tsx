@@ -835,7 +835,7 @@ export default function ProfilePage() {
           )}
         </div>
 
-        {verificationStatus === "approved" && (
+        {verificationStatus === "approved" && teacherMode && (
           <Link
             href="/profile/teacher-profile"
             className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-white/30 transition-colors"
