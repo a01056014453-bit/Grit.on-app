@@ -35,7 +35,10 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { nickname, name, instrument, level, email, auth_provider } = body;
+    const {
+      nickname, name, instrument, level, email, auth_provider,
+      profile_image, agreed_terms, agreed_privacy, agreed_marketing, agreed_at,
+    } = body;
 
     if (!nickname || typeof nickname !== "string" || nickname.trim().length < 2) {
       return NextResponse.json(
@@ -59,17 +62,26 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. service_role로 프로필 upsert (RLS 우회)
-    const { data, error } = await supabaseServer
+    const upsertData: Record<string, unknown> = {
+      id: user.id,
+      nickname: nickname.trim(),
+      name: name ?? nickname.trim(),
+      instrument: instrument ?? "piano",
+      level: level ?? null,
+      email: email ?? user.email ?? null,
+      auth_provider: auth_provider ?? user.app_metadata?.provider ?? null,
+    };
+
+    // 선택적 필드 (컬럼이 없을 수 있으므로 있을 때만 추가)
+    if (profile_image !== undefined) upsertData.profile_image = profile_image;
+    if (agreed_terms !== undefined) upsertData.agreed_terms = agreed_terms;
+    if (agreed_privacy !== undefined) upsertData.agreed_privacy = agreed_privacy;
+    if (agreed_marketing !== undefined) upsertData.agreed_marketing = agreed_marketing;
+    if (agreed_at !== undefined) upsertData.agreed_at = agreed_at;
+
+    const { data, error } = await (supabaseServer as any)
       .from("profiles")
-      .upsert({
-        id: user.id,
-        nickname: nickname.trim(),
-        name: name ?? nickname.trim(),
-        instrument: instrument ?? "piano",
-        level: level ?? null,
-        email: email ?? user.email ?? null,
-        auth_provider: auth_provider ?? user.app_metadata?.provider ?? null,
-      })
+      .upsert(upsertData)
       .select()
       .single();
 

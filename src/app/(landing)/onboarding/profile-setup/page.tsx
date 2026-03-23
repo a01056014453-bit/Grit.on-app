@@ -102,6 +102,9 @@ export default function ProfileSetupPage() {
   const [ageGroup, setAgeGroup] = useState("");
   const [instruments, setInstruments] = useState<string[]>([]);
   const [profileEmoji, setProfileEmoji] = useState("👤");
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
+  const profileImageRef = useRef<HTMLInputElement>(null);
 
   // Nickname duplicate check
   const [nicknameStatus, setNicknameStatus] = useState<NicknameStatus>("idle");
@@ -156,6 +159,30 @@ export default function ProfileSetupPage() {
     );
   };
 
+  const handleProfileImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert("이미지는 5MB 이하만 가능합니다.");
+      return;
+    }
+    setProfileImageFile(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setProfileImagePreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  const requestPushPermission = async () => {
+    if (!("Notification" in window)) return;
+    if (Notification.permission === "granted") return;
+    try {
+      await Notification.requestPermission();
+    } catch {
+      // 권한 요청 실패 무시
+    }
+  };
+
   const [showCelebration, setShowCelebration] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -183,6 +210,28 @@ export default function ProfileSetupPage() {
 
     const authProvider = localStorage.getItem("sempre-auth") || undefined;
 
+    // 프로필 이미지 업로드
+    let profileImageUrl: string | undefined;
+    if (profileImageFile) {
+      try {
+        const formData = new FormData();
+        formData.append("file", profileImageFile);
+        const uploadRes = await fetch("/api/profile/image", {
+          method: "POST",
+          body: formData,
+        });
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          profileImageUrl = uploadData.url;
+        }
+      } catch {
+        // 이미지 업로드 실패해도 가입은 진행
+      }
+    }
+
+    // 푸시 알림 권한 요청
+    await requestPushPermission();
+
     try {
       const res = await fetch("/api/profile", {
         method: "POST",
@@ -193,6 +242,7 @@ export default function ProfileSetupPage() {
           instrument: primaryInstrument,
           level: ageGroup,
           auth_provider: authProvider,
+          profile_image: profileImageUrl ?? null,
           agreed_terms: true,
           agreed_privacy: true,
           agreed_marketing: agreeMarketing,
@@ -527,17 +577,56 @@ export default function ProfileSetupPage() {
               </div>
             )}
 
-            {/* Step 4: Profile Emoji */}
+            {/* Step 4: Profile Photo + Emoji */}
             {step === 4 && (
               <div>
                 <h1 className="text-2xl font-black text-gray-900 mb-2">
-                  프로필 이모지를 선택해주세요
+                  프로필을 꾸며주세요
                 </h1>
                 <p className="text-sm text-gray-500 mb-8">
-                  나를 표현하는 이모지를 골라보세요
+                  사진 또는 이모지로 나를 표현해보세요
                 </p>
 
-                <div className="grid grid-cols-5 gap-3 mb-8">
+                {/* 프로필 이미지 업로드 */}
+                <div className="flex justify-center mb-6">
+                  <button
+                    onClick={() => profileImageRef.current?.click()}
+                    className="relative group"
+                  >
+                    <div className="w-24 h-24 rounded-full border-3 border-dashed border-violet-300 flex items-center justify-center overflow-hidden bg-violet-50 group-hover:border-violet-500 transition-colors">
+                      {profileImagePreview ? (
+                        <img src={profileImagePreview} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-4xl">{profileEmoji}</span>
+                      )}
+                    </div>
+                    <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-violet-500 rounded-full flex items-center justify-center text-white shadow-md">
+                      <span className="text-lg">+</span>
+                    </div>
+                  </button>
+                  <input
+                    ref={profileImageRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleProfileImage}
+                    className="hidden"
+                  />
+                </div>
+                {profileImagePreview && (
+                  <button
+                    onClick={() => { setProfileImageFile(null); setProfileImagePreview(null); }}
+                    className="block mx-auto text-xs text-gray-400 underline mb-4"
+                  >
+                    사진 제거
+                  </button>
+                )}
+                <p className="text-center text-xs text-gray-400 mb-6">
+                  {profileImagePreview ? "사진이 설정되었습니다" : "사진이 없으면 이모지가 표시됩니다"}
+                </p>
+
+                {/* 이모지 선택 */}
+                <p className="text-xs font-semibold text-gray-600 mb-2">이모지 선택</p>
+                <div className="grid grid-cols-5 gap-3 mb-6">
                   {EMOJI_OPTIONS.map((emoji) => (
                     <button
                       key={emoji}
@@ -557,8 +646,12 @@ export default function ProfileSetupPage() {
                 <div className="p-5 rounded-2xl bg-white border border-gray-100 shadow-sm">
                   <p className="text-xs text-gray-400 mb-3">프로필 미리보기</p>
                   <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-full bg-violet-50 border-2 border-violet-200 flex items-center justify-center text-3xl">
-                      {profileEmoji}
+                    <div className="w-14 h-14 rounded-full bg-violet-50 border-2 border-violet-200 flex items-center justify-center overflow-hidden">
+                      {profileImagePreview ? (
+                        <img src={profileImagePreview} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-3xl">{profileEmoji}</span>
+                      )}
                     </div>
                     <div>
                       <p className="text-lg font-bold text-gray-900">{nickname || "사용자"}</p>
