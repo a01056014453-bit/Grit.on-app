@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { RefreshCw, ChevronRight, Check, Loader2 } from "lucide-react";
+import { RefreshCw, ChevronRight, Check, Loader2, FileText, Shield } from "lucide-react";
 import { isNicknameAvailable } from "@/lib/queries/profiles";
 import { getUserId } from "@/lib/user-id";
 
@@ -89,6 +90,12 @@ const stepTransition = {
 export default function ProfileSetupPage() {
   const router = useRouter();
   const [step, setStep] = useState(0);
+
+  // 약관 동의 state
+  const [agreeTerms, setAgreeTerms] = useState(false);
+  const [agreePrivacy, setAgreePrivacy] = useState(false);
+  const [agreeAge, setAgreeAge] = useState(false);
+  const [agreeMarketing, setAgreeMarketing] = useState(false);
 
   // Form state
   const [nickname, setNickname] = useState("");
@@ -186,6 +193,10 @@ export default function ProfileSetupPage() {
           instrument: primaryInstrument,
           level: ageGroup,
           auth_provider: authProvider,
+          agreed_terms: true,
+          agreed_privacy: true,
+          agreed_marketing: agreeMarketing,
+          agreed_at: new Date().toISOString(),
         }),
       });
 
@@ -215,14 +226,25 @@ export default function ProfileSetupPage() {
     };
   }, []);
 
-  const totalSteps = 4;
+  const allRequiredAgreed = agreeTerms && agreePrivacy && agreeAge;
+
+  const handleAgreeAll = () => {
+    const allChecked = agreeTerms && agreePrivacy && agreeAge && agreeMarketing;
+    setAgreeTerms(!allChecked);
+    setAgreePrivacy(!allChecked);
+    setAgreeAge(!allChecked);
+    setAgreeMarketing(!allChecked);
+  };
+
+  const totalSteps = 5;
   const nicknameValid = nickname.trim().length >= 2;
   const canProceed = (() => {
     switch (step) {
-      case 0: return nicknameValid && nicknameStatus !== "taken" && nicknameStatus !== "checking";
-      case 1: return ageGroup !== "";
-      case 2: return instruments.length > 0;
-      case 3: return true;
+      case 0: return allRequiredAgreed;
+      case 1: return nicknameValid && nicknameStatus !== "taken" && nicknameStatus !== "checking";
+      case 2: return ageGroup !== "";
+      case 3: return instruments.length > 0;
+      case 4: return true;
       default: return false;
     }
   })();
@@ -256,8 +278,119 @@ export default function ProfileSetupPage() {
             transition={stepTransition}
             className="h-full"
           >
-            {/* Step 0: Nickname */}
+            {/* Step 0: 약관 동의 */}
             {step === 0 && (
+              <div>
+                <h1 className="text-2xl font-black text-gray-900 mb-2">
+                  서비스 이용 동의
+                </h1>
+                <p className="text-sm text-gray-500 mb-8">
+                  Sempre를 시작하기 전에 동의가 필요해요
+                </p>
+
+                {/* 전체 동의 */}
+                <button
+                  onClick={handleAgreeAll}
+                  className={`w-full flex items-center gap-3 p-4 rounded-2xl border-2 mb-4 transition-all ${
+                    agreeTerms && agreePrivacy && agreeAge && agreeMarketing
+                      ? "border-violet-500 bg-violet-50"
+                      : "border-gray-200 bg-white"
+                  }`}
+                >
+                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+                    agreeTerms && agreePrivacy && agreeAge && agreeMarketing
+                      ? "border-violet-500 bg-violet-500"
+                      : "border-gray-300"
+                  }`}>
+                    {agreeTerms && agreePrivacy && agreeAge && agreeMarketing && (
+                      <Check className="w-4 h-4 text-white" />
+                    )}
+                  </div>
+                  <span className="text-base font-bold text-gray-900">전체 동의</span>
+                </button>
+
+                <div className="space-y-1 bg-white rounded-2xl border border-gray-200 overflow-hidden">
+                  {/* 이용약관 */}
+                  <div className="flex items-center justify-between px-4 py-3.5">
+                    <button
+                      onClick={() => setAgreeTerms(!agreeTerms)}
+                      className="flex items-center gap-3"
+                    >
+                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                        agreeTerms ? "border-violet-500 bg-violet-500" : "border-gray-300"
+                      }`}>
+                        {agreeTerms && <Check className="w-3 h-3 text-white" />}
+                      </div>
+                      <span className="text-sm text-gray-700">
+                        <span className="text-violet-600 font-medium">[필수]</span> 서비스 이용약관
+                      </span>
+                    </button>
+                    <Link href="/terms" className="text-xs text-gray-400 underline">보기</Link>
+                  </div>
+
+                  <div className="h-px bg-gray-100 mx-4" />
+
+                  {/* 개인정보 처리방침 */}
+                  <div className="flex items-center justify-between px-4 py-3.5">
+                    <button
+                      onClick={() => setAgreePrivacy(!agreePrivacy)}
+                      className="flex items-center gap-3"
+                    >
+                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                        agreePrivacy ? "border-violet-500 bg-violet-500" : "border-gray-300"
+                      }`}>
+                        {agreePrivacy && <Check className="w-3 h-3 text-white" />}
+                      </div>
+                      <span className="text-sm text-gray-700">
+                        <span className="text-violet-600 font-medium">[필수]</span> 개인정보 처리방침
+                      </span>
+                    </button>
+                    <Link href="/privacy" className="text-xs text-gray-400 underline">보기</Link>
+                  </div>
+
+                  <div className="h-px bg-gray-100 mx-4" />
+
+                  {/* 만 14세 이상 */}
+                  <div className="flex items-center px-4 py-3.5">
+                    <button
+                      onClick={() => setAgreeAge(!agreeAge)}
+                      className="flex items-center gap-3"
+                    >
+                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                        agreeAge ? "border-violet-500 bg-violet-500" : "border-gray-300"
+                      }`}>
+                        {agreeAge && <Check className="w-3 h-3 text-white" />}
+                      </div>
+                      <span className="text-sm text-gray-700">
+                        <span className="text-violet-600 font-medium">[필수]</span> 만 14세 이상입니다
+                      </span>
+                    </button>
+                  </div>
+
+                  <div className="h-px bg-gray-100 mx-4" />
+
+                  {/* 마케팅 수신 동의 */}
+                  <div className="flex items-center px-4 py-3.5">
+                    <button
+                      onClick={() => setAgreeMarketing(!agreeMarketing)}
+                      className="flex items-center gap-3"
+                    >
+                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                        agreeMarketing ? "border-violet-500 bg-violet-500" : "border-gray-300"
+                      }`}>
+                        {agreeMarketing && <Check className="w-3 h-3 text-white" />}
+                      </div>
+                      <span className="text-sm text-gray-700">
+                        <span className="text-gray-400">[선택]</span> 마케팅 정보 수신 동의
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step 1: Nickname */}
+            {step === 1 && (
               <div>
                 <h1 className="text-2xl font-black text-gray-900 mb-2">
                   별명을 정해주세요
@@ -329,8 +462,8 @@ export default function ProfileSetupPage() {
               </div>
             )}
 
-            {/* Step 1: Age Group */}
-            {step === 1 && (
+            {/* Step 2: Age Group */}
+            {step === 2 && (
               <div>
                 <h1 className="text-2xl font-black text-gray-900 mb-2">
                   나이대를 선택해주세요
@@ -357,8 +490,8 @@ export default function ProfileSetupPage() {
               </div>
             )}
 
-            {/* Step 2: Instruments */}
-            {step === 2 && (
+            {/* Step 3: Instruments */}
+            {step === 3 && (
               <div>
                 <h1 className="text-2xl font-black text-gray-900 mb-2">
                   연주하는 악기를 선택해주세요
@@ -394,8 +527,8 @@ export default function ProfileSetupPage() {
               </div>
             )}
 
-            {/* Step 3: Profile Emoji */}
-            {step === 3 && (
+            {/* Step 4: Profile Emoji */}
+            {step === 4 && (
               <div>
                 <h1 className="text-2xl font-black text-gray-900 mb-2">
                   프로필 이모지를 선택해주세요
