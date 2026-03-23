@@ -59,11 +59,20 @@ function GoogleCallbackHandler() {
         // 다른 소셜 로그인으로 이미 가입한 이메일인지 확인
         const email = authData.user.email;
         if (email) {
-          const existing = await getExistingProvider(email, authData.user.id);
-          if (existing && existing !== "google") {
-            await supabase.auth.signOut();
-            setConflict(existing);
-            return;
+          try {
+            const dupRes = await fetch("/api/auth/check-duplicate", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email, currentUserId: authData.user.id }),
+            });
+            const dupData = await dupRes.json();
+            if (dupData.duplicate) {
+              await supabase.auth.signOut();
+              setConflict(dupData.provider);
+              return;
+            }
+          } catch {
+            // 중복 확인 실패해도 로그인은 진행
           }
         }
 
