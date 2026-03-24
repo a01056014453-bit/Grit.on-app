@@ -34,7 +34,37 @@ export async function getFeedbackRequestById(
     .single();
 
   if (error) return null;
-  return rowToRequest(data);
+  const request = rowToRequest(data);
+
+  // teacher 정보 로드
+  if (request.teacherId) {
+    const { data: teacher } = await supabase
+      .from("teachers")
+      .select("id, name, specialty, profile_image, title, rating, verified")
+      .eq("id", request.teacherId)
+      .single();
+
+    if (teacher) {
+      request.teacher = {
+        id: teacher.id,
+        name: teacher.name,
+        specialty: teacher.specialty ?? [],
+        profileImage: teacher.profile_image ?? undefined,
+        title: teacher.title ?? "",
+        rating: teacher.rating ?? 0,
+        verified: teacher.verified ?? false,
+        reviewCount: 0,
+        completedCount: 0,
+        responseRate: 0,
+        avgResponseTime: 0,
+        priceCredits: 0,
+        bio: "",
+        badges: [],
+      };
+    }
+  }
+
+  return request;
 }
 
 export async function getTeacherFeedbackRequests(

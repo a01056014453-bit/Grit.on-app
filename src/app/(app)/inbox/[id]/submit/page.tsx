@@ -14,7 +14,7 @@ import {
   CheckCircle,
   AlertCircle,
 } from "lucide-react";
-import { getFeedbackRequestById, saveFeedback } from "@/lib/queries";
+import { getFeedbackRequestById, saveFeedback, updateFeedbackRequestStatus } from "@/lib/queries";
 import { addNotification } from "@/lib/notification-store";
 import { getRemainingTime } from "@/lib/time-utils";
 import { FeedbackRequest, FeedbackComment, PracticeCard } from "@/types";
@@ -173,6 +173,8 @@ export default function SubmitFeedbackPage() {
         demoVideoUrl: demoVideo ? "/videos/demo.mp4" : undefined,
         practiceCard,
       });
+      // 요청 상태를 SUBMITTED로 변경 (학생이 피드백 확인 가능)
+      await updateFeedbackRequestStatus(requestId, "SUBMITTED");
       addNotification({
         type: "feedback_received",
         title: "피드백 작성 완료",
