@@ -15,6 +15,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { RequestStatusChip } from "@/components/feedback/request-status-chip";
+import { VideoPlayer } from "@/components/feedback/video-player";
 import { getFeedbackRequestById, updateFeedbackRequestStatus } from "@/lib/queries";
 import { addNotification } from "@/lib/notification-store";
 import { getRemainingTime } from "@/lib/time-utils";
@@ -236,14 +237,7 @@ export default function InboxDetailPage() {
           <Play className="w-4 h-4 text-primary" />
           학생 연주 영상
         </h2>
-        <div className="aspect-video bg-slate-900 rounded-lg flex items-center justify-center">
-          <div className="text-center">
-            <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-2">
-              <Play className="w-8 h-8 text-white" />
-            </div>
-            <p className="text-white/70 text-sm">영상 재생</p>
-          </div>
-        </div>
+        <VideoPlayer url={request.videoUrl} />
         {request.faceBlurred && (
           <p className="text-xs text-muted-foreground mt-2 text-center">
             얼굴 블러 처리됨

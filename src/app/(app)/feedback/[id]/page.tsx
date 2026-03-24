@@ -17,6 +17,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { RequestStatusChip } from "@/components/feedback/request-status-chip";
+import { VideoPlayer } from "@/components/feedback/video-player";
 import { getFeedbackRequestById } from "@/lib/queries";
 import { getRemainingTime } from "@/lib/time-utils";
 import { FeedbackRequest, PROBLEM_TYPE_LABELS } from "@/types";
@@ -36,20 +37,45 @@ export default function FeedbackDetailPage() {
   const [request, setRequest] = useState<FeedbackRequest | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const loadRequest = async () => {
+    try {
+      const data = await getFeedbackRequestById(requestId);
+      setRequest(data);
+    } catch (err) {
+      console.error("Failed to load feedback request:", err);
+    }
+  };
+
   useEffect(() => {
-    const load = async () => {
-      setIsLoading(true);
-      try {
-        const data = await getFeedbackRequestById(requestId);
-        setRequest(data);
-      } catch (err) {
-        console.error("Failed to load feedback request:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    load();
+    setIsLoading(true);
+    loadRequest().finally(() => setIsLoading(false));
   }, [requestId]);
+
+  // SLA 마감 도달 시 자동 재조회
+  useEffect(() => {
+    if (!request) return;
+
+    const deadline =
+      request.status === "SENT" ? request.acceptDeadline :
+      request.status === "ACCEPTED" ? request.submitDeadline :
+      null;
+
+    if (!deadline) return;
+
+    const remaining = new Date(deadline).getTime() - Date.now();
+    if (remaining <= 0) {
+      // 이미 만료 — 즉시 재조회
+      loadRequest();
+      return;
+    }
+
+    // 마감 시점에 재조회 예약
+    const timer = setTimeout(() => {
+      loadRequest();
+    }, remaining + 5000); // Cron 처리 여유 5초
+
+    return () => clearTimeout(timer);
+  }, [request?.status, request?.acceptDeadline, request?.submitDeadline]);
 
   if (isLoading) {
     return (
@@ -284,11 +310,8 @@ export default function FeedbackDetailPage() {
           {request.videoUrl && (
             <div>
               <span className="text-xs text-muted-foreground">업로드 영상</span>
-              <div className="mt-2 bg-secondary/50 rounded-lg p-4 flex items-center justify-center">
-                <div className="text-center">
-                  <Play className="w-8 h-8 text-primary mx-auto mb-2" />
-                  <span className="text-xs text-muted-foreground">영상 재생</span>
-                </div>
+              <div className="mt-2">
+                <VideoPlayer url={request.videoUrl} />
               </div>
             </div>
           )}

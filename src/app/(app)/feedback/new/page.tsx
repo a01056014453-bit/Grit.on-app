@@ -23,6 +23,8 @@ import { getTeacherById, createFeedbackRequest, updateFeedbackRequestStatus } fr
 import { addNotification } from "@/lib/notification-store";
 import { sendPushToUser } from "@/lib/push-notify";
 import { getUserId } from "@/lib/user-id";
+import { useVideoUpload } from "@/hooks/useVideoUpload";
+import { getCreditBalance } from "@/lib/queries/credits";
 import { Teacher, ProblemType, PROBLEM_TYPE_LABELS } from "@/types";
 import { ComposerAutocomplete, TitleAutocomplete } from "@/components/ui/composer-autocomplete";
 
@@ -59,6 +61,8 @@ function NewFeedbackRequestContent() {
 
   // Teacher data
   const [teacher, setTeacher] = useState<Teacher | null>(null);
+  const [creditBalance, setCreditBalance] = useState<number | null>(null);
+  const FEEDBACK_COST = 2; // 피드백 1건 = 2크레딧
 
   // Form states
   const [composer, setComposer] = useState("");
@@ -74,9 +78,16 @@ function NewFeedbackRequestContent() {
   const [submitError, setSubmitError] = useState("");
   const [step, setStep] = useState(1); // 1: 선생님 확인, 2: 곡 정보, 3: 영상 업로드
 
+  const videoUpload = useVideoUpload({ type: "student" });
+
   useEffect(() => {
     if (teacherId) {
       getTeacherById(teacherId).then((t) => setTeacher(t));
+    }
+    // 크레딧 잔액 조회
+    const userId = getUserId();
+    if (userId) {
+      getCreditBalance(userId).then((b) => setCreditBalance(b.balance));
     }
   }, [teacherId]);
 
@@ -94,6 +105,7 @@ function NewFeedbackRequestContent() {
     setSubmitError("");
 
     try {
+      // 1. 먼저 요청을 DRAFT로 생성 (requestId 확보)
       const request = await createFeedbackRequest({
         studentId: getUserId(),
         teacherId: teacher.id,
@@ -103,11 +115,11 @@ function NewFeedbackRequestContent() {
         measureEnd: parseInt(measureEnd),
         problemType: problemType as ProblemType,
         description,
-        videoUrl: videoFile ? `/videos/${videoFile.name}` : "/videos/sample.mp4",
+        videoUrl: undefined,
         faceBlurred: faceBlur,
         status: "DRAFT",
-        creditAmount: 0,
-        paymentStatus: "released",
+        creditAmount: FEEDBACK_COST,
+        paymentStatus: "pending",
       });
 
       if (!request) {
@@ -115,7 +127,21 @@ function NewFeedbackRequestContent() {
         return;
       }
 
-      await updateFeedbackRequestStatus(request.id, "SENT");
+      // 2. 영상 업로드 (파일이 있으면)
+      let videoUrl: string | undefined;
+      if (videoFile) {
+        const uploadedUrl = await videoUpload.upload(videoFile, request.id);
+        if (!uploadedUrl) {
+          setSubmitError(videoUpload.error || "영상 업로드에 실패했습니다. 다시 시도해주세요.");
+          return;
+        }
+        videoUrl = uploadedUrl;
+      }
+
+      // 3. 영상 URL 업데이트 + SENT 전환
+      await updateFeedbackRequestStatus(request.id, "SENT", {
+        ...(videoUrl ? { video_url: videoUrl } : {}),
+      });
 
       // 선생님에게 푸시 알림 발송
       sendPushToUser({
@@ -248,7 +274,18 @@ function NewFeedbackRequestContent() {
             </div>
 
             <div className="flex items-center justify-between pt-3 border-t border-border">
-              <span className="text-xs text-green-600 font-medium bg-green-50 px-2 py-0.5 rounded-full">무료 피드백</span>
+              <span className="text-xs text-violet-600 font-medium bg-violet-50 px-2 py-0.5 rounded-full">
+                {FEEDBACK_COST}크레딧 필요
+              </span>
+              {creditBalance !== null && (
+                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                  creditBalance >= FEEDBACK_COST
+                    ? "text-green-600 bg-green-50"
+                    : "text-red-600 bg-red-50"
+                }`}>
+                  잔액: {creditBalance}크레딧
+                </span>
+              )}
             </div>
           </div>
 
@@ -396,7 +433,7 @@ function NewFeedbackRequestContent() {
                 <label className="cursor-pointer block">
                   <Upload className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
                   <p className="font-medium text-foreground">영상을 업로드하세요</p>
-                  <p className="text-sm text-muted-foreground mt-1">30-60초, 최대 100MB</p>
+                  <p className="text-sm text-muted-foreground mt-1">30-60초, 최대 50MB</p>
                   <input
                     type="file"
                     accept="video/*"
@@ -453,18 +490,38 @@ function NewFeedbackRequestContent() {
             </button>
           </div>
 
-          {submitError && (
+          {/* 업로드 진행률 */}
+          {videoUpload.uploading && (
+            <div className="p-4 bg-violet-50 border border-violet-200 rounded-xl">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-medium text-violet-700">영상 업로드 중...</p>
+                <span className="text-sm font-bold text-violet-700">{videoUpload.progress}%</span>
+              </div>
+              <div className="w-full h-2 bg-violet-200 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-violet-600 rounded-full transition-all duration-300"
+                  style={{ width: `${videoUpload.progress}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          {(submitError || videoUpload.error) && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
-              <p className="text-sm text-red-600">{submitError}</p>
+              <p className="text-sm text-red-600">{submitError || videoUpload.error}</p>
             </div>
           )}
 
           <button
             onClick={handleSubmit}
-            disabled={isSubmitting || !canProceed()}
+            disabled={isSubmitting || videoUpload.uploading || !canProceed()}
             className="w-full py-4 rounded-xl bg-gradient-to-r from-primary to-violet-600 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSubmitting ? "요청 전송 중..." : "피드백 요청 보내기"}
+            {videoUpload.uploading
+              ? "영상 업로드 중..."
+              : isSubmitting
+                ? "요청 전송 중..."
+                : "피드백 요청 보내기"}
           </button>
         </div>
       )}

@@ -13,6 +13,8 @@ import {
   Star,
   Sparkles,
 } from "lucide-react";
+import { VideoPlayer } from "@/components/feedback/video-player";
+import { TeacherReviewForm } from "@/components/feedback/teacher-review-form";
 import { getFeedbackRequestById, getFeedback, updateFeedbackRequestStatus } from "@/lib/queries";
 import { addNotification } from "@/lib/notification-store";
 import { FeedbackRequest, Feedback } from "@/types";
@@ -130,14 +132,7 @@ export default function FeedbackViewPage() {
             <Play className="w-4 h-4 text-primary" />
             시연 영상
           </h2>
-          <div className="aspect-video bg-slate-900 rounded-lg flex items-center justify-center">
-            <div className="text-center">
-              <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-2">
-                <Play className="w-8 h-8 text-white" />
-              </div>
-              <p className="text-white/70 text-sm">영상 재생</p>
-            </div>
-          </div>
+          <VideoPlayer url={feedback.demoVideoUrl} />
           <p className="text-xs text-muted-foreground mt-2 text-center">
             선생님이 직접 시연한 영상입니다
           </p>
@@ -217,23 +212,11 @@ export default function FeedbackViewPage() {
       </div>
 
       {request.status === "COMPLETED" && (
-        <div className="bg-card rounded-xl p-4 border border-border mb-4">
-          <h2 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-            <Star className="w-4 h-4 text-amber-500" />
-            내 평가
-          </h2>
-          <div className="flex items-center gap-1">
-            {[1, 2, 3, 4, 5].map((star) => (
-              <Star
-                key={star}
-                className="w-8 h-8 text-amber-400 fill-current"
-              />
-            ))}
-          </div>
-          <p className="text-xs text-muted-foreground mt-2">
-            피드백이 도움이 되셨다면 평가를 남겨주세요
-          </p>
-        </div>
+        <TeacherReviewForm
+          requestId={request.id}
+          studentId={request.studentId}
+          teacherId={request.teacherId}
+        />
       )}
 
       {request.status === "SUBMITTED" && (

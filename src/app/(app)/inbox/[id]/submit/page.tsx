@@ -18,6 +18,7 @@ import { getFeedbackRequestById, saveFeedback, updateFeedbackRequestStatus } fro
 import { addNotification } from "@/lib/notification-store";
 import { sendPushToUser } from "@/lib/push-notify";
 import { getRemainingTime } from "@/lib/time-utils";
+import { useVideoUpload } from "@/hooks/useVideoUpload";
 import { FeedbackRequest, FeedbackComment, PracticeCard } from "@/types";
 
 interface CommentDraft {
@@ -46,6 +47,7 @@ export default function SubmitFeedbackPage() {
   const [dailyMinutes, setDailyMinutes] = useState("15");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const demoUpload = useVideoUpload({ type: "demo" });
 
   useEffect(() => {
     const load = async () => {
@@ -168,10 +170,21 @@ export default function SubmitFeedbackPage() {
     };
 
     try {
+      // 시연 영상 업로드
+      let demoVideoUrl: string | undefined;
+      if (demoVideo) {
+        const uploadedUrl = await demoUpload.upload(demoVideo, requestId);
+        if (!uploadedUrl) {
+          setIsSubmitting(false);
+          return;
+        }
+        demoVideoUrl = uploadedUrl;
+      }
+
       await saveFeedback({
         requestId,
         comments: feedbackComments,
-        demoVideoUrl: demoVideo ? "/videos/demo.mp4" : undefined,
+        demoVideoUrl,
         practiceCard,
       });
       // 요청 상태를 SUBMITTED로 변경 (학생이 피드백 확인 가능)
