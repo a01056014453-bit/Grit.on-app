@@ -163,19 +163,19 @@ function NewFeedbackRequestContent() {
   }
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
+    <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet overflow-x-hidden">
       <div className="bg-blob-extra" />
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button
           onClick={() => (step > 1 ? setStep(step - 1) : safeBack(router))}
-          className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors"
+          className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors shrink-0"
         >
           <ArrowLeft className="w-5 h-5 text-muted-foreground" />
         </button>
         <div>
           <h1 className="text-lg font-bold text-foreground">피드백 요청</h1>
-          <p className="text-xs text-muted-foreground">단계 {step}/4</p>
+          <p className="text-xs text-muted-foreground">단계 {step}/3</p>
         </div>
       </div>
 
@@ -261,7 +261,7 @@ function NewFeedbackRequestContent() {
               <Music className="w-4 h-4 text-primary" />
               곡 정보
             </h2>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-3">
               <ComposerAutocomplete
                 value={composer}
                 onChange={setComposer}
