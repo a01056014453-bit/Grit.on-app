@@ -17,6 +17,7 @@ import {
   createDetailAnalysisPrompt,
   createExtraTechniquePrompt,
   isLargeWork,
+  AnalysisInstrument,
 } from "@/lib/analysis-prompts";
 import { findComposerResources } from "@/lib/composer-resources";
 import type {
@@ -216,6 +217,7 @@ async function safeParseJSON(
 async function searchMusicReference(
   composer: string,
   title: string,
+  instrument?: AnalysisInstrument,
 ): Promise<string | null> {
   const perplexity = getPerplexityClient();
   if (!perplexity) {
@@ -225,7 +227,7 @@ async function searchMusicReference(
 
   try {
     console.log("[Phase 0] Perplexity 레퍼런스 검색 중...");
-    const prompt = createReferenceSearchPrompt(composer, title);
+    const prompt = createReferenceSearchPrompt(composer, title, instrument);
     const completion = await perplexity.chat.completions.create({
       model: "sonar-pro",
       messages: [{ role: "user", content: prompt }],
@@ -335,11 +337,12 @@ async function runPhase1(
   composer: string,
   title: string,
   musicXml?: string,
+  instrument?: AnalysisInstrument,
   enrichedReference?: string | null,
 ): Promise<{ meta: SongAnalysis["meta"]; song_overview: SongOverview }> {
   console.log("[Phase 1] 데이터 검증 + 곡 개요...");
 
-  const prompt = createPhase1Prompt(composer, title, musicXml, enrichedReference || undefined);
+  const prompt = createPhase1Prompt(composer, title, musicXml, enrichedReference || undefined, instrument);
   const text = await callGPT(openai, prompt, 4096, 0.1);
   const parsed = await safeParseJSON(text, openai, "Phase 1");
 
@@ -376,6 +379,7 @@ async function runPhase2(
   composer: string,
   title: string,
   opus: string,
+  instrument?: AnalysisInstrument,
   verifiedMeta?: { composer: string; title: string; opus: string; key: string },
   enrichedReference?: string | null,
 ): Promise<{
@@ -385,7 +389,7 @@ async function runPhase2(
 }> {
   console.log("[Phase 2] 인문학적 배경...");
 
-  const prompt = createPhase2Prompt(composer, title, opus, verifiedMeta, enrichedReference || undefined);
+  const prompt = createPhase2Prompt(composer, title, opus, verifiedMeta, enrichedReference || undefined, instrument);
   const text = await callGPT(openai, prompt, 8192, 0.3);
   const parsed = await safeParseJSON(text, openai, "Phase 2");
 
@@ -418,13 +422,14 @@ async function runPhase3(
   composer: string,
   title: string,
   opus: string,
+  instrument?: AnalysisInstrument,
   musicXml?: string,
   enrichedReference?: string | null,
   verifiedMeta?: { composer: string; title: string; opus: string; key: string },
 ): Promise<{ structure_analysis_v2: StructureAnalysisV2 }> {
   console.log("[Phase 3] 구조/화성 분석...");
 
-  const prompt = createPhase3Prompt(composer, title, opus, musicXml, enrichedReference || undefined, verifiedMeta);
+  const prompt = createPhase3Prompt(composer, title, opus, musicXml, enrichedReference || undefined, verifiedMeta, instrument);
   const text = await callGPT(openai, prompt, 12000, 0.1);
   const parsed = await safeParseJSON(text, openai, "Phase 3");
 
@@ -450,6 +455,7 @@ async function runPhase4a(
   title: string,
   opus: string,
   sectionNames: string[],
+  instrument?: AnalysisInstrument,
   enrichedReference?: string | null,
 ): Promise<{
   technique_summary: PracticeMethod["technique_summary"];
@@ -458,7 +464,7 @@ async function runPhase4a(
 }> {
   console.log("[Phase 4a] 연습법 + 추천 연주...");
 
-  const prompt = createPhase4aPrompt(composer, title, opus, sectionNames, enrichedReference || undefined);
+  const prompt = createPhase4aPrompt(composer, title, opus, sectionNames, enrichedReference || undefined, instrument);
   const text = await callGPT(openai, prompt, 8192, 0.3);
   const parsed = await safeParseJSON(text, openai, "Phase 4a");
 
@@ -485,11 +491,12 @@ async function runPhase4b(
   title: string,
   opus: string,
   sectionNames: string[],
+  instrument?: AnalysisInstrument,
   enrichedReference?: string | null,
 ): Promise<PracticeMethod["weekly_routine"]> {
   console.log("[Phase 4b] 4주 루틴...");
 
-  const prompt = createPhase4bPrompt(composer, title, opus, sectionNames, enrichedReference || undefined);
+  const prompt = createPhase4bPrompt(composer, title, opus, sectionNames, enrichedReference || undefined, instrument);
   const text = await callGPT(openai, prompt, 12000, 0.3);
   const parsed = await safeParseJSON(text, openai, "Phase 4b");
 
@@ -584,12 +591,13 @@ async function runV2Pipeline(
   title: string,
   musicXml?: string,
   forceRefresh = false,
+  instrument?: AnalysisInstrument,
 ): Promise<SongAnalysis> {
   // ── Phase 0: 팩트 수집 (학술자료 DB + Perplexity 병렬)
   console.log("[Phase 0] 팩트 수집 시작 (학술자료 DB + 웹 검색 병렬)...");
   const [resourceResult, referenceData] = await Promise.all([
     findComposerResources(composer, title),
-    searchMusicReference(composer, title),
+    searchMusicReference(composer, title, instrument),
   ]);
 
   // 학술자료 DB를 1차 출처로, 웹 검색을 보조로 구성
@@ -608,7 +616,7 @@ async function runV2Pipeline(
 
   // ── Phase 1: GPT — enrichedReference 기반으로 메타 정리
   const { meta: rawMeta, song_overview } = await runPhase1(
-    openai, composer, title, musicXml, enrichedReference,
+    openai, composer, title, musicXml, instrument, enrichedReference,
   );
 
   // ── 교차검증: Perplexity로 Phase 1 meta 재검증
@@ -621,15 +629,15 @@ async function runV2Pipeline(
   };
 
   // ── Phase 2 → Phase 3: GPT — 순차 실행 (TPM 30K 제한 대응)
-  const phase2Result = await runPhase2(openai, meta.composer, meta.title, meta.opus, verifiedMeta, enrichedReference);
-  const phase3Result = await runPhase3(openai, meta.composer, meta.title, meta.opus, musicXml, enrichedReference, verifiedMeta);
+  const phase2Result = await runPhase2(openai, meta.composer, meta.title, meta.opus, instrument, verifiedMeta, enrichedReference);
+  const phase3Result = await runPhase3(openai, meta.composer, meta.title, meta.opus, instrument, musicXml, enrichedReference, verifiedMeta);
 
   // ── Phase 4a → Phase 4b: GPT — 순차 실행 (TPM 제한 대응)
   const sectionNames = phase3Result.structure_analysis_v2.sections.map((s) => s.section);
   const effectiveSections = sectionNames.length > 0 ? sectionNames : ["전체"];
 
-  const phase4aResult = await runPhase4a(openai, meta.composer, meta.title, meta.opus, effectiveSections, enrichedReference);
-  const phase4bResult = await runPhase4b(openai, meta.composer, meta.title, meta.opus, effectiveSections, enrichedReference);
+  const phase4aResult = await runPhase4a(openai, meta.composer, meta.title, meta.opus, effectiveSections, instrument, enrichedReference);
+  const phase4bResult = await runPhase4b(openai, meta.composer, meta.title, meta.opus, effectiveSections, instrument, enrichedReference);
 
   // ── YouTube URL 검색 (Perplexity — Phase 4b와 독립적이므로 여기서 실행)
   const performancesWithUrls = await searchYoutubeUrls(
@@ -924,6 +932,7 @@ export async function POST(request: NextRequest) {
     const body: AnalyzeSongRequest = await request.json();
     let { composer, title, forceRefresh = false, sheetMusicImages, musicXml } = body;
     const { pdfStoragePath, musicxmlStoragePath, useStoredSource, useV2 = true } = body;
+    const instrument = ((body as unknown as Record<string, unknown>).instrument as AnalysisInstrument) || "piano";
 
     if (!composer || !title) {
       const response: AnalyzeSongResponse = {
@@ -1049,6 +1058,7 @@ export async function POST(request: NextRequest) {
         title,
         hasMusicXml ? musicXml : undefined,
         forceRefresh,
+        instrument,
       );
     } else {
       analysis = await runV1Pipeline(

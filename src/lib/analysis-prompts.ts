@@ -5,41 +5,88 @@
  * 핵심 원칙:
  * - Perplexity: 팩트 수집 전용
  * - GPT-4o: Perplexity 수집 팩트를 기반으로 글 작성
+ * - 악기별 분기: instrument 파라미터로 전문가 역할 전환
  * - 하드코딩된 예시 없음 — GPT가 곡별로 스스로 파악하도록 chain-of-thought
  */
 
+export type AnalysisInstrument = "piano" | "violin" | "cello" | "flute" | "clarinet" | "guitar" | "vocal";
+
+/** 악기별 전문가 역할 */
+function getExpertRole(instrument: AnalysisInstrument): string {
+  const roles: Record<AnalysisInstrument, string> = {
+    piano: "세계적인 피아노 교수법 전문가이자 연주 코치. 레슨 경력 30년, 국제 콩쿠르 입상자를 다수 배출한 마스터 클래스 강사로서, 학생이 바로 피아노 앞에서 실행할 수 있는 구체적인 신체 동작과 연습 방법을 처방합니다.",
+    violin: "세계적인 바이올린 교수법 전문가이자 연주 코치. 보잉(데타셰, 마르텔레, 스피카토, 리코셰), 왼손 포지션 이동, 비브라토, 더블스탑 등 현악 특유의 테크닉에 정통합니다.",
+    cello: "세계적인 첼로 교수법 전문가이자 연주 코치. 엄지 포지션, 보잉과 음색의 관계, 바흐 무반주 모음곡 연주 관습 등 첼로 특유의 테크닉에 정통합니다.",
+    flute: "세계적인 플루트 교수법 전문가이자 연주 코치. 앙부쉬어, 횡격막 호흡, 싱글/더블/트리플 텅잉, 고음역 발음, 현대 주법(플러터 텅잉, 멀티포닉스)에 정통합니다.",
+    clarinet: "세계적인 클라리넷 교수법 전문가이자 연주 코치. 앙부쉬어, 호흡 컨트롤, 샬뤼모/클래리온/알티시모 음역 전환, 레가토 텅잉에 정통합니다.",
+    guitar: "세계적인 클래식 기타 교수법 전문가이자 연주 코치. 오른손 터치(아포얀도/티란도), 왼손 운지, 바레 코드, 트레몰로, 하모닉스에 정통합니다.",
+    vocal: "세계적인 성악 교수법 전문가이자 보컬 코치. 파사조(Passaggio), 벨칸토 창법, 호흡법, 딕션(이탈리아어/독일어/프랑스어), 공명에 정통합니다.",
+  };
+  return roles[instrument] ?? roles.piano;
+}
+
+/** 악기별 연습법 키워드 */
+function getPracticeKeywords(instrument: AnalysisInstrument): string {
+  const keywords: Record<AnalysisInstrument, string> = {
+    piano: "손목/팔/어깨 동작, 터치(레가토/스타카토/논레가토), 페달링, 손 포지션, 팔 무게 활용",
+    violin: "보잉 방향/속도/압력, 왼손 포지션 이동, 비브라토(손목/팔/손가락), 더블스탑, 하모닉스",
+    cello: "보잉 배분, 엄지 포지션, 비브라토, 음색 변화(sul tasto/sul ponticello), 왼손 확장",
+    flute: "앙부쉬어 조절, 호흡 배분, 텅잉 종류, 음색 변화, 고음역 도약, 레가토 연결",
+    clarinet: "앙부쉬어 압력, 호흡 지지, 음역 전환(브레이크), 텅잉 아티큘레이션, 레지스터 키 활용",
+    guitar: "오른손 터치(아포얀도/티란도), 왼손 운지/스트레칭, 바레 압력, 음색 변화(sul tasto/ponticello)",
+    vocal: "호흡 지지(횡격막), 발성 위치(마스케라), 모음 변형, 딕션 정확도, 레가토 라인, 파사조 전환",
+  };
+  return keywords[instrument] ?? keywords.piano;
+}
+
+/** 악기별 운지법 금지 규칙 */
+function getFingeringRule(instrument: AnalysisInstrument): string {
+  if (instrument === "piano") {
+    return "🚨 손가락 번호(운지법) 절대 금지. 손목/팔 동작, 터치, 신체 감각 기반 조언만.";
+  }
+  if (instrument === "violin" || instrument === "cello") {
+    return "운지(fingering)는 포지션 단위로만 언급 (예: '3rd 포지션에서'). 개별 손가락 번호는 지양.";
+  }
+  return "구체적 운지법보다 신체 감각, 호흡, 터치 기반 조언을 우선.";
+}
+
 const KOREAN_OUTPUT_RULE = `🚨 모든 출력은 반드시 한국어로 작성하십시오. (고유명사, 음악 용어만 원어 병기 가능)
 🚨 마크다운 서식 절대 금지. **bold**, *italic*, ##heading, - list 등 금지. 순수 텍스트만 출력.
-🚨 일본어 절대 금지. 한국어 또는 원어로 대체.
-🚨 손가락 번호(운지법) 절대 금지. 손목/팔 동작, 터치, 신체 감각 기반 조언만.`;
+🚨 일본어 절대 금지. 한국어 또는 원어로 대체.`;
 
 const HALLUCINATION_GUARD = `🚨 핵심 규칙 — 거짓말 금지:
-- 제공된 레퍼런스 데이터에 없는 구체적 수치(마디 번호, 연도, BPM)를 생성하지 마십시오.
-- 확인되지 않은 사실을 단정적으로 서술하지 마십시오.
+- 확인되지 않은 구체적 수치(마디 번호, 연도, BPM, 마디 수)를 만들어내지 마십시오.
+- 확인되지 않은 사실을 단정적으로 서술하지 마십시오. "~으로 알려져 있다", "~으로 추정된다" 등 유보적 표현을 사용하십시오.
 - 모르는 것은 해당 필드를 빈 문자열("")로 두십시오. "문헌 확인 필요" 같은 표기 금지.
-- 레퍼런스에 있는 내용만 활용하고, 없는 내용은 생략하십시오.
+- 작곡가의 생몰년, 작품 번호, 조성 등 팩트는 반드시 레퍼런스에서 확인된 것만 기재하십시오.
+- 화성 분석(roman numeral)은 확신할 수 있는 것만 기재하고, 추측성 분석은 하지 마십시오.
 
 🚨 출처 우선순위:
-1순위: [학술 자료 DB] 태그 하의 논문/학위논문 데이터 — 가장 신뢰도 높음. 이 데이터의 내용을 최우선으로 반영.
-2순위: [웹 검색 요약] 태그 하의 Perplexity 검색 결과 — 학술 자료 보충용.
-3순위: 모델 자체 지식 — 위 두 출처에서 다루지 않은 일반 음악사·음악이론 지식만 사용.
-- 학술 자료에 구체적 분석(화성 진행, 마디 번호, 형식 구조, 연주법)이 있으면 반드시 인용하십시오.
-- 학술 자료의 내용과 모델 지식이 상충하면 학술 자료를 따르십시오.`;
+1순위: [학술 자료 DB] — 가장 신뢰도 높음. 반드시 최우선 반영.
+2순위: [웹 검색 요약] — 학술 자료 보충용.
+3순위: 모델 자체 지식 — 위 두 출처에서 다루지 않은 일반 음악사·음악이론만.
+- 학술 자료와 모델 지식이 상충하면 학술 자료를 따르십시오.
+- 레퍼런스에 없는 내용을 지어내는 것은 분석 실패보다 나쁩니다.`;
 
 // ── Phase 0: Perplexity 레퍼런스 검색 ──────────────────────────
 
-export function createReferenceSearchPrompt(composer: string, title: string): string {
-  return `I need accurate musical reference data for this piano piece:
+export function createReferenceSearchPrompt(composer: string, title: string, instrument?: AnalysisInstrument): string {
+  const instrumentLabel = instrument ? {
+    piano: "piano", violin: "violin", cello: "cello", flute: "flute",
+    clarinet: "clarinet", guitar: "classical guitar", vocal: "vocal/art song",
+  }[instrument] ?? "musical" : "musical";
+
+  return `I need accurate musical reference data for this ${instrumentLabel} piece:
 
 Composer: ${composer}
 Title: ${title}
 
-Search broadly across the web: IMSLP, Wikipedia, Henle Verlag, Grove Music Online, AllMusic, MusicBrainz, piano forums, sheet music databases, YouTube descriptions, academic papers, composer society websites, and any other relevant source.
+Search broadly across the web: IMSLP, Wikipedia, Henle Verlag, Grove Music Online, AllMusic, MusicBrainz, music forums, sheet music databases, YouTube descriptions, academic papers, composer society websites, and any other relevant source.
 
 For less mainstream composers (e.g., Kapustin, Medtner, Godowsky), also search:
 - "${composer} ${title} key" directly
 - Score preview sites (Scribd, IMSLP, Sheet Music Plus)
-- Piano competition repertoire lists
+- Competition repertoire lists
 - Recording liner notes and album descriptions
 
 CRITICAL: If the title contains "No.X", search for THAT SPECIFIC piece only.
@@ -76,7 +123,8 @@ export function createPhase1Prompt(
   composer: string,
   title: string,
   musicXml?: string,
-  referenceData?: string
+  referenceData?: string,
+  instrument?: AnalysisInstrument,
 ): string {
   const xmlSection = musicXml
     ? `\n\n[MusicXML 데이터 — 조성·박자·마디를 여기서 직접 읽으십시오]\n\`\`\`xml\n${musicXml.substring(0, 30000)}\n\`\`\``
@@ -141,6 +189,7 @@ export function createPhase2Prompt(
   opus: string,
   verifiedMeta?: { composer: string; title: string; opus: string; key: string },
   referenceData?: string,
+  instrument?: AnalysisInstrument,
 ): string {
   const metaLock = verifiedMeta
     ? `\n[🔒 Phase 1 확정값 — 이 정보를 기준으로, 상충하는 내용 생성 금지]
@@ -151,7 +200,7 @@ export function createPhase2Prompt(
     ? `\n\n[🔍 레퍼런스 데이터 — 이 데이터를 1차 출처로 사용하십시오]\n${referenceData.substring(0, 20000)}\n\n🚨 위 학술자료에 작곡 배경, 시대적 맥락, 형식·구조, 기법 분석이 포함되어 있다면 반드시 해당 내용을 인용·반영하십시오.`
     : "";
 
-  return `당신은 세계적인 음악학자이자 피아노 교수법 전문가입니다.
+  return `당신은 세계적인 음악학자이자 ${getExpertRole(instrument ?? "piano")}
 
 작곡가: ${composer}
 곡 제목: ${title}
@@ -160,6 +209,7 @@ ${metaLock}
 ${refSection}
 
 ${KOREAN_OUTPUT_RULE}
+${getFingeringRule(instrument ?? "piano")}
 ${HALLUCINATION_GUARD}
 
 [Phase 2: 인문학적 배경]
@@ -273,7 +323,8 @@ export function createPhase3Prompt(
   opus: string,
   musicXml?: string,
   referenceData?: string,
-  verifiedMeta?: { composer: string; title: string; opus: string; key: string }
+  verifiedMeta?: { composer: string; title: string; opus: string; key: string },
+  instrument?: AnalysisInstrument,
 ): string {
   const xmlSection = musicXml
     ? `\n\n[MusicXML — 마디 번호·조성·박자·음형을 여기서 읽으십시오]\n\`\`\`xml\n${musicXml.substring(0, 60000)}\n\`\`\``
@@ -367,14 +418,17 @@ JSON만 출력:
   }
 }
 
-🚨 화성 테이블 필수 규칙:
-- 전체 곡을 커버하되 화성적으로 중요한 지점 20-40행 이상
-- 단순한 I-IV-V-I 나열 절대 금지 — 이 곡 고유의 화성 어법을 구체적으로 보여줘야 함
-- 반드시 포함할 것: 조바꿈 지점, 감7화음, 증6화음, 나폴리탄, 페달 포인트, 2차 도미넌트, 차용화음(modal mixture)
-- roman_numeral은 전위형까지 표기 (예: V6/5, viio7/V)
-- 바로크 곡은 순환5도 진행, 대위법적 종지 패턴을 상세히
-- 고전파 곡은 기능 화성의 구체적 진행을 상세히
-- 낭만파 이후는 반음계 화성, 감화음 연쇄, 3도 관계 조바꿈 등을 상세히`;
+🚨 화성 테이블 규칙:
+- 화성적으로 중요한 핵심 지점만 10-20행 (무리하게 40행을 채우지 마십시오)
+- MusicXML이나 레퍼런스에서 확인 가능한 화성만 기재하십시오
+- 확신할 수 없는 로마숫자 분석은 하지 마십시오 — 틀린 분석보다 적은 분석이 낫습니다
+- 반드시 포함할 것: 주요 조바꿈 지점, 종지 유형(PAC/HC/DC), 특수 화음(있는 경우만)
+- roman_numeral: 확실한 것만 기재. 추측은 "?" 접미사 (예: "V7?")
+- 바로크: 순환5도, 종지 패턴 중심
+- 고전파: 소나타 형식의 조성 구조 중심
+- 낭만파 이후: 전조 경로와 화성적 색채 중심
+- 마디 번호가 확인되지 않으면 구간명만 기재 (예: "제1주제 시작부")`;
+
 }
 
 // ── Phase 4a: 연습법 + 추천 연주 ─────────────────────────────
@@ -385,24 +439,27 @@ export function createPhase4aPrompt(
   opus: string,
   sectionNames: string[],
   referenceData?: string,
+  instrument?: AnalysisInstrument,
 ): string {
   const refSection = referenceData
     ? `\n\n[🔍 레퍼런스 데이터 — 연습법·연주 해석의 1차 출처]\n${referenceData.substring(0, 20000)}\n\n🚨 위 학술자료에 연주법, 테크닉, 페달링, 터치, 연습 방법, 해석 가이드, 추천 연주자 정보가 있으면 반드시 반영하십시오.`
     : "";
 
-  return `당신은 세계적인 피아노 교수법 전문가이자 연주 코치입니다.
-레슨 경력 30년, 국제 콩쿠르 입상자를 다수 배출한 마스터 클래스 강사로서,
-학생이 바로 피아노 앞에서 실행할 수 있는 구체적인 신체 동작과 연습 방법을 처방합니다.
+  const inst = instrument ?? "piano";
+
+  return `당신은 ${getExpertRole(inst)}
 
 작곡가: ${composer}
 곡 제목: ${title}
 작품번호: ${opus}
+악기: ${inst}
 
 이 곡의 구조 (${sectionNames.length}개 섹션):
 ${sectionNames.map((s, i) => `${i + 1}. ${s}`).join("\n")}
 ${refSection}
 
 ${KOREAN_OUTPUT_RULE}
+${getFingeringRule(inst)}
 ${HALLUCINATION_GUARD}
 
 [Phase 4a: 연습법 + 추천 연주]
@@ -415,23 +472,17 @@ ${HALLUCINATION_GUARD}
 
 각 섹션의 guide는 6문장으로, 아래 6가지를 반드시 하나씩 다루십시오:
 
-문장1: 이 섹션 고유의 핵심 테크닉 + 신체 동작 (손목/팔/어깨 구체적으로)
-   예: "격렬하고 불안한 도입부에서 손목을 낮게 유지하며 팔 전체로 폭포처럼 쏟아지는 아르페지오를 연주해 에너지를 폭발시키세요."
+문장1: 이 섹션 고유의 핵심 테크닉 + 신체 동작 (${getPracticeKeywords(inst)} 등 구체적으로)
 
-문장2: 양손 분리 연습법 — 한 손의 구체적 음형/동기를 떼어내 어떻게 연습할지
-   예: "제1주제의 3도 모티브를 떼어내 노래 부르듯 선율로 먼저 익히고 왼손 베이스를 별도로 무게 실어 연습하세요."
+문장2: 분리 연습법 — 구체적 음형/동기를 떼어내 어떻게 연습할지
 
 문장3: 리듬·박자 연습 — 이 섹션 고유의 리듬 패턴을 몸으로 익히는 방법
-   예: "리듬을 손뼉으로 세며 내부 싱코페이션을 잡고 2/4와 4/4 전환에서 몸 전체 리듬감을 느껴보세요."
 
-문장4: 다이내믹·터치 표현 — 이 섹션의 감정/분위기를 실현하는 구체적 터치
-   예: "양손 따로 터치 대비를 실험하며 pp에서 ff까지 팔 깊이를 바꿔 극적 긴장감을 만들어요."
+문장4: 다이내믹·표현 — 이 섹션의 감정/분위기를 실현하는 구체적 방법
 
 문장5: 형식·연결 — 이 섹션이 전체 구조에서 어떤 역할이며, 앞뒤 섹션과 어떻게 연결할지
-   예: "형식적으로 이 영역이 제시부의 문이라고 인식하며 다음 전이부로 자연스럽게 흘러가도록 연결 연주하세요."
 
 문장6: 소리 이미지·비유 — 추구해야 할 소리의 질감을 비유로
-   예: "손목을 가볍게 위로 튕겨 소리가 공중으로 퍼지는 느낌을 추구하세요."
 
 🚨 절대 금지:
 - "반복 연습하세요", "프레이즈를 살려서" 같은 일반론
@@ -483,16 +534,20 @@ export function createPhase4bPrompt(
   opus: string,
   sectionNames: string[],
   referenceData?: string,
+  instrument?: AnalysisInstrument,
 ): string {
   const refSection = referenceData
     ? `\n\n[🔍 레퍼런스 데이터]\n${referenceData.substring(0, 10000)}\n\n🚨 학술자료에 연습 순서, 단계별 학습 방법이 있으면 반드시 반영.`
     : "";
 
-  return `당신은 세계적인 피아노 교수법 전문가이자 연주 코치입니다.
+  const inst = instrument ?? "piano";
+
+  return `당신은 ${getExpertRole(inst)}
 
 작곡가: ${composer}
 곡 제목: ${title}
 작품번호: ${opus}
+악기: ${inst}
 
 이 곡의 구조 (${sectionNames.length}개 섹션):
 ${sectionNames.map((s, i) => `${i + 1}. ${s}`).join("\n")}
