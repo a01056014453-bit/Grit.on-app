@@ -2,7 +2,8 @@ export type NotificationType =
   | "analysis_complete"
   | "feedback_received"
   | "practice_milestone"
-  | "feedback_status";
+  | "feedback_status"
+  | "reward";
 
 export interface AppNotification {
   id: string;
@@ -38,5 +39,10 @@ export const NOTIFICATION_TYPE_CONFIG: Record<
     label: "피드백 상태",
     color: "text-green-600",
     bgColor: "bg-green-100/70",
+  },
+  reward: {
+    label: "보상",
+    color: "text-amber-600",
+    bgColor: "bg-amber-100/70",
   },
 };

@@ -1,0 +1,16 @@
+{
+  "crons": [
+    {
+      "path": "/api/feedback/expire-check",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/daily-rewards",
+      "schedule": "5 15 * * *"
+    },
+    {
+      "path": "/api/cron/weekly-rewards",
+      "schedule": "10 15 * * 1"
+    }
+  ]
+}
