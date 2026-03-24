@@ -70,6 +70,7 @@ function NewFeedbackRequestContent() {
   const [faceBlur, setFaceBlur] = useState(true);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const [step, setStep] = useState(1); // 1: 선생님 확인, 2: 곡 정보, 3: 영상 업로드
 
   useEffect(() => {
@@ -89,6 +90,7 @@ function NewFeedbackRequestContent() {
     if (!teacher || !problemType) return;
 
     setIsSubmitting(true);
+    setSubmitError("");
 
     try {
       const request = await createFeedbackRequest({
@@ -100,26 +102,30 @@ function NewFeedbackRequestContent() {
         measureEnd: parseInt(measureEnd),
         problemType: problemType as ProblemType,
         description,
-        videoUrl: "/videos/sample.mp4",
+        videoUrl: videoFile ? `/videos/${videoFile.name}` : "/videos/sample.mp4",
         faceBlurred: faceBlur,
         status: "DRAFT",
         creditAmount: 0,
         paymentStatus: "released",
       });
 
-      if (request) {
-        await updateFeedbackRequestStatus(request.id, "SENT");
-        addNotification({
-          type: "feedback_status",
-          title: "피드백 요청 전송 완료",
-          description: `${teacher?.name ?? "선생님"}에게 피드백 요청을 보냈습니다. 12시간 내 수락 여부가 결정됩니다.`,
-          icon: "CheckCircle",
-          actionUrl: `/feedback/${request.id}`,
-        });
-        router.push(`/feedback/${request.id}`);
+      if (!request) {
+        setSubmitError("피드백 요청 생성에 실패했습니다. 다시 시도해주세요.");
+        return;
       }
+
+      await updateFeedbackRequestStatus(request.id, "SENT");
+      addNotification({
+        type: "feedback_status",
+        title: "피드백 요청 전송 완료",
+        description: `${teacher?.name ?? "선생님"}에게 피드백 요청을 보냈습니다. 12시간 내 수락 여부가 결정됩니다.`,
+        icon: "CheckCircle",
+        actionUrl: `/feedback/${request.id}`,
+      });
+      router.push(`/feedback/${request.id}`);
     } catch (err) {
       console.error("Failed to create feedback request:", err);
+      setSubmitError("네트워크 오류가 발생했습니다. 다시 시도해주세요.");
     } finally {
       setIsSubmitting(false);
     }
@@ -436,6 +442,12 @@ function NewFeedbackRequestContent() {
               </div>
             </button>
           </div>
+
+          {submitError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
+              <p className="text-sm text-red-600">{submitError}</p>
+            </div>
+          )}
 
           <button
             onClick={handleSubmit}
