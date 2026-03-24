@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { getTeacherById, createFeedbackRequest, updateFeedbackRequestStatus } from "@/lib/queries";
 import { addNotification } from "@/lib/notification-store";
+import { sendPushToUser } from "@/lib/push-notify";
 import { getUserId } from "@/lib/user-id";
 import { Teacher, ProblemType, PROBLEM_TYPE_LABELS } from "@/types";
 import { ComposerAutocomplete, TitleAutocomplete } from "@/components/ui/composer-autocomplete";
@@ -115,6 +116,15 @@ function NewFeedbackRequestContent() {
       }
 
       await updateFeedbackRequestStatus(request.id, "SENT");
+
+      // 선생님에게 푸시 알림 발송
+      sendPushToUser({
+        teacherId: teacher.id,
+        title: "새 피드백 요청",
+        body: `${composer} - ${piece} 에 대한 피드백 요청이 도착했습니다.`,
+        url: `/inbox/${request.id}`,
+      }).catch(() => {}); // 푸시 실패해도 요청은 성공
+
       addNotification({
         type: "feedback_status",
         title: "피드백 요청 전송 완료",

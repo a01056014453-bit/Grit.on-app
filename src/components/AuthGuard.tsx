@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import { getProfile } from "@/lib/queries/profiles";
 import { pullUserData } from "@/lib/sync-user-data";
+import { subscribeToPush } from "@/lib/push-subscribe";
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -50,6 +51,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
           return;
         }
         setReady(true);
+        subscribeToPush().catch(() => {});
         return;
       }
 
@@ -70,6 +72,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
             }));
             await pullUserData();
             setReady(true);
+            subscribeToPush().catch(() => {});
             return;
           }
         } catch {

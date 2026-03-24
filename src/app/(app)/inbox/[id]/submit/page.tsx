@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { getFeedbackRequestById, saveFeedback, updateFeedbackRequestStatus } from "@/lib/queries";
 import { addNotification } from "@/lib/notification-store";
+import { sendPushToUser } from "@/lib/push-notify";
 import { getRemainingTime } from "@/lib/time-utils";
 import { FeedbackRequest, FeedbackComment, PracticeCard } from "@/types";
 
@@ -175,6 +176,17 @@ export default function SubmitFeedbackPage() {
       });
       // 요청 상태를 SUBMITTED로 변경 (학생이 피드백 확인 가능)
       await updateFeedbackRequestStatus(requestId, "SUBMITTED");
+
+      // 학생에게 푸시 알림 발송
+      if (request.studentId) {
+        sendPushToUser({
+          userId: request.studentId,
+          title: "피드백이 도착했습니다!",
+          body: `${request.piece ?? "곡"}에 대한 선생님 피드백을 확인하세요.`,
+          url: `/feedback/${requestId}/view`,
+        }).catch(() => {});
+      }
+
       addNotification({
         type: "feedback_received",
         title: "피드백 작성 완료",
