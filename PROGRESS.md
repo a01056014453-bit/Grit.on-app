@@ -1,4 +1,4 @@
-# GRIT.ON App 개발 진행 현황
+# SEMPRE App 개발 진행 현황
 
 ## Phase 개요
 
