@@ -43,6 +43,19 @@ export interface RankingUser {
   rank: number;
 }
 
+// 랭킹 필터
+export interface RankingFilter {
+  schoolId?: string;
+  instrument?: InstrumentType;
+}
+
+// 학교 정보 (필터 선택용)
+export interface SchoolOption {
+  id: string;
+  name: string;
+  shortName: string;
+}
+
 // Grit 점수 레벨
 export type GritLevel = "bronze" | "silver" | "gold" | "platinum" | "diamond";
 

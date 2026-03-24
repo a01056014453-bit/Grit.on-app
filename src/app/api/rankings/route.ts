@@ -26,14 +26,29 @@ export async function GET(request: NextRequest) {
     const authUserId = user?.id ?? null;
 
     const { searchParams } = new URL(request.url);
+    const filterInstrument = searchParams.get("instrument");
+    const filterSchoolId = searchParams.get("schoolId");
 
     // KST 기준 오늘 날짜
     const now = new Date();
     const kstOffset = 9 * 60 * 60 * 1000;
     const today = new Date(now.getTime() + kstOffset).toISOString().split("T")[0];
 
+    // 학교별 필터: 해당 학교 유저 ID 목록 조회
+    let schoolUserIds: string[] | null = null;
+    if (filterSchoolId) {
+      const { data: memberships } = await supabaseServer
+        .from("room_memberships")
+        .select("user_id, rooms!inner(school_id)")
+        .eq("rooms.school_id", filterSchoolId);
+
+      if (memberships) {
+        schoolUserIds = [...new Set(memberships.map((m: { user_id: string }) => m.user_id))];
+      }
+    }
+
     // 전체 랭킹 조회
-    const { data: rankings, error: rankingsError } = await supabaseServer
+    let query = supabaseServer
       .from("daily_rankings")
       .select(`
         user_id,
@@ -50,6 +65,16 @@ export async function GET(request: NextRequest) {
       .eq("date", today)
       .order("net_practice_time", { ascending: false });
 
+    // 학교 필터 적용
+    if (schoolUserIds !== null) {
+      if (schoolUserIds.length === 0) {
+        return NextResponse.json({ rankers: [], myRanking: null, filter: { type: "school", totalCount: 0 } });
+      }
+      query = query.in("user_id", schoolUserIds);
+    }
+
+    const { data: rankings, error: rankingsError } = await query;
+
     if (rankingsError) {
       console.error("[rankings] 조회 실패:", rankingsError);
       return NextResponse.json(
@@ -58,7 +83,16 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const rankers = (rankings ?? []).map(
+    // 악기 필터는 클라이언트 사이드에서도 가능하지만 서버에서 필터링
+    let filteredRankings = rankings ?? [];
+    if (filterInstrument) {
+      filteredRankings = filteredRankings.filter((row: Record<string, unknown>) => {
+        const profiles = row.profiles as { instrument?: string } | null;
+        return profiles?.instrument === filterInstrument;
+      });
+    }
+
+    const rankers = filteredRankings.map(
       (row: Record<string, unknown>, index: number) => {
         const profiles = row.profiles as {
           nickname?: string;
@@ -112,7 +146,21 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ rankers, myRanking });
+    const filterType = filterSchoolId && filterInstrument ? "school_instrument"
+      : filterSchoolId ? "school"
+      : filterInstrument ? "instrument"
+      : "all";
+
+    return NextResponse.json({
+      rankers,
+      myRanking,
+      filter: {
+        type: filterType,
+        schoolId: filterSchoolId || undefined,
+        instrument: filterInstrument || undefined,
+        totalCount: rankers.length,
+      },
+    });
   } catch (error) {
     console.error("[rankings] 서버 오류:", error);
     return NextResponse.json(

@@ -13,7 +13,9 @@ import {
 } from "lucide-react";
 import type { RankingUser } from "@/types";
 import { INSTRUMENT_EMOJIS, INSTRUMENT_LABELS } from "@/types/ranking";
-import { fetchRankingsData } from "@/lib/ranking-queries";
+import type { RankingFilter, SchoolOption } from "@/types/ranking";
+import { fetchRankingsData, fetchUserSchools } from "@/lib/ranking-queries";
+import { RankingFilterBar } from "@/components/app/RankingFilterBar";
 import { getUserId } from "@/lib/user-id";
 import { cn } from "@/lib/utils";
 import dynamic from "next/dynamic";
@@ -262,13 +264,15 @@ export default function RankingPage() {
   const [myRanking, setMyRanking] = useState<RankingUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<RankingFilter>({});
+  const [schools, setSchools] = useState<SchoolOption[]>([]);
 
-  const loadRankings = async () => {
+  const loadRankings = async (currentFilter?: RankingFilter) => {
     setLoadError(null);
     setIsLoading(true);
     try {
       const uid = getUserId();
-      const { rankers: rankings, myRanking: my } = await fetchRankingsData(uid);
+      const { rankers: rankings, myRanking: my } = await fetchRankingsData(uid, currentFilter ?? filter);
       setRankers(rankings);
       setMyRanking(my);
       setElapsedSeconds(0);
@@ -280,9 +284,18 @@ export default function RankingPage() {
     }
   };
 
-  // 초기 로드
+  const handleFilterChange = (newFilter: RankingFilter) => {
+    setFilter(newFilter);
+    loadRankings(newFilter);
+  };
+
+  // 초기 로드 + 학교 목록
   useEffect(() => {
     loadRankings();
+    const uid = getUserId();
+    if (uid) {
+      fetchUserSchools(uid).then(setSchools);
+    }
   }, []);
 
   // 1초마다 타이머 업데이트
@@ -297,11 +310,11 @@ export default function RankingPage() {
   // 60초마다 Supabase 재조회
   useEffect(() => {
     const pollInterval = setInterval(() => {
-      loadRankings();
+      loadRankings(filter);
     }, 60000);
 
     return () => clearInterval(pollInterval);
-  }, []);
+  }, [filter]);
 
   const practicingCount = rankers.filter((r) => r.isPracticing).length;
   const totalUsers = rankers.length;
@@ -330,6 +343,13 @@ export default function RankingPage() {
         </div>
       </div>
 
+      {/* Filter Bar */}
+      <RankingFilterBar
+        filter={filter}
+        onFilterChange={handleFilterChange}
+        schools={schools}
+      />
+
       {/* Error Banner */}
       {loadError && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4 flex items-center gap-3">
@@ -337,7 +357,7 @@ export default function RankingPage() {
             <p className="text-sm font-medium text-red-800">{loadError}</p>
           </div>
           <button
-            onClick={loadRankings}
+            onClick={() => loadRankings()}
             className="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold rounded-lg transition-colors"
           >
             다시 시도
@@ -369,10 +389,24 @@ export default function RankingPage() {
         </>
       )}
 
+      {/* 인원 부족 안내 */}
+      {(filter.schoolId || filter.instrument) && rankers.length > 0 && rankers.length < 5 && (
+        <div className="bg-amber-50/80 backdrop-blur-sm rounded-xl p-3 mb-4 border border-amber-200/50">
+          <p className="text-xs text-amber-700 text-center">
+            인원이 적어요 ({rankers.length}명).{" "}
+            <button onClick={() => handleFilterChange({})} className="font-semibold underline">
+              전체 랭킹 보기
+            </button>
+          </p>
+        </div>
+      )}
+
       {/* Full Ranking List - 4위부터 */}
       <div>
         <p className="text-sm font-semibold text-gray-700 mb-3">
-          전체 순위
+          {filter.schoolId || filter.instrument
+            ? `${schools.find(s => s.id === filter.schoolId)?.shortName ?? ""}${filter.schoolId && filter.instrument ? " " : ""}${filter.instrument ? INSTRUMENT_LABELS[filter.instrument] : ""} 순위`.trim()
+            : "전체 순위"}
         </p>
         <div className="flex flex-col gap-2">
           {rankers.slice(3).map((user) => (
