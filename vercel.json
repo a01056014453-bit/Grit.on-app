@@ -30,7 +30,7 @@
     },
     {
       "path": "/api/cron/check-sla",
-      "schedule": "0 * * * *"
+      "schedule": "0 12 * * *"
     }
   ]
 }
