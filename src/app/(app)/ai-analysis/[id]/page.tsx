@@ -60,7 +60,20 @@ export default function AnalysisDetailPage() {
 
       // 2. 백그라운드에서 DB 최신 버전 가져오기
       try {
-        const res = await fetch(`/api/song-analysis/${id}`);
+        // user-analyses에서 composer/title 가져와서 fallback 검색용으로 전달
+        let queryParams = "";
+        try {
+          const raw = localStorage.getItem("sempre-user-analyses");
+          if (raw) {
+            const list = JSON.parse(raw) as { id: string; composer: string; title: string }[];
+            const match = list.find((a) => a.id === id);
+            if (match) {
+              queryParams = `?composer=${encodeURIComponent(match.composer)}&title=${encodeURIComponent(match.title)}`;
+            }
+          }
+        } catch { /* 무시 */ }
+
+        const res = await fetch(`/api/song-analysis/${id}${queryParams}`);
         if (!res.ok) {
           if (!analysis) setError("분석 데이터를 찾을 수 없습니다.");
           return;
@@ -70,9 +83,24 @@ export default function AnalysisDetailPage() {
 
         // localStorage에 캐시 저장 (최대 20개 유지)
         try {
-          localStorage.setItem(`sempre-analysis-${id}`, JSON.stringify(data));
+          localStorage.setItem(`sempre-analysis-${data.id}`, JSON.stringify(data));
+          if (data.id !== id) {
+            localStorage.removeItem(`sempre-analysis-${id}`);
+          }
           cleanupAnalysisCache();
         } catch { /* 저장 실패 무시 (용량 초과 등) */ }
+
+        // user-analyses의 id가 달라졌으면 업데이트
+        if (data.id !== id) {
+          try {
+            const raw = localStorage.getItem("sempre-user-analyses");
+            if (raw) {
+              const list = JSON.parse(raw) as { id: string; composer: string; title: string; analyzedAt: string }[];
+              const updated = list.map((a) => a.id === id ? { ...a, id: data.id } : a);
+              localStorage.setItem("sempre-user-analyses", JSON.stringify(updated));
+            }
+          } catch { /* 무시 */ }
+        }
 
         saveAnalyzedSong({
           id: data.id,

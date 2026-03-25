@@ -7,12 +7,31 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  const url = new URL(_request.url);
+  const composer = url.searchParams.get("composer");
+  const title = url.searchParams.get("title");
 
-  const { data, error } = await supabaseServer
+  // 1. id로 검색
+  let { data, error } = await supabaseServer
     .from("song_analyses")
     .select("*")
     .eq("id", id)
     .single();
+
+  // 2. id로 못 찾으면 composer+title로 재검색
+  if ((error || !data) && composer && title) {
+    const { data: fallback } = await supabaseServer
+      .from("song_analyses")
+      .select("*")
+      .ilike("composer", `%${composer}%`)
+      .ilike("title", `%${title}%`)
+      .limit(1)
+      .single();
+    if (fallback) {
+      data = fallback;
+      error = null;
+    }
+  }
 
   if (error || !data) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
