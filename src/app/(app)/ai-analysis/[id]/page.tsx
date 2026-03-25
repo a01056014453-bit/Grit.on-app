@@ -22,6 +22,21 @@ import type {
 } from "@/types/song-analysis";
 import { isV2Content, getDifficultyLabel } from "@/types/song-analysis";
 
+/** localStorage 분석 캐시를 최대 20개로 유지 */
+function cleanupAnalysisCache() {
+  try {
+    const keys: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith("sempre-analysis-")) keys.push(key);
+    }
+    if (keys.length > 20) {
+      // 오래된 것부터 삭제 (키 순서 = 저장 순서는 아니지만 대략적)
+      keys.slice(0, keys.length - 20).forEach((k) => localStorage.removeItem(k));
+    }
+  } catch { /* 무시 */ }
+}
+
 export default function AnalysisDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -33,14 +48,32 @@ export default function AnalysisDetailPage() {
 
   useEffect(() => {
     async function fetchAnalysis() {
+      // 1. localStorage 캐시에서 즉시 표시
+      try {
+        const cached = localStorage.getItem(`sempre-analysis-${id}`);
+        if (cached) {
+          const cachedData = JSON.parse(cached) as SongAnalysis;
+          setAnalysis(cachedData);
+          setLoading(false); // 즉시 표시
+        }
+      } catch { /* 캐시 파싱 실패 무시 */ }
+
+      // 2. 백그라운드에서 DB 최신 버전 가져오기
       try {
         const res = await fetch(`/api/song-analysis/${id}`);
         if (!res.ok) {
-          setError("분석 데이터를 찾을 수 없습니다.");
+          if (!analysis) setError("분석 데이터를 찾을 수 없습니다.");
           return;
         }
         const data: SongAnalysis = await res.json();
         setAnalysis(data);
+
+        // localStorage에 캐시 저장 (최대 20개 유지)
+        try {
+          localStorage.setItem(`sempre-analysis-${id}`, JSON.stringify(data));
+          cleanupAnalysisCache();
+        } catch { /* 저장 실패 무시 (용량 초과 등) */ }
+
         saveAnalyzedSong({
           id: data.id,
           title: data.meta.title,
@@ -48,7 +81,7 @@ export default function AnalysisDetailPage() {
           composer: data.meta.composer,
         });
       } catch {
-        setError("데이터를 불러오는 중 오류가 발생했습니다.");
+        if (!analysis) setError("데이터를 불러오는 중 오류가 발생했습니다.");
       } finally {
         setLoading(false);
       }
