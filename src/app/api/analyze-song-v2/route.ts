@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 import { songAnalysisV2Limiter } from "@/lib/rate-limiters";
 import { getClientIdentifier, rateLimitResponse } from "@/lib/api-utils";
 import { getCachedAnalysis, saveCachedAnalysis, deleteCachedAnalysis, updateAnalysisById } from "@/lib/song-analysis-db";
@@ -41,6 +42,11 @@ import type {
 function getOpenAIClient(): OpenAI | null {
   if (!process.env.OPENAI_API_KEY) return null;
   return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
+
+function getAnthropicClient(): Anthropic | null {
+  if (!process.env.ANTHROPIC_API_KEY) return null;
+  return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 }
 
 function getPerplexityClient(): OpenAI | null {
@@ -112,12 +118,41 @@ function sleep(ms: number): Promise<void> {
  * GPT-4o 호출 — 글쓰기 전용
  * 429 Rate Limit 시 자동 재시도 (최대 3회, 대기 후 재시도)
  */
+const SYSTEM_PROMPT =
+  "반드시 한국어로만 응답하세요. 일본어, 중국어는 절대 사용하지 마세요. " +
+  "고유명사(인명, 지명, 작품명)는 원어 표기를 허용합니다. " +
+  "제공된 레퍼런스 데이터에 없는 구체적 수치(연도, 마디 번호, 작품번호)를 절대 생성하지 마세요. " +
+  "확실하지 않은 정보는 빈 문자열(\"\")로 반환하세요. JSON 외에 다른 텍스트는 출력하지 마세요.";
+
+/**
+ * 멀티 프로바이더 AI 호출
+ * 1순위: OpenAI GPT-4o
+ * 2순위: Anthropic Claude Sonnet (OpenAI 실패 시 자동 전환)
+ */
 async function callGPT(
   openai: OpenAI,
   prompt: string,
   maxTokens: number = 8192,
   temperature: number = 0.1,
 ): Promise<string> {
+  // 1순위: OpenAI GPT-4o
+  const openaiResult = await tryOpenAI(openai, prompt, maxTokens, temperature);
+  if (openaiResult !== null) return openaiResult;
+
+  // 2순위: Claude Sonnet 폴백
+  console.log("[callGPT] OpenAI 실패 → Claude Sonnet 폴백 시도...");
+  const claudeResult = await tryClaude(prompt, maxTokens, temperature);
+  if (claudeResult !== null) return claudeResult;
+
+  throw new Error("OpenAI와 Claude 모두 실패했습니다.");
+}
+
+async function tryOpenAI(
+  openai: OpenAI,
+  prompt: string,
+  maxTokens: number,
+  temperature: number,
+): Promise<string | null> {
   const MAX_RETRIES = 3;
 
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
@@ -125,14 +160,7 @@ async function callGPT(
       const completion = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [
-          {
-            role: "system",
-            content:
-              "반드시 한국어로만 응답하세요. 일본어, 중국어는 절대 사용하지 마세요. " +
-              "고유명사(인명, 지명, 작품명)는 원어 표기를 허용합니다. " +
-              "제공된 레퍼런스 데이터에 없는 구체적 수치(연도, 마디 번호, 작품번호)를 절대 생성하지 마세요. " +
-              "확실하지 않은 정보는 빈 문자열(\"\")로 반환하세요. JSON 외에 다른 텍스트는 출력하지 마세요.",
-          },
+          { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: prompt },
         ],
         max_tokens: maxTokens,
@@ -141,19 +169,58 @@ async function callGPT(
       });
       return completion.choices[0]?.message?.content || "";
     } catch (error) {
-      const is429 = error instanceof Error && (
-        error.message.includes("429") || error.message.includes("Rate limit")
-      );
+      const errMsg = error instanceof Error ? error.message : String(error);
+      const is429 = errMsg.includes("429") || errMsg.includes("Rate limit");
+      const isFatal = errMsg.includes("401") || errMsg.includes("Incorrect API key") || errMsg.includes("quota");
+
+      if (isFatal) {
+        console.error(`[OpenAI] 치명적 에러 (폴백 전환): ${errMsg}`);
+        return null; // Claude 폴백으로
+      }
+
       if (is429 && attempt < MAX_RETRIES - 1) {
-        const waitSec = 15 * (attempt + 1); // 15s, 30s, 45s
-        console.log(`[callGPT] 429 Rate limit — ${waitSec}초 대기 후 재시도 (${attempt + 1}/${MAX_RETRIES})`);
+        const waitSec = 15 * (attempt + 1);
+        console.log(`[OpenAI] 429 Rate limit — ${waitSec}초 대기 (${attempt + 1}/${MAX_RETRIES})`);
         await sleep(waitSec * 1000);
         continue;
       }
-      throw error;
+
+      console.error(`[OpenAI] 에러 (폴백 전환): ${errMsg}`);
+      return null; // Claude 폴백으로
     }
   }
-  return "";
+  return null;
+}
+
+async function tryClaude(
+  prompt: string,
+  maxTokens: number,
+  temperature: number,
+): Promise<string | null> {
+  const anthropic = getAnthropicClient();
+  if (!anthropic) {
+    console.error("[Claude] ANTHROPIC_API_KEY 미설정 — 폴백 불가");
+    return null;
+  }
+
+  try {
+    const message = await anthropic.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: maxTokens,
+      temperature: Math.min(temperature, 1.0),
+      system: SYSTEM_PROMPT,
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    const textBlock = message.content.find((b) => b.type === "text");
+    const result = textBlock?.text || "";
+    console.log(`[Claude] 응답 성공: ${result.length}자`);
+    return result;
+  } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.error(`[Claude] 에러: ${errMsg}`);
+    return null;
+  }
 }
 
 /**
