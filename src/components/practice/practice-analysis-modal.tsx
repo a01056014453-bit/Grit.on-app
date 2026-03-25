@@ -233,7 +233,8 @@ export function PracticeAnalysisModal({
   if (!analysisResult) return null;
 
   const { totalDuration, netPracticeTime, restTime, summary, segments } = analysisResult;
-  const goalProgress = Math.min((netPracticeTime / 60 / dailyGoal) * 100, 100);
+  const dailyGoalSeconds = dailyGoal * 60; // 분 → 초
+  const goalProgress = Math.min((netPracticeTime / dailyGoalSeconds) * 100, 100);
   const coachingFeedbacks = generateCoachingFeedback(analysisResult);
 
   // 타임라인 세그먼트 색상 (연주 vs 휴식)
@@ -275,7 +276,7 @@ export function PracticeAnalysisModal({
                     <span className="text-xs font-medium text-gray-700">Grit Gauge 반영</span>
                   </div>
                   <span className="text-xs font-bold text-violet-600">
-                    +{Math.floor(netPracticeTime / 60)}분
+                    +{formatTimeDisplay(netPracticeTime)}
                   </span>
                 </div>
                 <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
@@ -285,7 +286,7 @@ export function PracticeAnalysisModal({
                   />
                 </div>
                 <p className="text-[10px] text-gray-500 mt-1.5 text-center">
-                  오늘의 목표 {Math.round(goalProgress)}% 달성 ({Math.floor(netPracticeTime / 60)}/{dailyGoal}분)
+                  오늘의 목표 {Math.round(goalProgress)}% 달성 ({formatTimeDisplay(netPracticeTime)}/{dailyGoal}분)
                   {goalProgress >= 100 && " 🎉"}
                 </p>
               </div>
