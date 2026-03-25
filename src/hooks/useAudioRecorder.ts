@@ -9,7 +9,7 @@ import {
   type AudioLabel,
   type ModelStatus,
 } from "@/lib/audio-classifier";
-import { estimateProximity, detectRecordedMusic } from "@/lib/audio-proximity";
+import { estimateProximity, detectRecordedMusic, resetSpectrumHistory } from "@/lib/audio-proximity";
 import { detectPitch, analyzePitchPattern, type PitchResult } from "@/lib/pitch-detector";
 
 // ─────────────────────────────────────────────
@@ -299,7 +299,7 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
         const rms = Math.sqrt(sumSq / timeData.length);
         const db = rms === 0 ? 0 : Math.max(0, Math.min(120, 20 * Math.log10(rms) + 90));
 
-        const isSoundDetected = db > noiseFloorDecibelRef.current + 5;
+        const isSoundDetected = db > noiseFloorDecibelRef.current + 3;
 
         // 원거리 소리 필터
         let isNearSound = true;
@@ -349,6 +349,9 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
         if (!isRecordingRef.current || isPausedRef.current) return;
         if (!isCalibrationCompleteRef.current) return;
 
+        // dB 기반 간이 분류는 blob 없이도 가능 — 즉시 실행
+        classifyAudioClipLocal(new Blob());
+
         const mimeType = MediaRecorder.isTypeSupported("audio/webm")
           ? "audio/webm"
           : "audio/mp4";
@@ -367,12 +370,7 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
             clipDbIntervalRef.current = null;
           }
 
-          if (classifyChunksRef.current.length > 0) {
-            const blob = new Blob(classifyChunksRef.current, {
-              type: mimeType,
-            });
-            classifyAudioClipLocal(blob);
-          }
+          // blob은 사후 분석용으로만 유지 (분류는 startClipCapture에서 즉시 실행)
         };
 
         classifyRecorderRef.current = recorder;
@@ -611,6 +609,11 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
 
     const stream = mediaStreamRef.current;
     if (!stream) return;
+
+    // 스펙트럼 히스토리 리셋 (녹음 음악 필터 초기화)
+    resetSpectrumHistory();
+    // 피치 히스토리 리셋
+    pitchHistoryRef.current = [];
 
     try {
       const audioContext = new AudioContext();
