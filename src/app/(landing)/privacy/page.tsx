@@ -590,10 +590,10 @@ export default function PrivacyPage() {
               <li>
                 <strong>연락처</strong>:{" "}
                 <a
-                  href="mailto:sempre.official@gmail.com"
+                  href="mailto:support@withsempre.com"
                   className="text-violet-600 underline"
                 >
-                  sempre.official@gmail.com
+                  support@withsempre.com
                 </a>
               </li>
             </ul>

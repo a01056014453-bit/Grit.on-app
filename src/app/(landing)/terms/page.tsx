@@ -333,10 +333,10 @@ export default function TermsPage() {
               <li>
                 이메일:{" "}
                 <a
-                  href="mailto:sempre.official@gmail.com"
+                  href="mailto:support@withsempre.com"
                   className="text-violet-600 underline"
                 >
-                  sempre.official@gmail.com
+                  support@withsempre.com
                 </a>
               </li>
             </ul>
