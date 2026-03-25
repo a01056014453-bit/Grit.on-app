@@ -180,9 +180,8 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
     null
   );
 
-  // YAMNet 모델 사전 로드 + 상태 추적
+  // 모델 상태 추적 (사후 분석 시 로드됨, 연습 중에는 불필요)
   useEffect(() => {
-    preloadModel();
     const unsubscribe = onModelStatusChange((status) => {
       setState((prev) => ({ ...prev, modelStatus: status }));
     });
@@ -277,23 +276,34 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
   );
 
   // ─────────────────────────────────────────────
-  // 브라우저 TF.js로 오디오 분류 (서버 호출 제거)
+  // dB 기반 간이 분류 (YAMNet 없이, 연습 중 경량 판별)
+  // 정밀 분석은 종료 후 사후 분석(post-analysis)에서 수행
   // ─────────────────────────────────────────────
   const classifyAudioClipLocal = useCallback(
-    async (audioBlob: Blob) => {
+    async (_audioBlob: Blob) => {
       if (isClassifyingRef.current) return;
       isClassifyingRef.current = true;
 
       try {
-        const result = await classifyAudioClip(audioBlob, {
-          metronomeOn: metronomeActiveRef.current,
-        });
+        // dB 기반 간이 판별: 소리가 노이즈 플로어보다 높으면 INSTRUMENT_PLAYING
+        if (!analyserRef.current) return;
 
-        let { label, confidence } = result;
-        const { reason } = result;
+        const timeData = new Uint8Array(analyserRef.current.fftSize);
+        analyserRef.current.getByteTimeDomainData(timeData);
 
-        // 스펙트럼 게이팅: 원거리 소리 필터
-        if (label === "INSTRUMENT_PLAYING" && analyserRef.current) {
+        let sumSq = 0;
+        for (let i = 0; i < timeData.length; i++) {
+          const a = (timeData[i] - 128) / 128;
+          sumSq += a * a;
+        }
+        const rms = Math.sqrt(sumSq / timeData.length);
+        const db = rms === 0 ? 0 : Math.max(0, Math.min(120, 20 * Math.log10(rms) + 90));
+
+        const isSoundDetected = db > noiseFloorDecibelRef.current + 5;
+
+        // 원거리 소리 필터
+        let isNearSound = true;
+        if (isSoundDetected) {
           const freqData = new Uint8Array(analyserRef.current.frequencyBinCount);
           analyserRef.current.getByteFrequencyData(freqData);
           const proximity = estimateProximity(
@@ -301,41 +311,14 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
             analyserRef.current.fftSize,
             audioContextRef.current?.sampleRate ?? 44100,
           );
-          if (proximity === "far") {
-            label = "NOISE";
-            confidence = 0.6;
-          }
+          if (proximity === "far") isNearSound = false;
+
+          // 녹음 음악 필터
+          if (detectRecordedMusic(freqData)) isNearSound = false;
         }
 
-        // 녹음 음악 필터: 유튜브/스피커 재생 감지
-        if (label === "INSTRUMENT_PLAYING" && analyserRef.current) {
-          const freqCheck = new Uint8Array(analyserRef.current.frequencyBinCount);
-          analyserRef.current.getByteFrequencyData(freqCheck);
-          if (detectRecordedMusic(freqCheck)) {
-            label = "NOISE";
-            confidence = 0.5;
-          }
-        }
-
-        // 피치 감지: 성악 전공자의 VOICE를 재판별
-        if (label === "VOICE" && instrument === "vocal" && analyserRef.current) {
-          const pitchBuf = new Float32Array(analyserRef.current.fftSize);
-          analyserRef.current.getFloatTimeDomainData(pitchBuf);
-          const pitch = detectPitch(pitchBuf, audioContextRef.current?.sampleRate ?? 44100);
-          pitchHistoryRef.current = [...pitchHistoryRef.current.slice(-9), pitch];
-
-          if (pitchHistoryRef.current.length >= 3) {
-            const pattern = analyzePitchPattern(pitchHistoryRef.current);
-            if (pattern === "singing") {
-              label = "INSTRUMENT_PLAYING";
-              confidence = Math.max(confidence, 0.7);
-            }
-          }
-        }
-
-        console.log(
-          `[Classify] ${label} (${(confidence * 100).toFixed(0)}%) ${reason}`
-        );
+        const label: AudioLabel = isSoundDetected && isNearSound ? "INSTRUMENT_PLAYING" : "SILENCE";
+        const confidence = isSoundDetected ? 0.7 : 0.9;
 
         updatePracticeState(label, confidence);
 
@@ -346,7 +329,7 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
           isPianoDetected: isActuallyPlayingRef.current,
         }));
       } catch (err) {
-        console.error("[Classify] 분류 실패:", err);
+        console.error("[Classify] 간이 분류 실패:", err);
       } finally {
         isClassifyingRef.current = false;
       }
@@ -979,6 +962,22 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
     };
   }, []);
 
+  /**
+   * 사후 분석: 녹음 완료 후 전체 오디오를 정밀 분석
+   * YAMNet 모델을 이때 로드하여 3초 단위로 분류 + 후처리
+   */
+  const runPostAnalysis = useCallback(
+    async (onProgress?: (percent: number) => void) => {
+      const blob = state.audioBlob;
+      if (!blob) return null;
+
+      // 동적 import로 사후 분석 모듈 로드 (코드 스플리팅)
+      const { analyzeRecording } = await import("@/lib/post-analysis");
+      return analyzeRecording(blob, onProgress);
+    },
+    [state.audioBlob],
+  );
+
   return {
     ...state,
     requestPermission,
@@ -987,5 +986,6 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
     resumeRecording,
     stopRecording,
     reset,
+    runPostAnalysis,
   };
 }
