@@ -167,6 +167,7 @@ function PracticePageContent() {
   const [isSongModalOpen, setIsSongModalOpen] = useState(false);
   const [isAnalysisModalOpen, setIsAnalysisModalOpen] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisProgress, setAnalysisProgress] = useState(0);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [isAddSongModalOpen, setIsAddSongModalOpen] = useState(false);
   const [practiceType, setPracticeType] = useState<PracticeType>("runthrough");
@@ -280,6 +281,7 @@ function PracticePageContent() {
     resumeRecording,
     stopRecording,
     reset,
+    runPostAnalysis,
   } = useAudioRecorder({
     decibelThreshold: 40,
     minSoundDuration: 100,
@@ -595,6 +597,24 @@ function PracticePageContent() {
     setMetronomeState(newState);
   }, []);
 
+  // 사후 분석 실패 시 간이 결과 생성
+  const createFallbackAnalysis = (ref: typeof classificationTimeRef.current, totalTime: number): AnalysisResult => {
+    const total = ref.instrument + ref.voice + ref.silence + ref.noise;
+    const effective = totalTime > 0 ? totalTime : total;
+    return {
+      totalDuration: effective,
+      netPracticeTime: Math.round(ref.instrument),
+      restTime: effective - Math.round(ref.instrument),
+      segments: [],
+      summary: {
+        instrumentPercent: effective > 0 ? Math.round((ref.instrument / effective) * 100) : 0,
+        voicePercent: effective > 0 ? Math.round((ref.voice / effective) * 100) : 0,
+        silencePercent: effective > 0 ? Math.round((ref.silence / effective) * 100) : 0,
+        noisePercent: effective > 0 ? Math.round((ref.noise / effective) * 100) : 0,
+      },
+    };
+  };
+
   const handleStopRecording = useCallback(async () => {
     stopRecording();
     releaseWakeLock();
@@ -636,55 +656,43 @@ function PracticePageContent() {
     // 분석 모달 열기
     setIsAnalysisModalOpen(true);
     setIsAnalyzing(true);
+    setAnalysisProgress(0);
 
     let analysisData: AnalysisResult;
 
-    // 실시간 분류 데이터로 즉시 분석 (서버 왕복 불필요)
-    const classificationData = {
-      instrument: Math.round(ref.instrument),
-      voice: Math.round(ref.voice),
-      silence: Math.round(ref.silence),
-      noise: Math.round(ref.noise),
-    };
-    const totalClassified =
-      classificationData.instrument +
-      classificationData.voice +
-      classificationData.silence +
-      classificationData.noise;
-    const effectiveTotalTime =
-      actualTotalTime > 0 ? actualTotalTime : totalClassified;
+    // 사후 분석: 녹음 파일을 YAMNet으로 정밀 분석
+    if (audioBlob) {
+      try {
+        const postResult = await runPostAnalysis((percent) => {
+          setAnalysisProgress(percent);
+        });
 
-    console.log("[Analysis] 분류 데이터:", classificationData, "총:", effectiveTotalTime);
-
-    const instrumentPercent =
-      effectiveTotalTime > 0
-        ? Math.round((classificationData.instrument / effectiveTotalTime) * 100)
-        : 0;
-    const voicePercent =
-      effectiveTotalTime > 0
-        ? Math.round((classificationData.voice / effectiveTotalTime) * 100)
-        : 0;
-    const silencePercent =
-      effectiveTotalTime > 0
-        ? Math.round((classificationData.silence / effectiveTotalTime) * 100)
-        : 0;
-    const noisePercent =
-      effectiveTotalTime > 0
-        ? Math.round((classificationData.noise / effectiveTotalTime) * 100)
-        : 0;
-
-    analysisData = {
-      totalDuration: effectiveTotalTime,
-      netPracticeTime: classificationData.instrument,
-      restTime: effectiveTotalTime - classificationData.instrument,
-      segments: [],
-      summary: {
-        instrumentPercent,
-        voicePercent,
-        silencePercent,
-        noisePercent,
-      },
-    };
+        if (postResult) {
+          const effectiveTotalTime = postResult.totalDuration || actualTotalTime;
+          analysisData = {
+            totalDuration: effectiveTotalTime,
+            netPracticeTime: postResult.practiceTime,
+            restTime: postResult.restTime + postResult.noiseTime,
+            segments: [],
+            summary: {
+              instrumentPercent: postResult.focusPercent,
+              voicePercent: effectiveTotalTime > 0 ? Math.round((postResult.voiceTime / effectiveTotalTime) * 100) : 0,
+              silencePercent: effectiveTotalTime > 0 ? Math.round((postResult.restTime / effectiveTotalTime) * 100) : 0,
+              noisePercent: effectiveTotalTime > 0 ? Math.round((postResult.noiseTime / effectiveTotalTime) * 100) : 0,
+            },
+          };
+        } else {
+          // 분석 실패 시 간이 결과 사용
+          analysisData = createFallbackAnalysis(ref, actualTotalTime);
+        }
+      } catch (err) {
+        console.error("[PostAnalysis] 사후 분석 실패:", err);
+        analysisData = createFallbackAnalysis(ref, actualTotalTime);
+      }
+    } else {
+      // 녹음 파일 없으면 간이 결과
+      analysisData = createFallbackAnalysis(ref, actualTotalTime);
+    }
 
     setAnalysisResult(analysisData);
     setCompletedSession(prev => prev ? {
@@ -1818,6 +1826,7 @@ function PracticePageContent() {
       <PracticeAnalysisModal
         isOpen={isAnalysisModalOpen}
         isAnalyzing={isAnalyzing}
+        analysisProgress={analysisProgress}
         analysisResult={analysisResult}
         audioUrl={recordedAudio?.url}
         dailyGoal={dailyGoal}

@@ -34,6 +34,7 @@ function PracticeGauge({ percent }: { percent: number }) {
 interface PracticeAnalysisModalProps {
   isOpen: boolean;
   isAnalyzing: boolean;
+  analysisProgress?: number;
   analysisResult: AnalysisResult | null;
   audioUrl?: string;
   dailyGoal?: number;
@@ -85,6 +86,7 @@ function generateCoachingFeedback(result: AnalysisResult): string[] {
 export function PracticeAnalysisModal({
   isOpen,
   isAnalyzing,
+  analysisProgress = 0,
   analysisResult,
   audioUrl,
   dailyGoal = 60,
@@ -191,9 +193,23 @@ export function PracticeAnalysisModal({
             <Loader2 className="w-10 h-10 text-violet-600 animate-spin" />
           </div>
           <h3 className="text-xl font-bold text-black mb-2">연습 분석 중...</h3>
-          <p className="text-sm text-gray-500 mb-4">
-            AI가 녹음을 스캔하고 있습니다
+          <p className="text-sm text-gray-500 mb-3">
+            AI가 녹음을 정밀 분석하고 있습니다
           </p>
+          {analysisProgress > 0 && (
+            <div className="mb-4">
+              <div className="flex justify-between text-xs text-gray-400 mb-1">
+                <span>분석 진행률</span>
+                <span>{analysisProgress}%</span>
+              </div>
+              <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-violet-500 rounded-full transition-all duration-300"
+                  style={{ width: `${analysisProgress}%` }}
+                />
+              </div>
+            </div>
+          )}
           <div className="space-y-2 text-left bg-gray-50 rounded-xl p-4">
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
