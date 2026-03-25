@@ -24,8 +24,7 @@ function runDataMigration() {
   localStorage.removeItem("grit-on-onboarding-complete");
   localStorage.removeItem("sempre-onboarding-complete");
 
-  // 목업 연습 세션 제거 (IndexedDB)
-  indexedDB.deleteDatabase("griton_db");
+  // 목업 연습 세션 제거 (sempre_db만 — griton_db는 실제 데이터 보존)
   indexedDB.deleteDatabase("sempre_db");
 
   // 서비스 워커 캐시 정리 (오래된 JS 번들 제거)

@@ -84,12 +84,11 @@ export default function RootLayout({
             __html: `
               (function() {
                 var v = localStorage.getItem('sempre-data-version');
-                if (v === '6') return;
+                if (v === '7') return;
                 localStorage.removeItem('grit-on-notifications');
                 localStorage.removeItem('sempre-notifications');
                 localStorage.removeItem('grit-on-onboarding-complete');
                 localStorage.removeItem('sempre-onboarding-complete');
-                indexedDB.deleteDatabase('griton_db');
                 indexedDB.deleteDatabase('sempre_db');
                 if ('serviceWorker' in navigator) {
                   navigator.serviceWorker.getRegistrations().then(function(r) {
@@ -101,7 +100,7 @@ export default function RootLayout({
                     k.forEach(function(c) { caches.delete(c); });
                   });
                 }
-                localStorage.setItem('sempre-data-version', '6');
+                localStorage.setItem('sempre-data-version', '7');
               })();
             `,
           }}

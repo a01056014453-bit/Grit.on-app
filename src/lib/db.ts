@@ -17,7 +17,7 @@ export interface PracticeSession {
   todoNote?: string; // 연습 To-do의 메모
 }
 
-const DB_NAME = "sempre_db";
+const DB_NAME = "griton_db"; // 기존 유저 데이터 보존 — DB 이름 변경하면 데이터 손실됨
 const DB_VERSION = 1;
 const SESSIONS_STORE = "practice_sessions";
 
