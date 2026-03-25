@@ -40,9 +40,8 @@ export function detectPitch(
   rms = Math.sqrt(rms / bufferSize);
   if (rms < 0.01) return { frequency: 0, confidence: 0 };
 
-  // 자기상관 계산
-  let bestLag = 0;
-  let bestCorr = -1;
+  // 자기상관 계산 — 첫 번째 피크 찾기 (옥타브 에러 방지)
+  const correlations = new Float32Array(maxLag + 1);
 
   for (let lag = minLag; lag < maxLag && lag < halfSize; lag++) {
     let correlation = 0;
@@ -55,11 +54,35 @@ export function detectPitch(
       norm2 += timeData[i + lag] * timeData[i + lag];
     }
 
-    const normalizedCorr = correlation / (Math.sqrt(norm1 * norm2) + 1e-10);
+    correlations[lag] = correlation / (Math.sqrt(norm1 * norm2) + 1e-10);
+  }
 
-    if (normalizedCorr > bestCorr) {
-      bestCorr = normalizedCorr;
-      bestLag = lag;
+  // 첫 번째 유의미한 피크 찾기 (상승 후 하강하는 지점)
+  let bestLag = 0;
+  let bestCorr = -1;
+  let ascending = false;
+
+  for (let lag = minLag + 1; lag < maxLag && lag < halfSize; lag++) {
+    if (correlations[lag] > correlations[lag - 1]) {
+      ascending = true;
+    } else if (ascending && correlations[lag] < correlations[lag - 1]) {
+      // 피크 발견
+      if (correlations[lag - 1] > 0.6 && correlations[lag - 1] > bestCorr) {
+        bestCorr = correlations[lag - 1];
+        bestLag = lag - 1;
+        break; // 첫 번째 유의미한 피크만 사용
+      }
+      ascending = false;
+    }
+  }
+
+  // 피크를 못 찾으면 전체 최대값 사용
+  if (bestLag === 0) {
+    for (let lag = minLag; lag < maxLag && lag < halfSize; lag++) {
+      if (correlations[lag] > bestCorr) {
+        bestCorr = correlations[lag];
+        bestLag = lag;
+      }
     }
   }
 
