@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/feedback/expire-check",
-      "schedule": "0 */6 * * *"
+      "schedule": "0 14 * * *"
     },
     {
       "path": "/api/cron/daily-rewards",
@@ -18,7 +18,7 @@
     },
     {
       "path": "/api/cron/auto-approve-teachers",
-      "schedule": "0 * * * *"
+      "schedule": "0 13 * * *"
     },
     {
       "path": "/api/cron/dev-report",
