@@ -105,7 +105,7 @@ export function RankingFilterBar({
             className="absolute inset-0 bg-black/30 backdrop-blur-sm"
             onClick={() => setShowSchoolSheet(false)}
           />
-          <div className="relative w-full max-w-lg bg-white rounded-t-2xl p-5 pb-8 animate-slide-up">
+          <div className="relative w-full max-w-lg bg-white rounded-t-2xl p-5 pb-24 animate-slide-up max-h-[70vh] overflow-y-auto">
             <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-4" />
             <h3 className="text-base font-bold text-gray-900 mb-4">학교 선택</h3>
 
@@ -152,7 +152,7 @@ export function RankingFilterBar({
             className="absolute inset-0 bg-black/30 backdrop-blur-sm"
             onClick={() => setShowInstrumentSheet(false)}
           />
-          <div className="relative w-full max-w-lg bg-white rounded-t-2xl p-5 pb-8 animate-slide-up">
+          <div className="relative w-full max-w-lg bg-white rounded-t-2xl p-5 pb-24 animate-slide-up max-h-[70vh] overflow-y-auto">
             <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-4" />
             <h3 className="text-base font-bold text-gray-900 mb-4">악기 선택</h3>
 
