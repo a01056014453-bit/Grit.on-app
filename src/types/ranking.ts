@@ -2,32 +2,65 @@
 export type InstrumentType =
   | "piano"
   | "violin"
+  | "viola"
   | "cello"
+  | "double_bass"
   | "flute"
+  | "oboe"
   | "clarinet"
+  | "bassoon"
+  | "trumpet"
+  | "horn"
+  | "trombone"
+  | "tuba"
+  | "percussion"
+  | "harp"
   | "guitar"
-  | "vocal";
+  | "vocal"
+  | "composition";
 
 // 악기 라벨
 export const INSTRUMENT_LABELS: Record<InstrumentType, string> = {
   piano: "피아노",
   violin: "바이올린",
+  viola: "비올라",
   cello: "첼로",
+  double_bass: "콘트라베이스",
   flute: "플루트",
+  oboe: "오보에",
   clarinet: "클라리넷",
+  bassoon: "바순",
+  trumpet: "트럼펫",
+  horn: "호른",
+  trombone: "트롬본",
+  tuba: "튜바",
+  percussion: "타악기",
+  harp: "하프",
   guitar: "기타",
-  vocal: "보컬",
+  vocal: "성악",
+  composition: "작곡",
 };
 
 // 악기 이모지
 export const INSTRUMENT_EMOJIS: Record<InstrumentType, string> = {
   piano: "🎹",
   violin: "🎻",
+  viola: "🎻",
   cello: "🎻",
-  flute: "🎵",
+  double_bass: "🎻",
+  flute: "🪈",
+  oboe: "🪈",
   clarinet: "🎷",
+  bassoon: "🪈",
+  trumpet: "🎺",
+  horn: "🎺",
+  trombone: "🎺",
+  tuba: "🎺",
+  percussion: "🥁",
+  harp: "🪕",
   guitar: "🎸",
   vocal: "🎤",
+  composition: "🎼",
 };
 
 // 랭킹 유저 정보

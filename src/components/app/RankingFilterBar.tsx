@@ -12,7 +12,10 @@ interface RankingFilterBarProps {
 }
 
 const ALL_INSTRUMENTS: InstrumentType[] = [
-  "piano", "violin", "cello", "flute", "clarinet", "guitar", "vocal",
+  "piano", "violin", "viola", "cello", "double_bass",
+  "flute", "oboe", "clarinet", "bassoon",
+  "trumpet", "horn", "trombone", "tuba",
+  "percussion", "harp", "guitar", "vocal", "composition",
 ];
 
 export function RankingFilterBar({
