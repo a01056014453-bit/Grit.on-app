@@ -13,6 +13,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import type { HelpRequest } from "@/types/help";
+import { getCachedPageData, setCachedPageData } from "@/lib/page-cache";
 import { HELP_STATUS_LABELS, HELP_STATUS_COLORS, HELP_PROBLEM_TYPE_LABELS } from "@/types/help";
 
 const problemTypeFilters = ["전체", "양손 합", "템포", "페달", "테크닉", "보이싱", "리듬", "표현", "기타"];
@@ -48,20 +49,25 @@ export default function HelpRequestPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    async function load() {
-      try {
-        const res = await fetch("/api/help-requests");
-        if (!res.ok) throw new Error("fetch failed");
-        const data = await res.json();
-        setRequests(data.requests ?? []);
-        setStats(data.stats ?? { activeExperts: 0, completedCount: 0, avgResponseHours: 0 });
-      } catch (err) {
-        console.error("[help] 목록 로드 실패:", err);
-      } finally {
-        setIsLoading(false);
-      }
+    // 캐시에서 즉시 표시
+    const cached = getCachedPageData<{ requests: HelpRequest[]; stats: HelpStats }>("sempre-cache-help");
+    if (cached) {
+      setRequests(cached.requests ?? []);
+      setStats(cached.stats ?? stats);
+      setIsLoading(false);
     }
-    load();
+    // 백그라운드 갱신
+    fetch("/api/help-requests").then(async (res) => {
+      if (!res.ok) return;
+      const data = await res.json();
+      setRequests(data.requests ?? []);
+      setStats(data.stats ?? { activeExperts: 0, completedCount: 0, avgResponseHours: 0 });
+      setCachedPageData("sempre-cache-help", data);
+      setIsLoading(false);
+    }).catch((err) => {
+      console.error("[help] 목록 로드 실패:", err);
+      setIsLoading(false);
+    });
   }, []);
 
   const filteredRequests = requests.filter((req) => {

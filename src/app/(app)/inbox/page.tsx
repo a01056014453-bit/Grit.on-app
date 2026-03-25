@@ -6,6 +6,7 @@ import { Inbox, Clock, CheckCircle, Bell, ChevronRight, AlertCircle } from "luci
 import { RequestStatusChip } from "@/components/feedback/request-status-chip";
 import { getRemainingTime } from "@/lib/time-utils";
 import { getTeacherFeedbackRequests } from "@/lib/queries";
+import { getCachedPageData, setCachedPageData } from "@/lib/page-cache";
 import { FeedbackRequest, FeedbackRequestStatus, PROBLEM_TYPE_LABELS } from "@/types";
 import { useTeacherMode } from "@/hooks/useTeacherMode";
 
@@ -18,7 +19,12 @@ export default function InboxPage() {
 
   useEffect(() => {
     if (!teacherProfileId) return;
-    getTeacherFeedbackRequests(teacherProfileId).then(setRequests);
+    const cached = getCachedPageData<FeedbackRequest[]>("sempre-cache-inbox");
+    if (cached && cached.length > 0) setRequests(cached);
+    getTeacherFeedbackRequests(teacherProfileId).then((data) => {
+      setRequests(data);
+      setCachedPageData("sempre-cache-inbox", data);
+    });
   }, [teacherProfileId]);
 
   const pendingRequests = requests.filter((r) => r.status === "SENT");

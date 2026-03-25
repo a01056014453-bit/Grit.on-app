@@ -8,6 +8,7 @@ import { BentoGrid, BentoCard } from "@/components/ui/bento-grid";
 import { StatsCard, DailyGoal } from "@/components/app";
 import { getGreeting } from "@/lib/utils-practice";
 import { getProfile, profileToUser } from "@/lib/queries";
+import { getCachedPageData, setCachedPageData } from "@/lib/page-cache";
 import { getAuthUserId } from "@/lib/user-id";
 import { syncPracticeSessions } from "@/lib/sync-practice";
 import { syncUserData } from "@/lib/sync-user-data";
@@ -26,21 +27,28 @@ export default function HomePage() {
   const [userProfile, setUserProfile] = useState<{ name: string } | null>(null);
 
   useEffect(() => {
-    async function loadProfile() {
+    // 캐시에서 즉시 표시
+    const cached = getCachedPageData<{ name: string }>("sempre-cache-home-profile");
+    if (cached) {
+      setUserProfile(cached);
+      setProfileLoading(false);
+    }
+    // 백그라운드 갱신
+    (async () => {
       try {
         const userId = await getAuthUserId();
         const profile = await getProfile(userId);
         if (profile) {
           const user = profileToUser(profile);
           setUserProfile(user);
+          setCachedPageData("sempre-cache-home-profile", user);
         }
       } catch (error) {
         console.error("Failed to load profile:", error);
       } finally {
         setProfileLoading(false);
       }
-    }
-    loadProfile();
+    })();
   }, []);
 
   // Sync all data to Supabase on load + tab visibility change

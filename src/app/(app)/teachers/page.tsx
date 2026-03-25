@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Users, Search, SlidersHorizontal, Star, Clock, X, ArrowLeft, Inbox, ChevronRight } from "lucide-react";
 import { TeacherCard } from "@/components/feedback/teacher-card";
 import { getTeachers } from "@/lib/queries";
+import { getCachedPageData, setCachedPageData } from "@/lib/page-cache";
 import { Teacher } from "@/types";
 
 type SortOption = "rating" | "responseTime" | "completedCount";
@@ -39,18 +40,19 @@ export default function TeachersPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const load = async () => {
-      setIsLoading(true);
-      try {
-        const data = await getTeachers();
-        setAllTeachers(data);
-      } catch (err) {
-        console.error("Failed to load teachers:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    load();
+    const cached = getCachedPageData<Teacher[]>("sempre-cache-teachers");
+    if (cached && cached.length > 0) {
+      setAllTeachers(cached);
+      setIsLoading(false);
+    }
+    getTeachers().then((data) => {
+      setAllTeachers(data);
+      setCachedPageData("sempre-cache-teachers", data);
+      setIsLoading(false);
+    }).catch((err) => {
+      console.error("Failed to load teachers:", err);
+      setIsLoading(false);
+    });
   }, []);
 
   const filteredTeachers = useMemo(() => {

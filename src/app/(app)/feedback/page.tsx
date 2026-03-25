@@ -7,6 +7,7 @@ import { safeBack } from "@/lib/navigation";
 import { MessageSquare, Clock, CheckCircle, Plus, ChevronRight, ChevronLeft } from "lucide-react";
 import { RequestStatusChip } from "@/components/feedback/request-status-chip";
 import { getFeedbackRequests } from "@/lib/queries";
+import { getCachedPageData, setCachedPageData } from "@/lib/page-cache";
 import { getRemainingTime } from "@/lib/time-utils";
 import { getUserId } from "@/lib/user-id";
 import { FeedbackRequest, FeedbackRequestStatus } from "@/types";
@@ -23,18 +24,21 @@ export default function FeedbackListPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const load = async () => {
-      setIsLoading(true);
-      try {
-        const data = await getFeedbackRequests(getUserId());
-        setRequests(data);
-      } catch (err) {
-        console.error("Failed to load feedback requests:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    load();
+    // 캐시에서 즉시 표시
+    const cached = getCachedPageData<FeedbackRequest[]>("sempre-cache-feedback");
+    if (cached && cached.length > 0) {
+      setRequests(cached);
+      setIsLoading(false);
+    }
+    // 백그라운드 갱신
+    getFeedbackRequests(getUserId()).then((data) => {
+      setRequests(data);
+      setCachedPageData("sempre-cache-feedback", data);
+      setIsLoading(false);
+    }).catch((err) => {
+      console.error("Failed to load feedback requests:", err);
+      setIsLoading(false);
+    });
   }, []);
 
   const filteredRequests = useMemo(() => {
