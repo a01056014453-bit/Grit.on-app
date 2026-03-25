@@ -139,8 +139,8 @@ export async function saveCachedAnalysis(
         console.log(`[Supabase] Updated: ${composer} - ${title}`);
       }
     } else {
-      // 새로 삽입
-      const { error } = await supabase
+      // 새로 삽입 + 실제 DB ID 반환
+      const { data: inserted, error } = await supabase
         .from("song_analyses")
         .insert({
           composer: composer.trim(),
@@ -152,12 +152,18 @@ export async function saveCachedAnalysis(
           verification_status: analysis.verification_status,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-        });
+        })
+        .select("id")
+        .single();
 
       if (error) {
         console.error("[Supabase] insert error:", error.message);
       } else {
-        console.log(`[Supabase] Saved: ${composer} - ${title}`);
+        // DB가 생성한 실제 ID로 analysis 객체 갱신
+        if (inserted?.id) {
+          analysis.id = inserted.id;
+        }
+        console.log(`[Supabase] Saved: ${composer} - ${title} (id: ${inserted?.id})`);
       }
     }
 
