@@ -1,0 +1,16 @@
+{
+  "_comment": "이 설정을 .claude/settings.local.json의 hooks 필드에 병합하여 사용합니다. 아래는 참고용 예시입니다.",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node scripts/dev-debugger/claude-hook.mjs"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "description": "알려진 에러와 해결법 DB. 동일 에러 재발 시 참조한다.",
+  "issues": [
+    {
+      "fingerprint": "build::Module not found::example",
+      "category": "build",
+      "title": "Module not found (예시)",
+      "solution": "npm install 실행 후 .next 캐시 삭제",
+      "occurrences": 0,
+      "lastSeen": null,
+      "resolved": true
+    }
+  ]
+}
