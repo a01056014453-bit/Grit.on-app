@@ -40,6 +40,12 @@ export default function Error({
           >
             홈으로 돌아가기
           </Link>
+          <a
+            href="mailto:support@withsempre.com"
+            className="text-xs text-gray-300 hover:text-violet-500 transition-colors"
+          >
+            문제가 계속되면 support@withsempre.com
+          </a>
         </div>
       </div>
     </div>

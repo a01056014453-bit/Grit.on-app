@@ -576,6 +576,12 @@ export default function TeacherRegisterPage() {
           >
             시작하기
           </button>
+          <a
+            href="mailto:support@withsempre.com"
+            className="block mt-3 text-center text-xs text-gray-400 hover:text-orange-500 transition-colors"
+          >
+            인증 관련 문의: support@withsempre.com
+          </a>
         </div>
       )}
 

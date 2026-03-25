@@ -264,6 +264,16 @@ export default function HelpRequestPage() {
           </div>
         </div>
       </div>
+
+      {/* 문의 링크 */}
+      <div className="mt-4 mb-4">
+        <a
+          href="mailto:support@withsempre.com"
+          className="block text-center text-xs text-muted-foreground hover:text-primary transition-colors"
+        >
+          게시판에서 해결이 안 되셨나요? support@withsempre.com
+        </a>
+      </div>
     </div>
   );
 }

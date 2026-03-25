@@ -260,6 +260,12 @@ export default function FeedbackDetailPage() {
           >
             다른 선생님 찾아보기
           </Link>
+          <a
+            href="mailto:support@withsempre.com"
+            className="block mt-2 text-center text-xs text-red-400 hover:text-red-600 transition-colors"
+          >
+            문제가 해결되지 않나요? support@withsempre.com
+          </a>
         </div>
       )}
 

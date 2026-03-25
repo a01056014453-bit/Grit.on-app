@@ -1065,6 +1065,12 @@ export default function ProfilePage() {
                 고객지원
               </Link>
             </div>
+            <a
+              href="mailto:support@withsempre.com"
+              className="block text-center text-xs text-gray-400 hover:text-violet-500 transition-colors mt-2"
+            >
+              문의 support@withsempre.com
+            </a>
           </>
         ) : (
           <>
