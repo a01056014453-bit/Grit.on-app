@@ -18,6 +18,30 @@ if (VAPID_PUBLIC && VAPID_PRIVATE) {
  */
 export async function POST(request: NextRequest) {
   try {
+    // 내부 호출만 허용: 인증된 유저이거나 서버 내부 호출(CRON_SECRET)
+    const authHeader = request.headers.get("authorization");
+    const cronSecret = process.env.CRON_SECRET;
+    const isInternalCall = cronSecret && authHeader === `Bearer ${cronSecret}`;
+
+    if (!isInternalCall) {
+      // 인증된 유저 확인
+      const { createServerClient } = await import("@supabase/ssr");
+      const supabaseAuth = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          cookies: {
+            getAll() { return request.cookies.getAll(); },
+            setAll() {},
+          },
+        },
+      );
+      const { data: { user } } = await supabaseAuth.auth.getUser();
+      if (!user) {
+        return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
+      }
+    }
+
     const { userId, teacherId, title, body, url } = await request.json();
 
     // teacherId가 주어지면 user_id 조회

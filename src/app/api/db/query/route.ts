@@ -1,17 +1,46 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
 import { supabaseServer } from "@/lib/supabase-server";
+
+/** 접근 허용 테이블 (개인정보 미포함 또는 본인 데이터만) */
+const ALLOWED_TABLES = new Set([
+  "teacher_reviews",
+  "reward_definitions",
+  "reward_grants",
+  "rooms",
+  "schools",
+  "room_memberships",
+  "song_analyses",
+  "composers",
+  "designated_pieces",
+]);
 
 /**
  * GET /api/db/query
- * 범용 읽기 전용 쿼리 API
- *
- * Query params:
- * - table: 테이블명
- * - filter: PostgREST 형식 필터 (예: request_id.eq.abc123)
- * - limit: 결과 수 제한 (기본 50)
+ * 인증 필수 + 테이블 허용목록 기반 읽기 전용 쿼리 API
  */
 export async function GET(request: NextRequest) {
   try {
+    // 인증 확인
+    const supabaseAuth = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() { return request.cookies.getAll(); },
+          setAll() {},
+        },
+      },
+    );
+
+    const { data: { user } } = await supabaseAuth.auth.getUser();
+    if (!user) {
+      return NextResponse.json(
+        { error: "인증이 필요합니다." },
+        { status: 401 },
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const table = searchParams.get("table");
     const filter = searchParams.get("filter");
@@ -21,6 +50,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         { error: "테이블명이 필요합니다." },
         { status: 400 },
+      );
+    }
+
+    // 테이블 허용목록 검증
+    if (!ALLOWED_TABLES.has(table)) {
+      return NextResponse.json(
+        { error: "접근할 수 없는 테이블입니다." },
+        { status: 403 },
       );
     }
 

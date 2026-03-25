@@ -50,15 +50,14 @@ export default function CreditsPage() {
       .finally(() => setIsLoading(false));
   }, []);
 
-  const handleCharge = async (amount: number) => {
-    // TODO: 토스페이먼츠 결제 위젯 연동
-    // 현재는 API만 호출 (테스트용)
-    alert(`${amount}크레딧 충전 기능은 PG 연동 후 사용 가능합니다.`);
+  const [chargeMessage, setChargeMessage] = useState("");
+
+  const handleCharge = async () => {
+    setChargeMessage("결제 시스템을 준비 중입니다. 곧 이용 가능합니다!");
   };
 
   const handleProSubscribe = () => {
-    // TODO: Pro 구독 결제 연동
-    alert("Pro 구독 기능은 PG 연동 후 사용 가능합니다.");
+    setChargeMessage("Pro 구독 시스템을 준비 중입니다. 곧 이용 가능합니다!");
   };
 
   const showProBanner = totalPurchases >= 3 && plan === "free";
@@ -151,9 +150,15 @@ export default function CreditsPage() {
           ))}
         </div>
 
+        {chargeMessage && (
+          <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+            <p className="text-sm text-amber-700 text-center">{chargeMessage}</p>
+          </div>
+        )}
+
         {selectedPackage && (
           <button
-            onClick={() => handleCharge(selectedPackage)}
+            onClick={handleCharge}
             className="w-full mt-4 py-4 rounded-xl bg-primary text-white font-semibold"
           >
             {selectedPackage}크레딧 충전하기 (₩{(selectedPackage * 1000).toLocaleString()})
