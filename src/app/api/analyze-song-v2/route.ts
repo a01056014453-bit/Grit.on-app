@@ -1230,12 +1230,28 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(response);
   } catch (error) {
     console.error("Song analysis API v2 error:", error);
-    console.error("Song analysis detail:", error instanceof Error ? error.message : error);
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.error("Song analysis detail:", errMsg);
+
+    let userMessage = "곡 분석 중 오류가 발생했습니다. 다시 시도해주세요.";
+    let statusCode = 500;
+
+    if (errMsg.includes("429") || errMsg.includes("Rate limit")) {
+      userMessage = "AI 서버가 바쁩니다. 1-2분 후 다시 시도해주세요.";
+      statusCode = 429;
+    } else if (errMsg.includes("401") || errMsg.includes("API key")) {
+      userMessage = "AI 서비스 연결에 문제가 있습니다. 잠시 후 다시 시도해주세요.";
+      statusCode = 503;
+    } else if (errMsg.includes("OpenAI와 Claude 모두 실패")) {
+      userMessage = "AI 서비스가 일시적으로 불안정합니다. 잠시 후 다시 시도해주세요.";
+      statusCode = 503;
+    }
+
     const response: AnalyzeSongResponse = {
       success: false,
-      error: "곡 분석 중 오류가 발생했습니다. 다시 시도해주세요.",
+      error: userMessage,
     };
-    return NextResponse.json(response, { status: 500 });
+    return NextResponse.json(response, { status: statusCode });
   }
 }
 
