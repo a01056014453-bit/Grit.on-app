@@ -115,13 +115,7 @@ export function RankingFilterBar({
             {schools.length === 0 ? (
               <div className="text-center py-8">
                 <GraduationCap className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-                <p className="text-sm text-gray-500 mb-3">가입한 입시룸이 없어요</p>
-                <a
-                  href="/rooms"
-                  className="inline-block px-4 py-2 bg-violet-500 text-white text-sm font-semibold rounded-xl"
-                >
-                  입시룸 둘러보기
-                </a>
+                <p className="text-sm text-gray-500">등록된 학교가 없습니다</p>
               </div>
             ) : (
               <div className="space-y-2">

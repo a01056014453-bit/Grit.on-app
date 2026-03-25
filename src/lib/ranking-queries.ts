@@ -37,42 +37,19 @@ export async function fetchRankingsData(
   };
 }
 
-/** 유저가 가입한 학교 목록 조회 */
-export async function fetchUserSchools(userId: string): Promise<SchoolOption[]> {
+/** 전체 학교 목록 조회 (입시룸 가입 불필요) */
+export async function fetchUserSchools(): Promise<SchoolOption[]> {
   try {
-    const res = await fetch(`/api/db/query?table=room_memberships&filter=user_id.eq.${userId}&limit=50`);
+    const res = await fetch(`/api/db/query?table=schools&limit=50`);
     if (!res.ok) return [];
-    const { data: memberships } = await res.json();
-    if (!memberships || memberships.length === 0) return [];
+    const { data } = await res.json();
+    if (!data || data.length === 0) return [];
 
-    // room_id로 rooms 조회해서 school_id 가져오기
-    const roomIds = memberships.map((m: { room_id: string }) => m.room_id);
-    const schoolIds = new Set<string>();
-    const schools: SchoolOption[] = [];
-
-    for (const roomId of roomIds) {
-      const roomRes = await fetch(`/api/db/query?table=rooms&filter=id.eq.${roomId}&limit=1`);
-      if (!roomRes.ok) continue;
-      const { data: rooms } = await roomRes.json();
-      if (!rooms || rooms.length === 0) continue;
-
-      const schoolId = rooms[0].school_id;
-      if (schoolId && !schoolIds.has(schoolId)) {
-        schoolIds.add(schoolId);
-        const schoolRes = await fetch(`/api/db/query?table=schools&filter=id.eq.${schoolId}&limit=1`);
-        if (!schoolRes.ok) continue;
-        const { data: schoolData } = await schoolRes.json();
-        if (schoolData && schoolData.length > 0) {
-          schools.push({
-            id: schoolData[0].id,
-            name: schoolData[0].name,
-            shortName: schoolData[0].short_name ?? schoolData[0].name,
-          });
-        }
-      }
-    }
-
-    return schools;
+    return data.map((s: { id: string; name: string; short_name?: string }) => ({
+      id: s.id,
+      name: s.name,
+      shortName: s.short_name ?? s.name,
+    }));
   } catch {
     return [];
   }

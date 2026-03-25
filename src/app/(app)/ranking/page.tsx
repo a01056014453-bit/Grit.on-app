@@ -312,10 +312,7 @@ export default function RankingPage() {
 
     // 2. 백그라운드에서 최신 데이터 가져오기
     loadRankings();
-    const uid = getUserId();
-    if (uid) {
-      fetchUserSchools(uid).then(setSchools);
-    }
+    fetchUserSchools().then(setSchools);
   }, []);
 
   // 1초마다 타이머 업데이트
@@ -409,14 +406,11 @@ export default function RankingPage() {
         </>
       )}
 
-      {/* 인원 부족 안내 */}
-      {(filter.schoolId || filter.instrument) && rankers.length > 0 && rankers.length < 5 && (
-        <div className="bg-amber-50/80 backdrop-blur-sm rounded-xl p-3 mb-4 border border-amber-200/50">
-          <p className="text-xs text-amber-700 text-center">
-            인원이 적어요 ({rankers.length}명).{" "}
-            <button onClick={() => handleFilterChange({})} className="font-semibold underline">
-              전체 랭킹 보기
-            </button>
+      {/* 필터 결과 안내 */}
+      {(filter.schoolId || filter.instrument) && rankers.length > 0 && (
+        <div className="bg-violet-50/80 backdrop-blur-sm rounded-xl p-2 mb-4 border border-violet-200/50">
+          <p className="text-xs text-violet-600 text-center">
+            {rankers.length}명 참여 중
           </p>
         </div>
       )}
