@@ -48,14 +48,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ challenge: body.challenge });
   }
 
-  // 2) 서명 검증
-  const timestamp = req.headers.get('x-slack-request-timestamp') ?? '';
-  const signature = req.headers.get('x-slack-signature') ?? '';
+  // 2) 서명 검증 (환경변수 없으면 스킵 — 개발 편의)
+  const signingSecret = process.env.SLACK_SIGNING_SECRET;
+  if (signingSecret) {
+    const timestamp = req.headers.get('x-slack-request-timestamp') ?? '';
+    const signature = req.headers.get('x-slack-signature') ?? '';
 
-  if (
-    !verifySlackRequest(process.env.SLACK_SIGNING_SECRET!, { timestamp, signature }, rawBody)
-  ) {
-    return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+    if (!timestamp || !signature) {
+      return NextResponse.json({ error: 'Missing headers' }, { status: 401 });
+    }
+
+    if (!verifySlackRequest(signingSecret, { timestamp, signature }, rawBody)) {
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+    }
   }
 
   // 3) 이벤트 추출
@@ -64,8 +69,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  console.log('[slack-event]', event.type, event.text?.slice(0, 50));
+
   // 봇 자신의 메시지, 재전송 무시
-  if (event.bot_id || !markProcessed(event.ts ?? event.event_ts)) {
+  if (event.bot_id || event.subtype === 'bot_message') {
+    return NextResponse.json({ ok: true });
+  }
+
+  if (!markProcessed(event.ts ?? event.event_ts)) {
     return NextResponse.json({ ok: true });
   }
 

@@ -20,8 +20,10 @@ export function verifySlackRequest(
       .update(baseString, 'utf8')
       .digest('hex');
 
-  return crypto.timingSafeEqual(
-    Buffer.from(computed, 'utf8'),
-    Buffer.from(headers.signature, 'utf8')
-  );
+  const a = Buffer.from(computed, 'utf8');
+  const b = Buffer.from(headers.signature, 'utf8');
+
+  if (a.length !== b.length) return false;
+
+  return crypto.timingSafeEqual(a, b);
 }
