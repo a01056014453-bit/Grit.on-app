@@ -82,6 +82,47 @@ function extractJSON(text: string): string {
   return cleaned;
 }
 
+/**
+ * 잘린 JSON 복구 시도
+ * max_tokens에 걸려 중간에 잘린 JSON을 부분적으로라도 파싱
+ */
+function tryRepairTruncatedJSON(text: string): Record<string, unknown> | null {
+  let json = text.trim();
+
+  // 열린 브래킷/브레이스 카운트
+  let braces = 0;
+  let brackets = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (const ch of json) {
+    if (escaped) { escaped = false; continue; }
+    if (ch === "\\") { escaped = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === "{") braces++;
+    if (ch === "}") braces--;
+    if (ch === "[") brackets++;
+    if (ch === "]") brackets--;
+  }
+
+  // 닫히지 않은 문자열 닫기
+  if (inString) json += '"';
+
+  // 닫히지 않은 배열/객체 닫기
+  while (brackets > 0) { json += "]"; brackets--; }
+  while (braces > 0) { json += "}"; braces--; }
+
+  // 마지막 불완전한 요소 제거 (쉼표 뒤 잘림)
+  json = json.replace(/,\s*([}\]])/g, "$1");
+
+  try {
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
 /** "확인 필요" 문구 → undefined (조용히 제거) */
 function filterNeedsReview(text: string | undefined): string | undefined {
   if (!text) return undefined;
@@ -256,7 +297,12 @@ async function callPerplexity(
   }
 }
 
-/** 안전한 JSON 파싱: 실패 시 GPT로 재포맷 */
+/**
+ * 안전한 JSON 파싱: 3단계 복구
+ * 1차: 직접 파싱
+ * 2차: 잘린 JSON 복구 (브래킷 닫기)
+ * 3차: GPT로 재포맷 (최후 수단)
+ */
 async function safeParseJSON(
   text: string,
   openai: OpenAI,
@@ -264,17 +310,34 @@ async function safeParseJSON(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<Record<string, any>> {
   const jsonStr = extractJSON(text);
+
+  // 1차: 직접 파싱
   try {
     return JSON.parse(jsonStr);
   } catch {
-    console.log(`[${label}] JSON 파싱 실패 → GPT로 재포맷`);
-    const reformatted = await callGPT(
-      openai,
-      `다음 텍스트에서 JSON 객체만 추출하여 유효한 JSON으로 변환하십시오. 텍스트 설명이나 마크다운은 제거하고 순수 JSON만 출력하십시오.\n\n${text}`,
-      8192,
-      0.1,
-    );
-    return JSON.parse(extractJSON(reformatted));
+    // 2차: 잘린 JSON 복구 시도
+    console.log(`[${label}] JSON 파싱 실패 → 잘린 JSON 복구 시도`);
+    const repaired = tryRepairTruncatedJSON(jsonStr);
+    if (repaired) {
+      console.log(`[${label}] 잘린 JSON 복구 성공`);
+      return repaired;
+    }
+
+    // 3차: GPT로 재포맷 (비용 발생)
+    console.log(`[${label}] 복구 실패 → GPT 재포맷`);
+    try {
+      const reformatted = await callGPT(
+        openai,
+        `다음 텍스트에서 JSON 객체만 추출하여 유효한 JSON으로 변환하십시오. 텍스트 설명이나 마크다운은 제거하고 순수 JSON만 출력하십시오.\n\n${text.substring(0, 12000)}`,
+        4096,
+        0.1,
+      );
+      return JSON.parse(extractJSON(reformatted));
+    } catch {
+      // 최종 실패: 빈 객체 반환 (에러 전파하지 않음)
+      console.error(`[${label}] 모든 JSON 파싱 실패 — 빈 결과 반환`);
+      return {};
+    }
   }
 }
 
