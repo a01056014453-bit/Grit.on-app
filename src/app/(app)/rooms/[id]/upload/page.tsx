@@ -87,11 +87,20 @@ export default function RoomUploadPage() {
     if (!canUpload || !videoFile) return;
     setIsUploading(true);
     try {
+      // rooms 테이블에서 room_id 조회
+      const roomRes = await fetch(`/api/db/query?table=rooms&filter=school_id.eq.${schoolId}&limit=1`);
+      const roomData = await roomRes.json();
+      const roomId = roomData?.data?.[0]?.id || schoolId;
+
       const formData = new FormData();
       formData.append("file", videoFile);
-      formData.append("requestId", `room-${schoolId}-${Date.now()}`);
-      formData.append("type", "student");
-      const res = await fetch("/api/feedback/upload-video", { method: "POST", body: formData });
+      formData.append("roomId", roomId);
+      formData.append("pieceComposer", "");
+      formData.append("pieceTitle", pieceName);
+      formData.append("section", "");
+      formData.append("userName", anonymous ? "익명" : "연습생");
+
+      const res = await fetch("/api/rooms/upload-video", { method: "POST", body: formData });
       const data = await res.json();
       if (data.success) {
         router.push(`/rooms/${schoolId}`);

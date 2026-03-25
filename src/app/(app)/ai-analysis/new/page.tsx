@@ -183,6 +183,11 @@ export default function NewAnalysisPage() {
       // 사용자 분석 기록에 추가
       addUserAnalysis({ id: result.data.id, composer, title });
 
+      // 분석 결과를 localStorage에 즉시 캐싱 (상세 페이지에서 바로 표시)
+      try {
+        localStorage.setItem(`sempre-analysis-${result.data.id}`, JSON.stringify(result.data));
+      } catch { /* 용량 초과 무시 */ }
+
       setAnalyzePhase("분석 완료! 이동 중...");
       router.push(`/ai-analysis/${result.data.id}`);
     } catch {
