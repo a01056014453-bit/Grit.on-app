@@ -6,7 +6,7 @@
  * 이미 마이그레이션된 경우 스킵.
  */
 
-const MIGRATION_FLAG = "sempre-migration-v1";
+const MIGRATION_FLAG = "sempre-migration-v2";
 
 /** localStorage 키 매핑 (구 → 신) */
 const LS_KEY_MAP: Record<string, string> = {
@@ -80,6 +80,25 @@ export function runStorageMigration(): void {
       const oldProfile = localStorage.getItem("grit-on-profile");
       if (oldProfile) {
         localStorage.setItem("sempre-user-profile", oldProfile);
+      }
+    }
+
+    // 4. analyzed-songs → user-analyses 통합 마이그레이션
+    if (!localStorage.getItem("sempre-user-analyses")) {
+      // griton-analyzed-songs 또는 sempre-analyzed-songs에서 가져오기
+      const oldSongs = localStorage.getItem("sempre-analyzed-songs")
+        || localStorage.getItem("griton-analyzed-songs");
+      if (oldSongs) {
+        try {
+          const songs = JSON.parse(oldSongs);
+          const userAnalyses = (songs as { id: string; composer: string; title: string; date?: string }[]).map((s) => ({
+            id: s.id,
+            composer: s.composer,
+            title: s.title,
+            analyzedAt: s.date || new Date().toISOString(),
+          }));
+          localStorage.setItem("sempre-user-analyses", JSON.stringify(userAnalyses));
+        } catch { /* 파싱 실패 무시 */ }
       }
     }
 
