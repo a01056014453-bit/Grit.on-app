@@ -563,15 +563,23 @@ async function runPhase3(
   const text = await callGPT(openai, prompt, 12000, 0.1);
   const parsed = await safeParseJSON(text, openai, "Phase 3");
 
-  const rawSections = Array.isArray(parsed.structure_analysis_v2?.sections)
-    ? parsed.structure_analysis_v2.sections
-    : [];
+  // GPT가 다양한 키로 반환할 수 있으므로 여러 경로에서 탐색
+  const v2 = parsed.structure_analysis_v2 || parsed;
+  const rawSections = Array.isArray(v2.sections)
+    ? v2.sections
+    : Array.isArray(parsed.sections)
+      ? parsed.sections
+      : [];
+
+  const rawHarmony = Array.isArray(v2.harmony_table)
+    ? v2.harmony_table
+    : Array.isArray(parsed.harmony_table)
+      ? parsed.harmony_table
+      : [];
 
   const structure_analysis_v2: StructureAnalysisV2 = {
     sections: sanitizeSections(rawSections),
-    harmony_table: Array.isArray(parsed.structure_analysis_v2?.harmony_table)
-      ? parsed.structure_analysis_v2.harmony_table
-      : [],
+    harmony_table: rawHarmony,
   };
 
   console.log(`[Phase 3] Done: ${structure_analysis_v2.sections.length} sections, ${structure_analysis_v2.harmony_table.length} harmony rows`);
