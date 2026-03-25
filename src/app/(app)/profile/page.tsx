@@ -123,6 +123,10 @@ const INSTRUMENT_TO_ENUM: Record<string, string> = {
 function loadProfile() {
   if (typeof window === "undefined") return defaultUser;
   try {
+    // 일일 목표는 grit-on-daily-goal에서 읽기 (홈 화면과 동일 소스)
+    const savedGoal = localStorage.getItem("grit-on-daily-goal");
+    const dailyGoal = savedGoal ? parseInt(savedGoal, 10) : defaultUser.dailyGoal;
+
     // sempre-user-profile에서 온보딩 프로필 먼저 읽기
     const sempre = localStorage.getItem(SEMPRE_PROFILE_KEY);
     if (sempre) {
@@ -134,11 +138,12 @@ function loadProfile() {
         grade: sp.ageGroup || defaultUser.grade,
         profileEmoji: sp.profileEmoji || defaultUser.profileEmoji,
         instruments: sp.instruments || [],
+        dailyGoal,
       };
     }
     // 기존 grit-on-profile 폴백
     const saved = localStorage.getItem(PROFILE_STORAGE_KEY);
-    if (saved) return { ...defaultUser, ...JSON.parse(saved) };
+    if (saved) return { ...defaultUser, ...JSON.parse(saved), dailyGoal };
   } catch {}
   return defaultUser;
 }
