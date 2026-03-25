@@ -25,7 +25,23 @@ export async function getUsers(limit = 100, offset = 0): Promise<AdminUser[]> {
   const res = await fetch(`/api/admin/users?limit=${limit}&offset=${offset}`);
   if (!res.ok) return [];
   const data = await res.json();
-  return data.users ?? [];
+  return (data.users ?? []).map((u: Record<string, unknown>) => ({
+    id: u.id as string,
+    nickname: u.nickname as string,
+    name: u.name as string | null,
+    instrument: u.instrument as string,
+    level: u.level as string | null,
+    gritScore: u.gritScore as number | null,
+    totalPracticeHours: u.totalPracticeHours as number | null,
+    streakDays: u.streakDays as number | null,
+    createdAt: u.createdAt as string,
+    lastActiveAt: u.updatedAt as string | null,
+    subscription: "free" as const,
+    pushEnabled: false,
+    email: u.email as string | null,
+    authProvider: u.authProvider as string | null,
+    sessionCount: u.sessionCount as number,
+  }));
 }
 
 // ─── 사용자 상세 ───

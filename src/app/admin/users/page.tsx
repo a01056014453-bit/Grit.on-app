@@ -17,48 +17,44 @@ export default function UsersPage() {
     getUsers().then(setUsers);
   }, []);
 
-  const columns: Column<AdminUser>[] = [
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const columns: Column<any>[] = [
     {
       key: 'nickname',
       header: '닉네임',
-      render: (row) => (
+      render: (row: any) => (
         <div>
           <p className="font-medium text-gray-900">{row.nickname}</p>
-          {row.name && <p className="text-xs text-gray-400">{row.name}</p>}
+          {row.email && <p className="text-xs text-gray-400">{row.email}</p>}
         </div>
       ),
     },
     { key: 'instrument', header: '악기' },
-    { key: 'level', header: '레벨', render: (row) => row.level ?? '-' },
+    {
+      key: 'authProvider',
+      header: '가입',
+      render: (row: any) => (
+        <StatusBadge
+          label={row.authProvider === 'google' ? 'Google' : row.authProvider === 'apple' ? 'Apple' : row.authProvider ?? '-'}
+          variant={row.authProvider === 'google' ? 'info' : row.authProvider === 'apple' ? 'neutral' : 'neutral'}
+        />
+      ),
+    },
+    { key: 'level', header: '레벨', render: (row: any) => row.level ?? '-' },
+    {
+      key: 'sessionCount',
+      header: '연습 횟수',
+      render: (row: any) => <span className="font-number">{row.sessionCount ?? 0}회</span>,
+    },
     {
       key: 'gritScore',
       header: '그릿 점수',
-      render: (row) => <span className="font-number">{row.gritScore?.toLocaleString() ?? '-'}</span>,
-    },
-    {
-      key: 'totalPracticeHours',
-      header: '총 연습(시간)',
-      render: (row) => <span className="font-number">{row.totalPracticeHours?.toFixed(1) ?? '-'}</span>,
-    },
-    {
-      key: 'streakDays',
-      header: '연속일',
-      render: (row) => <span className="font-number">{row.streakDays ?? 0}일</span>,
-    },
-    {
-      key: 'subscription',
-      header: '구독',
-      render: (row) => (
-        <StatusBadge
-          label={row.subscription === 'free' ? '무료' : row.subscription === 'premium' ? '프리미엄' : '프로'}
-          variant={row.subscription === 'free' ? 'neutral' : row.subscription === 'premium' ? 'info' : 'purple'}
-        />
-      ),
+      render: (row: any) => <span className="font-number">{row.gritScore?.toLocaleString() ?? '-'}</span>,
     },
     {
       key: 'createdAt',
       header: '가입일',
-      render: (row) => new Date(row.createdAt).toLocaleDateString('ko-KR'),
+      render: (row: any) => row.createdAt ? new Date(row.createdAt).toLocaleDateString('ko-KR') : '-',
     },
   ];
 
