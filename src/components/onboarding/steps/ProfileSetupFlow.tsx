@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight } from "lucide-react";
 import dynamic from "next/dynamic";
 import { pushUserDataDebounced } from "@/lib/sync-user-data";
+import { isNicknameAvailable } from "@/lib/queries/profiles";
+import { getUserId } from "@/lib/user-id";
 
 const BlurText = dynamic(() => import("@/components/reactbits/BlurText"), {
   ssr: false,
@@ -68,16 +70,27 @@ function NicknameStep({
   onNext: () => void;
 }) {
   const [checking, setChecking] = useState(false);
+  const [duplicateError, setDuplicateError] = useState("");
   const isValid = value.trim().length >= 2;
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!isValid) return;
     setChecking(true);
-    // Mock duplicate check
-    setTimeout(() => {
-      setChecking(false);
+    setDuplicateError("");
+
+    try {
+      const available = await isNicknameAvailable(value.trim(), getUserId());
+      if (!available) {
+        setDuplicateError("이미 사용 중인 닉네임입니다");
+        setChecking(false);
+        return;
+      }
       onNext();
-    }, 500);
+    } catch {
+      onNext(); // 에러 시 허용 (UX 우선)
+    } finally {
+      setChecking(false);
+    }
   };
 
   return (
@@ -118,6 +131,9 @@ function NicknameStep({
           <p className="text-center text-violet-300/50 text-xs mt-3">
             {value.length}/8자
           </p>
+          {duplicateError && (
+            <p className="text-center text-red-400 text-xs mt-2">{duplicateError}</p>
+          )}
         </div>
       </motion.div>
 
@@ -407,8 +423,9 @@ export function ProfileSetupFlow({ onComplete }: ProfileSetupFlowProps) {
       profileImage: "",
       birthday,
     };
-    localStorage.setItem("grit-on-profile", JSON.stringify(profileToSave));
-    pushUserDataDebounced("grit-on-profile");
+    localStorage.setItem("sempre-profile", JSON.stringify(profileToSave));
+    localStorage.setItem("grit-on-profile", JSON.stringify(profileToSave)); // 호환성
+    pushUserDataDebounced("sempre-profile");
 
     onComplete({
       nickname,
