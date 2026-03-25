@@ -84,7 +84,7 @@ export default function RootLayout({
             __html: `
               (function() {
                 var v = localStorage.getItem('sempre-data-version');
-                if (v === '5') return;
+                if (v === '6') return;
                 localStorage.removeItem('grit-on-notifications');
                 localStorage.removeItem('sempre-notifications');
                 localStorage.removeItem('grit-on-onboarding-complete');
@@ -101,7 +101,7 @@ export default function RootLayout({
                     k.forEach(function(c) { caches.delete(c); });
                   });
                 }
-                localStorage.setItem('sempre-data-version', '5');
+                localStorage.setItem('sempre-data-version', '6');
               })();
             `,
           }}
