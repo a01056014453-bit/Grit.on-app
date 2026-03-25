@@ -52,6 +52,48 @@ export function estimateProximity(
 }
 
 /**
+ * 녹음된 음악(유튜브/스피커) vs 실제 연주 판별
+ *
+ * 녹음 음악: 프레임 간 스펙트럼이 매우 일정 (프로 마스터링)
+ * 실제 연습: 멈춤, 반복, 실수 등으로 스펙트럼 변화가 불규칙
+ */
+const spectrumHistory: number[][] = [];
+const SPECTRUM_HISTORY_SIZE = 5;
+
+export function detectRecordedMusic(frequencyData: Uint8Array): boolean {
+  const bands: number[] = [];
+  const bandSize = Math.floor(frequencyData.length / 8);
+  for (let b = 0; b < 8; b++) {
+    let sum = 0;
+    for (let i = b * bandSize; i < (b + 1) * bandSize && i < frequencyData.length; i++) {
+      sum += frequencyData[i];
+    }
+    bands.push(sum / bandSize);
+  }
+
+  spectrumHistory.push(bands);
+  if (spectrumHistory.length > SPECTRUM_HISTORY_SIZE) spectrumHistory.shift();
+  if (spectrumHistory.length < 3) return false;
+
+  let totalChange = 0;
+  for (let i = 1; i < spectrumHistory.length; i++) {
+    let frameChange = 0;
+    for (let b = 0; b < 8; b++) {
+      frameChange += Math.abs(spectrumHistory[i][b] - spectrumHistory[i - 1][b]);
+    }
+    totalChange += frameChange / 8;
+  }
+  const avgChange = totalChange / (spectrumHistory.length - 1);
+
+  // 녹음 음악: 변화량 < 5, 실제 연습: 변화량 > 15
+  return avgChange < 5;
+}
+
+export function resetSpectrumHistory(): void {
+  spectrumHistory.length = 0;
+}
+
+/**
  * 악기별 주파수 범위 (기본음 범위)
  * 근접 판별 시 해당 악기의 주파수 대역에 에너지가 집중되어 있는지 확인
  */

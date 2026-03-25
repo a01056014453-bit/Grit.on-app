@@ -9,7 +9,7 @@ import {
   type AudioLabel,
   type ModelStatus,
 } from "@/lib/audio-classifier";
-import { estimateProximity } from "@/lib/audio-proximity";
+import { estimateProximity, detectRecordedMusic } from "@/lib/audio-proximity";
 import { detectPitch, analyzePitchPattern, type PitchResult } from "@/lib/pitch-detector";
 
 // ─────────────────────────────────────────────
@@ -307,6 +307,16 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
           }
         }
 
+        // 녹음 음악 필터: 유튜브/스피커 재생 감지
+        if (label === "INSTRUMENT_PLAYING" && analyserRef.current) {
+          const freqCheck = new Uint8Array(analyserRef.current.frequencyBinCount);
+          analyserRef.current.getByteFrequencyData(freqCheck);
+          if (detectRecordedMusic(freqCheck)) {
+            label = "NOISE";
+            confidence = 0.5;
+          }
+        }
+
         // 피치 감지: 성악 전공자의 VOICE를 재판별
         if (label === "VOICE" && instrument === "vocal" && analyserRef.current) {
           const pitchBuf = new Float32Array(analyserRef.current.fftSize);
@@ -507,13 +517,34 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
                 const now = Date.now();
                 const delta = (now - lastPracticeCheckRef.current) / 1000;
                 lastPracticeCheckRef.current = now;
-                if (isActuallyPlayingRef.current) {
+
+                // isActuallyPlaying이 true이면 카운팅
+                // 추가: YAMNet 분류 사이에도 dB가 높으면 보간 카운팅 (부드러운 타이머)
+                const currentDb = analyserRef.current ? (() => {
+                  const td = new Uint8Array(analyserRef.current!.fftSize);
+                  analyserRef.current!.getByteTimeDomainData(td);
+                  let s = 0;
+                  for (let i = 0; i < td.length; i++) {
+                    const a = (td[i] - 128) / 128;
+                    s += a * a;
+                  }
+                  const r = Math.sqrt(s / td.length);
+                  return r === 0 ? 0 : Math.max(0, Math.min(120, 20 * Math.log10(r) + 90));
+                })() : 0;
+
+                const soundDetected = currentDb > noiseFloorDecibelRef.current + 3;
+                const shouldCount = isActuallyPlayingRef.current ||
+                  (soundDetected && lastPianoDetectedTimeRef.current > 0 &&
+                   (now - lastPianoDetectedTimeRef.current) < PIANO_OFF_DELAY_MS);
+
+                if (shouldCount) {
                   accumulatedPracticeRef.current += delta;
-                  setState((prev) => ({
-                    ...prev,
-                    practiceTime: Math.floor(accumulatedPracticeRef.current),
-                  }));
                 }
+
+                setState((prev) => ({
+                  ...prev,
+                  practiceTime: Math.floor(accumulatedPracticeRef.current),
+                }));
               }, 100);
 
               setState((prev) => ({ ...prev, calibrationCountdown: null }));
