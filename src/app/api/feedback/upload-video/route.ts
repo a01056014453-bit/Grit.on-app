@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { supabaseServer } from "@/lib/supabase-server";
 
+// Vercel serverless 설정: 최대 60초, body 크기 무제한 (App Router는 streaming)
+export const maxDuration = 60;
+
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 const ALLOWED_TYPES = ["video/mp4", "video/webm", "video/quicktime"];
 

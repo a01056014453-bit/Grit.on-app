@@ -19,7 +19,7 @@ const ALLOWED_TYPES = ["video/mp4", "video/webm", "video/quicktime"];
 
 /**
  * 피드백 영상 업로드 훅
- * - type: "student" (학생 연습 영상) | "demo" (선생님 시연 영상)
+ * Supabase Storage signed URL로 직접 업로드 (Vercel body 크기 제한 우회)
  */
 export function useVideoUpload({
   type,
@@ -55,49 +55,57 @@ export function useVideoUpload({
       setUploading(true);
 
       try {
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("requestId", requestId);
-        formData.append("type", type);
+        // 1. 서버에서 signed upload URL 받기
+        setProgress(5);
+        const urlRes = await fetch("/api/feedback/upload-url", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            requestId,
+            type,
+            fileName: file.name,
+            contentType: file.type,
+          }),
+        });
 
-        // XMLHttpRequest로 진행률 추적
-        const url = await new Promise<string | null>((resolve, reject) => {
+        const urlData = await urlRes.json();
+        if (!urlRes.ok || !urlData.signedUrl) {
+          setError(urlData.error || "업로드 URL 생성에 실패했습니다.");
+          return null;
+        }
+
+        // 2. signed URL로 Supabase Storage에 직접 업로드
+        const publicUrl = await new Promise<string | null>((resolve) => {
           const xhr = new XMLHttpRequest();
 
           xhr.upload.addEventListener("progress", (e) => {
             if (e.lengthComputable) {
-              setProgress(Math.round((e.loaded / e.total) * 100));
+              // 5~95% 범위로 매핑 (5%는 URL 생성, 95~100%는 완료 처리)
+              setProgress(5 + Math.round((e.loaded / e.total) * 90));
             }
           });
 
           xhr.addEventListener("load", () => {
-            try {
-              const result = JSON.parse(xhr.responseText);
-              if (xhr.status >= 200 && xhr.status < 300 && result.success) {
-                resolve(result.url);
-              } else {
-                setError(result.error || "업로드에 실패했습니다.");
-                resolve(null);
-              }
-            } catch {
-              setError("서버 응답을 처리할 수 없습니다.");
+            if (xhr.status >= 200 && xhr.status < 300) {
+              setProgress(100);
+              resolve(urlData.publicUrl);
+            } else {
+              setError("영상 업로드에 실패했습니다. 다시 시도해주세요.");
               resolve(null);
             }
           });
 
           xhr.addEventListener("error", () => {
-            reject(new Error("네트워크 오류가 발생했습니다."));
-          });
-
-          xhr.addEventListener("abort", () => {
+            setError("네트워크 오류가 발생했습니다.");
             resolve(null);
           });
 
-          xhr.open("POST", "/api/feedback/upload-video");
-          xhr.send(formData);
+          xhr.open("PUT", urlData.signedUrl);
+          xhr.setRequestHeader("Content-Type", file.type);
+          xhr.send(file);
         });
 
-        return url;
+        return publicUrl;
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "업로드에 실패했습니다.";
