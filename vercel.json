@@ -23,6 +23,14 @@
     {
       "path": "/api/cron/dev-report",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/daily-report",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/check-sla",
+      "schedule": "0 * * * *"
     }
   ]
 }

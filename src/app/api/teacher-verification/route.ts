@@ -150,6 +150,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    // Slack 알림 발송 (비동기, 실패해도 무시)
+    import("@/lib/slack").then(({ sendSlackNotification, teacherVerificationMessage }) => {
+      sendSlackNotification("teacher", teacherVerificationMessage(name, specialty ?? [], id));
+    }).catch(() => {});
+
     return NextResponse.json({ success: true, userId });
   } catch (err) {
     console.error("[teacher-verification] 서버 오류:", err);
