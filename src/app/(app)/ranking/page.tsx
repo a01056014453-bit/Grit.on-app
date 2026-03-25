@@ -267,19 +267,25 @@ export default function RankingPage() {
   const [filter, setFilter] = useState<RankingFilter>({});
   const [schools, setSchools] = useState<SchoolOption[]>([]);
 
+  const RANKING_CACHE_KEY = "sempre-ranking-cache";
+
   const loadRankings = async (currentFilter?: RankingFilter) => {
     setLoadError(null);
-    setIsLoading(true);
     try {
       const uid = getUserId();
       const { rankers: rankings, myRanking: my } = await fetchRankingsData(uid, currentFilter ?? filter);
       setRankers(rankings);
       setMyRanking(my);
       setElapsedSeconds(0);
+      setIsLoading(false);
+
+      // 캐시 저장
+      try {
+        localStorage.setItem(RANKING_CACHE_KEY, JSON.stringify({ rankers: rankings, myRanking: my, ts: Date.now() }));
+      } catch { /* 저장 실패 무시 */ }
     } catch (err) {
       console.error("Failed to load rankings:", err);
-      setLoadError("랭킹 데이터를 불러오지 못했습니다.");
-    } finally {
+      if (rankers.length === 0) setLoadError("랭킹 데이터를 불러오지 못했습니다.");
       setIsLoading(false);
     }
   };
@@ -289,8 +295,22 @@ export default function RankingPage() {
     loadRankings(newFilter);
   };
 
-  // 초기 로드 + 학교 목록
+  // 초기 로드: 캐시 먼저 → 백그라운드 갱신
   useEffect(() => {
+    // 1. localStorage 캐시에서 즉시 표시
+    try {
+      const cached = localStorage.getItem(RANKING_CACHE_KEY);
+      if (cached) {
+        const { rankers: cachedRankers, myRanking: cachedMy } = JSON.parse(cached);
+        if (cachedRankers?.length > 0) {
+          setRankers(cachedRankers);
+          setMyRanking(cachedMy);
+          setIsLoading(false); // 즉시 표시
+        }
+      }
+    } catch { /* 캐시 파싱 실패 무시 */ }
+
+    // 2. 백그라운드에서 최신 데이터 가져오기
     loadRankings();
     const uid = getUserId();
     if (uid) {
