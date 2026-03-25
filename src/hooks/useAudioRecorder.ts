@@ -9,6 +9,8 @@ import {
   type AudioLabel,
   type ModelStatus,
 } from "@/lib/audio-classifier";
+import { estimateProximity } from "@/lib/audio-proximity";
+import { detectPitch, analyzePitchPattern, type PitchResult } from "@/lib/pitch-detector";
 
 // ─────────────────────────────────────────────
 // Types
@@ -163,6 +165,9 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
   // ── 동적 노이즈 플로어 재캘리브레이션 ──
   const noiseHistoryRef = useRef<number[]>([]);
   const lastRecalibrationRef = useRef<number>(0);
+
+  // ── 피치 감지 (성악 vs 대화) ──
+  const pitchHistoryRef = useRef<PitchResult[]>([]);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // ── Piano detection hysteresis refs ──
@@ -284,7 +289,39 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
           metronomeOn: metronomeActiveRef.current,
         });
 
-        const { label, confidence, reason } = result;
+        let { label, confidence } = result;
+        const { reason } = result;
+
+        // 스펙트럼 게이팅: 원거리 소리 필터
+        if (label === "INSTRUMENT_PLAYING" && analyserRef.current) {
+          const freqData = new Uint8Array(analyserRef.current.frequencyBinCount);
+          analyserRef.current.getByteFrequencyData(freqData);
+          const proximity = estimateProximity(
+            freqData,
+            analyserRef.current.fftSize,
+            audioContextRef.current?.sampleRate ?? 44100,
+          );
+          if (proximity === "far") {
+            label = "NOISE";
+            confidence = 0.6;
+          }
+        }
+
+        // 피치 감지: 성악 전공자의 VOICE를 재판별
+        if (label === "VOICE" && instrument === "vocal" && analyserRef.current) {
+          const pitchBuf = new Float32Array(analyserRef.current.fftSize);
+          analyserRef.current.getFloatTimeDomainData(pitchBuf);
+          const pitch = detectPitch(pitchBuf, audioContextRef.current?.sampleRate ?? 44100);
+          pitchHistoryRef.current = [...pitchHistoryRef.current.slice(-9), pitch];
+
+          if (pitchHistoryRef.current.length >= 3) {
+            const pattern = analyzePitchPattern(pitchHistoryRef.current);
+            if (pattern === "singing") {
+              label = "INSTRUMENT_PLAYING";
+              confidence = Math.max(confidence, 0.7);
+            }
+          }
+        }
 
         console.log(
           `[Classify] ${label} (${(confidence * 100).toFixed(0)}%) ${reason}`
