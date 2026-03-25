@@ -60,25 +60,7 @@ export function RankingFilterBar({
           전체
         </button>
 
-        {/* 학교 필터 */}
-        {filter.schoolId && selectedSchool ? (
-          <button
-            onClick={() => onFilterChange({ ...filter, schoolId: undefined })}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-violet-500 text-white text-xs font-semibold whitespace-nowrap"
-          >
-            {selectedSchool.shortName}
-            <X className="w-3 h-3" />
-          </button>
-        ) : (
-          <button
-            onClick={() => setShowSchoolSheet(true)}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-white/50 text-gray-600 border border-white/60 text-xs font-semibold whitespace-nowrap"
-          >
-            <GraduationCap className="w-3 h-3" />
-            학교
-            <ChevronDown className="w-3 h-3" />
-          </button>
-        )}
+        {/* 학교 필터 — Phase 2 "목표 학교" 리브랜딩 후 복귀 예정 */}
 
         {/* 악기 필터 */}
         {filter.instrument ? (
