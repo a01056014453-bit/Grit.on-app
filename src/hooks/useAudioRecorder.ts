@@ -5,6 +5,7 @@ import {
   classifyAudioClip,
   preloadModel,
   onModelStatusChange,
+  setUserInstrument,
   type AudioLabel,
   type ModelStatus,
 } from "@/lib/audio-classifier";
@@ -50,6 +51,7 @@ interface UseAudioRecorderOptions {
   calibrationDuration?: number;
   metronomeActive?: boolean;
   getBeatTimestamps?: () => BeatTimestamp[];
+  instrument?: string; // 사용자 악기 (vocal 시 성악 분류 활성화)
 }
 
 // ─────────────────────────────────────────────
@@ -59,10 +61,12 @@ const CLASSIFY_INTERVAL_MS = 3000; // 3초마다 분류
 const CALIBRATION_SAMPLES = 120; // ~2초 (60fps × 2) — 이후 3초 카운트다운
 const CALIBRATION_SKIP = 30; // 첫 0.5초 스킵 (마이크 초기화)
 const COUNTDOWN_SECONDS = 3; // 카운트다운 3초
-const PIANO_ON_THRESHOLD_MS = 800; // 피아노 0.8초 이상 → 카운팅 시작
-const PIANO_OFF_DELAY_MS = 7000; // 피아노 안 들린 후 7초 → 중단
+const PIANO_ON_THRESHOLD_MS = 800; // 악기 0.8초 이상 → 카운팅 시작
+const PIANO_OFF_DELAY_MS = 7000; // 악기 안 들린 후 7초 → 중단
 const VOICE_SUPPRESS_MS = 2500; // 목소리 감지 후 2.5초간 카운팅 중단
 const MIN_CONFIDENCE = 0.55;
+const NOISE_RECALIBRATION_INTERVAL_MS = 30000; // 30초마다 노이즈 플로어 재캘리브레이션
+const NOISE_HISTORY_SIZE = 10; // 최근 10개 비연주 클립의 dB
 
 // ─────────────────────────────────────────────
 // 네이티브 앱 환경 감지
@@ -81,7 +85,13 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
   const {
     metronomeActive = false,
     getBeatTimestamps = () => [],
+    instrument = "piano",
   } = options;
+
+  // 분류기에 사용자 악기 설정 전달
+  useEffect(() => {
+    setUserInstrument(instrument);
+  }, [instrument]);
 
   const [state, setState] = useState<AudioRecorderState>({
     isRecording: false,
@@ -149,6 +159,10 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
   const noiseFloorDecibelRef = useRef<number>(0);
   const calibrationSamplesRef = useRef<number[]>([]);
   const isCalibrationCompleteRef = useRef<boolean>(false);
+
+  // ── 동적 노이즈 플로어 재캘리브레이션 ──
+  const noiseHistoryRef = useRef<number[]>([]);
+  const lastRecalibrationRef = useRef<number>(0);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // ── Piano detection hysteresis refs ──
@@ -193,6 +207,24 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
       const isPianoSound =
         label === "INSTRUMENT_PLAYING" && confidence >= MIN_CONFIDENCE;
       const isVoiceSound = label === "VOICE" && confidence >= MIN_CONFIDENCE;
+
+      // 동적 노이즈 플로어 재캘리브레이션
+      if (label === "SILENCE" || label === "NOISE") {
+        const clipAvg = clipDbSamplesRef.current.length > 0
+          ? clipDbSamplesRef.current.reduce((a, b) => a + b, 0) / clipDbSamplesRef.current.length
+          : 0;
+        if (clipAvg > 0) {
+          noiseHistoryRef.current = [...noiseHistoryRef.current, clipAvg].slice(-NOISE_HISTORY_SIZE);
+        }
+        if (currentTime - lastRecalibrationRef.current > NOISE_RECALIBRATION_INTERVAL_MS
+            && noiseHistoryRef.current.length >= 3) {
+          const sorted = [...noiseHistoryRef.current].sort((a, b) => a - b);
+          const median = sorted[Math.floor(sorted.length / 2)];
+          const newFloor = Math.max(42, median + 3);
+          noiseFloorDecibelRef.current = noiseFloorDecibelRef.current * 0.7 + newFloor * 0.3;
+          lastRecalibrationRef.current = currentTime;
+        }
+      }
 
       if (isVoiceSound) {
         lastVoiceDetectedTimeRef.current = currentTime;

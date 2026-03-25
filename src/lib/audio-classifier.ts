@@ -27,8 +27,15 @@ export interface ClassificationResult {
 }
 
 // ─────────────────────────────────────────────
-// 키워드 분류 (analyze_server.py에서 이식)
+// 키워드 분류 (악기별 분기 + 환경 소음 블랙리스트)
 // ─────────────────────────────────────────────
+
+/** 사용자 악기 설정 (외부에서 주입) */
+let _userInstrument: string = "piano";
+export function setUserInstrument(instrument: string): void {
+  _userInstrument = instrument;
+}
+
 const INSTRUMENT_KEYWORDS = [
   "Music",
   "Piano",
@@ -66,14 +73,32 @@ const INSTRUMENT_KEYWORDS = [
   "Saxophone",
   "Clarinet",
   "Timpani",
+  "Oboe",
+  "Double bass",
+  "Sitar",
+  "Zither",
+] as const;
+
+/** 성악/노래 키워드 — SPEECH에서 분리, 사용자 악기에 따라 분류 결정 */
+const VOCAL_PLAYING_KEYWORDS = [
+  "Singing",
+  "Choir",
+  "Yodeling",
+  "Chant",
+  "Mantra",
+  "Child singing",
+  "Synthetic singing",
+  "Humming",
+  "Opera",
+  "A capella",
+  "Vocal music",
+  "Gospel music",
 ] as const;
 
 const SPEECH_KEYWORDS = [
   "Speech",
   "Conversation",
   "Narration",
-  "Singing",
-  "Chant",
   "Child speech",
   "Babbling",
   "Whispering",
@@ -81,7 +106,6 @@ const SPEECH_KEYWORDS = [
   "Yell",
   "Laughter",
   "Rapping",
-  "Humming",
 ] as const;
 
 const METRONOME_KEYWORDS = [
@@ -100,6 +124,25 @@ const SILENCE_KEYWORDS = [
   "Pink noise",
   "Static",
 ] as const;
+
+/** 환경 소음 블랙리스트 — 절대 악기로 분류하면 안 되는 클래스 */
+const ENVIRONMENT_NOISE_BLACKLIST = new Set([
+  "Vehicle", "Car", "Truck", "Bus", "Motorcycle",
+  "Traffic noise, roadway noise", "Aircraft", "Helicopter",
+  "Train", "Subway, metro, underground",
+  "Air conditioning", "Mechanical fan", "Vacuum cleaner", "Hair dryer",
+  "Dog", "Bark", "Cat", "Meow", "Growling",
+  "Bird", "Bird vocalization, bird call, bird song", "Crow",
+  "Siren", "Alarm", "Telephone", "Ringtone", "Telephone bell ringing",
+  "Door", "Doorbell", "Knock", "Slam",
+  "Wind", "Rain", "Thunder", "Water", "Rain on surface",
+  "Jackhammer", "Drill", "Chainsaw", "Power tool",
+  "Microwave oven", "Blender", "Frying (food)", "Boiling",
+  "Television", "Radio", "Video game music",
+  "Engine", "Engine starting", "Idling",
+  "Toilet flush", "Bathtub (filling or washing)",
+  "Fireworks", "Gunshot, gunfire", "Explosion",
+]);
 
 // ─────────────────────────────────────────────
 // 모델 싱글톤
@@ -178,11 +221,27 @@ function matchesKeywords(
 }
 
 function categorize(className: string, metronomeOn: boolean): AudioLabel {
+  // 1. 환경 소음 블랙리스트 — 최우선 차단
+  if (ENVIRONMENT_NOISE_BLACKLIST.has(className)) return "NOISE";
+
+  // 2. 메트로놈
   const isMetronome = matchesKeywords(className, METRONOME_KEYWORDS);
   if (isMetronome && metronomeOn) return "METRONOME_ONLY";
+
+  // 3. 악기 연주
   if (matchesKeywords(className, INSTRUMENT_KEYWORDS)) return "INSTRUMENT_PLAYING";
+
+  // 4. 성악/노래 — 사용자 악기에 따라 분류
+  if (matchesKeywords(className, VOCAL_PLAYING_KEYWORDS)) {
+    return _userInstrument === "vocal" ? "INSTRUMENT_PLAYING" : "VOICE";
+  }
+
+  // 5. 대화/음성
   if (matchesKeywords(className, SPEECH_KEYWORDS)) return "VOICE";
+
+  // 6. 무음
   if (matchesKeywords(className, SILENCE_KEYWORDS)) return "SILENCE";
+
   return "NOISE";
 }
 
@@ -265,8 +324,8 @@ export async function classifyAudioClip(
     scoresTensor.dispose();
     inputTensor.dispose();
 
-    // 프레임별 투표
-    const votes: Record<AudioLabel, number> = {
+    // Top-3 가중 투표 (확률 합산)
+    const weightedScores: Record<AudioLabel, number> = {
       INSTRUMENT_PLAYING: 0,
       VOICE: 0,
       METRONOME_ONLY: 0,
@@ -277,36 +336,38 @@ export async function classifyAudioClip(
     let bestClassName = "";
 
     for (const frameScores of scores) {
-      let maxIdx = 0;
-      let maxScore = frameScores[0];
-      for (let j = 1; j < frameScores.length; j++) {
-        if (frameScores[j] > maxScore) {
-          maxScore = frameScores[j];
-          maxIdx = j;
-        }
+      // Top-3 인덱스 추출
+      const indexed: { score: number; idx: number }[] = [];
+      for (let j = 0; j < frameScores.length; j++) {
+        indexed.push({ score: frameScores[j], idx: j });
+      }
+      indexed.sort((a, b) => b.score - a.score);
+      const topK = indexed.slice(0, 3);
+
+      for (const { score, idx } of topK) {
+        const className = YAMNET_CLASSES[idx] ?? "Unknown";
+        const label = categorize(className, metronomeOn);
+        weightedScores[label] += score; // 확률값으로 가중 합산
       }
 
-      const className = YAMNET_CLASSES[maxIdx] ?? "Unknown";
-      votes[categorize(className, metronomeOn)] += 1;
-
-      if (maxScore > bestConfidence) {
-        bestConfidence = maxScore;
-        bestClassName = className;
+      if (indexed[0].score > bestConfidence) {
+        bestConfidence = indexed[0].score;
+        bestClassName = YAMNET_CLASSES[indexed[0].idx] ?? "Unknown";
       }
     }
 
-    // 투표 결과 → 최종 라벨
-    const totalFrames = scores.length;
+    // 가중 합산 → 최종 라벨
+    const totalWeight = Object.values(weightedScores).reduce((a, b) => a + b, 0);
     let winnerLabel: AudioLabel = "SILENCE";
-    let winnerVotes = 0;
-    for (const [label, count] of Object.entries(votes)) {
-      if (count > winnerVotes) {
-        winnerVotes = count;
+    let winnerWeight = 0;
+    for (const [label, weight] of Object.entries(weightedScores)) {
+      if (weight > winnerWeight) {
+        winnerWeight = weight;
         winnerLabel = label as AudioLabel;
       }
     }
 
-    const confidence = totalFrames > 0 ? winnerVotes / totalFrames : 0;
+    const confidence = totalWeight > 0 ? winnerWeight / totalWeight : 0;
 
     return {
       label: winnerLabel,
