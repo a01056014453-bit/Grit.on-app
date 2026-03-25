@@ -20,10 +20,13 @@ function runDataMigration() {
 
   // 목업 알림 데이터 + 이전 온보딩 키 제거
   localStorage.removeItem("grit-on-notifications");
+  localStorage.removeItem("sempre-notifications");
   localStorage.removeItem("grit-on-onboarding-complete");
+  localStorage.removeItem("sempre-onboarding-complete");
 
   // 목업 연습 세션 제거 (IndexedDB)
   indexedDB.deleteDatabase("griton_db");
+  indexedDB.deleteDatabase("sempre_db");
 
   // 서비스 워커 캐시 정리 (오래된 JS 번들 제거)
   if ("serviceWorker" in navigator) {

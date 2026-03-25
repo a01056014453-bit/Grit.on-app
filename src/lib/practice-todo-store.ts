@@ -2,7 +2,7 @@
 
 import type { PracticeTodo } from "@/types";
 
-const STORAGE_KEY = "griton_practice_todos";
+const STORAGE_KEY = "sempre-practice-todos";
 
 // 모든 To-do 가져오기
 export function getPracticeTodos(): PracticeTodo[] {

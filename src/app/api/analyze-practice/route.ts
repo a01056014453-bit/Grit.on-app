@@ -41,7 +41,7 @@ interface ClassificationEntry {
 }
 
 const LABEL_TO_TYPE: Record<string, PracticeSegment["type"]> = {
-  PIANO_PLAYING: "instrument",
+  INSTRUMENT_PLAYING: "instrument",
   VOICE: "voice",
   SILENCE: "silence",
   NOISE: "noise",

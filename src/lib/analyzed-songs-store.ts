@@ -8,7 +8,7 @@ export interface AnalyzedSong {
   date: string;
 }
 
-const STORAGE_KEY = "griton-analyzed-songs";
+const STORAGE_KEY = "sempre-analyzed-songs";
 
 function getToday(): string {
   const now = new Date();

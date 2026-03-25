@@ -13,9 +13,9 @@ export async function syncPracticeSessions(): Promise<void> {
     let nickname = "연습생";
     let instrument = "piano";
     try {
+      const sempreSaved = localStorage.getItem("sempre-profile") || localStorage.getItem("sempre-user-profile");
       const saved = localStorage.getItem("grit-on-profile");
-      const sempreSaved = localStorage.getItem("sempre-user-profile");
-      const profile = saved ? JSON.parse(saved) : sempreSaved ? JSON.parse(sempreSaved) : null;
+      const profile = sempreSaved ? JSON.parse(sempreSaved) : saved ? JSON.parse(saved) : null;
       if (profile) {
         if (profile.nickname) nickname = profile.nickname;
         if (profile.instrument) instrument = profile.instrument;

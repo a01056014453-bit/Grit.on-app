@@ -86,8 +86,11 @@ export default function RootLayout({
                 var v = localStorage.getItem('sempre-data-version');
                 if (v === '5') return;
                 localStorage.removeItem('grit-on-notifications');
+                localStorage.removeItem('sempre-notifications');
                 localStorage.removeItem('grit-on-onboarding-complete');
+                localStorage.removeItem('sempre-onboarding-complete');
                 indexedDB.deleteDatabase('griton_db');
+                indexedDB.deleteDatabase('sempre_db');
                 if ('serviceWorker' in navigator) {
                   navigator.serviceWorker.getRegistrations().then(function(r) {
                     r.forEach(function(sw) { sw.unregister(); });

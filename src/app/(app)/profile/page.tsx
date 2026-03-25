@@ -620,6 +620,7 @@ export default function ProfilePage() {
       localStorage.clear();
       sessionStorage.clear();
       indexedDB.deleteDatabase("griton_db");
+      indexedDB.deleteDatabase("sempre_db");
 
       // Supabase 세션 정리
       try {

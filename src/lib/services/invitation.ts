@@ -211,7 +211,7 @@ export async function acceptInvitation(
       teacher_id: inv.teacher_id,
       student_id: studentUserId,
       nickname: profile?.nickname ?? inv.student_name ?? "학생",
-      instrument: profile?.instrument ?? "피아노",
+      instrument: profile?.instrument ?? "piano",
       type: inv.category ?? "취미",
       category: inv.category ?? null,
       weekly_practice_minutes: 0,

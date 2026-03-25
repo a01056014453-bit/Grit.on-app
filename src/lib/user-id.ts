@@ -1,12 +1,18 @@
 import { createClient } from "@/lib/supabase-browser";
 
-const USER_ID_KEY = "grit-on-user-id";
+const USER_ID_KEY = "sempre-user-id";
+const OLD_USER_ID_KEY = "grit-on-user-id";
 
 /** 동기적으로 로컬 유저 ID 반환 (기존 호환) */
 export function getUserId(): string {
   if (typeof window === "undefined") return "";
 
   let userId = localStorage.getItem(USER_ID_KEY);
+  // 기존 키에서 마이그레이션
+  if (!userId) {
+    userId = localStorage.getItem(OLD_USER_ID_KEY);
+    if (userId) localStorage.setItem(USER_ID_KEY, userId);
+  }
   if (!userId) {
     userId = crypto.randomUUID();
     localStorage.setItem(USER_ID_KEY, userId);

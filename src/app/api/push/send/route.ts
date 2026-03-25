@@ -9,7 +9,7 @@ const VAPID_PUBLIC = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || "";
 const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY || "";
 
 if (VAPID_PUBLIC && VAPID_PRIVATE) {
-  webPush.setVapidDetails("mailto:support@sempre.app", VAPID_PUBLIC, VAPID_PRIVATE);
+  webPush.setVapidDetails("mailto:support@withsempre.com", VAPID_PUBLIC, VAPID_PRIVATE);
 }
 
 /**

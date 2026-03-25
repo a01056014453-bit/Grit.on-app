@@ -102,10 +102,10 @@ function getApplicantInstrument(): string {
     const saved = localStorage.getItem(PROFILE_KEY);
     if (saved) {
       const profile = JSON.parse(saved);
-      return profile.instrument || "피아노";
+      return profile.instrument || "piano";
     }
   } catch {}
-  return "피아노";
+  return "piano";
 }
 
 export interface SubmitVerificationInput {

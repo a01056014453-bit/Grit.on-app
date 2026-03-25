@@ -75,7 +75,7 @@ export function AdminSidebar() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-gray-900 truncate">관리자</p>
-            <p className="text-xs text-gray-500 truncate">admin@sempre.app</p>
+            <p className="text-xs text-gray-500 truncate">support@withsempre.com</p>
           </div>
         </div>
       </div>

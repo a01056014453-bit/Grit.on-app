@@ -13,7 +13,7 @@ import type { BeatTimestamp } from "./metronome-engine";
 // Types
 // ─────────────────────────────────────────────
 export type AudioLabel =
-  | "PIANO_PLAYING"
+  | "INSTRUMENT_PLAYING"
   | "VOICE"
   | "METRONOME_ONLY"
   | "SILENCE"
@@ -180,7 +180,7 @@ function matchesKeywords(
 function categorize(className: string, metronomeOn: boolean): AudioLabel {
   const isMetronome = matchesKeywords(className, METRONOME_KEYWORDS);
   if (isMetronome && metronomeOn) return "METRONOME_ONLY";
-  if (matchesKeywords(className, INSTRUMENT_KEYWORDS)) return "PIANO_PLAYING";
+  if (matchesKeywords(className, INSTRUMENT_KEYWORDS)) return "INSTRUMENT_PLAYING";
   if (matchesKeywords(className, SPEECH_KEYWORDS)) return "VOICE";
   if (matchesKeywords(className, SILENCE_KEYWORDS)) return "SILENCE";
   return "NOISE";
@@ -267,7 +267,7 @@ export async function classifyAudioClip(
 
     // 프레임별 투표
     const votes: Record<AudioLabel, number> = {
-      PIANO_PLAYING: 0,
+      INSTRUMENT_PLAYING: 0,
       VOICE: 0,
       METRONOME_ONLY: 0,
       SILENCE: 0,
@@ -356,7 +356,7 @@ export function aggregateSessionFromLabels(
   for (const entry of labels) {
     totalMs += entry.durationMs;
     switch (entry.label) {
-      case "PIANO_PLAYING":
+      case "INSTRUMENT_PLAYING":
         totals.instrument += entry.durationMs;
         break;
       case "VOICE":

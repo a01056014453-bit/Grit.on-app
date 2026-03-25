@@ -83,15 +83,26 @@ export default function RoomUploadPage() {
 
   const canUpload = pieceName.trim().length >= 2 && videoFile;
 
-  const handleUpload = () => {
-    if (!canUpload) return;
+  const handleUpload = async () => {
+    if (!canUpload || !videoFile) return;
     setIsUploading(true);
-    // TODO: 실제 Supabase Storage 업로드
-    setTimeout(() => {
+    try {
+      const formData = new FormData();
+      formData.append("file", videoFile);
+      formData.append("requestId", `room-${schoolId}-${Date.now()}`);
+      formData.append("type", "student");
+      const res = await fetch("/api/feedback/upload-video", { method: "POST", body: formData });
+      const data = await res.json();
+      if (data.success) {
+        router.push(`/rooms/${schoolId}`);
+      } else {
+        alert(data.error || "업로드에 실패했습니다.");
+      }
+    } catch {
+      alert("업로드 중 오류가 발생했습니다.");
+    } finally {
       setIsUploading(false);
-      alert("업로드가 완료되었습니다!");
-      router.push(`/rooms/${schoolId}`);
-    }, 1000);
+    }
   };
 
   if (!school) {

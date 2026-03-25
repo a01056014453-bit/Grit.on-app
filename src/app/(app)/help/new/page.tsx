@@ -69,13 +69,17 @@ export default function NewHelpRequestPage() {
     try {
       const userId = getUserId();
 
-      // 비디오 업로드는 별도 처리 (향후 Supabase storage 연동)
+      // 비디오 업로드
       let videoUrl: string | undefined;
       let videoLength: number | undefined;
       if (videoFile) {
-        // TODO: 실제 비디오 스토리지 업로드
-        videoUrl = undefined;
-        videoLength = undefined;
+        const formData = new FormData();
+        formData.append("file", videoFile);
+        formData.append("requestId", `help-${Date.now()}`);
+        formData.append("type", "student");
+        const uploadRes = await fetch("/api/feedback/upload-video", { method: "POST", body: formData });
+        const uploadData = await uploadRes.json();
+        if (uploadData.success) videoUrl = uploadData.url;
       }
 
       const res = await fetch("/api/help-requests", {

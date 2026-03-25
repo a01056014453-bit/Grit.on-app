@@ -1,6 +1,6 @@
 import { AppNotification } from "@/types";
 
-const STORAGE_KEY = "grit-on-notifications";
+const STORAGE_KEY = "sempre-notifications";
 
 export function getNotifications(): AppNotification[] {
   if (typeof window === "undefined") return [];

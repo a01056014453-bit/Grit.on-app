@@ -191,7 +191,7 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}) {
     (label: AudioLabel, confidence: number) => {
       const currentTime = Date.now();
       const isPianoSound =
-        label === "PIANO_PLAYING" && confidence >= MIN_CONFIDENCE;
+        label === "INSTRUMENT_PLAYING" && confidence >= MIN_CONFIDENCE;
       const isVoiceSound = label === "VOICE" && confidence >= MIN_CONFIDENCE;
 
       if (isVoiceSound) {

@@ -297,7 +297,7 @@ function PracticePageContent() {
     // 이전 레이블의 시간 누적
     if (ref.lastLabel && ref.lastUpdateTime > 0) {
       const elapsed = (now - ref.lastUpdateTime) / 1000; // seconds
-      if (ref.lastLabel === "PIANO_PLAYING") {
+      if (ref.lastLabel === "INSTRUMENT_PLAYING") {
         ref.instrument += elapsed;
       } else if (ref.lastLabel === "VOICE") {
         ref.voice += elapsed;
@@ -605,7 +605,7 @@ function PracticePageContent() {
     const now = Date.now();
     if (ref.lastLabel && ref.lastUpdateTime > 0) {
       const elapsed = (now - ref.lastUpdateTime) / 1000;
-      if (ref.lastLabel === "PIANO_PLAYING") {
+      if (ref.lastLabel === "INSTRUMENT_PLAYING") {
         ref.instrument += elapsed;
       } else if (ref.lastLabel === "VOICE") {
         ref.voice += elapsed;

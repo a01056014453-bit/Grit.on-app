@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase-browser";
 import { getProfile } from "@/lib/queries/profiles";
 import { pullUserData } from "@/lib/sync-user-data";
 import { subscribeToPush } from "@/lib/push-subscribe";
+import { runStorageMigration } from "@/lib/storage-migration";
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -13,6 +14,9 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     async function checkAccess() {
+      // 0. localStorage 마이그레이션 (grit-on → sempre)
+      runStorageMigration();
+
       // 1. 인증 확인 (Supabase 세션 우선)
       let userId: string | null = null;
 
@@ -22,6 +26,9 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         if (user) {
           userId = user.id;
           localStorage.setItem("sempre-auth", user.app_metadata?.provider || "google");
+          localStorage.setItem("sempre-logged-in", "true");
+          localStorage.setItem("sempre-user-id", user.id);
+          // 호환성 유지
           localStorage.setItem("grit-on-logged-in", "true");
           localStorage.setItem("grit-on-user-id", user.id);
         }
@@ -37,7 +44,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
           router.replace("/onboarding/login");
           return;
         }
-        userId = localStorage.getItem("grit-on-user-id");
+        userId = localStorage.getItem("sempre-user-id") || localStorage.getItem("grit-on-user-id");
       }
 
       // 2. 온보딩 완료 여부 확인

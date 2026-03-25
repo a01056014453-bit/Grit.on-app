@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import type { HelpRequest } from "@/types/help";
 import { HELP_PROBLEM_TYPE_LABELS } from "@/types/help";
+import { useVideoUpload } from "@/hooks/useVideoUpload";
 
 export default function SubmitProposalPage() {
   const params = useParams();
@@ -103,9 +104,19 @@ export default function SubmitProposalPage() {
         throw new Error("마디별 코멘트가 최소 2개 필요합니다.");
       }
 
-      // TODO: 시연 비디오 스토리지 업로드
-      const demoVideoUrl: string | undefined = undefined;
+      // 시연 비디오 업로드
+      let demoVideoUrl: string | undefined;
       const demoVideoLength: number | undefined = undefined;
+      // demoVideo 파일이 있으면 업로드 (feedback 업로드 API 재활용)
+      if (typeof demoVideo !== "undefined" && demoVideo) {
+        const formData = new FormData();
+        formData.append("file", demoVideo as File);
+        formData.append("requestId", requestId);
+        formData.append("type", "demo");
+        const uploadRes = await fetch("/api/feedback/upload-video", { method: "POST", body: formData });
+        const uploadData = await uploadRes.json();
+        if (uploadData.success) demoVideoUrl = uploadData.url;
+      }
 
       const res = await fetch("/api/help-proposals", {
         method: "POST",

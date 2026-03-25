@@ -77,15 +77,25 @@ export default function SupportPage() {
             <h2 className="text-xl font-semibold text-gray-900 mb-4">
               문의하기
             </h2>
-            <div className="bg-gray-50 rounded-xl p-6 space-y-3">
+            <div className="bg-gray-50 rounded-xl p-6 space-y-4">
               <div>
-                <span className="font-medium text-gray-900">이메일</span>
+                <span className="font-medium text-gray-900">고객지원</span>
                 <br />
                 <a
-                  href="mailto:sempre.official@gmail.com"
+                  href="mailto:support@withsempre.com"
                   className="text-violet-600 underline"
                 >
-                  sempre.official@gmail.com
+                  support@withsempre.com
+                </a>
+              </div>
+              <div>
+                <span className="font-medium text-gray-900">제휴/비즈니스</span>
+                <br />
+                <a
+                  href="mailto:contact@withsempre.com"
+                  className="text-violet-600 underline"
+                >
+                  contact@withsempre.com
                 </a>
               </div>
               <p className="text-sm text-gray-500">
