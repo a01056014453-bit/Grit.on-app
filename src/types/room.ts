@@ -52,6 +52,7 @@ export interface RoomVideo {
   };
   section: string; // "1-36 마디" 또는 "전곡"
   duration: number;
+  videoUrl?: string;
   uploadedAt: string;
   helpfulCount: number;
   tags: string[];

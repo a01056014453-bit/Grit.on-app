@@ -646,7 +646,9 @@ export default function RoomDetailPage() {
                       playsInline
                       onContextMenu={(e) => e.preventDefault()}
                     >
-                      <source src="/sample-video.mp4" type="video/mp4" />
+                      {selectedVideo?.videoUrl && (
+                        <source src={selectedVideo.videoUrl} type="video/mp4" />
+                      )}
                     </video>
 
                     {/* Watermarks */}

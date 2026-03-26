@@ -491,16 +491,14 @@ export default function RoomsPage() {
           원하는 룸이 없나요?
         </p>
         <p className="text-xs text-gray-500 mb-4">
-          새로운 입시 룸을 만들어 같은 목표를 가진 학생들과 함께하세요.
+          원하는 학교가 목록에 없나요?
         </p>
-        <motion.button
-          className="group/btn relative w-full py-3 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-white font-medium text-sm overflow-hidden transition-all"
-          whileHover={{ scale: 1.01 }}
-          whileTap={{ scale: 0.98 }}
+        <a
+          href="mailto:support@withsempre.com?subject=학교 추가 요청"
+          className="block w-full py-3 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-white font-medium text-sm text-center"
         >
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700" />
-          <span className="relative z-10">새 룸 만들기</span>
-        </motion.button>
+          학교 추가 요청하기
+        </a>
       </motion.div>
     </div>
   );
