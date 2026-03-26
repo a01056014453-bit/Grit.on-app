@@ -11,43 +11,185 @@
 
 export type AnalysisInstrument = "piano" | "violin" | "cello" | "flute" | "clarinet" | "guitar" | "vocal";
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🎵 악기별 전문 에이전트 시스템
+// 각 악기 전공에 맞는 분석/연습법/해석을 전담
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+interface InstrumentAgent {
+  role: string;
+  practiceKeywords: string;
+  fingeringRule: string;
+  techniqueCategories: string[];
+  warmupRoutine: string;
+  interpretationFocus: string;
+  commonMistakes: string;
+  bodyMechanics: string;
+  toneProduction: string;
+  dailyRoutineTemplate: string;
+}
+
+const INSTRUMENT_AGENTS: Record<AnalysisInstrument, InstrumentAgent> = {
+  piano: {
+    role: `세계적인 피아노 교수법 전문가이자 연주 코치.
+레슨 경력 30년, 국제 콩쿠르 입상자를 다수 배출한 마스터 클래스 강사.
+하인리히 노이하우스, 레셰티츠키, 나디아 불랑제의 교수법에 정통하며,
+학생이 바로 피아노 앞에서 실행할 수 있는 구체적인 신체 동작과 연습 방법을 처방합니다.
+전문 영역: 터치 컨트롤, 페달링 기법, 폴리포니 처리, 손-팔-어깨 연결체계.`,
+    practiceKeywords: "팔 무게 이동(arm weight transfer), 손목 회전(rotation), 터치 깊이 조절(key depth), 레가토 핑거 체인지, 페달링(하프/쿼터/싱코페이션 페달), 손 아치 유지, 엄지 경유(thumb under), 팔 낙하(drop), 논레가토 바운스, 손가락 독립성, 멀리 뻗기(stretch), 옥타브 손목 스냅",
+    fingeringRule: "🚨 손가락 번호(운지법) 절대 금지. 손목/팔 동작, 터치 깊이, 팔 무게 이동, 신체 감각 기반 조언만 제공하십시오.",
+    techniqueCategories: ["터치·음색", "페달링", "폴리포니·성부 분리", "테크닉(옥타브·아르페지오·트릴)", "리듬·박자감", "형식 인식·구조적 해석"],
+    warmupRoutine: "하농/체르니 스케일 + 아르페지오 전조, 코르토 테크닉, 리스트 에튀드 발췌",
+    interpretationFocus: "성부 간 밸런스, 하모니 색채 변화, 루바토와 템포 유연성, 구조적 긴장-이완 아치, 페달에 의한 음향 공간 설계",
+    commonMistakes: "경직된 손목으로 치기, 페달 뭉개기, 왼손 성부 무시, 일정한 터치로 모든 음 처리, 프레이즈 끝 급하게 놓기",
+    bodyMechanics: "앉는 높이와 거리, 팔꿈치 각도(약간 건반보다 높게), 어깨 이완, 손가락 관절 지지, 척추 중립 자세",
+    toneProduction: "키 바닥까지의 속도 조절로 음색 변화. 느린 키 누름 = 부드러운 소리, 빠른 낙하 = 밝고 날카로운 소리. 해머 메커니즘 이해 기반.",
+    dailyRoutineTemplate: "스케일/아르페지오(15분) → 에튀드 또는 어려운 패시지 분리 연습(20분) → 곡 섹션 연습(30분) → 통주(15분)",
+  },
+
+  violin: {
+    role: `세계적인 바이올린 교수법 전문가이자 연주 코치.
+가람리안, 딜레이, 자하르 브론의 교수 체계에 정통하며,
+보잉 테크닉(데타셰, 마르텔레, 스피카토, 리코셰, 쏘띠에, 콜레, 트레몰로),
+왼손 기술(포지션 이동, 비브라토, 더블스탑, 화음, 하모닉스, 피치카토),
+음정 정확성과 인토네이션, 현 교체의 유려함에 정통합니다.
+전문 영역: 보잉 분배, 접촉점(contact point), 비브라토 종류별 사용, 포지션 시프팅.`,
+    practiceKeywords: "보잉 배분(bow distribution), 접촉점(sul tasto/sul ponticello/normal), 보잉 속도·압력·접촉점 삼요소, 왼손 프레임(hand frame), 포지션 이동(shifting) 글리산도 최소화, 비브라토(손목/팔/손가락 비브라토), 더블스탑 음정 맞추기, 현 교체(string crossing) 팔꿈치 높이, 스피카토 바운스 포인트, 왼손 피치카토",
+    fingeringRule: "운지(fingering)는 포지션 단위로만 언급 (예: '3rd 포지션에서', '하이 포지션으로 이동'). 개별 손가락 번호보다 포지션 프레임과 손 모양을 설명하십시오.",
+    techniqueCategories: ["보잉 테크닉", "왼손·인토네이션", "비브라토·표현", "더블스탑·화음", "포지션 이동", "음색·음향"],
+    warmupRoutine: "오픈 현 보잉(전궁·반궁) → 세브치크 보잉 연습 → 스케일(3옥타브, 다양한 보잉 패턴) → 더블스탑 스케일(3도·6도·옥타브)",
+    interpretationFocus: "보잉에 의한 프레이징, 비브라토 속도와 폭으로 감정 표현, 접촉점 변화로 음색 팔레트, 왼손 표현(포르타멘토, 글리산도의 절제된 사용)",
+    commonMistakes: "보잉 압력 과다(찍는 소리), 비브라토 없이 긴 음 유지, 포지션 이동 시 글리산도 노출, 현 교체 시 잡음, 오른팔 경직",
+    bodyMechanics: "턱받침 없이도 악기를 지탱하는 밸런스, 오른팔 무게를 현에 전달하는 감각, 왼손 엄지 위치(넥 뒤쪽 자연스러운 곡선), 서서 연주 시 양발 체중 분배",
+    toneProduction: "보잉의 3요소(속도·압력·접촉점) 조합으로 음색 변화. 브릿지에 가까울수록 밝고 집중된 소리, 지판에 가까울수록 부드럽고 어두운 소리.",
+    dailyRoutineTemplate: "오픈 현 보잉 + 톤 연습(10분) → 스케일/아르페지오(15분) → 에튀드(15분) → 곡 어려운 패시지(20분) → 곡 통주(15분)",
+  },
+
+  cello: {
+    role: `세계적인 첼로 교수법 전문가이자 연주 코치.
+로스트로포비치, 야노스 슈타커, 폴 토르틀리에의 교수법에 정통하며,
+엄지 포지션(thumb position), 넓은 음역의 포지션 이동,
+보잉과 음색의 관계, 바흐 무반주 첼로 모음곡의 연주 관습,
+낮은 현의 깊은 울림부터 하이 포지션의 노래하는 음색까지 정통합니다.
+전문 영역: 엄지 포지션 테크닉, 보잉 배분, 비브라토 깊이, 음색 팔레트.`,
+    practiceKeywords: "엄지 포지션(thumb position) 안정성, 보잉 배분(전궁·반궁·3등분), 보잉 무게와 속도 조절, 왼손 확장(extension), 비브라토(팔 비브라토 중심), 포지션 이동(하이 포지션 접근), 현 교체 팔꿈치 궤도, 음색 변화(sul tasto/ponticello/flautando), 스피카토·쏘띠에, 피치카토(바르톡 피치카토 포함)",
+    fingeringRule: "운지는 포지션 단위로만 언급. 엄지 포지션 사용 여부와 확장(extension) 필요성을 명시하십시오.",
+    techniqueCategories: ["보잉 테크닉", "엄지 포지션·하이 포지션", "비브라토·표현", "인토네이션", "포지션 이동", "음색·공명"],
+    warmupRoutine: "오픈 현 보잉(무게 조절) → 스케일(4옥타브, 엄지 포지션 포함) → 더쩌 에튀드 또는 포퍼 에튀드 → 비브라토 연습",
+    interpretationFocus: "깊은 보잉으로 낮은 현의 울림 극대화, 노래하는 멜로디 라인(cantabile), 바로크 양식의 보잉 관습, 포르테에서의 음색 유지",
+    commonMistakes: "엄지 포지션에서 음정 불안정, 보잉 시작점 잡음(scratch), 느린 악장에서 보잉 배분 부족, 하이 포지션에서 비브라토 경직",
+    bodyMechanics: "앉는 자세(첼로 각도, 엔드핀 길이), 왼손 팔꿈치 높이(포지션별 변화), 오른팔의 자연스러운 원호 운동, 척추 지지와 호흡 연결",
+    toneProduction: "보잉 무게(팔 전체 무게 활용)와 속도의 비율로 음량·음색 조절. 낮은 현일수록 느린 보잉+무게, 높은 현일수록 빠른 보잉+가벼운 터치.",
+    dailyRoutineTemplate: "오픈 현 보잉 + 톤(10분) → 스케일(엄지 포지션 포함, 15분) → 에튀드(15분) → 곡 패시지(20분) → 통주(15분)",
+  },
+
+  flute: {
+    role: `세계적인 플루트 교수법 전문가이자 연주 코치.
+마르셀 모이즈, 트레버 와이, 윌리엄 베넷의 교수 체계에 정통하며,
+앙부쉬어(embouchure) 형성, 횡격막 호흡(diaphragmatic support),
+싱글/더블/트리플 텅잉, 고음역 발음과 음정 조절,
+현대 주법(플러터 텅잉, 멀티포닉스, 서큘러 브리딩, 하모닉스)에 정통합니다.
+전문 영역: 호흡 관리, 앙부쉬어 유연성, 음색 팔레트, 아티큘레이션.`,
+    practiceKeywords: "앙부쉬어 유연성(입술 개폐도·방향), 횡격막 지지(support), 호흡 배분(breath pacing), 싱글/더블/트리플 텅잉(tu-ku, tu-ku-tu), 고음역 도약(lip flexibility), 레가토 연결(finger-breath coordination), 비브라토(복부/인후), 음정 미세 조절(lip bending), 다이나믹 컨트롤(pp에서 입술 방향 변화), 플러터 텅잉, 하모닉스 연습",
+    fingeringRule: "대체 운지(alternate fingering)를 언급할 때는 이유(음색, 음정, 레가토 연결)를 함께 설명하십시오. 기본적으로 신체 감각과 호흡 기반 조언을 우선합니다.",
+    techniqueCategories: ["호흡·앙부쉬어", "텅잉·아티큘레이션", "음색·다이나믹", "고음역·저음역", "레가토·프레이징", "현대 주법"],
+    warmupRoutine: "호흡 연습(복식호흡, 긴 음) → 하모닉스 연습 → 모이즈 일일 연습(Moyse) → 스케일(전조, 다양한 아티큘레이션) → 도약 연습",
+    interpretationFocus: "호흡으로 프레이즈 형태 만들기, 비브라토 속도와 폭으로 감정 표현, 다이나믹 범위(특히 pp 컨트롤), 음색 변화(밝은/어두운/바람 섞인)",
+    commonMistakes: "호흡 부족으로 프레이즈 끊김, 고음에서 음정 올라감, 텅잉이 거칠어짐(too heavy), pp에서 음색 빠짐, 비브라토 과다 또는 부재",
+    bodyMechanics: "서서 연주: 양발 어깨 너비, 무릎 살짝 구부림. 복부·늑간근 지지. 팔꿈치 자연스러운 각도. 머리 기울이지 않기. 목·턱 이완.",
+    toneProduction: "공기 속도와 방향으로 음색 조절. 빠른 공기 = 밝고 집중된 소리(고음역), 느린 넓은 공기 = 따뜻하고 어두운 소리(저음역). 앙부쉬어 개폐도와 공기 각도가 핵심.",
+    dailyRoutineTemplate: "호흡+롱톤(10분) → 하모닉스+음정(5분) → 스케일+아르페지오(10분) → 텅잉 연습(5분) → 에튀드(15분) → 곡 연습(20분)",
+  },
+
+  clarinet: {
+    role: `세계적인 클라리넷 교수법 전문가이자 연주 코치.
+로버트 마르첼루스, 칼 라이스터, 사비네 마이어의 교수법에 정통하며,
+앙부쉬어 형성, 호흡 컨트롤, 음역 전환(브레이크 crossing the break),
+샬뤼모/클래리온/알티시모 음역별 특성, 리드 선택과 관리,
+레가토 텅잉, 다양한 아티큘레이션에 정통합니다.
+전문 영역: 앙부쉬어 안정성, 호흡 지지, 음역 간 음색 통일, 레가토.`,
+    practiceKeywords: "앙부쉬어 압력·위치(하순 쿠션), 호흡 지지(support column), 브레이크 넘기(crossing the break), 레지스터 키 활용, 레가토 텅잉(legato tongue), 스타카토(혀끝 위치), 음역별 음색 통일, 알티시모 발음, 피아니시모 컨트롤, 인토네이션(throat tones 음정 보정), 비브라토(턱/호흡)",
+    fingeringRule: "대체 운지는 음정 보정이나 빠른 패시지에서의 기술적 용이성 목적으로만 언급하십시오.",
+    techniqueCategories: ["앙부쉬어·리드", "호흡·지지", "음역 전환", "텅잉·아티큘레이션", "음색·인토네이션", "표현·다이나믹"],
+    warmupRoutine: "롱톤(12도 간격) → 브레이크 음역 연결 연습 → 스케일(레가토+스타카토) → 클레멘트 에튀드",
+    interpretationFocus: "레가토 라인의 아름다움, 샬뤼모 음역의 따뜻함과 클래리온의 밝음 대비 활용, 다이나믹 범위(특히 pp 컨트롤이 핵심), 프레이즈 내 미세한 뉘앙스",
+    commonMistakes: "브레이크 구간 음색 단절, 쓰로트 톤(throat tones) 음정 높음, 리드 물어뜯기(biting), 스타카토 너무 짧게, 고음에서 꽥 소리",
+    bodyMechanics: "오른 엄지 받침대 위치, 좌우 손 밸런스, 복부 지지, 턱 이완(물어뜯지 않기), 목구멍 열기(open throat)",
+    toneProduction: "공기 기둥(air column)의 일정한 지지가 핵심. 앙부쉬어 압력은 최소한으로, 공기 속도로 음역 전환. 리드 진동을 방해하지 않는 느슨한 앙부쉬어.",
+    dailyRoutineTemplate: "롱톤+12도(10분) → 브레이크 연습(5분) → 스케일(10분) → 텅잉 연습(5분) → 에튀드(15분) → 곡 연습(20분)",
+  },
+
+  guitar: {
+    role: `세계적인 클래식 기타 교수법 전문가이자 연주 코치.
+안드레스 세고비아, 아벨 카를레바로, 스콧 테넌트의 교수법에 정통하며,
+오른손 터치(아포얀도/티란도), 왼손 운지와 바레,
+트레몰로, 하모닉스(자연/인공), 라스게아도,
+음색 변화(sul tasto/ponticello/normal), 네일 케어에 정통합니다.
+전문 영역: 오른손 독립성, 왼손 효율적 운지, 음색 팔레트, 무대 연주.`,
+    practiceKeywords: "아포얀도(rest stroke)/티란도(free stroke), 오른손 독립 연습(pima), 왼손 바레 압력 최적화, 포지션 이동(가이드 핑거), 트레몰로(p-a-m-i 균일성), 자연 하모닉스/인공 하모닉스, 라스게아도, 슬러(hammer-on/pull-off), 음색 변화(nail angle), 비브라토(세로/가로)",
+    fingeringRule: "왼손 운지 시 효율적인 핑거링 원칙(가이드 핑거, 공통 음 유지)을 설명하되, 오른손은 p-i-m-a 패턴 기반으로 조언하십시오.",
+    techniqueCategories: ["오른손 터치", "왼손·바레", "트레몰로·아르페지오", "음색·다이나믹", "슬러·레가토", "하모닉스·특수 주법"],
+    warmupRoutine: "오른손 아르페지오 패턴(줄리아니) → 왼손 크로매틱 → 스케일(세고비아 스케일) → 슬러 연습 → 트레몰로",
+    interpretationFocus: "오른손 터치 각도에 의한 음색 팔레트, 성부 분리(베이스 vs 멜로디), 루바토와 아고긱, 음량 밸런스(p 지배적인 악기 특성 고려)",
+    commonMistakes: "바레 시 과도한 압력(왼손 피로), 오른손 잡음(nail scratch), 트레몰로 불균일, 포지션 이동 시 끊김, 멜로디 성부 묻힘",
+    bodyMechanics: "악기 각도(45도), 발판/지지대 높이, 왼손 엄지 위치(넥 중앙 뒤), 오른손 손목 중립, 어깨 이완",
+    toneProduction: "오른손 터치 위치(hole 위 = 따뜻, bridge 근처 = 밝고 날카로움), 손톱 각도(nail angle), 터치 깊이(flesh vs nail 비율)로 음색 조절.",
+    dailyRoutineTemplate: "오른손 아르페지오(10분) → 왼손+스케일(10분) → 슬러+트레몰로(10분) → 에튀드(15분) → 곡 연습(20분)",
+  },
+
+  vocal: {
+    role: `세계적인 성악 교수법 전문가이자 보컬 코치.
+가르시아, 라모르, 밀러의 벨칸토 교수법에 정통하며,
+호흡법(아포지오 appoggio), 발성 위치(마스케라 maschera),
+파사조(Passaggio) 전환, 레지스터 통일(chest/middle/head),
+딕션(이탈리아어/독일어/프랑스어/영어), 공명(resonance)에 정통합니다.
+전문 영역: 호흡 지지, 파사조 관리, 모음 변형(vowel modification), 무대 표현.`,
+    practiceKeywords: "아포지오(appoggio, 횡격막+늑간근 지지), 마스케라(maschera, 전면 공명), 파사조 전환(primo/secondo passaggio), 모음 변형(vowel modification, 고음에서 'a'→'ɔ' 등), 레지스터 블렌딩(chest/mix/head), 딕션 정확성(자음 명료도, 모음 순수성), 비브라토(자연스러운 진동), 메자 보체(mezza voce), 필라투라(filar la voce, 음량 조절), 레가토 라인, 아질리타(agility, 콜로라투라 기교)",
+    fingeringRule: "발성과 호흡, 공명, 딕션 기반 조언을 제공하십시오. 성대 조작에 대한 직접적 언급은 피하고, 신체 감각과 이미지 비유를 활용하십시오.",
+    techniqueCategories: ["호흡·지지", "발성·공명", "파사조·레지스터", "딕션·언어", "표현·해석", "아질리타·기교"],
+    warmupRoutine: "호흡 연습(복식호흡, 's-s-s' 제어) → 립 트릴/허밍 → 5도 스케일(모음 변화) → 아르페지오(레가토) → 텍스트 읽기(딕션)",
+    interpretationFocus: "가사의 의미와 감정 전달, 프레이징과 호흡의 일치, 다이나믹 범위(특히 피아노에서의 표현력), 레지스터 전환의 자연스러움, 무대에서의 캐릭터 표현",
+    commonMistakes: "목에 힘주기(throat tension), 호흡 지지 부족으로 음정 흔들림, 파사조에서 소리 끊김, 딕션 불명확(자음 삼킴), 비브라토 과다(wobble) 또는 부재(straight tone)",
+    bodyMechanics: "발을 어깨 너비로, 무릎 살짝 구부림, 골반 중립, 늑골 확장 유지, 턱 이완(내리지 않고 뒤로), 연구개 들기(soft palate lift), 혀 이완(tongue root)",
+    toneProduction: "호흡 지지(아포지오) 위에 성대가 자유롭게 진동하는 상태. 공명 공간(인두·비강·구강)을 열어 배음을 풍부하게. '소리를 놓는다(release)'는 감각.",
+    dailyRoutineTemplate: "호흡 연습(5분) → 발성 워밍업(10분) → 기교 연습(10분) → 곡 부분 연습(20분) → 곡 통주+표현(15분)",
+  },
+};
+
 /** 악기별 전문가 역할 */
 function getExpertRole(instrument: AnalysisInstrument): string {
-  const roles: Record<AnalysisInstrument, string> = {
-    piano: "세계적인 피아노 교수법 전문가이자 연주 코치. 레슨 경력 30년, 국제 콩쿠르 입상자를 다수 배출한 마스터 클래스 강사로서, 학생이 바로 피아노 앞에서 실행할 수 있는 구체적인 신체 동작과 연습 방법을 처방합니다.",
-    violin: "세계적인 바이올린 교수법 전문가이자 연주 코치. 보잉(데타셰, 마르텔레, 스피카토, 리코셰), 왼손 포지션 이동, 비브라토, 더블스탑 등 현악 특유의 테크닉에 정통합니다.",
-    cello: "세계적인 첼로 교수법 전문가이자 연주 코치. 엄지 포지션, 보잉과 음색의 관계, 바흐 무반주 모음곡 연주 관습 등 첼로 특유의 테크닉에 정통합니다.",
-    flute: "세계적인 플루트 교수법 전문가이자 연주 코치. 앙부쉬어, 횡격막 호흡, 싱글/더블/트리플 텅잉, 고음역 발음, 현대 주법(플러터 텅잉, 멀티포닉스)에 정통합니다.",
-    clarinet: "세계적인 클라리넷 교수법 전문가이자 연주 코치. 앙부쉬어, 호흡 컨트롤, 샬뤼모/클래리온/알티시모 음역 전환, 레가토 텅잉에 정통합니다.",
-    guitar: "세계적인 클래식 기타 교수법 전문가이자 연주 코치. 오른손 터치(아포얀도/티란도), 왼손 운지, 바레 코드, 트레몰로, 하모닉스에 정통합니다.",
-    vocal: "세계적인 성악 교수법 전문가이자 보컬 코치. 파사조(Passaggio), 벨칸토 창법, 호흡법, 딕션(이탈리아어/독일어/프랑스어), 공명에 정통합니다.",
-  };
-  return roles[instrument] ?? roles.piano;
+  return INSTRUMENT_AGENTS[instrument]?.role ?? INSTRUMENT_AGENTS.piano.role;
 }
 
 /** 악기별 연습법 키워드 */
 function getPracticeKeywords(instrument: AnalysisInstrument): string {
-  const keywords: Record<AnalysisInstrument, string> = {
-    piano: "손목/팔/어깨 동작, 터치(레가토/스타카토/논레가토), 페달링, 손 포지션, 팔 무게 활용",
-    violin: "보잉 방향/속도/압력, 왼손 포지션 이동, 비브라토(손목/팔/손가락), 더블스탑, 하모닉스",
-    cello: "보잉 배분, 엄지 포지션, 비브라토, 음색 변화(sul tasto/sul ponticello), 왼손 확장",
-    flute: "앙부쉬어 조절, 호흡 배분, 텅잉 종류, 음색 변화, 고음역 도약, 레가토 연결",
-    clarinet: "앙부쉬어 압력, 호흡 지지, 음역 전환(브레이크), 텅잉 아티큘레이션, 레지스터 키 활용",
-    guitar: "오른손 터치(아포얀도/티란도), 왼손 운지/스트레칭, 바레 압력, 음색 변화(sul tasto/ponticello)",
-    vocal: "호흡 지지(횡격막), 발성 위치(마스케라), 모음 변형, 딕션 정확도, 레가토 라인, 파사조 전환",
-  };
-  return keywords[instrument] ?? keywords.piano;
+  return INSTRUMENT_AGENTS[instrument]?.practiceKeywords ?? INSTRUMENT_AGENTS.piano.practiceKeywords;
 }
 
-/** 악기별 운지법 금지 규칙 */
+/** 악기별 운지법 규칙 */
 function getFingeringRule(instrument: AnalysisInstrument): string {
-  if (instrument === "piano") {
-    return "🚨 손가락 번호(운지법) 절대 금지. 손목/팔 동작, 터치, 신체 감각 기반 조언만.";
-  }
-  if (instrument === "violin" || instrument === "cello") {
-    return "운지(fingering)는 포지션 단위로만 언급 (예: '3rd 포지션에서'). 개별 손가락 번호는 지양.";
-  }
-  return "구체적 운지법보다 신체 감각, 호흡, 터치 기반 조언을 우선.";
+  return INSTRUMENT_AGENTS[instrument]?.fingeringRule ?? INSTRUMENT_AGENTS.piano.fingeringRule;
+}
+
+/** 악기별 테크닉 카테고리 (technique_summary용) */
+export function getTechniqueCategories(instrument: AnalysisInstrument): string[] {
+  return INSTRUMENT_AGENTS[instrument]?.techniqueCategories ?? INSTRUMENT_AGENTS.piano.techniqueCategories;
+}
+
+/** 악기별 전문 컨텍스트 (프롬프트에 주입) */
+export function getInstrumentContext(instrument: AnalysisInstrument): string {
+  const agent = INSTRUMENT_AGENTS[instrument] ?? INSTRUMENT_AGENTS.piano;
+  return `
+[악기 전문 에이전트 컨텍스트 — ${instrument.toUpperCase()}]
+- 해석 포커스: ${agent.interpretationFocus}
+- 흔한 실수: ${agent.commonMistakes}
+- 신체 역학: ${agent.bodyMechanics}
+- 음색 생산: ${agent.toneProduction}
+- 일일 루틴 템플릿: ${agent.dailyRoutineTemplate}
+- 워밍업: ${agent.warmupRoutine}
+
+🚨 위 컨텍스트를 반드시 반영하여 이 악기 전공 학생에게 실질적으로 도움이 되는 조언을 하십시오.
+🚨 다른 악기의 관점을 섞지 마십시오. 오직 ${instrument} 전문가로서 답하십시오.`;
 }
 
 const KOREAN_OUTPUT_RULE = `🚨 모든 출력은 반드시 한국어로 작성하십시오. (고유명사, 음악 용어만 원어 병기 가능)
@@ -452,6 +594,7 @@ export function createPhase4aPrompt(
 이 곡의 구조 (${sectionNames.length}개 섹션):
 ${sectionNames.map((s, i) => `${i + 1}. ${s}`).join("\n")}
 ${refSection}
+${getInstrumentContext(inst)}
 
 ${KOREAN_OUTPUT_RULE}
 ${getFingeringRule(inst)}
@@ -489,12 +632,7 @@ ${HALLUCINATION_GUARD}
 JSON만 출력:
 {
   "technique_summary": [
-    { "category": "음정", "items": ["이 곡의 구체적 음정 패턴 연습 1", "항목 2", "항목 3"] },
-    { "category": "기본기", "items": ["이 곡에 필요한 구체적 신체 능력 1", "항목 2", "항목 3"] },
-    { "category": "기교 테크닉", "items": ["이 곡 고유 패시지의 해결법 1", "항목 2", "항목 3"] },
-    { "category": "감정표현", "items": ["이 곡 고유의 표현 방법 1", "항목 2", "항목 3"] },
-    { "category": "리듬감각", "items": ["이 곡 고유 리듬 훈련법 1", "항목 2", "항목 3"] },
-    { "category": "형식인식", "items": ["이 곡의 구조 활용법 1", "항목 2", "항목 3"] }
+${getTechniqueCategories(inst).map((cat) => `    { "category": "${cat}", "items": ["이 곡의 ${cat} 관련 구체적 연습법 1", "항목 2", "항목 3"] }`).join(",\n")}
   ],
   "section_guides": [
     {
@@ -543,6 +681,7 @@ export function createPhase4bPrompt(
 이 곡의 구조 (${sectionNames.length}개 섹션):
 ${sectionNames.map((s, i) => `${i + 1}. ${s}`).join("\n")}
 ${refSection}
+${getInstrumentContext(inst)}
 
 ${KOREAN_OUTPUT_RULE}
 ${HALLUCINATION_GUARD}
