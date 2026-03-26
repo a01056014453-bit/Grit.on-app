@@ -41,29 +41,29 @@ ${diff.slice(0, 15000)}
 
 위 변경사항을 감사 기준에 따라 리뷰하세요.
 
-출력 규칙:
-- Slack mrkdwn만 사용 (*볼드*, \`코드\`, > 인용)
-- ## ### ** --- 같은 마크다운 헤더/구분선 절대 금지
-- [x] 체크박스 형식 금지
-- 이모지는 Slack 형식 (:white_check_mark:, :x:, :warning:)
-- 간결하게
+절대 금지 (위반 시 출력 거부):
+- #, ##, ###, **, ---, ___  사용 금지
+- [x], [ ] 체크박스 금지
+- 마크다운 문법 일체 금지
 
-형식:
-심각도: info / warning / critical
+허용: *볼드*, \`코드\`, :이모지:, > 인용, 줄바꿈
 
-요약
-(한 줄)
+아래 예시를 정확히 따라 작성:
 
-통과 항목
-:white_check_mark: 항목1
-:white_check_mark: 항목2
+:mag: *감사 결과*: :white_check_mark: 통과 / :warning: 주의 / :rotating_light: 심각 중 하나
 
-문제 항목
-:x: 항목1 — 설명
-:warning: 항목2 — 설명
+:page_facing_up: *요약*
+이모지와 함께 한 줄 요약
 
-개선 제안
-(있으면)`;
+:white_check_mark: *통과 항목*
+• 항목1
+• 항목2
+
+:x: *문제 항목* (없으면 생략)
+• 항목 — 설명
+
+:bulb: *개선 제안* (없으면 생략)
+• 제안 내용`;
 }
 
 export function buildPrReviewPrompt(prBody: string, diff: string): string {
