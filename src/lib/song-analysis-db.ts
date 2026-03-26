@@ -154,7 +154,7 @@ export async function saveCachedAnalysis(
         };
       if (userId) insertData.user_id = userId;
 
-      const { data: inserted, error } = await supabase
+      const { data: inserted, error } = await (supabase as any)
         .from("song_analyses")
         .insert(insertData)
         .select("id")

@@ -13,9 +13,23 @@ import { getVerificationLabel } from '@/types/song-analysis';
 
 type AnalysisListItem = SongAnalysis & { _composer: string; _title: string };
 
+interface PreAnalyzeStatus {
+  total: number;
+  analyzed: number;
+  remaining: number;
+  progress: number;
+  byCategory: Record<string, { total: number; done: number }>;
+  byInstrument: Record<string, { total: number; done: number; label: string }>;
+  totalDbAnalyses: number;
+  pieces: { composer: string; title: string; category: string; instrument: string; analyzed: boolean; analyzedAt?: string }[];
+}
+
 export default function MusicDBPage() {
   const [analyses, setAnalyses] = useState<AnalysisListItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [preAnalyze, setPreAnalyze] = useState<PreAnalyzeStatus | null>(null);
+  const [showPieceList, setShowPieceList] = useState(false);
+  const [pieceFilter, setPieceFilter] = useState<string>("all");
 
   // 새 곡 분석 폼
   const [newComposer, setNewComposer] = useState('');
@@ -66,6 +80,7 @@ export default function MusicDBPage() {
 
   useEffect(() => {
     fetchAnalyses();
+    fetch("/api/admin/pre-analyze-status").then((r) => r.ok ? r.json() : null).then(setPreAnalyze).catch(() => {});
   }, [fetchAnalyses]);
 
   const verified = analyses.filter((a) => a.verification_status === 'Verified').length;
@@ -516,6 +531,112 @@ export default function MusicDBPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-xl font-bold text-gray-900">곡 DB / AI 분석 관리</h1>
+
+      {/* 사전 분석 현황 */}
+      {preAnalyze && (
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-violet-500" />
+              인기곡 사전 분석
+            </h2>
+            <button
+              onClick={() => setShowPieceList(!showPieceList)}
+              className="text-xs text-violet-600 hover:underline"
+            >
+              {showPieceList ? "접기" : "곡 목록 보기"}
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-gray-600">{preAnalyze.analyzed} / {preAnalyze.total}곡 완료</span>
+            <span className="text-sm font-bold text-violet-600">{preAnalyze.progress}%</span>
+          </div>
+          <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden mb-4">
+            <div className="h-full bg-violet-500 rounded-full transition-all" style={{ width: `${preAnalyze.progress}%` }} />
+          </div>
+
+          <div className="grid grid-cols-6 gap-2 mb-3">
+            {Object.entries(preAnalyze.byInstrument).map(([key, { total, done, label }]) => (
+              <button
+                key={key}
+                onClick={() => { setPieceFilter(pieceFilter === key ? "all" : key); setShowPieceList(true); }}
+                className={`text-center p-2 rounded-lg transition-colors ${pieceFilter === key ? "bg-violet-100 border border-violet-300" : "bg-gray-50 hover:bg-gray-100"}`}
+              >
+                <p className="text-[10px] text-gray-500">{label}</p>
+                <p className="text-sm font-bold text-gray-900">{done}<span className="text-[10px] text-gray-400">/{total}</span></p>
+              </button>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-4 gap-2">
+            {Object.entries(preAnalyze.byCategory).map(([cat, { total, done }]) => (
+              <button
+                key={cat}
+                onClick={() => { setPieceFilter(pieceFilter === `cat_${cat}` ? "all" : `cat_${cat}`); setShowPieceList(true); }}
+                className={`text-center p-2 rounded-lg transition-colors ${pieceFilter === `cat_${cat}` ? "bg-violet-100 border border-violet-300" : "bg-gray-50 hover:bg-gray-100"}`}
+              >
+                <p className="text-[10px] text-gray-500">{cat}</p>
+                <p className="text-sm font-bold text-gray-900">{done}<span className="text-[10px] text-gray-400">/{total}</span></p>
+              </button>
+            ))}
+          </div>
+
+          {preAnalyze.remaining > 0 && (
+            <p className="text-xs text-gray-400 mt-3">매일 3곡씩 자동 분석 · 약 {Math.ceil(preAnalyze.remaining / 3)}일 후 완료</p>
+          )}
+
+          {/* 곡 목록 */}
+          {showPieceList && (
+            <div className="mt-4 border-t pt-4 max-h-96 overflow-y-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-xs text-gray-500 border-b">
+                    <th className="text-left py-2 font-medium">상태</th>
+                    <th className="text-left py-2 font-medium">작곡가</th>
+                    <th className="text-left py-2 font-medium">곡명</th>
+                    <th className="text-left py-2 font-medium">악기</th>
+                    <th className="text-left py-2 font-medium">분류</th>
+                    <th className="text-left py-2 font-medium">분석일</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {preAnalyze.pieces
+                    .filter((p) => {
+                      if (pieceFilter === "all") return true;
+                      if (pieceFilter.startsWith("cat_")) return p.category === pieceFilter.slice(4);
+                      return p.instrument === pieceFilter;
+                    })
+                    .map((p, i) => (
+                    <tr key={i} className={`border-b border-gray-50 ${p.analyzed ? "" : "bg-amber-50/50"}`}>
+                      <td className="py-2">
+                        {p.analyzed
+                          ? <CheckCircle className="w-4 h-4 text-green-500" />
+                          : <AlertTriangle className="w-4 h-4 text-amber-400" />
+                        }
+                      </td>
+                      <td className="py-2 text-gray-700">{p.composer}</td>
+                      <td className="py-2 text-gray-900 font-medium truncate max-w-[250px]">{p.title}</td>
+                      <td className="py-2 text-gray-500 text-xs">{preAnalyze.byInstrument[p.instrument]?.label ?? p.instrument}</td>
+                      <td className="py-2">
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                          p.category === "입시" ? "bg-red-50 text-red-600" :
+                          p.category === "콩쿠르" ? "bg-blue-50 text-blue-600" :
+                          p.category === "레슨" ? "bg-green-50 text-green-600" :
+                          "bg-gray-50 text-gray-500"
+                        }`}>{p.category}</span>
+                      </td>
+                      <td className="py-2 text-gray-400 text-xs">
+                        {p.analyzedAt ? new Date(p.analyzedAt).toLocaleDateString("ko-KR") : "-"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 통계 카드 */}
       <div className="grid grid-cols-4 gap-4">
