@@ -136,10 +136,8 @@ function SwipeableAnalysisItem({
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        style={{
-          transform: `translateX(${offsetX}px)`,
-          transition: isSwiping ? "none" : "transform 0.2s ease-out",
-        }}
+        className={isSwiping ? "" : "transition-transform duration-200 ease-out"}
+        style={{ transform: `translateX(${offsetX}px)` }}
       >
         <Link
           href={`/ai-analysis/${analysis.id}`}
@@ -181,12 +179,17 @@ export default function AIAnalysisPage() {
 
     // DB에서도 삭제 시도
     try {
-      await fetch("/api/song-analysis/delete", {
+      const res = await fetch("/api/song-analysis/delete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
       });
-    } catch { /* DB 삭제 실패해도 보관함에서는 제거됨 */ }
+      if (!res.ok) {
+        console.error("[deleteAnalysis] DB 삭제 실패:", res.status);
+      }
+    } catch (err) {
+      console.error("[deleteAnalysis] 네트워크 오류:", err);
+    }
   }, []);
 
   useEffect(() => {
