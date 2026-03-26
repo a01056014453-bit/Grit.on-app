@@ -13,6 +13,15 @@ import { ChartCard } from '@/components/admin/chart-card';
 import { getDashboardStats, getWAUTrend, getAppStoreStats } from '@/lib/admin/queries';
 import type { DashboardStats } from '@/lib/admin/types';
 
+interface PreAnalyzeStatus {
+  total: number;
+  analyzed: number;
+  remaining: number;
+  progress: number;
+  byCategory: Record<string, { total: number; done: number }>;
+  totalDbAnalyses: number;
+}
+
 interface TodoItem {
   label: string;
   count: number;
@@ -40,6 +49,7 @@ export default function AdminDashboardPage() {
   const [wauTrend, setWauTrend] = useState<{ week: string; users: number }[]>([]);
   const [todos, setTodos] = useState<TodoItem[]>([]);
   const [appStore, setAppStore] = useState<AppStoreData | null>(null);
+  const [preAnalyze, setPreAnalyze] = useState<PreAnalyzeStatus | null>(null);
 
   useEffect(() => {
     // 대시보드 통계 + 최근 가입자
@@ -66,6 +76,9 @@ export default function AdminDashboardPage() {
 
     // App Store 데이터
     getAppStoreStats().then(setAppStore);
+
+    // 사전 분석 현황
+    fetch("/api/admin/pre-analyze-status").then((r) => r.ok ? r.json() : null).then(setPreAnalyze).catch(() => {});
   }, []);
 
   return (
@@ -202,6 +215,61 @@ export default function AdminDashboardPage() {
           )}
         </div>
       </ChartCard>
+
+      {/* 사전 분석 현황 */}
+      {preAnalyze && (
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+              <Brain className="w-4 h-4 text-violet-500" />
+              인기곡 사전 분석 현황
+            </h2>
+            <span className="text-xs text-gray-400">
+              DB 전체: {preAnalyze.totalDbAnalyses}곡
+            </span>
+          </div>
+
+          {/* 전체 진행률 */}
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-sm text-gray-600">
+                {preAnalyze.analyzed} / {preAnalyze.total}곡 완료
+              </span>
+              <span className="text-sm font-bold text-violet-600">{preAnalyze.progress}%</span>
+            </div>
+            <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-violet-500 to-violet-600 rounded-full transition-all"
+                style={{ width: `${preAnalyze.progress}%` }}
+              />
+            </div>
+          </div>
+
+          {/* 카테고리별 */}
+          <div className="grid grid-cols-4 gap-3">
+            {Object.entries(preAnalyze.byCategory).map(([cat, { total, done }]) => (
+              <div key={cat} className="text-center p-3 bg-gray-50 rounded-lg">
+                <p className="text-xs text-gray-500 mb-1">{cat}</p>
+                <p className="text-lg font-bold text-gray-900">{done}<span className="text-xs text-gray-400">/{total}</span></p>
+                <div className="w-full h-1.5 bg-gray-200 rounded-full mt-1.5 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${
+                      done === total ? "bg-green-500" : done > 0 ? "bg-violet-500" : "bg-gray-300"
+                    }`}
+                    style={{ width: `${total > 0 ? (done / total) * 100 : 0}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {preAnalyze.remaining > 0 && (
+            <p className="text-xs text-gray-400 mt-3">
+              매일 3곡씩 자동 분석 중 · 약 {Math.ceil(preAnalyze.remaining / 3)}일 후 완료 예정
+            </p>
+          )}
+        </div>
+      )}
 
       {/* 최근 가입자 */}
       <div className="bg-white rounded-xl border border-gray-200 p-5">
