@@ -62,14 +62,13 @@ const masteryColors: Record<string, string> = {
   mastered: "bg-green-500",
 };
 
-/** 스와이프 삭제 가능한 분석 아이템 */
-function SwipeableAnalysisItem({
-  analysis,
-  onDelete,
-}: {
+interface SwipeableAnalysisItemProps {
   analysis: UserAnalysis;
   onDelete: (id: string) => void;
-}) {
+}
+
+/** 스와이프 삭제 가능한 분석 아이템 */
+function SwipeableAnalysisItem({ analysis, onDelete }: SwipeableAnalysisItemProps) {
   const [showDelete, setShowDelete] = useState(false);
   const swipeRef = useRef<HTMLDivElement>(null);
   const startXRef = useRef(0);
