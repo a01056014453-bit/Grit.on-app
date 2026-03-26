@@ -10,7 +10,7 @@ import {
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { StatCard } from '@/components/admin/stat-card';
 import { ChartCard } from '@/components/admin/chart-card';
-import { getDashboardStats, getWAUTrend, getAppStoreStats } from '@/lib/admin/queries';
+import { getDashboardStats, getAppStoreStats } from '@/lib/admin/queries';
 import type { DashboardStats } from '@/lib/admin/types';
 
 interface PreAnalyzeStatus {
@@ -52,11 +52,11 @@ export default function AdminDashboardPage() {
   const [appStore, setAppStore] = useState<AppStoreData | null>(null);
 
   useEffect(() => {
-    // 대시보드 통계 + 최근 가입자
+    // 대시보드 통계 + 최근 가입자 + WAU 추이 (1회 호출)
     getDashboardStats().then((data) => {
       setStats(data);
-      const signups = (data as any).recentSignups ?? [];
-      setRecentSignups(signups);
+      setRecentSignups((data as any).recentSignups ?? []);
+      setWauTrend((data as any).wauTrend ?? []);
 
       // 할일 목록
       const items: TodoItem[] = [];
@@ -70,9 +70,6 @@ export default function AdminDashboardPage() {
       }
       setTodos(items);
     });
-
-    // WAU 추이
-    getWAUTrend().then(setWauTrend);
 
     // App Store 데이터
     getAppStoreStats().then(setAppStore);

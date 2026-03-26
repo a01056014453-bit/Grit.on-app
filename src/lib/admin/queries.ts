@@ -55,12 +55,7 @@ export async function getUserDetail(userId: string) {
 
 // ─── WAU 추이 ───
 
-export async function getWAUTrend(): Promise<{ week: string; users: number }[]> {
-  const res = await fetch("/api/admin/stats");
-  if (!res.ok) return [];
-  const data = await res.json();
-  return data.wauTrend ?? [];
-}
+// getWAUTrend 제거 — getDashboardStats에서 wauTrend 포함 반환
 
 // ─── 선생님 목록 ───
 
