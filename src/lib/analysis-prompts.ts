@@ -518,43 +518,68 @@ Q5. 조성 간 전조가 어떤 방식으로 이루어지는가?
 - 모든 섹션의 measures가 동일한 문구이면 분석 실패 — 각 섹션마다 고유한 내용이어야 함
 
 [구성 단위 표기 규칙]
-- 다악장: section에 "1악장:", "2악장:" 접두어
+- 다악장(협주곡/소나타/모음곡): section에 "1악장:", "2악장:" 접두어
 - 소품 모음집 (고유 제목): "Träumerei (꿈):", "Pierrot (피에로):" 접두어
 - 소품 모음집 (번호만): "No.1:", "No.2:" 접두어. 절대 "악장" 금지
-- 변주곡: "주제:", "Var.1:", "Var.2:" 접두어
+- 변주곡: "주제:", "Var.1:", "Var.2:" 접두어. 각 변주를 독립적으로 분석
+- 모음곡(Suite): "Prelude:", "Allemande:", "Sarabande:" 등 춤곡명 접두어
 
 [구간 구성 — 형식별 필수 구간]
 - 소나타 형식: 도입·제1주제 / 전이부 / 제2주제 / 종결부 / 전개부 / 재현부 / 코다
 - 론도 형식: A주제 / B에피소드 / A'회귀 / C에피소드 / A''+코다
 - 스케르초: 스케르초 주제 / 트리오 / 스케르초 회귀
-- 변주곡: 주제 + 각 변주 개별
+- 변주곡: 주제 + 각 변주 개별 (각 변주의 고유 특성·기교 반드시 명시)
 - 짧은 소품: A주제 / 중간부(대비) / 재현+코다 (2-4개)
 - 누락 시 분석 실패
+
+[🚨 다악장/변주곡/모음곡 필수 규칙]
+이 곡이 다악장 작품(Concerto, Sonata, Suite), 변주곡(Variations), 또는 소품 모음집이면:
+1. movements 배열을 반드시 출력하십시오 (각 악장/변주/소품 단위)
+2. 각 악장의 독립적 메타 정보: 제목, 조성, 템포, 형식, 성격, 핵심 테크닉 도전
+3. 악장 간 관계(attacca, 조성 관계, 동기 연결)를 connection_to_next에 명시
+4. 협주곡: 오케스트라 투티와 솔로의 관계, 카덴차 위치 명시
+5. 변주곡: 각 변주의 고유 특성(리듬 변화, 조성 변화, 기교적 변형) 개별 기술
+6. 모음곡: 각 춤곡의 성격, 박자, 템포 차이 명시
+
+단악장 곡이면 movements를 빈 배열 []로 두십시오.
 
 JSON만 출력:
 {
   "structure_analysis_v2": {
+    "movements": [
+      {
+        "number": 1,
+        "title": "악장 제목 또는 템포 지시어",
+        "key": "조성",
+        "tempo": "템포 지시어 + 권장 BPM",
+        "form": "이 악장/변주/소품의 형식",
+        "duration": "연주 시간",
+        "character": "성격·분위기 한 줄",
+        "technique_challenges": ["핵심 도전 1", "도전 2"],
+        "connection_to_next": "다음 악장/변주와의 연결"
+      }
+    ],
     "sections": [
       {
         "section": "구성단위: 구간 이름",
-        "measures": "마디 번호 (mm.1-32) 또는 추정 (약 mm.1-30) 또는 구체적 음악 내용 서술",
-        "key_signature": "조성 + 핵심 화성 진행 (예: E장조, I-vi-IV-V 진행 기반, ii-V-I 카덴스로 종결)",
+        "measures": "마디 번호 또는 음악 내용 서술",
+        "key_signature": "조성 + 핵심 화성 진행",
         "time_signature": "박자",
         "tempo": "템포 지시어",
-        "mood": "분위기·표현 한국어 요약",
-        "description": "3-5문장 — 이 구간의 주요 동기·음형, 텍스처(호모포닉/폴리포닉/대위법적), 성부 배치, 다이내믹 흐름, 이전 구간과의 차이점"
+        "mood": "분위기·표현",
+        "description": "3-5문장 — 동기·음형, 텍스처, 성부, 다이내믹, 이전 구간 차이점"
       }
     ],
     "harmony_table": [
       {
-        "measure": "구간명 + 마디 번호 (예: 제1주제 mm.1-4)",
-        "beat": "위치 (예: 1-2박)",
-        "chord": "코드명 (예: E, C#m, F#7/A#)",
-        "roman_numeral": "로마숫자 (예: I, vi, V7/V)",
-        "function": "기능 (Tonic/Dominant/Subdominant/Neapolitan/Aug6th/Secondary Dominant 등)",
-        "voice_leading": "성부진행 특이사항 (예: 바스 반음계 하행, 소프라노 순차 상행)",
-        "pedal": "페달 포인트 여부 (예: 토닉 페달 E, 없음)",
-        "note": "비고 (예: 피카르디 3도, 반종지)"
+        "measure": "구간명 + 마디",
+        "beat": "위치",
+        "chord": "코드명",
+        "roman_numeral": "로마숫자",
+        "function": "기능",
+        "voice_leading": "성부진행",
+        "pedal": "페달 포인트",
+        "note": "비고"
       }
     ]
   }
@@ -563,8 +588,7 @@ JSON만 출력:
 🚨 화성 테이블 규칙:
 - 핵심 전조점과 종지만 3-5행 (간결하게!)
 - 확신할 수 있는 화성만 기재. 틀린 분석보다 적은 분석이 훨씬 낫습니다.
-- 각 섹션의 description 필드에 핵심 화성 진행을 1문장으로 포함하십시오.
-- harmony_table은 보조 자료입니다. sections가 핵심입니다.`;
+- harmony_table은 보조 자료. sections가 핵심.`;
 
 }
 
@@ -640,6 +664,15 @@ ${getTechniqueCategories(inst).map((cat) => `    { "category": "${cat}", "items"
       "guide": "4문장 (위 4가지 규칙에 따라). 각 문장이 해당 섹션의 조성·음형·리듬을 구체적으로 언급."
     }
   ],
+  "movement_practice": [
+    {
+      "movement": "1악장 또는 Var.1 또는 소품명 (다악장/변주곡일 때만. 단악장이면 빈 배열)",
+      "focus_technique": "이 악장의 핵심 기술 과제",
+      "practice_strategy": "2-3문장 연습 전략",
+      "estimated_days": 7
+    }
+  ],
+  "practice_order": "권장 연습 순서 (예: 2악장 → 1악장 제시부 → 3악장 → 전곡 통주). 단악장이면 빈 문자열",
   "recommended_performances_v2": [
     {
       "artist": "연주자 이름",
@@ -649,6 +682,13 @@ ${getTechniqueCategories(inst).map((cat) => `    { "category": "${cat}", "items"
     }
   ]
 }
+
+🚨 다악장/변주곡 연습법 규칙:
+- movement_practice: 각 악장/변주별로 독립적 연습 전략 제공
+- practice_order: 권장 연습 순서 (보통: 느린 악장 → 빠른 악장의 어려운 부분 → 전체 통주)
+- 변주곡: 주제 먼저, 기교적으로 어려운 변주에 더 많은 일수 배분
+- 협주곡: 카덴차를 별도 항목으로 포함
+- 단악장 곡이면 movement_practice를 빈 배열, practice_order를 빈 문자열로
 
 추천 연주 (5-7명):
 - 한국 1-2명 (백건우/조성진/임윤찬/손열음/김선욱 등) + 레전드 1-2명 + 현대 거장 1-2명 + 차세대 1명

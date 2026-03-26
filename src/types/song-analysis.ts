@@ -144,6 +144,21 @@ export interface HarmonyTableRow {
 export interface StructureAnalysisV2 {
   sections: StructureSectionV2[];
   harmony_table: HarmonyTableRow[];
+  /** 다악장/변주곡/소품 모음 — 악장/곡 단위 메타 정보 */
+  movements?: MovementInfo[];
+}
+
+/** 악장/변주/소품 단위 메타 정보 */
+export interface MovementInfo {
+  number: number;
+  title: string;           // "Allegro ma non tanto" 또는 "Var.1" 또는 "Träumerei"
+  key: string;             // 조성
+  tempo: string;           // 템포 지시어
+  form: string;            // "소나타 형식", "3부 형식" 등
+  duration: string;        // "약 17분"
+  character: string;       // 성격/분위기 한 줄 요약
+  technique_challenges: string[];  // 이 악장/곡의 핵심 테크닉 도전 2-3개
+  connection_to_next?: string;     // 다음 악장과의 연결 (attacca 등)
 }
 
 /** 6. 연습법 - 기술 카테고리 표 항목 */
@@ -177,6 +192,17 @@ export interface PracticeMethod {
   technique_summary: PracticeTechniqueItem[];
   section_guides: PracticeSectionGuide[];
   weekly_routine: WeeklyRoutine[];
+  /** 다악장 곡: 악장별 연습 전략 + 권장 연습 순서 */
+  movement_practice?: MovementPracticeGuide[];
+  practice_order?: string;  // "2악장 → 1악장 제시부 → 3악장 → 1악장 전개부 → 전곡 통주"
+}
+
+/** 악장/변주/소품별 연습 가이드 */
+export interface MovementPracticeGuide {
+  movement: string;        // "1악장" 또는 "Var.3" 또는 "Träumerei"
+  focus_technique: string; // 이 악장의 핵심 기술 과제
+  practice_strategy: string; // 2-3문장 연습 전략
+  estimated_days: number;  // 이 악장에 권장 연습 일수
 }
 
 /** 7. 추천 연주 V2 */
