@@ -68,7 +68,7 @@ export async function sendSlackReport(
   // Webhook fallback
   const text = typeof content === 'string'
     ? `*${title}*\n\n${content}`
-    : `*${title}*`;
+    : `*${title}*\n\n${content.map((r) => `${SEVERITY_EMOJI[r.severity]} *${r.agentId}*\n${r.summary}\n${r.details?.slice(0, 2900) ?? ''}`).join('\n\n')}`;
 
   const res = await fetch(webhookUrl, {
     method: 'POST',
