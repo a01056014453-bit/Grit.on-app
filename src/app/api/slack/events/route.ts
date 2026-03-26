@@ -118,7 +118,7 @@ async function handleAgentMessage(event: Record<string, string>) {
         {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${process.env.GITHUB_TOKEN}`,
+            'Authorization': `Bearer ${process.env.GH_PAT}`,
             'Accept': 'application/vnd.github.v3+json',
             'Content-Type': 'application/json',
           },
