@@ -1,9 +1,10 @@
-import { query } from '@anthropic-ai/claude-agent-sdk';
+import Anthropic from '@anthropic-ai/sdk';
 import { buildDailySummaryPrompt } from './prompts.js';
 import { sendSlackReport } from './slack-report.js';
-import { BUDGET, MAX_TURNS, MODEL } from './types.js';
-import type { AgentResult } from './types.js';
+import { MODEL } from './types.js';
 import { execSync } from 'child_process';
+
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 function gatherRepoInfo(): string {
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -39,35 +40,23 @@ export async function dailySummary(): Promise<void> {
   console.log('[daily-summary] Gathering repo info...');
 
   const repoInfo = gatherRepoInfo();
-  let resultText = '';
 
-  for await (const message of query({
-    prompt: buildDailySummaryPrompt(repoInfo),
-    options: {
-      cwd: process.cwd(),
-      allowedTools: ['Read', 'Glob', 'Grep'],
-      model: MODEL,
-      maxTurns: MAX_TURNS['daily-summary'],
-      maxBudgetUsd: BUDGET['daily-summary'],
-    },
-  })) {
-    if ('result' in message) {
-      resultText = message.result;
-    }
-  }
+  const response = await anthropic.messages.create({
+    model: MODEL || 'claude-sonnet-4-20250514',
+    max_tokens: 2048,
+    messages: [{ role: 'user', content: buildDailySummaryPrompt(repoInfo) }],
+  });
+
+  const resultText = response.content
+    .filter((b) => b.type === 'text')
+    .map((b) => b.text)
+    .join('\n');
 
   if (!resultText) {
-    console.log('[daily-summary] No result from agent');
+    console.warn('[daily-summary] 빈 결과');
     return;
   }
 
-  const result: AgentResult = {
-    agentId: 'orchestrator',
-    summary: `${new Date().toLocaleDateString('ko-KR')} 일일 보고`,
-    details: resultText,
-    severity: 'info',
-  };
-
-  await sendSlackReport('📊 셈프레 일일 보고', [result]);
-  console.log('[daily-summary] Done');
+  await sendSlackReport('daily-summary', resultText);
+  console.log('[daily-summary] Done.');
 }

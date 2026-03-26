@@ -1,9 +1,11 @@
-import { query } from '@anthropic-ai/claude-agent-sdk';
+import Anthropic from '@anthropic-ai/sdk';
 import { buildReviewPrompt } from './prompts.js';
 import { sendSlackReport } from './slack-report.js';
-import { BUDGET, MAX_TURNS, MODEL } from './types.js';
+import { MODEL } from './types.js';
 import type { AgentResult } from './types.js';
 import { execSync } from 'child_process';
+
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const SKIP_PATTERNS = [
   /^package-lock\.json$/,
@@ -37,29 +39,22 @@ export async function reviewPush(): Promise<void> {
 
   console.log(`[review-push] Reviewing ${diff.split('\n').length} lines of diff`);
 
-  let resultText = '';
+  const response = await anthropic.messages.create({
+    model: MODEL || 'claude-sonnet-4-20250514',
+    max_tokens: 2048,
+    messages: [{ role: 'user', content: buildReviewPrompt(diff) }],
+  });
 
-  for await (const message of query({
-    prompt: buildReviewPrompt(diff),
-    options: {
-      cwd: process.cwd(),
-      allowedTools: ['Read', 'Glob', 'Grep'],
-      model: MODEL,
-      maxTurns: MAX_TURNS['review-push'],
-      maxBudgetUsd: BUDGET['review-push'],
-    },
-  })) {
-    if ('result' in message) {
-      resultText = message.result;
-    }
-  }
+  const resultText = response.content
+    .filter((b) => b.type === 'text')
+    .map((b) => b.text)
+    .join('\n');
 
   if (!resultText) {
     console.log('[review-push] No result from agent');
     return;
   }
 
-  // 심각도 파싱
   const severity = resultText.includes('critical')
     ? 'critical'
     : resultText.includes('warning')

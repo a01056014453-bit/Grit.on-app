@@ -1,8 +1,10 @@
-import { query } from '@anthropic-ai/claude-agent-sdk';
+import Anthropic from '@anthropic-ai/sdk';
 import { buildIssueClassifyPrompt } from './prompts.js';
 import { sendSlackText } from './slack-report.js';
-import { BUDGET, MAX_TURNS, MODEL } from './types.js';
+import { MODEL } from './types.js';
 import { execSync } from 'child_process';
+
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 export async function classifyIssue(issueNumber: number): Promise<void> {
   const issueJson = execSync(
@@ -13,30 +15,24 @@ export async function classifyIssue(issueNumber: number): Promise<void> {
 
   console.log(`[classify-issue] Classifying issue #${issueNumber}: ${issue.title}`);
 
-  let resultText = '';
+  const response = await anthropic.messages.create({
+    model: MODEL || 'claude-sonnet-4-20250514',
+    max_tokens: 1024,
+    messages: [{ role: 'user', content: buildIssueClassifyPrompt(issue.title, issue.body ?? '') }],
+  });
 
-  for await (const message of query({
-    prompt: buildIssueClassifyPrompt(issue.title, issue.body ?? ''),
-    options: {
-      model: MODEL,
-      maxTurns: MAX_TURNS['classify-issue'],
-      maxBudgetUsd: BUDGET['classify-issue'],
-    },
-  })) {
-    if ('result' in message) {
-      resultText = message.result;
-    }
-  }
+  const resultText = response.content
+    .filter((b) => b.type === 'text')
+    .map((b) => b.text)
+    .join('\n');
 
   if (!resultText) return;
 
-  // JSON 파싱 시도
   try {
     const jsonMatch = resultText.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const classification = JSON.parse(jsonMatch[0]);
 
-      // 라벨 추가
       const labels = [classification.area, classification.type, classification.priority]
         .filter(Boolean);
 

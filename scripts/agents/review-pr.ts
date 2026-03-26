@@ -1,19 +1,19 @@
-import { query } from '@anthropic-ai/claude-agent-sdk';
+import Anthropic from '@anthropic-ai/sdk';
 import { buildPrReviewPrompt } from './prompts.js';
 import { sendSlackReport } from './slack-report.js';
-import { BUDGET, MAX_TURNS, MODEL } from './types.js';
+import { MODEL } from './types.js';
 import type { AgentResult } from './types.js';
 import { execSync } from 'child_process';
 
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
 export async function reviewPr(prNumber: number): Promise<void> {
-  // PR 정보 가져오기
   const prJson = execSync(
     `gh pr view ${prNumber} --json title,body,baseRefName,headRefName`,
     { encoding: 'utf-8' }
   );
   const pr = JSON.parse(prJson);
 
-  // PR diff
   const diff = execSync(`gh pr diff ${prNumber}`, {
     encoding: 'utf-8',
     maxBuffer: 1024 * 1024,
@@ -26,26 +26,19 @@ export async function reviewPr(prNumber: number): Promise<void> {
 
   console.log(`[review-pr] Reviewing PR #${prNumber}: ${pr.title}`);
 
-  let resultText = '';
+  const response = await anthropic.messages.create({
+    model: MODEL || 'claude-sonnet-4-20250514',
+    max_tokens: 2048,
+    messages: [{ role: 'user', content: buildPrReviewPrompt(pr.body ?? '', diff) }],
+  });
 
-  for await (const message of query({
-    prompt: buildPrReviewPrompt(pr.body ?? '', diff),
-    options: {
-      cwd: process.cwd(),
-      allowedTools: ['Read', 'Glob', 'Grep'],
-      model: MODEL,
-      maxTurns: MAX_TURNS['review-pr'],
-      maxBudgetUsd: BUDGET['review-pr'],
-    },
-  })) {
-    if ('result' in message) {
-      resultText = message.result;
-    }
-  }
+  const resultText = response.content
+    .filter((b) => b.type === 'text')
+    .map((b) => b.text)
+    .join('\n');
 
   if (!resultText) return;
 
-  // PR에 코멘트 작성
   execSync(`gh pr comment ${prNumber} --body "${resultText.replace(/"/g, '\\"').slice(0, 60000)}"`, {
     encoding: 'utf-8',
   });
@@ -58,11 +51,11 @@ export async function reviewPr(prNumber: number): Promise<void> {
 
   const result: AgentResult = {
     agentId: 'orchestrator',
-    summary: `PR #${prNumber}: ${pr.title}`,
-    details: resultText,
+    action: 'review-pr',
     severity,
+    summary: `PR #${prNumber} 리뷰 완료`,
+    details: resultText.slice(0, 500),
   };
 
-  await sendSlackReport(`📋 PR 리뷰 — #${prNumber} ${pr.title}`, [result]);
-  console.log(`[review-pr] Done, commented on PR #${prNumber}`);
+  await sendSlackReport('review-pr', JSON.stringify(result, null, 2));
 }
