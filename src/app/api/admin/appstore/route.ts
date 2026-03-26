@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { isConfigured, getAppDownloads, getAppInfo } from "@/lib/appstore-connect";
+import {
+  isConfigured,
+  getAppDownloads,
+  getAppInfo,
+  type AppInfo,
+  type DownloadMetrics,
+} from "@/lib/appstore-connect";
+
+type AppStoreResponse =
+  | { configured: true; downloads: DownloadMetrics | null; appInfo: AppInfo | null }
+  | { configured: false; error?: string; message?: string; downloads: null; appInfo: null };
 
 function getAdminIds(): Set<string> {
   return new Set(
@@ -15,23 +25,40 @@ async function checkAdmin(request: NextRequest): Promise<boolean> {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       { cookies: { getAll() { return request.cookies.getAll(); }, setAll() {} } },
     );
-    const { data: { user } } = await supabaseAuth.auth.getUser();
-    return !!user && getAdminIds().has(user.id);
-  } catch {
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+
+    if (authError) {
+      console.error("[admin/appstore] Supabase 인증 오류:", authError.message);
+      return false;
+    }
+    if (!user) {
+      console.error("[admin/appstore] 비인증 접근");
+      return false;
+    }
+    if (!getAdminIds().has(user.id)) {
+      console.error("[admin/appstore] 관리자 아닌 사용자:", user.id);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("[admin/appstore] 인증 확인 네트워크 오류:", err);
     return false;
   }
 }
 
 /** GET /api/admin/appstore — App Store Connect 데이터 */
-export async function GET(request: NextRequest) {
+export async function GET(request: NextRequest): Promise<NextResponse<AppStoreResponse>> {
   if (!(await checkAdmin(request))) {
-    return NextResponse.json({ error: "관리자 권한이 필요합니다" }, { status: 403 });
+    return NextResponse.json(
+      { configured: false, error: "관리자 권한이 필요합니다", downloads: null, appInfo: null },
+      { status: 403 },
+    );
   }
 
   if (!isConfigured()) {
     return NextResponse.json({
       configured: false,
-      message: "App Store Connect API 키가 설정되지 않았습니다. (APP_STORE_ISSUER_ID, APP_STORE_KEY_ID, APP_STORE_PRIVATE_KEY)",
+      message: "APP_STORE_ISSUER_ID, APP_STORE_KEY_ID, APP_STORE_PRIVATE_KEY 환경변수를 설정하세요",
       downloads: null,
       appInfo: null,
     });
@@ -43,7 +70,6 @@ export async function GET(request: NextRequest) {
       getAppInfo(),
     ]);
 
-    // 둘 다 실패하면 configured: false 반환
     if (!downloads && !appInfo) {
       return NextResponse.json({
         configured: false,
@@ -60,7 +86,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (err) {
     console.error("[admin/appstore] 서버 오류:", err);
-    // 실패 시 절대 configured: true 반환하지 않음
     return NextResponse.json({
       configured: false,
       error: "App Store Connect API 호출에 실패했습니다",
