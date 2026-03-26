@@ -56,6 +56,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<AppStoreRe
   }
 
   if (!isConfigured()) {
+    console.error("[admin/appstore] 환경변수 누락 — ISSUER:", !!process.env.APP_STORE_ISSUER_ID, "KEY:", !!process.env.APP_STORE_KEY_ID, "PK:", !!process.env.APP_STORE_PRIVATE_KEY);
     return NextResponse.json({
       configured: false,
       message: "APP_STORE_ISSUER_ID, APP_STORE_KEY_ID, APP_STORE_PRIVATE_KEY 환경변수를 설정하세요",
