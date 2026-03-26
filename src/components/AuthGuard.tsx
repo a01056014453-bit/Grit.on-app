@@ -7,6 +7,7 @@ import { getProfile } from "@/lib/queries/profiles";
 import { pullUserData } from "@/lib/sync-user-data";
 import { subscribeToPush } from "@/lib/push-subscribe";
 import { runStorageMigration } from "@/lib/storage-migration";
+import { trackEvent } from "@/lib/analytics";
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -59,6 +60,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         }
         setReady(true);
         subscribeToPush().catch(() => {});
+        trackEvent({ event: "app_open" });
         return;
       }
 
@@ -80,6 +82,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
             await pullUserData();
             setReady(true);
             subscribeToPush().catch(() => {});
+            trackEvent({ event: "app_open" });
             return;
           }
         } catch {
