@@ -54,6 +54,7 @@ export default function MusicDBPage() {
   // 필터
   type FilterType = 'all' | 'needs_review' | 'verified' | 'with_sheet';
   const [filter, setFilter] = useState<FilterType>('all');
+  const [composerFilter, setComposerFilter] = useState<string>('all');
 
   // 기존 곡 악보 업로드
   const [uploadingSheetFor, setUploadingSheetFor] = useState<string | null>(null);
@@ -390,11 +391,19 @@ export default function MusicDBPage() {
     }
   };
 
+  // 작곡가 목록 추출
+  const composerList = [...new Set(analyses.map((a) => a._composer))].sort();
+  const composerCounts = composerList.map((c) => ({
+    name: c,
+    count: analyses.filter((a) => a._composer === c).length,
+  }));
+
   // 필터링 + 작곡가 A-Z → 곡명 A-Z 정렬
   const filteredAnalyses = (filter === 'all' ? analyses
     : filter === 'needs_review' ? analyses.filter((a) => a.verification_status === 'Needs Review')
     : filter === 'verified' ? analyses.filter((a) => a.verification_status === 'Verified')
     : analyses.filter((a) => a.pdf_storage_path || a.musicxml_storage_path)
+  ).filter((a) => composerFilter === 'all' || a._composer === composerFilter
   ).sort((a, b) => {
     const composerCmp = a._composer.localeCompare(b._composer);
     if (composerCmp !== 0) return composerCmp;
@@ -755,10 +764,37 @@ export default function MusicDBPage() {
         )}
       </ChartCard>
 
+      {/* 작곡가 필터 */}
+      <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-gray-900">Composers ({composerList.length})</h2>
+          {composerFilter !== 'all' && (
+            <button onClick={() => setComposerFilter('all')} className="text-xs text-violet-600 hover:underline">
+              Show All
+            </button>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {composerCounts.map(({ name, count }) => (
+            <button
+              key={name}
+              onClick={() => setComposerFilter(composerFilter === name ? 'all' : name)}
+              className={`px-2.5 py-1 text-xs rounded-lg transition-colors ${
+                composerFilter === name
+                  ? 'bg-violet-600 text-white font-medium'
+                  : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              {name} <span className={composerFilter === name ? 'text-violet-200' : 'text-gray-400'}>({count})</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* 분석 목록 */}
       <ChartCard
-        title="분석 목록"
-        description={filter === 'all' ? `총 ${analyses.length}개의 AI 분석 데이터` : `${filteredAnalyses.length}개 필터됨 (전체 ${analyses.length}개)`}
+        title={composerFilter !== 'all' ? `${composerFilter} — Analysis List` : 'Analysis List'}
+        description={`${filteredAnalyses.length} items${filter !== 'all' || composerFilter !== 'all' ? ` (total ${analyses.length})` : ''}`}
         action={filter !== 'all' ? (
           <button
             onClick={() => setFilter('all')}
