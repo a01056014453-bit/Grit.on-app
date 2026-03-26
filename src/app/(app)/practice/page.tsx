@@ -10,11 +10,12 @@ import { pushUserDataDebounced } from "@/lib/sync-user-data";
 import { completePracticeTodo } from "@/lib/practice-todo-store";
 import { addNotification } from "@/lib/notification-store";
 import { formatTime } from "@/lib/format";
+import { trackEvent } from "@/lib/analytics";
 import { getUserSongs, getDrillCards } from "@/lib/queries";
 import { ComposerAutocomplete, TitleAutocomplete } from "@/components/ui/composer-autocomplete";
 import { groupDrillsBySong } from "@/lib/utils-practice";
 import { getUserId } from "@/lib/user-id";
-import { setPracticeRecording } from "@/hooks/usePracticeGuard";
+import { setPracticeRecording, setPracticePaused } from "@/hooks/usePracticeGuard";
 import {
   buildSessionsForDate,
   buildCalendarData,
@@ -555,10 +556,22 @@ function PracticePageContent() {
   }, [isRecording]);
 
   // 전역 연습 상태 동기화 (BottomNavigation 연동)
+  // stopRecording ref로 선언 순서 문제 우회
+  const stopRef = useRef<() => void>(() => stopRecording());
+  useEffect(() => { stopRef.current = () => stopRecording(); }, [stopRecording]);
+
   useEffect(() => {
-    setPracticeRecording(isRecording);
+    setPracticeRecording(isRecording, {
+      onPause: () => pauseRecording(),
+      onStop: () => stopRef.current(),
+    });
     return () => setPracticeRecording(false);
-  }, [isRecording]);
+  }, [isRecording, pauseRecording]);
+
+  // 일시정지 상태도 동기화
+  useEffect(() => {
+    setPracticePaused(isPaused);
+  }, [isPaused]);
 
   // Manage wake lock based on recording state
   useEffect(() => {
@@ -590,6 +603,13 @@ function PracticePageContent() {
     };
     setSessionStartTime(new Date());
     setAutoPausedMessage(null);
+    trackEvent({
+      event: "practice_start",
+      properties: {
+        song: selectedSong?.title ?? activeDrill?.title ?? "unknown",
+        type: activeDrill ? "drill" : "song",
+      },
+    });
     await startRecording();
   }, [startRecording, selectedSong, activeDrill]);
 
