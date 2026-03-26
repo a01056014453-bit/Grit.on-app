@@ -4,7 +4,7 @@ import { supabaseServer } from "@/lib/supabase-server";
 
 /**
  * POST /api/song-analysis/delete
- * 본인 분석 삭제 (user_id 확인 또는 user_id=null인 기존 데이터)
+ * 본인 분석만 삭제 (user_id 일치 필수)
  */
 export async function POST(request: NextRequest) {
   try {
@@ -28,13 +28,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "ID가 필요합니다." }, { status: 400 });
     }
 
-    // 본인 것만 삭제 (user_id=본인 또는 user_id=null)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabaseServer as any)
+    // 본인 것만 삭제 (user_id 일치 필수)
+    const { error } = await supabaseServer
       .from("song_analyses")
       .delete()
       .eq("id", id)
-      .or(`user_id.eq.${user.id},user_id.is.null`);
+      .eq("user_id", user.id);
 
     if (error) {
       return NextResponse.json({ error: "삭제에 실패했습니다." }, { status: 500 });

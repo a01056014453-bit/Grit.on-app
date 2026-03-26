@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
 import { supabaseServer } from "@/lib/supabase-server";
 import type { SongAnalysis } from "@/types/song-analysis";
 
@@ -11,20 +12,46 @@ export async function GET(
   const composer = url.searchParams.get("composer");
   const title = url.searchParams.get("title");
 
-  // 1. id로 검색
+  // 인증 확인
+  const supabaseAuth = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return _request.headers.get("cookie")
+            ? _request.headers.get("cookie")!.split("; ").map((c) => {
+                const [name, ...rest] = c.split("=");
+                return { name, value: rest.join("=") };
+              })
+            : [];
+        },
+        setAll() {},
+      },
+    },
+  );
+  const { data: { user } } = await supabaseAuth.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "로그인이 필요합니다" }, { status: 401 });
+  }
+
+  // 1. id로 검색 (본인 것만)
   let { data, error } = await supabaseServer
     .from("song_analyses")
     .select("*")
     .eq("id", id)
+    .eq("user_id", user.id)
     .single();
 
-  // 2. id로 못 찾으면 composer+title로 재검색
+  // 2. id로 못 찾으면 composer+title로 재검색 (본인 것만)
   if ((error || !data) && composer && title) {
     const { data: fallback } = await supabaseServer
       .from("song_analyses")
       .select("*")
       .ilike("composer", `%${composer}%`)
       .ilike("title", `%${title}%`)
+      .eq("user_id", user.id)
       .limit(1)
       .single();
     if (fallback) {
@@ -33,23 +60,8 @@ export async function GET(
     }
   }
 
-  // 3. 그래도 못 찾으면 id가 analysis_ 형태일 때 전체 최근 분석에서 검색
-  if ((error || !data) && id.startsWith("analysis_")) {
-    const { data: recent } = await supabaseServer
-      .from("song_analyses")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(5);
-
-    if (recent && recent.length > 0) {
-      // 가장 최근 분석 반환 (최후의 수단)
-      data = recent[0];
-      error = null;
-    }
-  }
-
   if (error || !data) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json({ error: "분석 데이터를 찾을 수 없습니다" }, { status: 404 });
   }
 
   // content에 전체 SongAnalysis가 저장되어 있으면 복원

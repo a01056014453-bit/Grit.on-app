@@ -1072,18 +1072,21 @@ export async function POST(request: NextRequest) {
     const { pdfStoragePath, musicxmlStoragePath, useStoredSource, useV2 = true } = body;
     const instrument = ((body as unknown as Record<string, unknown>).instrument as AnalysisInstrument) || "piano";
 
-    // 인증된 유저 ID 가져오기
-    let authUserId: string | null = null;
-    try {
-      const { createServerClient } = await import("@supabase/ssr");
-      const supabaseAuth = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        { cookies: { getAll() { return request.cookies.getAll(); }, setAll() {} } },
+    // 인증 필수 — user_id 가져오기
+    const { createServerClient } = await import("@supabase/ssr");
+    const supabaseAuth = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { cookies: { getAll() { return request.cookies.getAll(); }, setAll() {} } },
+    );
+    const { data: { user } } = await supabaseAuth.auth.getUser();
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: "로그인이 필요합니다." } as AnalyzeSongResponse,
+        { status: 401 },
       );
-      const { data: { user } } = await supabaseAuth.auth.getUser();
-      authUserId = user?.id ?? null;
-    } catch { /* 비인증 허용 */ }
+    }
+    const authUserId = user.id;
 
     if (!composer || !title) {
       const response: AnalyzeSongResponse = {
@@ -1098,7 +1101,7 @@ export async function POST(request: NextRequest) {
 
     if (useStoredSource) {
       forceRefresh = true;
-      const existing = await getCachedAnalysis(composer, title);
+      const existing = await getCachedAnalysis(composer, title, authUserId);
 
       if (existing?.musicxml_storage_path) {
         console.log(`[Stored Source] Downloading MusicXML: ${existing.musicxml_storage_path}`);
@@ -1177,7 +1180,7 @@ export async function POST(request: NextRequest) {
 
     // 캐시 확인
     if (!forceRefresh && !hasImages && !hasMusicXml) {
-      const cachedAnalysis = await getCachedAnalysis(composer, title);
+      const cachedAnalysis = await getCachedAnalysis(composer, title, authUserId);
       if (cachedAnalysis) {
         console.log(`[Cache HIT] ${composer} - ${title}`);
         const response: AnalyzeSongResponse = {
@@ -1225,7 +1228,7 @@ export async function POST(request: NextRequest) {
     if (storedPdfPath) analysis.pdf_storage_path = storedPdfPath;
     if (storedMusicxmlPath) analysis.musicxml_storage_path = storedMusicxmlPath;
     if (!analysis.pdf_storage_path || !analysis.musicxml_storage_path) {
-      const existingForPaths = await getCachedAnalysis(composer, title);
+      const existingForPaths = await getCachedAnalysis(composer, title, authUserId);
       if (!analysis.pdf_storage_path && existingForPaths?.pdf_storage_path)
         analysis.pdf_storage_path = existingForPaths.pdf_storage_path;
       if (!analysis.musicxml_storage_path && existingForPaths?.musicxml_storage_path)
@@ -1268,13 +1271,25 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function DELETE(request: Request) {
+export async function DELETE(request: NextRequest) {
   try {
+    // 인증 필수
+    const { createServerClient } = await import("@supabase/ssr");
+    const supabaseAuth = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { cookies: { getAll() { return request.cookies.getAll(); }, setAll() {} } },
+    );
+    const { data: { user } } = await supabaseAuth.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ success: false, error: "로그인이 필요합니다" }, { status: 401 });
+    }
+
     const { id } = await request.json();
     if (!id) {
       return NextResponse.json({ success: false, error: "id가 필요합니다" }, { status: 400 });
     }
-    const result = await deleteCachedAnalysis(id);
+    const result = await deleteCachedAnalysis(id, user.id);
     if (result) return NextResponse.json({ success: true });
     return NextResponse.json({ success: false, error: "삭제 실패" }, { status: 500 });
   } catch (error) {
@@ -1283,8 +1298,20 @@ export async function DELETE(request: Request) {
   }
 }
 
-export async function PATCH(request: Request) {
+export async function PATCH(request: NextRequest) {
   try {
+    // 인증 필수
+    const { createServerClient } = await import("@supabase/ssr");
+    const supabaseAuth = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { cookies: { getAll() { return request.cookies.getAll(); }, setAll() {} } },
+    );
+    const { data: { user } } = await supabaseAuth.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ success: false, error: "로그인이 필요합니다" }, { status: 401 });
+    }
+
     const { id, analysis } = await request.json();
     if (!id || !analysis) {
       return NextResponse.json(
@@ -1292,7 +1319,7 @@ export async function PATCH(request: Request) {
         { status: 400 },
       );
     }
-    const result = await updateAnalysisById(id, analysis);
+    const result = await updateAnalysisById(id, analysis, user.id);
     if (result) return NextResponse.json({ success: true });
     return NextResponse.json({ success: false, error: "업데이트 실패" }, { status: 500 });
   } catch (error) {
@@ -1301,10 +1328,22 @@ export async function PATCH(request: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    // 인증 필수
+    const { createServerClient } = await import("@supabase/ssr");
+    const supabaseAuth = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { cookies: { getAll() { return request.cookies.getAll(); }, setAll() {} } },
+    );
+    const { data: { user } } = await supabaseAuth.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ success: false, error: "로그인이 필요합니다" }, { status: 401 });
+    }
+
     const { getAllCachedAnalyses } = await import("@/lib/song-analysis-db");
-    const analyses = await getAllCachedAnalyses();
+    const analyses = await getAllCachedAnalyses(user.id);
     return NextResponse.json({ success: true, data: analyses, count: analyses.length });
   } catch (error) {
     console.error("Get cached analyses error:", error);

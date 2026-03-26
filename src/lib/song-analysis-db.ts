@@ -11,31 +11,36 @@ export function createCacheKey(composer: string, title: string): string {
   return `${normalizedComposer}__${normalizedTitle}`;
 }
 
-/** Supabase에서 분석 데이터 조회 (작곡가 + 제목으로 검색) */
+/** Supabase에서 분석 데이터 조회 (작곡가 + 제목 + user_id로 검색) */
 export async function getCachedAnalysis(
   composer: string,
-  title: string
+  title: string,
+  userId?: string
 ): Promise<SongAnalysis | null> {
   try {
     // 정확한 매칭 시도 (case-insensitive)
-    const { data, error } = await supabase
+    let query = supabase
       .from("song_analyses")
       .select("*")
       .ilike("composer", composer.trim())
-      .ilike("title", title.trim())
-      .limit(1)
-      .single();
+      .ilike("title", title.trim());
+    if (userId) query = query.eq("user_id", userId);
+
+    const { data, error } = await query.limit(1).single();
 
     if (error || !data) {
       // 부분 매칭 시도 (작곡가 성만으로 검색)
       const composerParts = composer.trim().split(" ");
       const lastName = composerParts[composerParts.length - 1];
 
-      const { data: partialData, error: partialError } = await supabase
+      let partialQuery = supabase
         .from("song_analyses")
         .select("*")
         .ilike("composer", `%${lastName}%`)
-        .ilike("title", `%${title.trim()}%`)
+        .ilike("title", `%${title.trim()}%`);
+      if (userId) partialQuery = partialQuery.eq("user_id", userId);
+
+      const { data: partialData, error: partialError } = await partialQuery
         .limit(1)
         .single();
 
@@ -100,23 +105,29 @@ function reconstructAnalysis(row: {
   };
 }
 
-/** Supabase에 분석 데이터 저장 (upsert) */
+/** Supabase에 분석 데이터 저장 (upsert) — user_id 필수 */
 export async function saveCachedAnalysis(
   analysis: SongAnalysis,
   originalComposer?: string,
   originalTitle?: string,
-  userId?: string | null,
+  userId?: string,
 ): Promise<void> {
+  if (!userId) {
+    console.error("[Supabase] saveCachedAnalysis: user_id는 필수입니다");
+    return;
+  }
+
   try {
     const composer = analysis.meta.composer;
     const title = analysis.meta.title;
 
-    // 이미 존재하는지 확인
+    // 이미 존재하는지 확인 (같은 사용자의 같은 곡)
     const { data: existing } = await supabase
       .from("song_analyses")
       .select("id")
       .ilike("composer", composer.trim())
       .ilike("title", title.trim())
+      .eq("user_id", userId)
       .limit(1)
       .single();
 
@@ -132,7 +143,8 @@ export async function saveCachedAnalysis(
           verification_status: analysis.verification_status,
           updated_at: new Date().toISOString(),
         })
-        .eq("id", existing.id);
+        .eq("id", existing.id)
+        .eq("user_id", userId);
 
       if (error) {
         console.error("[Supabase] update error:", error.message);
@@ -149,11 +161,12 @@ export async function saveCachedAnalysis(
           opus: analysis.meta.opus || null,
           difficulty_level: analysis.meta.difficulty_level,
           verification_status: analysis.verification_status,
+          user_id: userId,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
-      if (userId) insertData.user_id = userId;
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: inserted, error } = await (supabase as any)
         .from("song_analyses")
         .insert(insertData)
@@ -171,7 +184,7 @@ export async function saveCachedAnalysis(
       }
     }
 
-    // 원본 키가 다르면 기존 원본 키 row 삭제 (중복 방지)
+    // 원본 키가 다르면 기존 원본 키 row 삭제 (중복 방지, 본인 것만)
     if (
       originalComposer &&
       originalTitle &&
@@ -182,7 +195,8 @@ export async function saveCachedAnalysis(
         .from("song_analyses")
         .delete()
         .ilike("composer", originalComposer.trim())
-        .ilike("title", originalTitle.trim());
+        .ilike("title", originalTitle.trim())
+        .eq("user_id", userId);
       console.log(`[Supabase] Cleaned duplicate: ${originalComposer} - ${originalTitle}`);
     }
   } catch (error) {
@@ -190,11 +204,14 @@ export async function saveCachedAnalysis(
   }
 }
 
-/** ID 기반 분석 데이터 직접 업데이트 (관리자 수정용) */
+/** ID 기반 분석 데이터 직접 업데이트 — user_id 필터 포함 */
 export async function updateAnalysisById(
   id: string,
-  analysis: SongAnalysis
+  analysis: SongAnalysis,
+  userId: string
 ): Promise<boolean> {
+  if (!userId) return false;
+
   try {
     const { error } = await supabase
       .from("song_analyses")
@@ -208,7 +225,8 @@ export async function updateAnalysisById(
         verification_status: analysis.verification_status,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", id);
+      .eq("id", id)
+      .eq("user_id", userId);
 
     if (error) {
       console.error("[Supabase] updateAnalysisById error:", error.message);
@@ -222,15 +240,19 @@ export async function updateAnalysisById(
   }
 }
 
-/** 캐시에서 분석 데이터 삭제 (id 기반) */
+/** 캐시에서 분석 데이터 삭제 (id + user_id 기반) */
 export async function deleteCachedAnalysis(
-  id: string
+  id: string,
+  userId: string
 ): Promise<boolean> {
+  if (!userId) return false;
+
   try {
     const { error } = await supabase
       .from("song_analyses")
       .delete()
-      .eq("id", id);
+      .eq("id", id)
+      .eq("user_id", userId);
 
     return !error;
   } catch {
@@ -238,12 +260,18 @@ export async function deleteCachedAnalysis(
   }
 }
 
-/** 모든 분석 목록 조회 */
-export async function getAllCachedAnalyses(): Promise<SongAnalysis[]> {
+/** 특정 사용자의 분석 목록 조회 — user_id 필수 */
+export async function getAllCachedAnalyses(userId: string): Promise<SongAnalysis[]> {
+  if (!userId) {
+    console.error("[Supabase] getAllCachedAnalyses: user_id는 필수입니다");
+    return [];
+  }
+
   try {
     const { data, error } = await supabase
       .from("song_analyses")
       .select("*")
+      .eq("user_id", userId)
       .order("updated_at", { ascending: false });
 
     if (error || !data) {
@@ -297,12 +325,15 @@ export async function getCacheStats(): Promise<{
   }
 }
 
-/** 검증 상태 업데이트 */
+/** 검증 상태 업데이트 — user_id 필터 포함 */
 export async function updateVerificationStatus(
   composer: string,
   title: string,
-  status: SongAnalysis["verification_status"]
+  status: SongAnalysis["verification_status"],
+  userId: string
 ): Promise<boolean> {
+  if (!userId) return false;
+
   try {
     const { error } = await supabase
       .from("song_analyses")
@@ -311,7 +342,8 @@ export async function updateVerificationStatus(
         updated_at: new Date().toISOString(),
       })
       .ilike("composer", composer.trim())
-      .ilike("title", title.trim());
+      .ilike("title", title.trim())
+      .eq("user_id", userId);
 
     return !error;
   } catch {

@@ -21,12 +21,7 @@ type SongAnalysisListResponse =
 
 /**
  * GET /api/song-analysis/list
- * 인증 필수 — 전체 분석 목록 반환 (공유 캐시)
- * "내 보관함" 필터링은 프론트엔드 localStorage에서 처리
- *
- * song_analyses는 공유 캐시: 사용자 A가 분석한 곡을 B가 요청하면
- * 캐시 히트로 같은 레코드를 사용. user_id는 최초 분석자만 기록되므로
- * 서버에서 user_id 필터링하면 다른 사용자에게 안 보이는 버그 발생.
+ * 인증 필수 — 해당 사용자의 분석 목록만 반환
  */
 export async function GET(request: NextRequest): Promise<NextResponse<SongAnalysisListResponse>> {
   try {
@@ -54,10 +49,11 @@ export async function GET(request: NextRequest): Promise<NextResponse<SongAnalys
       );
     }
 
-    // 전체 분석 목록 (공유 캐시 — user_id 필터 없음)
+    // 본인 분석 목록만 조회 (user_id 필터)
     const { data, error } = await supabaseServer
       .from("song_analyses")
       .select("id, composer, title, created_at, difficulty_level, key, user_id")
+      .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(100);
 

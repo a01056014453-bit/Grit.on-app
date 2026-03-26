@@ -26,7 +26,14 @@ import {
 } from "@/lib/queries/pieces";
 import type { Piece, PieceAnalysis, PiecePracticeData } from "@/lib/queries/pieces";
 import { getUserId } from "@/lib/user-id";
-import { getUserAnalyses, removeUserAnalysis, type UserAnalysis } from "@/lib/user-analyses";
+import { removeUserAnalysis } from "@/lib/user-analyses";
+
+interface UserAnalysis {
+  id: string;
+  composer: string;
+  title: string;
+  analyzedAt: string;
+}
 
 interface SectionData {
   startMeasure: number;
@@ -205,36 +212,27 @@ export default function AIAnalysisPage() {
     async function load() {
       const userId = getUserId();
 
-      // 내 보관함: localStorage 저장 ID → DB에서 최신 데이터 매칭
-      const savedAnalyses = getUserAnalyses();
-      if (savedAnalyses.length > 0) {
-        try {
-          const res = await fetch("/api/song-analysis/list");
-          if (res.ok) {
-            const { data: dbList } = await res.json();
-            if (dbList) {
-              const savedIds = new Set(savedAnalyses.map(a => a.id));
-              const matched = (dbList as { id: string; composer: string; title: string; created_at: string }[])
-                .filter(item => savedIds.has(item.id))
-                .map(item => ({
-                  id: item.id,
-                  composer: item.composer,
-                  title: item.title,
-                  analyzedAt: item.created_at || "",
-                }));
-              // DB에 없는 항목은 localStorage 원본 유지
-              const matchedIds = new Set(matched.map(m => m.id));
-              const remaining = savedAnalyses
-                .filter(a => !matchedIds.has(a.id))
-                .map(a => ({ ...a, analyzedAt: a.analyzedAt || "" }));
-              setUserAnalyses([...matched, ...remaining]);
-            }
+      // 서버에서 본인 분석 목록 조회 (user_id 필터는 서버에서 처리)
+      try {
+        const res = await fetch("/api/song-analysis/list");
+        if (res.ok) {
+          const { data: dbList } = await res.json();
+          if (dbList) {
+            const analyses = (dbList as { id: string; composer: string; title: string; created_at: string }[])
+              .map(item => ({
+                id: item.id,
+                composer: item.composer,
+                title: item.title,
+                analyzedAt: item.created_at || "",
+              }));
+            setUserAnalyses(analyses);
           }
-        } catch {
-          // 네트워크 실패 시 localStorage 원본 사용
-          setUserAnalyses(savedAnalyses);
         }
+      } catch {
+        // 네트워크 실패 시 빈 목록
+        setUserAnalyses([]);
       }
+
       const fetchedPieces = await getAnalyzedPieces();
       setPieces(fetchedPieces);
 
