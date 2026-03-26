@@ -959,6 +959,7 @@ export type Database = {
           opus: string | null
           title: string
           updated_at: string | null
+          user_id: string | null
           verification_status: string | null
         }
         Insert: {
@@ -971,6 +972,7 @@ export type Database = {
           opus?: string | null
           title: string
           updated_at?: string | null
+          user_id?: string | null
           verification_status?: string | null
         }
         Update: {
@@ -983,6 +985,7 @@ export type Database = {
           opus?: string | null
           title?: string
           updated_at?: string | null
+          user_id?: string | null
           verification_status?: string | null
         }
         Relationships: []

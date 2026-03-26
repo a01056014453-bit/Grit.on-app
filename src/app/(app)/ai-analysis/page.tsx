@@ -70,20 +70,30 @@ function SwipeableAnalysisItem({
   analysis: UserAnalysis;
   onDelete: (id: string) => void;
 }) {
-  const [offsetX, setOffsetX] = useState(0);
-  const [isSwiping, setIsSwiping] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
+  const swipeRef = useRef<HTMLDivElement>(null);
   const startXRef = useRef(0);
   const startYRef = useRef(0);
   const currentXRef = useRef(0);
   const isHorizontalRef = useRef<boolean | null>(null);
+  const isSwipingRef = useRef(false);
   const DELETE_THRESHOLD = 70;
+
+  const applyTransform = useCallback((x: number, animate: boolean) => {
+    const el = swipeRef.current;
+    if (!el) return;
+    el.classList.toggle("transition-transform", animate);
+    el.classList.toggle("duration-200", animate);
+    el.classList.toggle("ease-out", animate);
+    el.style.transform = `translateX(${x}px)`;
+  }, []);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     startXRef.current = e.touches[0].clientX;
     startYRef.current = e.touches[0].clientY;
     currentXRef.current = 0;
     isHorizontalRef.current = null;
-    setIsSwiping(false);
+    isSwipingRef.current = false;
   }, []);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
@@ -98,29 +108,30 @@ function SwipeableAnalysisItem({
     e.preventDefault();
     const clampedX = Math.min(0, Math.max(-DELETE_THRESHOLD, dx));
     currentXRef.current = clampedX;
-    setOffsetX(clampedX);
-    setIsSwiping(true);
-  }, []);
+    isSwipingRef.current = true;
+    setShowDelete(clampedX < 0);
+    applyTransform(clampedX, false);
+  }, [applyTransform]);
 
   const handleTouchEnd = useCallback(() => {
-    if (currentXRef.current <= -DELETE_THRESHOLD * 0.6) {
-      setOffsetX(-DELETE_THRESHOLD);
-    } else {
-      setOffsetX(0);
-    }
-    setIsSwiping(false);
+    const snapOpen = currentXRef.current <= -DELETE_THRESHOLD * 0.6;
+    const finalX = snapOpen ? -DELETE_THRESHOLD : 0;
+    setShowDelete(snapOpen);
+    applyTransform(finalX, true);
     isHorizontalRef.current = null;
-  }, []);
+    isSwipingRef.current = false;
+  }, [applyTransform]);
 
   const handleDelete = useCallback(() => {
-    setOffsetX(0);
+    applyTransform(0, true);
+    setShowDelete(false);
     onDelete(analysis.id);
-  }, [analysis.id, onDelete]);
+  }, [analysis.id, onDelete, applyTransform]);
 
   return (
     <div className="relative overflow-hidden rounded-xl">
       {/* 삭제 버튼 (스와이프 시 노출) */}
-      {offsetX < 0 && (
+      {showDelete && (
         <div className="absolute inset-y-0 right-0 flex items-center">
           <button
             onClick={handleDelete}
@@ -131,13 +142,12 @@ function SwipeableAnalysisItem({
         </div>
       )}
 
-      {/* 분석 아이템 */}
+      {/* 분석 아이템 — ref로 transform 제어, 인라인 스타일 없음 */}
       <div
+        ref={swipeRef}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        className={`translate-x-[var(--swipe-x)] ${isSwiping ? "" : "transition-transform duration-200 ease-out"}`}
-        style={{ "--swipe-x": `${offsetX}px` } as React.CSSProperties}
       >
         <Link
           href={`/ai-analysis/${analysis.id}`}

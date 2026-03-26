@@ -1,13 +1,10 @@
-/** song_analyses 테이블 공개 조회용 (user_id 포함, database.ts 미반영 보완) */
-export type SongAnalysisPublic = {
-  id: string;
-  composer: string;
-  title: string;
-  created_at: string | null;
-  difficulty_level: string | null;
-  key: string | null;
-  user_id: string | null;
-};
+import type { Tables } from "./database";
+
+/** song_analyses 테이블 목록 조회용 (database.ts 기준) */
+export type SongAnalysisPublic = Pick<
+  Tables<"song_analyses">,
+  "id" | "composer" | "title" | "created_at" | "difficulty_level" | "key" | "user_id"
+>;
 
 /** 곡 AI 분석 정보 (V1 - analyze-song API) */
 export interface SongAIInfo {
