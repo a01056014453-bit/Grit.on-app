@@ -1,7 +1,7 @@
 import { sendSlackText } from './slack-report.js';
 import type { AgentResult } from './types.js';
 
-const GITHUB_REPO = 'a01056014453-bit/Grit.on-app';
+const GITHUB_REPO = process.env.GITHUB_REPO ?? 'a01056014453-bit/Grit.on-app';
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 
 interface GitHubIssueResponse {
