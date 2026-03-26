@@ -33,7 +33,7 @@ jobs:
           node-version: 20
           cache: npm
 
-      - run: npm ci --ignore-scripts
+      - run: npm ci --ignore-scripts --legacy-peer-deps
 
       - name: Run Agent Review
         env:
