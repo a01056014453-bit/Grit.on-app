@@ -14,6 +14,7 @@ import { getUserSongs, getDrillCards } from "@/lib/queries";
 import { ComposerAutocomplete, TitleAutocomplete } from "@/components/ui/composer-autocomplete";
 import { groupDrillsBySong } from "@/lib/utils-practice";
 import { getUserId } from "@/lib/user-id";
+import { setPracticeRecording } from "@/hooks/usePracticeGuard";
 import {
   buildSessionsForDate,
   buildCalendarData,
@@ -553,27 +554,10 @@ function PracticePageContent() {
     };
   }, [isRecording]);
 
-  // SPA 네비게이션 감지: 녹음 중 다른 페이지로 이동하면 확인 후 중단
+  // 전역 연습 상태 동기화 (BottomNavigation 연동)
   useEffect(() => {
-    if (!isRecording) return;
-
-    const handleClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      const link = target.closest("a[href]") as HTMLAnchorElement | null;
-      if (!link) return;
-      const href = link.getAttribute("href") ?? "";
-      if (href.startsWith("/") && !href.startsWith("/practice")) {
-        e.preventDefault();
-        e.stopPropagation();
-        if (window.confirm("연습 중입니다. 연습을 중단하고 이동하시겠습니까?")) {
-          // 강제 이동 (연습 세션은 자동 저장됨)
-          window.location.href = href;
-        }
-      }
-    };
-
-    document.addEventListener("click", handleClick, true);
-    return () => document.removeEventListener("click", handleClick, true);
+    setPracticeRecording(isRecording);
+    return () => setPracticeRecording(false);
   }, [isRecording]);
 
   // Manage wake lock based on recording state
