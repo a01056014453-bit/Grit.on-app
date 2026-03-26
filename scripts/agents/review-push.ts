@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { buildReviewPrompt } from './prompts.js';
 import { sendSlackReport } from './slack-report.js';
+import { orchestrate } from './orchestrator.js';
 import { MODEL } from './types.js';
 import type { AgentResult } from './types.js';
 import { execSync } from 'child_process';
@@ -23,7 +24,6 @@ function getDiff(): string {
 
   if (files.length === 0) return '';
 
-  // 괄호 등 특수문자 포함 파일명을 안전하게 처리
   const quotedFiles = files.map((f) => `'${f}'`).join(' ');
   return execSync(`git diff HEAD~1 -- ${quotedFiles}`, {
     encoding: 'utf-8',
@@ -74,5 +74,10 @@ export async function reviewPush(): Promise<void> {
   };
 
   await sendSlackReport(`🔍 코드 리뷰 — ${commitMsg}`, [result]);
+
+  if (severity === 'critical' || severity === 'warning') {
+    await orchestrate([result], { commitSha, commitMsg });
+  }
+
   console.log('[review-push] Done, reported to Slack');
 }
