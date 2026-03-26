@@ -88,10 +88,16 @@ const APP_ID = process.env.APPSTORE_APP_ID ?? "6760019130";
 const BASE_URL = "https://api.appstoreconnect.apple.com/v1";
 
 function getPrivateKeyPem(): string {
-  // Vercel 환경변수에서 리터럴 \\n → 실제 개행 치환
-  const pem = PRIVATE_KEY_RAW.replace(/\\n/g, "\n");
-  if (pem.includes("BEGIN PRIVATE KEY")) return pem;
-  return `-----BEGIN PRIVATE KEY-----\n${pem}\n-----END PRIVATE KEY-----`;
+  let pem = PRIVATE_KEY_RAW;
+  // 리터럴 \n → 실제 개행 치환 (한 줄 문자열로 저장된 경우)
+  if (pem.includes("\\n")) {
+    pem = pem.replace(/\\n/g, "\n");
+  }
+  // PEM 헤더가 없으면 감싸기
+  if (!pem.includes("BEGIN PRIVATE KEY")) {
+    pem = `-----BEGIN PRIVATE KEY-----\n${pem}\n-----END PRIVATE KEY-----`;
+  }
+  return pem.trim();
 }
 
 /** API 키 설정 확인 */
