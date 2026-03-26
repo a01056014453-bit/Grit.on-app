@@ -555,23 +555,22 @@ function PracticePageContent() {
     };
   }, [isRecording]);
 
-  // 전역 연습 상태 동기화 (BottomNavigation 연동)
-  // stopRecording ref로 선언 순서 문제 우회
-  const stopRef = useRef<() => void>(() => stopRecording());
-  useEffect(() => { stopRef.current = () => stopRecording(); }, [stopRecording]);
+  // 전역 연습 상태 + 일시정지 동기화 (BottomNavigation 연동)
+  // stopRecording은 이 시점에 아직 선언 안 됐으므로 ref 사용
+  const stopRecordingRef = useRef(stopRecording);
+  useEffect(() => { stopRecordingRef.current = stopRecording; }, [stopRecording]);
 
   useEffect(() => {
     setPracticeRecording(isRecording, {
-      onPause: () => pauseRecording(),
-      onStop: () => stopRef.current(),
+      onPause: pauseRecording,
+      onStop: () => stopRecordingRef.current(),
     });
+    // isPaused도 같은 useEffect에서 동기화 (레이스 컨디션 방지)
+    if (isRecording) {
+      setPracticePaused(isPaused);
+    }
     return () => setPracticeRecording(false);
-  }, [isRecording, pauseRecording]);
-
-  // 일시정지 상태도 동기화
-  useEffect(() => {
-    setPracticePaused(isPaused);
-  }, [isPaused]);
+  }, [isRecording, isPaused, pauseRecording]);
 
   // Manage wake lock based on recording state
   useEffect(() => {

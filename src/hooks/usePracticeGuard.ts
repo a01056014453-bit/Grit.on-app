@@ -3,7 +3,7 @@
 /**
  * 연습 세션 보호 — 전역 상태
  *
- * 네비게이션 시 3가지 선택지 제공:
+ * 네비게이션 시 3가지 선택지:
  * 1. 일시정지하고 이동 — 세션 유지, 돌아오면 이어서
  * 2. 연습 종료 후 저장 — 세션 저장하고 이동
  * 3. 취소 — 연습 계속
@@ -17,16 +17,19 @@ const _listeners = new Set<() => void>();
 
 function notifyListeners(): void {
   _listeners.forEach((fn) => {
-    try { fn(); } catch { /* 무시 */ }
+    try { fn(); } catch { /* 리스너 에러 격리 */ }
   });
 }
 
 export interface PracticeCallbacks {
-  onPause?: () => void;   // 일시정지 콜백
-  onStop?: () => void;    // 종료+저장 콜백
+  onPause?: () => void;
+  onStop?: () => void;
 }
 
-/** 연습 중 상태 설정 */
+/**
+ * 연습 중 상태 + 콜백 설정
+ * recording과 paused를 한 번에 설정하여 레이스 컨디션 방지
+ */
 export function setPracticeRecording(
   recording: boolean,
   callbacks?: PracticeCallbacks,
@@ -44,8 +47,13 @@ export function setPracticeRecording(
   notifyListeners();
 }
 
-/** 일시정지 상태 설정 */
+/**
+ * 일시정지 상태만 변경
+ * setPracticeRecording과 동일 notify 사이클에서 호출되지 않도록
+ * 이미 recording=true인 상태에서만 의미가 있음
+ */
 export function setPracticePaused(paused: boolean): void {
+  if (!_isRecording) return; // recording 중이 아니면 무시
   _isPaused = paused;
   notifyListeners();
 }
@@ -55,27 +63,43 @@ export function isPracticePaused(): boolean { return _isPaused; }
 
 export type GuardAction = "pause" | "stop" | "cancel";
 
-/** 네비게이션 가드 — BottomNavigation에서 모달 표시 후 action 전달 */
-export function executeGuardAction(action: GuardAction, navigate: () => void): void {
-  if (action === "cancel") return;
+export interface GuardResult {
+  success: boolean;
+  error?: string;
+}
+
+/**
+ * 네비게이션 가드 액션 실행
+ * @returns GuardResult — 성공/실패 + 에러 메시지
+ */
+export function executeGuardAction(action: GuardAction, navigate: () => void): GuardResult {
+  if (action === "cancel") return { success: true };
 
   if (action === "pause") {
-    // 일시정지: 세션 유지, 상태는 recording+paused
     if (_onPauseCallback) {
-      try { _onPauseCallback(); } catch (err) { console.error("[guard] pause 실패:", err); }
+      try {
+        _onPauseCallback();
+      } catch (err) {
+        console.error("[guard] pause 실패:", err);
+        return { success: false, error: "일시정지에 실패했습니다." };
+      }
     }
     _isPaused = true;
     notifyListeners();
     setTimeout(() => {
       try { navigate(); } catch (err) { console.error("[guard] navigate 실패:", err); }
     }, 50);
-    return;
+    return { success: true };
   }
 
   if (action === "stop") {
-    // 종료+저장: 세션 종료
     if (_onStopCallback) {
-      try { _onStopCallback(); } catch (err) { console.error("[guard] stop 실패:", err); }
+      try {
+        _onStopCallback();
+      } catch (err) {
+        console.error("[guard] stop 실패:", err);
+        return { success: false, error: "연습 저장에 실패했습니다." };
+      }
     }
     _isRecording = false;
     _isPaused = false;
@@ -85,7 +109,10 @@ export function executeGuardAction(action: GuardAction, navigate: () => void): v
     setTimeout(() => {
       try { navigate(); } catch (err) { console.error("[guard] navigate 실패:", err); }
     }, 150);
+    return { success: true };
   }
+
+  return { success: false, error: "알 수 없는 액션" };
 }
 
 /** 상태 변경 구독 */

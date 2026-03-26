@@ -86,12 +86,21 @@ export function BottomNavigation() {
     [pathname, recording, paused, router],
   );
 
+  const [guardError, setGuardError] = useState<string | null>(null);
+
   const handleGuardAction = useCallback(
     (action: GuardAction) => {
       if (!guardModal) return;
       const { href } = guardModal;
       setGuardModal(null);
-      executeGuardAction(action, () => router.push(href));
+      setGuardError(null);
+
+      const result = executeGuardAction(action, () => router.push(href));
+      if (!result.success && result.error) {
+        setGuardError(result.error);
+        // 3초 후 에러 메시지 제거
+        setTimeout(() => setGuardError(null), 3000);
+      }
     },
     [guardModal, router],
   );
@@ -160,6 +169,13 @@ export function BottomNavigation() {
       )}
 
       <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-100 safe-bottom">
+        {/* 에러 메시지 */}
+        {guardError && (
+          <div className="bg-red-100 text-red-700 text-center py-1.5 text-[11px] font-medium">
+            {guardError}
+          </div>
+        )}
+
         {/* 연습 중/일시정지 인디케이터 */}
         {recording && !pathname.startsWith("/practice") && (
           <button
