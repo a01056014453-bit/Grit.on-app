@@ -23,7 +23,9 @@ function getDiff(): string {
 
   if (files.length === 0) return '';
 
-  return execSync(`git diff HEAD~1 -- ${files.join(' ')}`, {
+  // 괄호 등 특수문자 포함 파일명을 안전하게 처리
+  const quotedFiles = files.map((f) => `'${f}'`).join(' ');
+  return execSync(`git diff HEAD~1 -- ${quotedFiles}`, {
     encoding: 'utf-8',
     maxBuffer: 1024 * 1024,
   });

@@ -91,20 +91,36 @@ JSON 형식으로 출력:
 }
 
 export function buildDailySummaryPrompt(repoInfo: string): string {
+  const today = new Date().toLocaleDateString('ko-KR', {
+    year: 'numeric', month: 'long', day: 'numeric', weekday: 'long',
+  });
+
   return `${SEMPRE_CONTEXT}
 
 ---
 
-## 프로젝트 일일 요약 작성
+오늘 날짜: ${today}
+분석 에이전트: 오케스트레이터
 
 ${repoInfo}
 
-위 정보를 바탕으로 팀에게 보고할 일일 요약을 작성하세요:
-1. 어제 주요 변경사항 (커밋 요약)
-2. 현재 진행 중인 PR
-3. 미해결 이슈 현황
-4. 오늘 우선 처리해야 할 것
-5. 주의 사항
+위 정보를 바탕으로 Slack 일일 보고를 작성하세요.
 
-한국어로 간결하게 작성하세요.`;
+출력 규칙:
+- Slack mrkdwn 형식만 사용 (*볼드*, \`코드\`, > 인용)
+- ## 이나 ** 같은 마크다운 헤더 절대 사용 금지
+- 이모지는 Slack 형식 (:clipboard:, :warning: 등)
+- 간결하게, 핵심만
+- "담당자", "개발팀" 같은 플레이스홀더 금지
+- 에이전트가 분석했음을 명시
+
+형식:
+:clipboard: 셈프레 일일 보고 — ${today}
+분석: 오케스트레이터 에이전트
+
+[어제 주요 변경사항 — 커밋별 한 줄 요약]
+[열린 PR — 있으면]
+[미해결 이슈 — 있으면]
+[오늘 우선순위 — 구체적으로]
+[주의사항 — 있으면]`;
 }

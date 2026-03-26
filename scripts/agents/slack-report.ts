@@ -1,3 +1,4 @@
+import { WebClient } from '@slack/web-api';
 import type { AgentResult, SlackBlock } from './types.js';
 
 const SEVERITY_EMOJI = {
@@ -5,6 +6,9 @@ const SEVERITY_EMOJI = {
   warning: ':warning:',
   critical: ':rotating_light:',
 } as const;
+
+// Bot API로 보내면 스레드에서 대화 가능
+const SLACK_CHANNEL = process.env.SLACK_AGENT_CHANNEL ?? '새-채널';
 
 function buildBlocks(title: string, results: readonly AgentResult[]): SlackBlock[] {
   const blocks: SlackBlock[] = [
@@ -45,25 +49,31 @@ export async function sendSlackReport(
     return;
   }
 
-  // string이면 단순 텍스트, 배열이면 Block Kit
-  if (typeof content === 'string') {
-    const res = await fetch(webhookUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: `*${title}*\n\n${content}` }),
-    });
-    if (!res.ok) {
-      console.error('[slack] Failed to send:', res.status, await res.text());
+  // Bot Token이 있으면 Bot API 사용 (스레드 대화 가능)
+  const botToken = process.env.SLACK_BOT_TOKEN;
+  if (botToken) {
+    try {
+      const slack = new WebClient(botToken);
+      const text = typeof content === 'string'
+        ? `*${title}*\n\n${content}`
+        : `*${title}*\n\n${content.map((r) => `${SEVERITY_EMOJI[r.severity]} *${r.agentId}*\n${r.summary}\n${r.details?.slice(0, 2900) ?? ''}`).join('\n\n')}`;
+
+      await slack.chat.postMessage({ channel: SLACK_CHANNEL, text });
+      return;
+    } catch (err) {
+      console.error('[slack] Bot API failed, falling back to webhook:', err);
     }
-    return;
   }
 
-  const blocks = buildBlocks(title, content);
+  // Webhook fallback
+  const text = typeof content === 'string'
+    ? `*${title}*\n\n${content}`
+    : `*${title}*`;
 
   const res = await fetch(webhookUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text: title, blocks }),
+    body: JSON.stringify({ text }),
   });
 
   if (!res.ok) {
