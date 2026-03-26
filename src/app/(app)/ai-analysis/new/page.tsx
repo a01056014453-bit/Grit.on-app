@@ -20,6 +20,25 @@ interface ComposerEntry {
 
 import type { AnalyzeSongResponse } from "@/types/song-analysis";
 
+/** localStorage에서 사용자 악기 가져오기 (영문 DB enum) */
+function getUserInstrument(): string {
+  if (typeof window === "undefined") return "piano";
+  try {
+    const profile = localStorage.getItem("sempre-user-profile");
+    if (profile) {
+      const parsed = JSON.parse(profile);
+      const inst = parsed.instruments?.[0];
+      // 한글 → 영문 매핑
+      const map: Record<string, string> = {
+        "피아노": "piano", "바이올린": "violin", "첼로": "cello",
+        "비올라": "violin", "플루트": "flute", "클라리넷": "clarinet", "기타": "guitar",
+      };
+      return map[inst] ?? inst ?? "piano";
+    }
+  } catch {}
+  return "piano";
+}
+
 export default function NewAnalysisPage() {
   const router = useRouter();
   const [title, setTitle] = useState("");
@@ -169,7 +188,12 @@ export default function NewAnalysisPage() {
       const res = await fetch("/api/analyze-song-v2", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ composer, title, useV2: true }),
+        body: JSON.stringify({
+          composer,
+          title,
+          useV2: true,
+          instrument: getUserInstrument(),
+        }),
       });
 
       const result: AnalyzeSongResponse = await res.json();

@@ -77,6 +77,7 @@ export async function GET(request: NextRequest) {
           body: JSON.stringify({
             composer: piece.composer,
             title: piece.title,
+            instrument: piece.instrument,
             useV2: true,
           }),
         });
