@@ -6,57 +6,72 @@ import { Users, UserPlus, Activity, Music } from 'lucide-react';
 import { StatCard } from '@/components/admin/stat-card';
 import { DataTable, type Column } from '@/components/admin/data-table';
 import { StatusBadge } from '@/components/admin/status-badge';
+import { z } from 'zod';
 
-interface UserRow {
-  id: string;
-  nickname: string;
-  name: string | null;
-  email: string | null;
-  instrument: string;
-  level: string | null;
-  authProvider: string | null;
-  gritScore: number | null;
-  sessionCount: number;
-  isWeeklyActive: boolean;
-  hasPracticed: boolean;
-  createdAt: string;
-}
+/** API 응답 Zod 스키마 */
+const userRowSchema = z.object({
+  id: z.string(),
+  nickname: z.string(),
+  name: z.string().nullable(),
+  email: z.string().nullable(),
+  instrument: z.string(),
+  level: z.string().nullable(),
+  authProvider: z.string().nullable(),
+  gritScore: z.number(),
+  sessionCount: z.number(),
+  isWeeklyActive: z.boolean(),
+  hasPracticed: z.boolean(),
+  createdAt: z.string(),
+});
 
-interface Stats {
-  todaySignups: number;
-  weeklyActive: number;
-  practicedUsers: number;
-}
+const statsSchema = z.object({
+  todaySignups: z.number(),
+  weeklyActive: z.number(),
+  practicedUsers: z.number(),
+});
+
+const apiResponseSchema = z.object({
+  users: z.array(userRowSchema),
+  total: z.number(),
+  stats: statsSchema,
+});
+
+type UserRow = z.infer<typeof userRowSchema>;
+type Stats = z.infer<typeof statsSchema>;
+
+const EMPTY_STATS: Stats = { todaySignups: 0, weeklyActive: 0, practicedUsers: 0 };
 
 export default function UsersPage() {
   const router = useRouter();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [total, setTotal] = useState(0);
-  const [stats, setStats] = useState<Stats>({ todaySignups: 0, weeklyActive: 0, practicedUsers: 0 });
+  const [stats, setStats] = useState<Stats>(EMPTY_STATS);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     async function load() {
-      const res = await fetch('/api/admin/users?limit=500&offset=0');
-      if (!res.ok) return;
-      const data = await res.json();
-      setTotal(data.total ?? 0);
-      setStats(data.stats ?? { todaySignups: 0, weeklyActive: 0, practicedUsers: 0 });
+      try {
+        const res = await fetch('/api/admin/users?limit=500&offset=0');
+        if (!res.ok) {
+          setError('사용자 목록을 불러올 수 없습니다');
+          return;
+        }
+        const raw = await res.json();
+        const parsed = apiResponseSchema.safeParse(raw);
 
-      const mapped: UserRow[] = (data.users ?? []).map((u: Record<string, unknown>) => ({
-        id: u.id as string,
-        nickname: u.nickname as string,
-        name: u.name as string | null,
-        email: u.email as string | null,
-        instrument: u.instrument as string,
-        level: u.level as string | null,
-        authProvider: u.authProvider as string | null,
-        gritScore: u.gritScore as number | null,
-        sessionCount: u.sessionCount as number,
-        isWeeklyActive: u.isWeeklyActive as boolean,
-        hasPracticed: u.hasPracticed as boolean,
-        createdAt: u.createdAt as string,
-      }));
-      setUsers(mapped);
+        if (!parsed.success) {
+          console.error('[admin/users] 응답 검증 실패:', parsed.error.message);
+          setError('데이터 형식 오류가 발생했습니다');
+          return;
+        }
+
+        setUsers(parsed.data.users);
+        setTotal(parsed.data.total);
+        setStats(parsed.data.stats);
+      } catch (err) {
+        console.error('[admin/users] 로드 실패:', err);
+        setError('네트워크 오류가 발생했습니다');
+      }
     }
     load();
   }, []);
@@ -92,7 +107,7 @@ export default function UsersPage() {
     {
       key: 'gritScore',
       header: '그릿 점수',
-      render: (row) => <span className="font-number">{row.gritScore?.toLocaleString() ?? '-'}</span>,
+      render: (row) => <span className="font-number">{row.gritScore > 0 ? row.gritScore.toLocaleString() : '-'}</span>,
     },
     {
       key: 'createdAt',
@@ -104,6 +119,12 @@ export default function UsersPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-xl font-bold text-gray-900">사용자 관리</h1>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700">
+          {error}
+        </div>
+      )}
 
       <div className="grid grid-cols-4 gap-4">
         <StatCard title="전체 사용자" value={total} icon={Users} />
