@@ -16,7 +16,8 @@ import {
   BarChart3,
   Target,
   Folder,
-  FolderOpen
+  FolderOpen,
+  Trash2
 } from "lucide-react";
 import {
   getAnalyzedPieces,
@@ -218,24 +219,42 @@ export default function AIAnalysisPage() {
           </h2>
           <div className="space-y-2">
             {filteredUserAnalyses.map((a) => (
-              <Link
-                key={a.id}
-                href={`/ai-analysis/${a.id}`}
-                className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-gray-200 hover:border-violet-300 transition-colors"
-              >
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-100 to-primary/10 flex items-center justify-center shrink-0">
-                  <Sparkles className="w-5 h-5 text-violet-600" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-black truncate">
-                    {a.composer} - {a.title}
-                  </p>
-                  <p className="text-xs text-gray-400">
-                    {new Date(a.analyzedAt).toLocaleDateString("ko-KR")} 분석
-                  </p>
-                </div>
-                <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
-              </Link>
+              <div key={a.id} className="flex items-center gap-2">
+                <Link
+                  href={`/ai-analysis/${a.id}`}
+                  className="flex-1 flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-gray-200 hover:border-violet-300 transition-colors"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-100 to-primary/10 flex items-center justify-center shrink-0">
+                    <Sparkles className="w-5 h-5 text-violet-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-black truncate">
+                      {a.composer} - {a.title}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      {new Date(a.analyzedAt).toLocaleDateString("ko-KR")} 분석
+                    </p>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
+                </Link>
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    if (!confirm("이 분석을 삭제하시겠습니까?")) return;
+                    const res = await fetch("/api/song-analysis/delete", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ id: a.id }),
+                    });
+                    if (res.ok) {
+                      setUserAnalyses((prev) => prev.filter((x) => x.id !== a.id));
+                    }
+                  }}
+                  className="w-8 h-8 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center shrink-0 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4 text-red-400" />
+                </button>
+              </div>
             ))}
           </div>
         </div>
