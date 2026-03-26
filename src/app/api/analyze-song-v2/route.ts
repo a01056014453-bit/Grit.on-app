@@ -3,7 +3,7 @@ import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 import { songAnalysisV2Limiter } from "@/lib/rate-limiters";
 import { getClientIdentifier, rateLimitResponse } from "@/lib/api-utils";
-import { getCachedAnalysis, saveCachedAnalysis, deleteCachedAnalysis, updateAnalysisById } from "@/lib/song-analysis-db";
+import { getCachedAnalysis, saveCachedAnalysis, deleteCachedAnalysis, updateAnalysisById, addToUserHistory } from "@/lib/song-analysis-db";
 import { supabaseServer } from "@/lib/supabase-server";
 import {
   createReferenceSearchPrompt,
@@ -1101,7 +1101,7 @@ export async function POST(request: NextRequest) {
 
     if (useStoredSource) {
       forceRefresh = true;
-      const existing = await getCachedAnalysis(composer, title, authUserId);
+      const existing = await getCachedAnalysis(composer, title);
 
       if (existing?.musicxml_storage_path) {
         console.log(`[Stored Source] Downloading MusicXML: ${existing.musicxml_storage_path}`);
@@ -1180,7 +1180,7 @@ export async function POST(request: NextRequest) {
 
     // 캐시 확인
     if (!forceRefresh && !hasImages && !hasMusicXml) {
-      const cachedAnalysis = await getCachedAnalysis(composer, title, authUserId);
+      const cachedAnalysis = await getCachedAnalysis(composer, title);
       if (cachedAnalysis) {
         console.log(`[Cache HIT] ${composer} - ${title}`);
         const response: AnalyzeSongResponse = {
@@ -1228,14 +1228,18 @@ export async function POST(request: NextRequest) {
     if (storedPdfPath) analysis.pdf_storage_path = storedPdfPath;
     if (storedMusicxmlPath) analysis.musicxml_storage_path = storedMusicxmlPath;
     if (!analysis.pdf_storage_path || !analysis.musicxml_storage_path) {
-      const existingForPaths = await getCachedAnalysis(composer, title, authUserId);
+      const existingForPaths = await getCachedAnalysis(composer, title);
       if (!analysis.pdf_storage_path && existingForPaths?.pdf_storage_path)
         analysis.pdf_storage_path = existingForPaths.pdf_storage_path;
       if (!analysis.musicxml_storage_path && existingForPaths?.musicxml_storage_path)
         analysis.musicxml_storage_path = existingForPaths.musicxml_storage_path;
     }
 
-    await saveCachedAnalysis(analysis, composer, title, authUserId);
+    await saveCachedAnalysis(analysis, composer, title);
+    // 개인 보관함에 추가
+    if (analysis.id && authUserId) {
+      await addToUserHistory(authUserId, analysis.id);
+    }
     console.log(`[Cache SAVED] ${composer} - ${title} (schema_version=${analysis.schema_version})`);
 
     const response: AnalyzeSongResponse = {
@@ -1289,9 +1293,9 @@ export async function DELETE(request: NextRequest) {
     if (!id) {
       return NextResponse.json({ success: false, error: "id가 필요합니다" }, { status: 400 });
     }
-    const result = await deleteCachedAnalysis(id, user.id);
+    const result = await deleteCachedAnalysis(id);
     if (result) return NextResponse.json({ success: true });
-    return NextResponse.json({ success: false, error: "삭제 실패" }, { status: 500 });
+    return NextResponse.json({ success: false, error: "삭제에 실패했습니다" }, { status: 500 });
   } catch (error) {
     console.error("Delete analysis error:", error);
     return NextResponse.json({ success: false, error: "삭제 실패" }, { status: 500 });
@@ -1319,7 +1323,7 @@ export async function PATCH(request: NextRequest) {
         { status: 400 },
       );
     }
-    const result = await updateAnalysisById(id, analysis, user.id);
+    const result = await updateAnalysisById(id, analysis);
     if (result) return NextResponse.json({ success: true });
     return NextResponse.json({ success: false, error: "업데이트 실패" }, { status: 500 });
   } catch (error) {
@@ -1342,8 +1346,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: "로그인이 필요합니다" }, { status: 401 });
     }
 
-    const { getAllCachedAnalyses } = await import("@/lib/song-analysis-db");
-    const analyses = await getAllCachedAnalyses(user.id);
+    const { getUserAnalysisHistory } = await import("@/lib/song-analysis-db");
+    const analyses = await getUserAnalysisHistory(user.id);
     return NextResponse.json({ success: true, data: analyses, count: analyses.length });
   } catch (error) {
     console.error("Get cached analyses error:", error);

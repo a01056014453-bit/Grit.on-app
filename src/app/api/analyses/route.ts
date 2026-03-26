@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { getAllCachedAnalyses } from "@/lib/song-analysis-db";
+import { getUserAnalysisHistory } from "@/lib/song-analysis-db";
 
 export async function GET(request: NextRequest) {
   try {
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const analyses = await getAllCachedAnalyses(user.id);
+    const analyses = await getUserAnalysisHistory(user.id);
 
     // 클라이언트에 필요한 정보만 반환
     const simplified = analyses.map((a) => ({

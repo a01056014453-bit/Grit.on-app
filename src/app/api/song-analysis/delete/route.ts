@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { supabaseServer } from "@/lib/supabase-server";
+import { removeFromUserHistory } from "@/lib/song-analysis-db";
 
 /**
  * POST /api/song-analysis/delete
- * 본인 분석만 삭제 (user_id 일치 필수)
+ * 개인 보관함에서만 제거 (공유 캐시는 유지)
  */
 export async function POST(request: NextRequest) {
   try {
@@ -28,19 +28,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "ID가 필요합니다." }, { status: 400 });
     }
 
-    // 본인 것만 삭제 (user_id 일치 필수)
-    const { error } = await supabaseServer
-      .from("song_analyses")
-      .delete()
-      .eq("id", id)
-      .eq("user_id", user.id);
+    // 개인 보관함에서만 제거 (공유 캐시는 유지)
+    const result = await removeFromUserHistory(user.id, id);
 
-    if (error) {
-      return NextResponse.json({ error: "삭제에 실패했습니다." }, { status: 500 });
+    if (!result) {
+      return NextResponse.json({ error: "보관함에서 제거에 실패했습니다." }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
   } catch {
-    return NextResponse.json({ error: "서버 오류" }, { status: 500 });
+    return NextResponse.json({ error: "서버 오류가 발생했습니다" }, { status: 500 });
   }
 }

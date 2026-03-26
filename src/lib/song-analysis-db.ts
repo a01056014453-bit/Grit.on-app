@@ -11,36 +11,31 @@ export function createCacheKey(composer: string, title: string): string {
   return `${normalizedComposer}__${normalizedTitle}`;
 }
 
-/** Supabase에서 분석 데이터 조회 (작곡가 + 제목 + user_id로 검색) */
+/** 공유 캐시에서 분석 데이터 조회 (작곡가 + 제목) — user_id 무관 */
 export async function getCachedAnalysis(
   composer: string,
-  title: string,
-  userId?: string
+  title: string
 ): Promise<SongAnalysis | null> {
   try {
     // 정확한 매칭 시도 (case-insensitive)
-    let query = supabase
+    const { data, error } = await supabase
       .from("song_analyses")
       .select("*")
       .ilike("composer", composer.trim())
-      .ilike("title", title.trim());
-    if (userId) query = query.eq("user_id", userId);
-
-    const { data, error } = await query.limit(1).single();
+      .ilike("title", title.trim())
+      .limit(1)
+      .single();
 
     if (error || !data) {
       // 부분 매칭 시도 (작곡가 성만으로 검색)
       const composerParts = composer.trim().split(" ");
       const lastName = composerParts[composerParts.length - 1];
 
-      let partialQuery = supabase
+      const { data: partialData, error: partialError } = await supabase
         .from("song_analyses")
         .select("*")
         .ilike("composer", `%${lastName}%`)
-        .ilike("title", `%${title.trim()}%`);
-      if (userId) partialQuery = partialQuery.eq("user_id", userId);
-
-      const { data: partialData, error: partialError } = await partialQuery
+        .ilike("title", `%${title.trim()}%`)
         .limit(1)
         .single();
 
@@ -71,7 +66,6 @@ function reconstructAnalysis(row: {
   created_at: string | null;
   updated_at: string | null;
 }): SongAnalysis {
-  // content에 전체 SongAnalysis가 저장되어 있으면 그대로 사용
   const content = row.content as Record<string, unknown>;
 
   if (content && content.meta && content.content) {
@@ -87,7 +81,6 @@ function reconstructAnalysis(row: {
     };
   }
 
-  // 개별 컬럼에서 복원 (fallback)
   return {
     id: row.id,
     meta: {
@@ -105,34 +98,26 @@ function reconstructAnalysis(row: {
   };
 }
 
-/** Supabase에 분석 데이터 저장 (upsert) — user_id 필수 */
+/** 공유 캐시에 분석 데이터 저장 (user_id 없음) */
 export async function saveCachedAnalysis(
   analysis: SongAnalysis,
   originalComposer?: string,
   originalTitle?: string,
-  userId?: string,
 ): Promise<void> {
-  if (!userId) {
-    console.error("[Supabase] saveCachedAnalysis: user_id는 필수입니다");
-    return;
-  }
-
   try {
     const composer = analysis.meta.composer;
     const title = analysis.meta.title;
 
-    // 이미 존재하는지 확인 (같은 사용자의 같은 곡)
+    // 이미 존재하는지 확인 (같은 곡)
     const { data: existing } = await supabase
       .from("song_analyses")
       .select("id")
       .ilike("composer", composer.trim())
       .ilike("title", title.trim())
-      .eq("user_id", userId)
       .limit(1)
       .single();
 
     if (existing) {
-      // 업데이트
       const { error } = await supabase
         .from("song_analyses")
         .update({
@@ -143,28 +128,26 @@ export async function saveCachedAnalysis(
           verification_status: analysis.verification_status,
           updated_at: new Date().toISOString(),
         })
-        .eq("id", existing.id)
-        .eq("user_id", userId);
+        .eq("id", existing.id);
 
       if (error) {
         console.error("[Supabase] update error:", error.message);
       } else {
+        analysis.id = existing.id;
         console.log(`[Supabase] Updated: ${composer} - ${title}`);
       }
     } else {
-      // 새로 삽입 + 실제 DB ID 반환
       const insertData: Record<string, unknown> = {
-          composer: composer.trim(),
-          title: title.trim(),
-          content: analysis as unknown as Json,
-          key: analysis.meta.key || null,
-          opus: analysis.meta.opus || null,
-          difficulty_level: analysis.meta.difficulty_level,
-          verification_status: analysis.verification_status,
-          user_id: userId,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        };
+        composer: composer.trim(),
+        title: title.trim(),
+        content: analysis as unknown as Json,
+        key: analysis.meta.key || null,
+        opus: analysis.meta.opus || null,
+        difficulty_level: analysis.meta.difficulty_level,
+        verification_status: analysis.verification_status,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: inserted, error } = await (supabase as any)
@@ -176,7 +159,6 @@ export async function saveCachedAnalysis(
       if (error) {
         console.error("[Supabase] insert error:", error.message);
       } else {
-        // DB가 생성한 실제 ID로 analysis 객체 갱신
         if (inserted?.id) {
           analysis.id = inserted.id;
         }
@@ -184,7 +166,7 @@ export async function saveCachedAnalysis(
       }
     }
 
-    // 원본 키가 다르면 기존 원본 키 row 삭제 (중복 방지, 본인 것만)
+    // 원본 키가 다르면 기존 원본 키 row 삭제 (중복 방지)
     if (
       originalComposer &&
       originalTitle &&
@@ -195,8 +177,7 @@ export async function saveCachedAnalysis(
         .from("song_analyses")
         .delete()
         .ilike("composer", originalComposer.trim())
-        .ilike("title", originalTitle.trim())
-        .eq("user_id", userId);
+        .ilike("title", originalTitle.trim());
       console.log(`[Supabase] Cleaned duplicate: ${originalComposer} - ${originalTitle}`);
     }
   } catch (error) {
@@ -204,14 +185,11 @@ export async function saveCachedAnalysis(
   }
 }
 
-/** ID 기반 분석 데이터 직접 업데이트 — user_id 필터 포함 */
+/** ID 기반 분석 데이터 업데이트 (어드민/서버 전용) */
 export async function updateAnalysisById(
   id: string,
-  analysis: SongAnalysis,
-  userId: string
+  analysis: SongAnalysis
 ): Promise<boolean> {
-  if (!userId) return false;
-
   try {
     const { error } = await supabase
       .from("song_analyses")
@@ -225,8 +203,7 @@ export async function updateAnalysisById(
         verification_status: analysis.verification_status,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", id)
-      .eq("user_id", userId);
+      .eq("id", id);
 
     if (error) {
       console.error("[Supabase] updateAnalysisById error:", error.message);
@@ -240,19 +217,13 @@ export async function updateAnalysisById(
   }
 }
 
-/** 캐시에서 분석 데이터 삭제 (id + user_id 기반) */
-export async function deleteCachedAnalysis(
-  id: string,
-  userId: string
-): Promise<boolean> {
-  if (!userId) return false;
-
+/** 공유 캐시에서 분석 데이터 삭제 (어드민/서버 전용) */
+export async function deleteCachedAnalysis(id: string): Promise<boolean> {
   try {
     const { error } = await supabase
       .from("song_analyses")
       .delete()
-      .eq("id", id)
-      .eq("user_id", userId);
+      .eq("id", id);
 
     return !error;
   } catch {
@@ -260,18 +231,12 @@ export async function deleteCachedAnalysis(
   }
 }
 
-/** 특정 사용자의 분석 목록 조회 — user_id 필수 */
-export async function getAllCachedAnalyses(userId: string): Promise<SongAnalysis[]> {
-  if (!userId) {
-    console.error("[Supabase] getAllCachedAnalyses: user_id는 필수입니다");
-    return [];
-  }
-
+/** 전체 분석 목록 조회 (어드민용) */
+export async function getAllCachedAnalyses(): Promise<SongAnalysis[]> {
   try {
     const { data, error } = await supabase
       .from("song_analyses")
       .select("*")
-      .eq("user_id", userId)
       .order("updated_at", { ascending: false });
 
     if (error || !data) {
@@ -279,7 +244,6 @@ export async function getAllCachedAnalyses(userId: string): Promise<SongAnalysis
       return [];
     }
 
-    // 같은 분석(id)이 여러 키로 저장된 경우 중복 제거
     const analyses = data.map(reconstructAnalysis);
     const seen = new Set<string>();
     return analyses.filter((a) => {
@@ -294,7 +258,102 @@ export async function getAllCachedAnalyses(userId: string): Promise<SongAnalysis
   }
 }
 
-/** 캐시 통계 */
+// ============================================================
+// user_analysis_history — 개인 분석함
+// ============================================================
+
+/** 사용자의 분석 히스토리 조회 (개인 보관함) */
+export async function getUserAnalysisHistory(userId: string): Promise<SongAnalysis[]> {
+  if (!userId) return [];
+
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any)
+      .from("user_analysis_history")
+      .select(`
+        requested_at,
+        song_analyses (*)
+      `)
+      .eq("user_id", userId)
+      .order("requested_at", { ascending: false });
+
+    if (error || !data) {
+      console.error("[Supabase] getUserAnalysisHistory error:", error?.message);
+      return [];
+    }
+
+    return (data as { requested_at: string; song_analyses: Record<string, unknown> }[])
+      .filter((row) => row.song_analyses)
+      .map((row) => reconstructAnalysis(row.song_analyses as Parameters<typeof reconstructAnalysis>[0]));
+  } catch (err) {
+    console.error("[Supabase] getUserAnalysisHistory error:", err);
+    return [];
+  }
+}
+
+/** 사용자 분석 히스토리에 추가 (중복 시 무시) */
+export async function addToUserHistory(
+  userId: string,
+  songAnalysisId: string
+): Promise<void> {
+  if (!userId || !songAnalysisId) return;
+
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any)
+      .from("user_analysis_history")
+      .upsert(
+        { user_id: userId, song_analysis_id: songAnalysisId },
+        { onConflict: "user_id,song_analysis_id" }
+      );
+  } catch (err) {
+    console.error("[Supabase] addToUserHistory error:", err);
+  }
+}
+
+/** 사용자 분석 히스토리에서 제거 */
+export async function removeFromUserHistory(
+  userId: string,
+  songAnalysisId: string
+): Promise<boolean> {
+  if (!userId || !songAnalysisId) return false;
+
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any)
+      .from("user_analysis_history")
+      .delete()
+      .eq("user_id", userId)
+      .eq("song_analysis_id", songAnalysisId);
+
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+/** 하루 분석 횟수 체크 (Free 유저 제한용) */
+export async function checkDailyLimit(userId: string): Promise<boolean> {
+  if (!userId) return false;
+
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { count } = await (supabase as any)
+      .from("user_analysis_history")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .gte("requested_at", todayStart.toISOString());
+
+    return (count ?? 0) === 0;
+  } catch {
+    return true; // 에러 시 허용
+  }
+}
+
+/** 캐시 통계 (어드민용) */
 export async function getCacheStats(): Promise<{
   totalCount: number;
   verifiedCount: number;
@@ -325,15 +384,12 @@ export async function getCacheStats(): Promise<{
   }
 }
 
-/** 검증 상태 업데이트 — user_id 필터 포함 */
+/** 검증 상태 업데이트 (어드민용) */
 export async function updateVerificationStatus(
   composer: string,
   title: string,
-  status: SongAnalysis["verification_status"],
-  userId: string
+  status: SongAnalysis["verification_status"]
 ): Promise<boolean> {
-  if (!userId) return false;
-
   try {
     const { error } = await supabase
       .from("song_analyses")
@@ -342,8 +398,7 @@ export async function updateVerificationStatus(
         updated_at: new Date().toISOString(),
       })
       .ilike("composer", composer.trim())
-      .ilike("title", title.trim())
-      .eq("user_id", userId);
+      .ilike("title", title.trim());
 
     return !error;
   } catch {

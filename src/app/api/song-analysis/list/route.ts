@@ -1,27 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { z } from "zod";
-import { supabaseServer } from "@/lib/supabase-server";
-import type { SongAnalysisPublic } from "@/types/song-analysis";
+import { getUserAnalysisHistory } from "@/lib/song-analysis-db";
 
-/** API 응답 스키마 */
-const songAnalysisItemSchema = z.object({
-  id: z.string(),
-  composer: z.string(),
-  title: z.string(),
-  created_at: z.string().nullable(),
-  difficulty_level: z.string().nullable(),
-  key: z.string().nullable(),
-  user_id: z.string().nullable(),
-});
+type SongAnalysisListItem = {
+  id: string;
+  composer: string;
+  title: string;
+  created_at: string | null;
+  difficulty_level: string | null;
+  key: string | null;
+};
 
 type SongAnalysisListResponse =
-  | { data: SongAnalysisPublic[] }
+  | { data: SongAnalysisListItem[] }
   | { error: string };
 
 /**
  * GET /api/song-analysis/list
- * 인증 필수 — 해당 사용자의 분석 목록만 반환
+ * 인증 필수 — 해당 사용자의 개인 보관함 목록 반환
  */
 export async function GET(request: NextRequest): Promise<NextResponse<SongAnalysisListResponse>> {
   try {
@@ -49,33 +45,19 @@ export async function GET(request: NextRequest): Promise<NextResponse<SongAnalys
       );
     }
 
-    // 본인 분석 목록만 조회 (user_id 필터)
-    const { data, error } = await supabaseServer
-      .from("song_analyses")
-      .select("id, composer, title, created_at, difficulty_level, key, user_id")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(100);
+    // 개인 보관함에서 조회 (user_analysis_history 기반)
+    const analyses = await getUserAnalysisHistory(user.id);
 
-    if (error) {
-      console.error("[song-analysis/list] DB 조회 실패:", error.message);
-      return NextResponse.json(
-        { error: "분석 목록을 불러올 수 없습니다" },
-        { status: 500 },
-      );
-    }
+    const data: SongAnalysisListItem[] = analyses.map((a) => ({
+      id: a.id,
+      composer: a.meta.composer,
+      title: a.meta.title,
+      created_at: a.created_at ?? null,
+      difficulty_level: a.meta.difficulty_level ?? null,
+      key: a.meta.key ?? null,
+    }));
 
-    // Zod로 응답 데이터 검증
-    const validated = z.array(songAnalysisItemSchema).safeParse(data ?? []);
-    if (!validated.success) {
-      console.error("[song-analysis/list] 응답 검증 실패:", validated.error.message);
-      return NextResponse.json(
-        { error: "데이터 형식 오류가 발생했습니다" },
-        { status: 500 },
-      );
-    }
-
-    return NextResponse.json({ data: validated.data });
+    return NextResponse.json({ data });
   } catch (err) {
     console.error("[song-analysis/list] 서버 오류:", err);
     return NextResponse.json(

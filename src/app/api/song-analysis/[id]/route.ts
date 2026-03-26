@@ -3,6 +3,9 @@ import { createServerClient } from "@supabase/ssr";
 import { supabaseServer } from "@/lib/supabase-server";
 import type { SongAnalysis } from "@/types/song-analysis";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const supabaseAny = supabaseServer as any;
+
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -36,22 +39,33 @@ export async function GET(
     return NextResponse.json({ error: "로그인이 필요합니다" }, { status: 401 });
   }
 
-  // 1. id로 검색 (본인 것만)
+  // 사용자의 보관함에 해당 분석이 있는지 확인
+  const { data: historyCheck } = await supabaseAny
+    .from("user_analysis_history")
+    .select("song_analysis_id")
+    .eq("user_id", user.id)
+    .eq("song_analysis_id", id)
+    .limit(1)
+    .single();
+
+  if (!historyCheck) {
+    return NextResponse.json({ error: "보관함에 해당 분석이 없습니다" }, { status: 403 });
+  }
+
+  // 1. id로 공유 캐시에서 검색
   let { data, error } = await supabaseServer
     .from("song_analyses")
     .select("*")
     .eq("id", id)
-    .eq("user_id", user.id)
     .single();
 
-  // 2. id로 못 찾으면 composer+title로 재검색 (본인 것만)
+  // 2. id로 못 찾으면 composer+title로 재검색 (공유 캐시)
   if ((error || !data) && composer && title) {
     const { data: fallback } = await supabaseServer
       .from("song_analyses")
       .select("*")
       .ilike("composer", `%${composer}%`)
       .ilike("title", `%${title}%`)
-      .eq("user_id", user.id)
       .limit(1)
       .single();
     if (fallback) {
