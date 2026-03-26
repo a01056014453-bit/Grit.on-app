@@ -29,6 +29,7 @@ import {
   Shield,
   ToggleLeft,
   ToggleRight,
+  Sparkles,
 } from "lucide-react";
 import { motion, Variants } from "framer-motion";
 import { Modal } from "@/components/ui/modal";
@@ -195,11 +196,6 @@ const instrumentOptions = [
   { name: "지휘", emoji: "🎼" },
 ];
 
-interface AnalysisItem {
-  id: string;
-  composer: string;
-  title: string;
-}
 
 interface Badge {
   id: string;
@@ -243,7 +239,7 @@ export default function ProfilePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 데이터 상태
-  const [analyses, setAnalyses] = useState<AnalysisItem[]>([]);
+  // analyses state 제거 — 보관함은 /ai-analysis 페이지에서만 관리
   const [totalHours, setTotalHours] = useState(0);
   const [weekSessions, setWeekSessions] = useState(0);
   const [maxStreak, setMaxStreak] = useState(0);
@@ -287,32 +283,8 @@ export default function ProfilePage() {
   useEffect(() => {
     async function loadData() {
       try {
-        // 사용자가 분석한 곡 목록 (localStorage 저장 ID → DB 매칭)
-        let analysisCount = 0;
-        const savedAnalyses = getUserAnalyses();
-        if (savedAnalyses.length > 0) {
-          try {
-            const listRes = await fetch("/api/song-analysis/list");
-            if (listRes.ok) {
-              const { data: dbList } = await listRes.json();
-              if (dbList) {
-                const savedIds = new Set(savedAnalyses.map(a => a.id));
-                const matched = (dbList as { id: string; composer: string; title: string }[])
-                  .filter(item => savedIds.has(item.id))
-                  .map(item => ({ id: item.id, composer: item.composer, title: item.title }));
-                const matchedIds = new Set(matched.map(m => m.id));
-                const remaining = savedAnalyses
-                  .filter(a => !matchedIds.has(a.id))
-                  .map(a => ({ id: a.id, composer: a.composer, title: a.title }));
-                setAnalyses([...matched, ...remaining]);
-                analysisCount = matched.length + remaining.length;
-              }
-            }
-          } catch {
-            setAnalyses(savedAnalyses.map(a => ({ id: a.id, composer: a.composer, title: a.title })));
-            analysisCount = savedAnalyses.length;
-          }
-        }
+        // 분석 곡 수 (배지 계산용)
+        const analysisCount = getUserAnalyses().length;
 
         // 연습 통계 가져오기
         const stats = await getPracticeStats();
@@ -899,57 +871,26 @@ export default function ProfilePage() {
         ))}
       </motion.div>
 
-      {/* ─── My Analysis List ─── */}
+      {/* ─── AI 곡 분석 보관함 바로가기 ─── */}
       <motion.div
-        className="bg-white/40 backdrop-blur-xl rounded-3xl border border-white/50 shadow-sm overflow-hidden mb-6"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.2, ease: "easeOut" }}
+        className="mb-6"
       >
-        <div className="px-4 py-3 flex items-center justify-between">
-          <span className="inline-block font-bold text-sm text-violet-700 bg-violet-100/60 backdrop-blur-sm px-3.5 py-1 rounded-full">
-            나의 분석 리스트
-          </span>
-          <span className="text-xs text-gray-500">{analyses.length}곡</span>
-        </div>
-        {isLoading ? (
-          <div className="p-4 text-center text-sm text-gray-400">로딩 중...</div>
-        ) : analyses.length === 0 ? (
-          <div className="p-6 text-center">
-            <BookOpen className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-            <p className="text-sm text-gray-500">아직 분석한 곡이 없습니다</p>
-            <Link href="/ai-analysis" className="text-xs text-primary mt-1 inline-block">
-              곡 분석하러 가기 →
-            </Link>
+        <Link
+          href="/ai-analysis"
+          className="flex items-center gap-3 px-4 py-4 bg-white/40 backdrop-blur-xl rounded-3xl border border-white/50 shadow-sm hover:bg-white/50 transition-colors"
+        >
+          <div className="w-10 h-10 rounded-xl bg-violet-100/60 flex items-center justify-center shrink-0">
+            <Sparkles className="w-5 h-5 text-violet-600" />
           </div>
-        ) : (
-          <motion.div variants={listContainer} initial="hidden" animate="show">
-            {analyses.slice(0, 5).map((item, idx) => (
-              <motion.div key={`${item.id}-${idx}`} variants={listItem}>
-                <SpotlightCard
-                  href={`/ai-analysis/${item.id}`}
-                  className={`flex items-center justify-between px-4 py-3 hover:bg-white/30 transition-colors ${
-                    idx !== Math.min(analyses.length, 5) - 1 ? "border-b border-white/30" : ""
-                  }`}
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{item.title}</p>
-                    <p className="text-xs text-gray-500">{item.composer}</p>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
-                </SpotlightCard>
-              </motion.div>
-            ))}
-            {analyses.length > 5 && (
-              <Link
-                href="/ai-analysis"
-                className="block px-4 py-3 text-center text-sm text-primary hover:bg-white/30 transition-colors"
-              >
-                전체 보기 ({analyses.length}곡)
-              </Link>
-            )}
-          </motion.div>
-        )}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-gray-900">내 보관함</p>
+            <p className="text-xs text-gray-500">AI 곡 분석 결과 보기</p>
+          </div>
+          <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
+        </Link>
       </motion.div>
 
       {/* ─── Practice Insights ─── */}
