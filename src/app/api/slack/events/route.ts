@@ -108,6 +108,50 @@ async function handleAgentMessage(event: Record<string, string>) {
   const channel = event.channel;
   const threadTs = event.thread_ts ?? event.ts;
 
+  // "수정해줘" → GitHub Actions auto-fix 트리거
+  const fixMatch = rawText.match(/^(수정해줘|fix|자동수정|autofix)\s+(.+)$/i);
+  if (fixMatch) {
+    const instruction = fixMatch[2];
+    try {
+      const ghRes = await fetch(
+        'https://api.github.com/repos/a01056014453-bit/Grit.on-app/actions/workflows/agent-autofix.yml/dispatches',
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.GITHUB_TOKEN}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            ref: 'main',
+            inputs: { instruction },
+          }),
+        }
+      );
+
+      if (ghRes.ok) {
+        await slack.chat.postMessage({
+          channel,
+          thread_ts: threadTs,
+          text: `:rocket: 자동 수정 시작!\n지시: _${instruction}_\n\nGitHub Actions에서 실행 중이에요. PR이 생성되면 여기로 알려드릴게요.`,
+        });
+      } else {
+        await slack.chat.postMessage({
+          channel,
+          thread_ts: threadTs,
+          text: `:x: 자동 수정 트리거 실패: ${ghRes.status}`,
+        });
+      }
+    } catch (err) {
+      await slack.chat.postMessage({
+        channel,
+        thread_ts: threadTs,
+        text: `:x: 에러: ${err instanceof Error ? err.message : String(err)}`,
+      });
+    }
+    return;
+  }
+
   // "도움" 또는 "help" → 에이전트 목록 안내
   if (/^(도움|help|에이전트|agents?)$/i.test(rawText)) {
     await slack.chat.postMessage({

@@ -6,6 +6,7 @@
  *   npx tsx scripts/agents/runner.ts review-pr --pr=123
  *   npx tsx scripts/agents/runner.ts classify-issue --issue=456
  *   npx tsx scripts/agents/runner.ts daily-summary
+ *   npx tsx scripts/agents/runner.ts auto-fix --instruction="개선 내용"
  */
 
 import { sendSlackText } from './slack-report.js';
@@ -44,6 +45,13 @@ async function main() {
       case 'daily-summary': {
         const { dailySummary } = await import('./daily-summary.js');
         await dailySummary();
+        break;
+      }
+      case 'auto-fix': {
+        const instruction = getFlag('instruction');
+        if (!instruction) throw new Error('--instruction="내용" required');
+        const { autoFix } = await import('./auto-fix.js');
+        await autoFix(instruction);
         break;
       }
       default:
