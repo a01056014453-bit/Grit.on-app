@@ -40,10 +40,30 @@ ${diff.slice(0, 15000)}
 \`\`\`
 
 위 변경사항을 감사 기준에 따라 리뷰하세요.
-결과를 다음 형식으로 출력:
-- 심각도: info/warning/critical
-- 요약: 한 줄 요약
-- 상세: 항목별 체크 결과`;
+
+출력 규칙:
+- Slack mrkdwn만 사용 (*볼드*, \`코드\`, > 인용)
+- ## ### ** --- 같은 마크다운 헤더/구분선 절대 금지
+- [x] 체크박스 형식 금지
+- 이모지는 Slack 형식 (:white_check_mark:, :x:, :warning:)
+- 간결하게
+
+형식:
+심각도: info / warning / critical
+
+요약
+(한 줄)
+
+통과 항목
+:white_check_mark: 항목1
+:white_check_mark: 항목2
+
+문제 항목
+:x: 항목1 — 설명
+:warning: 항목2 — 설명
+
+개선 제안
+(있으면)`;
 }
 
 export function buildPrReviewPrompt(prBody: string, diff: string): string {
