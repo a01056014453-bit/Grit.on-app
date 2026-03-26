@@ -4,7 +4,9 @@
  * - 사용자 보관함은 사용자가 직접 분석/추가한 곡만 표시
  */
 
-const LIBRARY_KEY = "grit-on-my-library";
+import { STORAGE_KEYS } from "./storage-keys";
+
+const LIBRARY_KEY = STORAGE_KEYS.MY_LIBRARY;
 
 /** 정규화된 키 생성 (composer__title) */
 function normalizeKey(composer: string, title: string): string {

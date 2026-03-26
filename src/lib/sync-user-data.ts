@@ -5,6 +5,7 @@
  */
 
 import { getUserId } from "./user-id";
+import { STORAGE_KEYS } from "./storage-keys";
 
 // ─── 동기화 대상 키 ────────────────────────────────────────────────────────
 
@@ -14,10 +15,10 @@ const SINGLE_KEYS = [
   "grit-on-hidden-drills",
   "grit-on-daily-goal",
   "griton_practice_todos",
-  "grit-on-my-library",
+  STORAGE_KEYS.MY_LIBRARY,
   "grit-on-profile",
   "grit-on-routines",
-  "sempre-user-analyses",
+  STORAGE_KEYS.USER_ANALYSES,
 ] as const;
 
 /** 날짜별 키 접두사 */

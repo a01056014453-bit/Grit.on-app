@@ -41,6 +41,7 @@ import { getUserAnalyses } from "@/lib/user-analyses";
 import { getAnalyzedPieces } from "@/lib/queries/pieces";
 import { createClient } from "@/lib/supabase-browser";
 import { upsertProfile, isNicknameAvailable } from "@/lib/queries/profiles";
+import { STORAGE_KEYS } from "@/lib/storage-keys";
 
 /* ─── Animation variants ─── */
 const listContainer: Variants = {
@@ -575,7 +576,7 @@ export default function ProfilePage() {
     localStorage.removeItem("grit-on-hidden-drills");
     localStorage.removeItem("grit-on-daily-goal");
     localStorage.removeItem("griton_practice_todos");
-    localStorage.removeItem("grit-on-my-library");
+    localStorage.removeItem(STORAGE_KEYS.MY_LIBRARY);
     localStorage.removeItem("grit-on-routines");
     localStorage.removeItem("grit-on-notifications");
     localStorage.removeItem("grit-on-active-drill");

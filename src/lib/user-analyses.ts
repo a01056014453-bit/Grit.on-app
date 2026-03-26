@@ -1,8 +1,9 @@
 /** 사용자가 실제로 분석한 곡 ID를 localStorage에서 관리 + Supabase 동기화 */
 
 import { pushUserDataDebounced } from "./sync-user-data";
+import { STORAGE_KEYS } from "./storage-keys";
 
-const USER_ANALYSES_KEY = "sempre-user-analyses";
+const USER_ANALYSES_KEY = STORAGE_KEYS.USER_ANALYSES;
 
 export interface UserAnalysis {
   id: string;

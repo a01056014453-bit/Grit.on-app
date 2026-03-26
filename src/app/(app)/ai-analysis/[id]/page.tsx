@@ -16,6 +16,7 @@ import {
   Play,
 } from "lucide-react";
 import { saveAnalyzedSong } from "@/lib/song-analysis-store";
+import { STORAGE_KEYS } from "@/lib/storage-keys";
 import type {
   SongAnalysis,
   SongAnalysisContentV2,
@@ -63,7 +64,7 @@ export default function AnalysisDetailPage() {
         // user-analyses에서 composer/title 가져와서 fallback 검색용으로 전달
         let queryParams = "";
         try {
-          const raw = localStorage.getItem("sempre-user-analyses");
+          const raw = localStorage.getItem(STORAGE_KEYS.USER_ANALYSES);
           if (raw) {
             const list = JSON.parse(raw) as { id: string; composer: string; title: string }[];
             const match = list.find((a) => a.id === id);
@@ -93,11 +94,11 @@ export default function AnalysisDetailPage() {
         // user-analyses의 id가 달라졌으면 업데이트
         if (data.id !== id) {
           try {
-            const raw = localStorage.getItem("sempre-user-analyses");
+            const raw = localStorage.getItem(STORAGE_KEYS.USER_ANALYSES);
             if (raw) {
               const list = JSON.parse(raw) as { id: string; composer: string; title: string; analyzedAt: string }[];
               const updated = list.map((a) => a.id === id ? { ...a, id: data.id } : a);
-              localStorage.setItem("sempre-user-analyses", JSON.stringify(updated));
+              localStorage.setItem(STORAGE_KEYS.USER_ANALYSES, JSON.stringify(updated));
             }
           } catch { /* 무시 */ }
         }
