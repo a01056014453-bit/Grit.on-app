@@ -109,7 +109,6 @@ async function handleAgentMessage(event: Record<string, string>) {
   const threadTs = event.thread_ts ?? event.ts;
 
   // "수정해줘" → GitHub Actions auto-fix 트리거
-  console.log("[debug] rawText:", JSON.stringify(rawText));
   const fixMatch = rawText.match(/^(수정해줘|fix|자동수정|autofix)\s+(.+)$/i);
   if (fixMatch) {
     const instruction = fixMatch[2];
