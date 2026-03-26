@@ -306,6 +306,7 @@ export default function ProfilePage() {
                 if (dbList) {
                   const mapped = localAnalyses.map(a => {
                     const match = dbList.find((db: { composer: string; title: string; id: string }) =>
+                      db.composer.toLowerCase().includes(a.composer.toLowerCase()) &&
                       db.title.toLowerCase().includes(a.title.toLowerCase()));
                     return { id: match?.id || a.id, composer: a.composer, title: a.title };
                   });
@@ -935,7 +936,7 @@ export default function ProfilePage() {
             {analyses.slice(0, 5).map((item, idx) => (
               <motion.div key={`${item.id}-${idx}`} variants={listItem}>
                 <SpotlightCard
-                  href={`/songs/${item.id}`}
+                  href={`/ai-analysis/${item.id}`}
                   className={`flex items-center justify-between px-4 py-3 hover:bg-white/30 transition-colors ${
                     idx !== Math.min(analyses.length, 5) - 1 ? "border-b border-white/30" : ""
                   }`}
