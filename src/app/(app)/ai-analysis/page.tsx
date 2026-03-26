@@ -136,8 +136,8 @@ function SwipeableAnalysisItem({
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        className={isSwiping ? "" : "transition-transform duration-200 ease-out"}
-        style={{ transform: `translateX(${offsetX}px)` }}
+        className={`translate-x-[var(--swipe-x)] ${isSwiping ? "" : "transition-transform duration-200 ease-out"}`}
+        style={{ "--swipe-x": `${offsetX}px` } as React.CSSProperties}
       >
         <Link
           href={`/ai-analysis/${analysis.id}`}

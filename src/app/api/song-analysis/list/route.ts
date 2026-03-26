@@ -1,17 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { supabaseServer } from "@/lib/supabase-server";
-
-// song_analyses.user_id가 database.ts에 미반영되어 타입 보강
-type SongAnalysisRow = {
-  id: string;
-  composer: string;
-  title: string;
-  created_at: string | null;
-  difficulty_level: string | null;
-  key: string | null;
-  user_id: string | null;
-};
+import type { SongAnalysisPublic } from "@/types/song-analysis";
 
 /**
  * GET /api/song-analysis/list
@@ -41,18 +31,18 @@ export async function GET(request: NextRequest) {
       userId = user?.id ?? null;
     } catch { /* 비인증 허용 */ }
 
-    // user_id 컬럼이 database.ts 미반영 → 타입 단언 필요
-    const query = supabaseServer
+    // user_id가 database.ts에 미반영 → select 타입 단언
+    let query = supabaseServer
       .from("song_analyses")
       .select("id, composer, title, created_at, difficulty_level, key, user_id" as "id")
       .order("created_at", { ascending: false })
       .limit(100);
 
-    // user_id 기반 필터: 본인 + 공개
+    // user_id 기반 RLS 필터: 본인 + 공개
     if (userId) {
-      query.or(`user_id.eq.${userId},user_id.is.null`);
+      query = query.or(`user_id.eq.${userId},user_id.is.null`);
     } else {
-      query.is("user_id" as "id", null);
+      query = query.is("user_id" as "id", null);
     }
 
     const { data, error } = await query;
@@ -66,7 +56,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({
-      data: (data as unknown as SongAnalysisRow[] | null) ?? [],
+      data: (data as unknown as SongAnalysisPublic[]) ?? [],
     });
   } catch (err) {
     console.error("[song-analysis/list] 서버 오류:", err);
