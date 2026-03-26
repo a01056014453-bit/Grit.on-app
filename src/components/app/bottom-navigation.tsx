@@ -53,12 +53,11 @@ export function BottomNavigation() {
     return pathname.startsWith(href);
   };
 
-  const handleNavClick = useCallback((e: React.MouseEvent, href: string) => {
+  const handleNavClick = useCallback((e: React.MouseEvent, href: string, exact?: boolean) => {
     e.preventDefault();
 
-    // 이미 현재 페이지면 무시
-    const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
-    if (active) return;
+    // 이미 현재 페이지면 무시 (isActive와 동일한 로직)
+    if (exact ? pathname === href : pathname.startsWith(href)) return;
 
     // 연습 중이면 가드
     if (recording) {
@@ -93,7 +92,7 @@ export function BottomNavigation() {
               <a
                 key={item.href}
                 href={item.href}
-                onClick={(e) => handleNavClick(e, item.href)}
+                onClick={(e) => handleNavClick(e, item.href, item.exact)}
                 className={cn(
                   "flex flex-col items-center justify-center w-16 h-full transition-colors relative",
                   active ? "text-black" : "text-gray-400"
