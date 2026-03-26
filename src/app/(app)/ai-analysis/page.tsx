@@ -74,27 +74,39 @@ export default function AIAnalysisPage() {
   useEffect(() => {
     async function load() {
       const userId = getUserId();
-      // DB에서 분석 목록 가져오기 (localStorage 의존 제거)
-      try {
-        const res = await fetch("/api/song-analysis/list");
-        if (res.ok) {
-          const { data: dbList } = await res.json();
-          if (dbList && dbList.length > 0) {
-            const dbAnalyses = dbList.map((item: { id: string; composer: string; title: string; created_at: string }) => ({
-              id: item.id,
-              composer: item.composer,
-              title: item.title,
-              analyzedAt: item.created_at || new Date().toISOString(),
-            }));
-            setUserAnalyses(dbAnalyses);
+      // localStorage에서 본인 분석 목록 (ID는 DB와 다를 수 있음)
+      const localList = getUserAnalyses();
+
+      // DB에서 올바른 ID로 매핑
+      if (localList.length > 0) {
+        try {
+          const res = await fetch("/api/song-analysis/list");
+          if (res.ok) {
+            const { data: dbList } = await res.json();
+            if (dbList && dbList.length > 0) {
+              // localStorage 항목을 DB ID로 매핑
+              const mapped = localList.map((local) => {
+                const dbMatch = dbList.find((db: { composer: string; title: string }) =>
+                  db.composer.toLowerCase().includes(local.composer.toLowerCase()) ||
+                  local.composer.toLowerCase().includes(db.composer.toLowerCase())
+                    ? db.title.toLowerCase().includes(local.title.toLowerCase()) ||
+                      local.title.toLowerCase().includes(db.title.toLowerCase())
+                    : false
+                );
+                return dbMatch ? { ...local, id: dbMatch.id } : local;
+              });
+              setUserAnalyses(mapped);
+            } else {
+              setUserAnalyses(localList);
+            }
           } else {
-            setUserAnalyses(getUserAnalyses()); // DB 비어있으면 localStorage 폴백
+            setUserAnalyses(localList);
           }
-        } else {
-          setUserAnalyses(getUserAnalyses());
+        } catch {
+          setUserAnalyses(localList);
         }
-      } catch {
-        setUserAnalyses(getUserAnalyses()); // 네트워크 실패 시 localStorage
+      } else {
+        setUserAnalyses(localList);
       }
       const fetchedPieces = await getAnalyzedPieces();
       setPieces(fetchedPieces);

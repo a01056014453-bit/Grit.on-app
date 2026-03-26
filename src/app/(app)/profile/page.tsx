@@ -295,23 +295,30 @@ export default function ProfilePage() {
           setAnalyses(mapped);
           analysisCount = mapped.length;
         } else {
-          // DB에서 분석 목록 가져오기
-          try {
-            const listRes = await fetch("/api/song-analysis/list");
-            if (listRes.ok) {
-              const { data: dbList } = await listRes.json();
-              if (dbList && dbList.length > 0) {
-                const mapped = dbList.map((a: { id: string; composer: string; title: string }) => ({ id: a.id, composer: a.composer, title: a.title }));
-                setAnalyses(mapped);
-                analysisCount = mapped.length;
+          // localStorage에서 본인 분석 목록
+          const localAnalyses = getUserAnalyses();
+          if (localAnalyses.length > 0) {
+            // DB에서 올바른 ID 매핑
+            try {
+              const listRes = await fetch("/api/song-analysis/list");
+              if (listRes.ok) {
+                const { data: dbList } = await listRes.json();
+                if (dbList) {
+                  const mapped = localAnalyses.map(a => {
+                    const match = dbList.find((db: { composer: string; title: string; id: string }) =>
+                      db.title.toLowerCase().includes(a.title.toLowerCase()));
+                    return { id: match?.id || a.id, composer: a.composer, title: a.title };
+                  });
+                  setAnalyses(mapped);
+                  analysisCount = mapped.length;
+                }
               }
+            } catch { /* 무시 */ }
+            if (analysisCount === 0) {
+              const mapped = localAnalyses.map(a => ({ id: a.id, composer: a.composer, title: a.title }));
+              setAnalyses(mapped);
+              analysisCount = mapped.length;
             }
-          } catch { /* 무시 */ }
-          if (analysisCount === 0) {
-            const localAnalyses = getUserAnalyses();
-            const mapped = localAnalyses.map(a => ({ id: a.id, composer: a.composer, title: a.title }));
-            setAnalyses(mapped);
-            analysisCount = mapped.length;
           }
         }
 
