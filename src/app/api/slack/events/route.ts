@@ -85,8 +85,8 @@ export async function POST(req: NextRequest) {
   const isDirectMessage = event.type === 'message' && event.channel_type === 'im';
 
   if (isAppMention || isDirectMessage) {
-    // Vercel에서 response 반환 후에도 비동기 작업이 실행되도록 waitUntil 사용
-    const promise = handleAgentMessage(event).catch(async (err) => {
+    // response 반환 전에 await로 처리 (Vercel serverless에서 비동기 보장)
+    await handleAgentMessage(event).catch(async (err) => {
       console.error('[slack-agent] Error:', err);
       try {
         await slack.chat.postMessage({
@@ -95,10 +95,6 @@ export async function POST(req: NextRequest) {
         });
       } catch { /* ignore */ }
     });
-
-    // Next.js waitUntil — response 반환 후에도 promise 완료까지 대기
-    const { waitUntil } = await import('next/server');
-    waitUntil(promise);
   }
 
   return NextResponse.json({ ok: true });
