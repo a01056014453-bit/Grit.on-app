@@ -37,7 +37,7 @@ function buildBlocks(title: string, results: readonly AgentResult[]): SlackBlock
 
 export async function sendSlackReport(
   title: string,
-  results: readonly AgentResult[]
+  content: string | readonly AgentResult[]
 ): Promise<void> {
   const webhookUrl = process.env.SLACK_WEBHOOK_URL;
   if (!webhookUrl) {
@@ -45,15 +45,25 @@ export async function sendSlackReport(
     return;
   }
 
-  const blocks = buildBlocks(title, results);
+  // string이면 단순 텍스트, 배열이면 Block Kit
+  if (typeof content === 'string') {
+    const res = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: `*${title}*\n\n${content}` }),
+    });
+    if (!res.ok) {
+      console.error('[slack] Failed to send:', res.status, await res.text());
+    }
+    return;
+  }
+
+  const blocks = buildBlocks(title, content);
 
   const res = await fetch(webhookUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      text: title,
-      blocks,
-    }),
+    body: JSON.stringify({ text: title, blocks }),
   });
 
   if (!res.ok) {
