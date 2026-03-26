@@ -21,6 +21,7 @@ const userRowSchema = z.object({
   sessionCount: z.number(),
   isWeeklyActive: z.boolean(),
   hasPracticed: z.boolean(),
+  isToday: z.boolean(),
   createdAt: z.string(),
 });
 
@@ -82,7 +83,14 @@ export default function UsersPage() {
       header: '닉네임',
       render: (row) => (
         <div>
-          <p className="font-medium text-gray-900">{row.nickname}</p>
+          <div className="flex items-center gap-2">
+            <p className="font-medium text-gray-900">{row.nickname}</p>
+            {row.isToday && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 font-semibold">
+                NEW
+              </span>
+            )}
+          </div>
           {row.email && <p className="text-xs text-gray-400">{row.email}</p>}
         </div>
       ),

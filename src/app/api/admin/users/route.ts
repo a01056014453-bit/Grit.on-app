@@ -30,115 +30,90 @@ async function checkAdmin(request: NextRequest): Promise<boolean> {
   }
 }
 
-/** GET /api/admin/users — 전체 사용자 목록 + 통계 (service role) */
+/** GET /api/admin/users — Auth 기준 전체 사용자 + profiles 조인 */
 export async function GET(request: NextRequest) {
   if (!(await checkAdmin(request))) {
     return NextResponse.json({ error: "관리자 권한이 필요합니다" }, { status: 403 });
   }
 
   try {
-    const url = new URL(request.url);
-    const limit = parseInt(url.searchParams.get("limit") ?? "100");
-    const offset = parseInt(url.searchParams.get("offset") ?? "0");
+    // 1. Auth 전체 사용자 (실제 가입일 기준 — source of truth)
+    const { data: { users: authUsers }, error: authError } =
+      await supabaseServer.auth.admin.listUsers({ page: 1, perPage: 1000 });
 
-    // 1. Auth 사용자 목록 (실제 가입일)
-    let authCreatedMap: Record<string, string> = {};
-    let allAuthUsers: { id: string; created_at: string }[] = [];
-    try {
-      const { data: { users: authUsers } } = await supabaseServer.auth.admin.listUsers({
-        page: Math.floor(offset / limit) + 1,
-        perPage: limit,
-      });
-      allAuthUsers = (authUsers ?? []).map((au) => ({ id: au.id, created_at: au.created_at }));
-      for (const au of allAuthUsers) {
-        authCreatedMap[au.id] = au.created_at;
-      }
-    } catch (err) {
-      console.error("[admin/users] Auth 사용자 목록 조회 실패:", err);
-    }
-
-    // 2. 프로필 목록
-    const { data: profiles, error: profilesError, count } = await db
-      .from("profiles")
-      .select("*", { count: "exact" })
-      .order("created_at", { ascending: false })
-      .range(offset, offset + limit - 1);
-
-    if (profilesError) {
-      console.error("[admin/users] 프로필 조회 실패:", profilesError.message);
+    if (authError || !authUsers) {
+      console.error("[admin/users] Auth 사용자 조회 실패:", authError);
       return NextResponse.json(
         { error: "사용자 목록을 불러올 수 없습니다" },
         { status: 500 },
       );
     }
 
-    const userIds = (profiles ?? []).map((p: any) => p.id as string);
-
-    // 3. 연습 세션 수 (유저별)
-    let sessionCounts: Record<string, number> = {};
-    if (userIds.length > 0) {
-      const { data: sessions, error: sessionsError } = await db
-        .from("practice_sessions")
-        .select("user_id")
-        .in("user_id", userIds);
-
-      if (sessionsError) {
-        console.error("[admin/users] 세션 조회 실패:", sessionsError.message);
-      }
-
-      sessionCounts = (sessions ?? []).reduce((acc: Record<string, number>, s: any) => {
-        acc[s.user_id] = (acc[s.user_id] ?? 0) + 1;
-        return acc;
-      }, {});
-    }
-
-    // 4. 7일 이내 실제 연습한 사용자 (practice_sessions 기반)
-    const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
-    const { data: recentSessions } = await db
-      .from("practice_sessions")
-      .select("user_id")
-      .gte("start_time", weekAgo);
-
-    const weeklyActiveIds = new Set(
-      (recentSessions ?? []).map((s: any) => s.user_id as string),
+    // Auth 가입일 순 정렬 (최신 먼저)
+    const sortedAuth = [...authUsers].sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
     );
 
-    // 5. 오늘 가입자 수 (Auth 기준)
+    // 2. 전체 프로필 조회 (Auth와 조인용)
+    const { data: profiles } = await db
+      .from("profiles")
+      .select("*");
+
+    const profileMap: Record<string, any> = {};
+    for (const p of profiles ?? []) {
+      profileMap[p.id] = p;
+    }
+
+    // 3. 연습 세션 수
+    const { data: allSessions } = await db
+      .from("practice_sessions")
+      .select("user_id, start_time");
+
+    const sessionCounts: Record<string, number> = {};
+    const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+    const weeklyActiveIds = new Set<string>();
+    const practicedUserIds = new Set<string>();
+
+    for (const s of allSessions ?? []) {
+      const uid = s.user_id as string;
+      sessionCounts[uid] = (sessionCounts[uid] ?? 0) + 1;
+      practicedUserIds.add(uid);
+      if (s.start_time >= weekAgo) {
+        weeklyActiveIds.add(uid);
+      }
+    }
+
+    // 4. 오늘 가입자
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
     const todayIso = todayStart.toISOString();
-    const todaySignupCount = allAuthUsers.filter(
-      (au) => au.created_at >= todayIso,
-    ).length;
 
-    // 6. 전체 연습 경험 사용자 수
-    const { data: allPracticedUsers } = await db
-      .from("practice_sessions")
-      .select("user_id");
+    // 5. 사용자 목록 조립 (Auth 기준 — 프로필 없는 사용자도 포함)
+    const users = sortedAuth.map((au) => {
+      const p = profileMap[au.id];
+      const isToday = au.created_at >= todayIso;
+      return {
+        id: au.id,
+        nickname: p?.nickname ?? "(온보딩 미완료)",
+        name: p?.name ?? null,
+        email: au.email ?? null,
+        instrument: p?.instrument ?? "-",
+        level: p?.level ?? null,
+        authProvider: au.app_metadata?.provider ?? null,
+        gritScore: p?.grit_score ?? 0,
+        sessionCount: sessionCounts[au.id] ?? 0,
+        isWeeklyActive: weeklyActiveIds.has(au.id),
+        hasPracticed: practicedUserIds.has(au.id),
+        isToday,
+        createdAt: au.created_at,
+      };
+    });
 
-    const practicedUserIds = new Set(
-      (allPracticedUsers ?? []).map((s: any) => s.user_id as string),
-    );
-
-    // 응답 조립
-    const users = (profiles ?? []).map((p: any) => ({
-      id: p.id as string,
-      nickname: (p.nickname ?? "연습생") as string,
-      name: p.name as string | null,
-      email: p.email as string | null,
-      instrument: (p.instrument ?? "-") as string,
-      level: p.level as string | null,
-      authProvider: p.auth_provider as string | null,
-      gritScore: (p.grit_score ?? 0) as number,
-      sessionCount: sessionCounts[p.id] ?? 0,
-      isWeeklyActive: weeklyActiveIds.has(p.id),
-      hasPracticed: practicedUserIds.has(p.id),
-      createdAt: (authCreatedMap[p.id] ?? p.created_at) as string,
-    }));
+    const todaySignupCount = users.filter((u) => u.isToday).length;
 
     return NextResponse.json({
       users,
-      total: count ?? 0,
+      total: authUsers.length,
       stats: {
         todaySignups: todaySignupCount,
         weeklyActive: weeklyActiveIds.size,
