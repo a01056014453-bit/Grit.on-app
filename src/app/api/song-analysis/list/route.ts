@@ -3,23 +3,34 @@ import { supabaseServer } from "@/lib/supabase-server";
 
 /**
  * GET /api/song-analysis/list
- * 분석 목록 반환 — 현재는 전체, 추후 user_id 기반 필터 전환
+ * 전체 분석 목록 반환 (공개 레퍼런스 데이터)
+ * 사용자별 "내 보관함" 필터링은 클라이언트에서 localStorage 기반으로 처리
  */
 export async function GET() {
   try {
-    const { data, error } = await supabaseServer
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = supabaseServer as any;
+
+    const { data, error } = await db
       .from("song_analyses")
       .select("id, composer, title, created_at, difficulty_level, key")
       .order("created_at", { ascending: false })
-      .limit(50);
+      .limit(100);
 
     if (error) {
-      console.error("[song-analysis/list] error:", error.message);
-      return NextResponse.json({ data: [] });
+      console.error("[song-analysis/list] DB 조회 실패:", error.message);
+      return NextResponse.json(
+        { error: "분석 목록을 불러올 수 없습니다" },
+        { status: 500 },
+      );
     }
 
     return NextResponse.json({ data: data ?? [] });
-  } catch {
-    return NextResponse.json({ data: [] });
+  } catch (err) {
+    console.error("[song-analysis/list] 서버 오류:", err);
+    return NextResponse.json(
+      { error: "서버 오류가 발생했습니다" },
+      { status: 500 },
+    );
   }
 }

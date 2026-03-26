@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { safeBack } from "@/lib/navigation";
@@ -26,7 +26,7 @@ import {
 } from "@/lib/queries/pieces";
 import type { Piece, PieceAnalysis, PiecePracticeData } from "@/lib/queries/pieces";
 import { getUserId } from "@/lib/user-id";
-import { getUserAnalyses, type UserAnalysis } from "@/lib/user-analyses";
+import { getUserAnalyses, removeUserAnalysis, type UserAnalysis } from "@/lib/user-analyses";
 
 interface SectionData {
   startMeasure: number;
@@ -62,6 +62,107 @@ const masteryColors: Record<string, string> = {
   mastered: "bg-green-500",
 };
 
+/** 스와이프 삭제 가능한 분석 아이템 */
+function SwipeableAnalysisItem({
+  analysis,
+  onDelete,
+}: {
+  analysis: UserAnalysis;
+  onDelete: (id: string) => void;
+}) {
+  const [offsetX, setOffsetX] = useState(0);
+  const [isSwiping, setIsSwiping] = useState(false);
+  const startXRef = useRef(0);
+  const startYRef = useRef(0);
+  const currentXRef = useRef(0);
+  const isHorizontalRef = useRef<boolean | null>(null);
+  const DELETE_THRESHOLD = 70;
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    startXRef.current = e.touches[0].clientX;
+    startYRef.current = e.touches[0].clientY;
+    currentXRef.current = 0;
+    isHorizontalRef.current = null;
+    setIsSwiping(false);
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    const dx = e.touches[0].clientX - startXRef.current;
+    const dy = e.touches[0].clientY - startYRef.current;
+
+    if (isHorizontalRef.current === null && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
+      isHorizontalRef.current = Math.abs(dx) > Math.abs(dy);
+    }
+    if (!isHorizontalRef.current) return;
+
+    e.preventDefault();
+    const clampedX = Math.min(0, Math.max(-DELETE_THRESHOLD, dx));
+    currentXRef.current = clampedX;
+    setOffsetX(clampedX);
+    setIsSwiping(true);
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    if (currentXRef.current <= -DELETE_THRESHOLD * 0.6) {
+      setOffsetX(-DELETE_THRESHOLD);
+    } else {
+      setOffsetX(0);
+    }
+    setIsSwiping(false);
+    isHorizontalRef.current = null;
+  }, []);
+
+  const handleDelete = useCallback(() => {
+    setOffsetX(0);
+    onDelete(analysis.id);
+  }, [analysis.id, onDelete]);
+
+  return (
+    <div className="relative overflow-hidden rounded-xl">
+      {/* 삭제 버튼 (스와이프 시 노출) */}
+      {offsetX < 0 && (
+        <div className="absolute inset-y-0 right-0 flex items-center">
+          <button
+            onClick={handleDelete}
+            className="h-full w-[70px] bg-red-500 flex items-center justify-center"
+          >
+            <Trash2 className="w-5 h-5 text-white" />
+          </button>
+        </div>
+      )}
+
+      {/* 분석 아이템 */}
+      <div
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{
+          transform: `translateX(${offsetX}px)`,
+          transition: isSwiping ? "none" : "transform 0.2s ease-out",
+        }}
+      >
+        <Link
+          href={`/ai-analysis/${analysis.id}`}
+          className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-gray-200 hover:border-violet-300 transition-colors"
+        >
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-100 to-primary/10 flex items-center justify-center shrink-0">
+            <Sparkles className="w-5 h-5 text-violet-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-black truncate">
+              {analysis.composer} - {analysis.title}
+            </p>
+            <p className="text-xs text-gray-400">
+              {new Date(analysis.analyzedAt).toLocaleDateString("ko-KR")} 분석
+            </p>
+          </div>
+          <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 export default function AIAnalysisPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
@@ -72,24 +173,56 @@ export default function AIAnalysisPage() {
   const [userAnalyses, setUserAnalyses] = useState<UserAnalysis[]>([]);
   const [loading, setLoading] = useState(true);
 
+  /** 보관함에서 분석 삭제 (localStorage + DB) */
+  const handleDeleteAnalysis = useCallback(async (id: string) => {
+    // localStorage에서 제거
+    removeUserAnalysis(id);
+    setUserAnalyses((prev) => prev.filter((x) => x.id !== id));
+
+    // DB에서도 삭제 시도
+    try {
+      await fetch("/api/song-analysis/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+    } catch { /* DB 삭제 실패해도 보관함에서는 제거됨 */ }
+  }, []);
+
   useEffect(() => {
     async function load() {
       const userId = getUserId();
-      // DB에서 본인 분석 목록 직접 조회 (localStorage 의존 제거)
-      try {
-        const res = await fetch("/api/song-analysis/list");
-        if (res.ok) {
-          const { data: dbList } = await res.json();
-          if (dbList && dbList.length > 0) {
-            setUserAnalyses(dbList.map((item: { id: string; composer: string; title: string; created_at: string }) => ({
-              id: item.id,
-              composer: item.composer,
-              title: item.title,
-              analyzedAt: item.created_at || "",
-            })));
+
+      // 내 보관함: localStorage 저장 ID → DB에서 최신 데이터 매칭
+      const savedAnalyses = getUserAnalyses();
+      if (savedAnalyses.length > 0) {
+        try {
+          const res = await fetch("/api/song-analysis/list");
+          if (res.ok) {
+            const { data: dbList } = await res.json();
+            if (dbList) {
+              const savedIds = new Set(savedAnalyses.map(a => a.id));
+              const matched = (dbList as { id: string; composer: string; title: string; created_at: string }[])
+                .filter(item => savedIds.has(item.id))
+                .map(item => ({
+                  id: item.id,
+                  composer: item.composer,
+                  title: item.title,
+                  analyzedAt: item.created_at || "",
+                }));
+              // DB에 없는 항목은 localStorage 원본 유지
+              const matchedIds = new Set(matched.map(m => m.id));
+              const remaining = savedAnalyses
+                .filter(a => !matchedIds.has(a.id))
+                .map(a => ({ ...a, analyzedAt: a.analyzedAt || "" }));
+              setUserAnalyses([...matched, ...remaining]);
+            }
           }
+        } catch {
+          // 네트워크 실패 시 localStorage 원본 사용
+          setUserAnalyses(savedAnalyses);
         }
-      } catch { /* 네트워크 실패 시 빈 목록 */ }
+      }
       const fetchedPieces = await getAnalyzedPieces();
       setPieces(fetchedPieces);
 
@@ -210,7 +343,7 @@ export default function AIAnalysisPage() {
         새로운 곡 분석 요청
       </Link>
 
-      {/* User AI Analyses */}
+      {/* User AI Analyses — 스와이프로 삭제 */}
       {filteredUserAnalyses.length > 0 && (
         <div className="mb-6">
           <h2 className="text-sm font-semibold text-black flex items-center gap-2 mb-3">
@@ -219,42 +352,11 @@ export default function AIAnalysisPage() {
           </h2>
           <div className="space-y-2">
             {filteredUserAnalyses.map((a) => (
-              <div key={a.id} className="flex items-center gap-2">
-                <Link
-                  href={`/ai-analysis/${a.id}`}
-                  className="flex-1 flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-gray-200 hover:border-violet-300 transition-colors"
-                >
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-100 to-primary/10 flex items-center justify-center shrink-0">
-                    <Sparkles className="w-5 h-5 text-violet-600" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-black truncate">
-                      {a.composer} - {a.title}
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      {new Date(a.analyzedAt).toLocaleDateString("ko-KR")} 분석
-                    </p>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
-                </Link>
-                <button
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    if (!confirm("이 분석을 삭제하시겠습니까?")) return;
-                    const res = await fetch("/api/song-analysis/delete", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ id: a.id }),
-                    });
-                    if (res.ok) {
-                      setUserAnalyses((prev) => prev.filter((x) => x.id !== a.id));
-                    }
-                  }}
-                  className="w-8 h-8 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center shrink-0 transition-colors"
-                >
-                  <Trash2 className="w-4 h-4 text-red-400" />
-                </button>
-              </div>
+              <SwipeableAnalysisItem
+                key={a.id}
+                analysis={a}
+                onDelete={handleDeleteAnalysis}
+              />
             ))}
           </div>
         </div>

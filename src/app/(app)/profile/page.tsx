@@ -287,39 +287,30 @@ export default function ProfilePage() {
   useEffect(() => {
     async function loadData() {
       try {
-        // 사용자가 분석한 곡 목록 (Supabase DB → fallback localStorage)
+        // 사용자가 분석한 곡 목록 (localStorage 저장 ID → DB 매칭)
         let analysisCount = 0;
-        const dbPieces = await getAnalyzedPieces();
-        if (dbPieces.length > 0) {
-          const mapped = dbPieces.map(p => ({ id: p.id, composer: p.composerShortName, title: p.title }));
-          setAnalyses(mapped);
-          analysisCount = mapped.length;
-        } else {
-          // localStorage에서 본인 분석 목록
-          const localAnalyses = getUserAnalyses();
-          if (localAnalyses.length > 0) {
-            // DB에서 올바른 ID 매핑
-            try {
-              const listRes = await fetch("/api/song-analysis/list");
-              if (listRes.ok) {
-                const { data: dbList } = await listRes.json();
-                if (dbList) {
-                  const mapped = localAnalyses.map(a => {
-                    const match = dbList.find((db: { composer: string; title: string; id: string }) =>
-                      db.composer.toLowerCase().includes(a.composer.toLowerCase()) &&
-                      db.title.toLowerCase().includes(a.title.toLowerCase()));
-                    return { id: match?.id || a.id, composer: a.composer, title: a.title };
-                  });
-                  setAnalyses(mapped);
-                  analysisCount = mapped.length;
-                }
+        const savedAnalyses = getUserAnalyses();
+        if (savedAnalyses.length > 0) {
+          try {
+            const listRes = await fetch("/api/song-analysis/list");
+            if (listRes.ok) {
+              const { data: dbList } = await listRes.json();
+              if (dbList) {
+                const savedIds = new Set(savedAnalyses.map(a => a.id));
+                const matched = (dbList as { id: string; composer: string; title: string }[])
+                  .filter(item => savedIds.has(item.id))
+                  .map(item => ({ id: item.id, composer: item.composer, title: item.title }));
+                const matchedIds = new Set(matched.map(m => m.id));
+                const remaining = savedAnalyses
+                  .filter(a => !matchedIds.has(a.id))
+                  .map(a => ({ id: a.id, composer: a.composer, title: a.title }));
+                setAnalyses([...matched, ...remaining]);
+                analysisCount = matched.length + remaining.length;
               }
-            } catch { /* 무시 */ }
-            if (analysisCount === 0) {
-              const mapped = localAnalyses.map(a => ({ id: a.id, composer: a.composer, title: a.title }));
-              setAnalyses(mapped);
-              analysisCount = mapped.length;
             }
+          } catch {
+            setAnalyses(savedAnalyses.map(a => ({ id: a.id, composer: a.composer, title: a.title })));
+            analysisCount = savedAnalyses.length;
           }
         }
 
