@@ -19,7 +19,7 @@ async function checkAdmin(request: NextRequest): Promise<boolean> {
   return !!user && getAdminIds().has(user.id);
 }
 
-/** GET /api/admin/users — 전체 사용자 목록 (service role) */
+/** GET /api/admin/users — 전체 사용자 목록 + 통계 (service role) */
 export async function GET(request: NextRequest) {
   if (!(await checkAdmin(request))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -29,15 +29,16 @@ export async function GET(request: NextRequest) {
   const limit = parseInt(url.searchParams.get("limit") ?? "100");
   const offset = parseInt(url.searchParams.get("offset") ?? "0");
 
+  // 1. 프로필 목록
   const { data: profiles, count } = await db
     .from("profiles")
     .select("*", { count: "exact" })
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
 
-  // 각 유저의 최근 연습 세션 수 조회
   const userIds = (profiles ?? []).map((p: any) => p.id);
 
+  // 2. 연습 세션 수 (유저별)
   let sessionCounts: Record<string, number> = {};
   if (userIds.length > 0) {
     const { data: sessions } = await db
@@ -50,6 +51,34 @@ export async function GET(request: NextRequest) {
       return acc;
     }, {});
   }
+
+  // 3. 7일 이내 실제 연습한 사용자 (practice_sessions 기반)
+  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+  const { data: recentSessions } = await db
+    .from("practice_sessions")
+    .select("user_id")
+    .gte("start_time", weekAgo);
+
+  const weeklyActiveIds = new Set(
+    (recentSessions ?? []).map((s: any) => s.user_id),
+  );
+
+  // 4. 오늘 가입자 수 (DB에서 직접 카운트 — 타임존 안전)
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const { count: todaySignupCount } = await db
+    .from("profiles")
+    .select("id", { count: "exact", head: true })
+    .gte("created_at", todayStart.toISOString());
+
+  // 5. 전체 연습 경험 사용자 수
+  const { data: allPracticedUsers } = await db
+    .from("practice_sessions")
+    .select("user_id");
+
+  const practicedUserIds = new Set(
+    (allPracticedUsers ?? []).map((s: any) => s.user_id),
+  );
 
   const users = (profiles ?? []).map((p: any) => ({
     id: p.id,
@@ -64,9 +93,19 @@ export async function GET(request: NextRequest) {
     streakDays: p.streak_days,
     dailyGoal: p.daily_goal,
     sessionCount: sessionCounts[p.id] ?? 0,
+    isWeeklyActive: weeklyActiveIds.has(p.id),
+    hasPracticed: practicedUserIds.has(p.id),
     createdAt: p.created_at,
     updatedAt: p.updated_at,
   }));
 
-  return NextResponse.json({ users, total: count ?? 0 });
+  return NextResponse.json({
+    users,
+    total: count ?? 0,
+    stats: {
+      todaySignups: todaySignupCount ?? 0,
+      weeklyActive: weeklyActiveIds.size,
+      practicedUsers: practicedUserIds.size,
+    },
+  });
 }
