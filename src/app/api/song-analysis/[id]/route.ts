@@ -33,6 +33,21 @@ export async function GET(
     }
   }
 
+  // 3. 그래도 못 찾으면 id가 analysis_ 형태일 때 전체 최근 분석에서 검색
+  if ((error || !data) && id.startsWith("analysis_")) {
+    const { data: recent } = await supabaseServer
+      .from("song_analyses")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(5);
+
+    if (recent && recent.length > 0) {
+      // 가장 최근 분석 반환 (최후의 수단)
+      data = recent[0];
+      error = null;
+    }
+  }
+
   if (error || !data) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }

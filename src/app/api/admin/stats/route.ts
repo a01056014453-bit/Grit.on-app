@@ -56,6 +56,25 @@ export async function GET(request: NextRequest) {
     ? Math.round(recentSessions.reduce((sum: number, s: any) => sum + s.practice_time, 0) / recentSessions.length / 60)
     : 0;
 
+  // WAU 추이 (최근 8주)
+  const wauTrend: { week: string; users: number }[] = [];
+  for (let i = 7; i >= 0; i--) {
+    const weekEnd = new Date(Date.now() - i * 7 * 86400000);
+    const weekStart = new Date(weekEnd.getTime() - 7 * 86400000);
+    const startStr = weekStart.toISOString().split("T")[0];
+    const endStr = weekEnd.toISOString().split("T")[0];
+
+    const { data: weekData } = await db
+      .from("daily_rankings")
+      .select("user_id")
+      .gte("date", startStr)
+      .lt("date", endStr);
+
+    const uniqueUsers = new Set((weekData ?? []).map((r: any) => r.user_id)).size;
+    const label = `${weekStart.getMonth() + 1}/${weekStart.getDate()}`;
+    wauTrend.push({ week: label, users: uniqueUsers });
+  }
+
   return NextResponse.json({
     totalUsers: totalUsers ?? 0,
     activeUsersToday: activeToday ?? 0,
@@ -66,5 +85,6 @@ export async function GET(request: NextRequest) {
     totalTeachers: totalTeachers ?? 0,
     pendingVerifications: pendingTeachers ?? 0,
     recentSignups: recentSignups ?? [],
+    wauTrend,
   });
 }

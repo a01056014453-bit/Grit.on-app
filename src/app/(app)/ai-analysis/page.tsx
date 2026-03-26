@@ -74,7 +74,28 @@ export default function AIAnalysisPage() {
   useEffect(() => {
     async function load() {
       const userId = getUserId();
-      setUserAnalyses(getUserAnalyses());
+      // DB에서 분석 목록 가져오기 (localStorage 의존 제거)
+      try {
+        const res = await fetch("/api/song-analysis/list");
+        if (res.ok) {
+          const { data: dbList } = await res.json();
+          if (dbList && dbList.length > 0) {
+            const dbAnalyses = dbList.map((item: { id: string; composer: string; title: string; created_at: string }) => ({
+              id: item.id,
+              composer: item.composer,
+              title: item.title,
+              analyzedAt: item.created_at || new Date().toISOString(),
+            }));
+            setUserAnalyses(dbAnalyses);
+          } else {
+            setUserAnalyses(getUserAnalyses()); // DB 비어있으면 localStorage 폴백
+          }
+        } else {
+          setUserAnalyses(getUserAnalyses());
+        }
+      } catch {
+        setUserAnalyses(getUserAnalyses()); // 네트워크 실패 시 localStorage
+      }
       const fetchedPieces = await getAnalyzedPieces();
       setPieces(fetchedPieces);
 

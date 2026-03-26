@@ -2,12 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Users, Activity, Music, Brain, GraduationCap, Clock, TrendingUp, BarChart3, AlertCircle, ChevronRight, CheckCircle } from 'lucide-react';
+import {
+  Users, Activity, Clock, TrendingUp, BarChart3,
+  AlertCircle, ChevronRight, CheckCircle, GraduationCap,
+  Music, Brain, Download, Smartphone,
+} from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { StatCard } from '@/components/admin/stat-card';
 import { ChartCard } from '@/components/admin/chart-card';
-import { getDashboardStats, getWAUTrend } from '@/lib/admin/queries';
-import { supabase } from '@/lib/supabase';
+import { getDashboardStats, getWAUTrend, getAppStoreStats } from '@/lib/admin/queries';
 import type { DashboardStats } from '@/lib/admin/types';
 
 interface TodoItem {
@@ -17,39 +20,52 @@ interface TodoItem {
   urgent: boolean;
 }
 
+interface RecentSignup {
+  id: string;
+  nickname: string;
+  instrument: string;
+  created_at: string;
+}
+
+interface AppStoreData {
+  configured: boolean;
+  message?: string;
+  downloads: { totalDownloads: number; totalInstalls: number } | null;
+  appInfo: Record<string, unknown> | null;
+}
+
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [recentSignups, setRecentSignups] = useState<RecentSignup[]>([]);
   const [wauTrend, setWauTrend] = useState<{ week: string; users: number }[]>([]);
   const [todos, setTodos] = useState<TodoItem[]>([]);
+  const [appStore, setAppStore] = useState<AppStoreData | null>(null);
 
   useEffect(() => {
-    getDashboardStats().then(setStats);
+    // 대시보드 통계 + 최근 가입자
+    getDashboardStats().then((data) => {
+      setStats(data);
+      const signups = (data as any).recentSignups ?? [];
+      setRecentSignups(signups);
+
+      // 할일 목록
+      const items: TodoItem[] = [];
+      if (data.pendingVerifications > 0) {
+        items.push({
+          label: '선생님 인증 대기',
+          count: data.pendingVerifications,
+          href: '/admin/experts',
+          urgent: true,
+        });
+      }
+      setTodos(items);
+    });
+
+    // WAU 추이
     getWAUTrend().then(setWauTrend);
 
-    // 할일 목록 로드
-    async function loadTodos() {
-      const items: TodoItem[] = [];
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { count: pendingTeachers } = await (supabase as any)
-        .from("teachers")
-        .select("id", { count: "exact", head: true })
-        .eq("verified", false);
-      if ((pendingTeachers ?? 0) > 0) {
-        items.push({ label: "선생님 인증 대기", count: pendingTeachers ?? 0, href: "/admin/experts", urgent: true });
-      }
-
-      const { count: pendingFeedback } = await supabase
-        .from("feedback_requests")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "SENT");
-      if ((pendingFeedback ?? 0) > 0) {
-        items.push({ label: "피드백 요청 대기", count: pendingFeedback ?? 0, href: "/admin/support", urgent: false });
-      }
-
-      setTodos(items);
-    }
-    loadTodos();
+    // App Store 데이터
+    getAppStoreStats().then(setAppStore);
   }, []);
 
   return (
@@ -89,6 +105,7 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
+      {/* 핵심 지표 */}
       <div className="grid grid-cols-4 gap-4">
         <StatCard
           title="전체 사용자"
@@ -96,32 +113,32 @@ export default function AdminDashboardPage() {
           icon={Users}
         />
         <StatCard
-          title="오늘 활성 사용자"
+          title="오늘 활성 사용자 (DAU)"
           value={stats?.activeUsersToday ?? '-'}
           icon={Activity}
+        />
+        <StatCard
+          title="주간 활성 사용자 (WAU)"
+          value={stats?.weeklyActiveUsers ?? '-'}
+          icon={TrendingUp}
         />
         <StatCard
           title="총 연습 세션"
           value={stats?.totalPracticeSessions ?? '-'}
           icon={Clock}
         />
-        <StatCard
-          title="AI 분석 건수"
-          value={stats?.totalSongAnalyses ?? '-'}
-          icon={Brain}
-        />
       </div>
 
       <div className="grid grid-cols-4 gap-4">
         <StatCard
-          title="주간 활성 사용자"
-          value={stats?.weeklyActiveUsers ?? '-'}
-          icon={TrendingUp}
-        />
-        <StatCard
           title="평균 연습 시간"
           value={stats ? `${stats.avgDailyPracticeMinutes}분` : '-'}
           icon={BarChart3}
+        />
+        <StatCard
+          title="AI 분석 건수"
+          value={stats?.totalSongAnalyses ?? '-'}
+          icon={Brain}
         />
         <StatCard
           title="전문가 수"
@@ -137,6 +154,35 @@ export default function AdminDashboardPage() {
         />
       </div>
 
+      {/* App Store 다운로드 */}
+      <div className="grid grid-cols-4 gap-4">
+        <StatCard
+          title="App Store 다운로드"
+          value={
+            appStore === null
+              ? '-'
+              : !appStore.configured
+                ? '설정 필요'
+                : appStore.downloads?.totalDownloads?.toLocaleString() ?? '조회 불가'
+          }
+          change={appStore && !appStore.configured ? 'API 키 미설정' : undefined}
+          changeType={appStore && !appStore.configured ? 'neutral' : undefined}
+          icon={Download}
+        />
+        <StatCard
+          title="App Store 설치"
+          value={
+            appStore === null
+              ? '-'
+              : !appStore.configured
+                ? '설정 필요'
+                : appStore.downloads?.totalInstalls?.toLocaleString() ?? '조회 불가'
+          }
+          icon={Smartphone}
+        />
+      </div>
+
+      {/* WAU 차트 */}
       <ChartCard title="주간 활성 사용자 추이" description="최근 8주 (실제 데이터)">
         <div className="h-64">
           {wauTrend.length > 0 ? (
@@ -156,6 +202,38 @@ export default function AdminDashboardPage() {
           )}
         </div>
       </ChartCard>
+
+      {/* 최근 가입자 */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <h2 className="text-sm font-semibold text-gray-900 mb-4">최근 가입자 (10명)</h2>
+        {recentSignups.length > 0 ? (
+          <div className="space-y-2">
+            {recentSignups.map((user) => (
+              <div
+                key={user.id}
+                className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center">
+                    <span className="text-xs font-bold text-violet-600">
+                      {(user.nickname ?? '?').charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{user.nickname ?? '(이름없음)'}</p>
+                    <p className="text-xs text-gray-400">{user.instrument ?? '-'}</p>
+                  </div>
+                </div>
+                <span className="text-xs text-gray-400">
+                  {user.created_at ? new Date(user.created_at).toLocaleDateString('ko-KR') : '-'}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-gray-400 text-center py-4">아직 가입자가 없습니다</p>
+        )}
+      </div>
     </div>
   );
 }

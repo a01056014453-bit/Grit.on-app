@@ -5,12 +5,53 @@ import { CheckCircle, XCircle, Clock, FileText, Inbox, Sparkles } from 'lucide-r
 import { StatCard } from '@/components/admin/stat-card';
 import { StatusBadge, getStatusVariant } from '@/components/admin/status-badge';
 import { cn } from '@/lib/utils';
-import {
-  approveVerificationById,
-  rejectVerificationById,
-  getAllVerificationsFromSupabase,
-} from '@/lib/teacher-store';
-import type { TeacherVerification, AIVerdict } from '@/types';
+import type { TeacherVerification, AIVerdict, TeacherDocument, AIReview } from '@/types';
+
+/** 서버 API를 통해 선생님 목록 조회 (service role, RLS 우회) */
+async function fetchVerificationsFromAPI(): Promise<TeacherVerification[]> {
+  const res = await fetch('/api/admin/teachers');
+  if (!res.ok) return [];
+  const data = await res.json();
+  const teachers = data.teachers ?? [];
+
+  return teachers
+    .filter((row: any) => {
+      const career = row.career as Record<string, unknown> | null;
+      return career && typeof career === 'object' && 'verification' in career;
+    })
+    .map((row: any) => {
+      const career = row.career as { verification: Record<string, unknown> };
+      const v = career.verification;
+      return {
+        id: row.id,
+        applicantName: row.name,
+        specialty: row.specialty ?? [],
+        status: (row.verified ? 'approved' : (v.status as string) || 'pending') as TeacherVerification['status'],
+        documents: (v.documents as TeacherDocument[]) ?? [],
+        appliedAt: v.appliedAt as string | undefined,
+        reviewedAt: v.reviewedAt as string | undefined,
+        rejectReason: v.rejectReason as string | undefined,
+        aiReview: v.aiReview as AIReview | undefined,
+      };
+    });
+}
+
+/** 서버 API를 통해 승인/거절 처리 */
+async function approveTeacher(id: string): Promise<void> {
+  await fetch('/api/admin/teachers', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, action: 'approve' }),
+  });
+}
+
+async function rejectTeacher(id: string, reason: string): Promise<void> {
+  await fetch('/api/admin/teachers', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, action: 'reject', reason }),
+  });
+}
 
 export default function ExpertsPage() {
   const [verifications, setVerifications] = useState<TeacherVerification[]>([]);
@@ -20,7 +61,7 @@ export default function ExpertsPage() {
   const [showRejectInput, setShowRejectInput] = useState(false);
 
   const load = useCallback(async () => {
-    const list = await getAllVerificationsFromSupabase();
+    const list = await fetchVerificationsFromAPI();
     setVerifications(list);
   }, []);
 
@@ -45,19 +86,19 @@ export default function ExpertsPage() {
     }
   };
 
-  const handleApprove = (v: TeacherVerification) => {
-    approveVerificationById(v.id);
-    load();
+  const handleApprove = async (v: TeacherVerification) => {
+    await approveTeacher(v.id);
+    await load();
     setSelected(null);
   };
 
-  const handleReject = (v: TeacherVerification) => {
+  const handleReject = async (v: TeacherVerification) => {
     if (!showRejectInput) {
       setShowRejectInput(true);
       return;
     }
-    rejectVerificationById(v.id, rejectReason || '서류 미비');
-    load();
+    await rejectTeacher(v.id, rejectReason || '서류 미비');
+    await load();
     setSelected(null);
     setShowRejectInput(false);
     setRejectReason('');

@@ -14,7 +14,11 @@
     "test:e2e": "vitest run tests/e2e",
     "test:all": "vitest run",
     "test:coverage": "vitest run tests/unit --coverage",
-    "test:ci": "vitest run tests/unit && vitest run tests/api"
+    "test:ci": "vitest run tests/unit && vitest run tests/api",
+    "dev:debug": "node scripts/dev-debugger/monitor.mjs",
+    "debug:list": "node scripts/dev-debugger/cli.mjs list",
+    "debug:unresolved": "node scripts/dev-debugger/cli.mjs unresolved",
+    "debug:stats": "node scripts/dev-debugger/cli.mjs stats"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.73.0",

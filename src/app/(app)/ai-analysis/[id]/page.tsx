@@ -141,9 +141,18 @@ export default function AnalysisDetailPage() {
           <span>뒤로</span>
         </button>
         <div className="text-center py-12">
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground mb-4">
             {error || "분석 데이터를 찾을 수 없습니다."}
           </p>
+          <p className="text-xs text-muted-foreground/60 mb-4">
+            이전 버전에서 저장된 데이터일 수 있습니다.
+          </p>
+          <a
+            href="/ai-analysis/new"
+            className="inline-block px-6 py-3 bg-violet-500 text-white text-sm font-semibold rounded-xl"
+          >
+            새로 분석하기
+          </a>
         </div>
       </div>
     );

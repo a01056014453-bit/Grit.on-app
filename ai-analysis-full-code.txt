@@ -1,0 +1,4393 @@
+================================================================================
+AI 곡 분석 전체 코드 모음
+생성일: 2026-02-28
+총 10개 파일
+================================================================================
+
+================================================================================
+[1] 페이지: 분석 보관함 (목록)
+파일: src/app/(app)/ai-analysis/page.tsx
+================================================================================
+
+"use client";
+
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { safeBack } from "@/lib/navigation";
+import {
+  ArrowLeft,
+  Search,
+  Plus,
+  ChevronRight,
+  ChevronDown,
+  Clock,
+  Sparkles,
+  Music2,
+  BarChart3,
+  Target,
+  Folder,
+  FolderOpen
+} from "lucide-react";
+import {
+  getAnalyzedPieces,
+  getPieceAnalysis,
+  getUserPracticeData,
+} from "@/lib/queries/pieces";
+import type { Piece, PieceAnalysis, PiecePracticeData } from "@/lib/queries/pieces";
+import { getUserId } from "@/lib/user-id";
+
+interface SectionData {
+  startMeasure: number;
+  endMeasure: number;
+  sectionName: string;
+  technicalDifficulty: string;
+  dynamics: string;
+}
+
+interface MeasureProgressData {
+  measureStart: number;
+  mastery: string;
+}
+
+const difficultyColors: Record<string, string> = {
+  easy: "bg-green-100 text-green-700",
+  medium: "bg-yellow-100 text-yellow-700",
+  hard: "bg-orange-100 text-orange-700",
+  very_hard: "bg-red-100 text-red-700",
+};
+
+const difficultyLabels: Record<string, string> = {
+  easy: "쉬움",
+  medium: "보통",
+  hard: "어려움",
+  very_hard: "매우 어려움",
+};
+
+const masteryColors: Record<string, string> = {
+  not_started: "bg-gray-200",
+  learning: "bg-yellow-400",
+  practicing: "bg-blue-400",
+  mastered: "bg-green-500",
+};
+
+export default function AIAnalysisPage() {
+  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [expandedPieceId, setExpandedPieceId] = useState<string | null>(null);
+  const [pieces, setPieces] = useState<Piece[]>([]);
+  const [analysisData, setAnalysisData] = useState<Record<string, PieceAnalysis>>({});
+  const [practiceData, setPracticeData] = useState<Record<string, PiecePracticeData>>({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      const userId = getUserId();
+      const fetchedPieces = await getAnalyzedPieces();
+      setPieces(fetchedPieces);
+
+      const analyses: Record<string, PieceAnalysis> = {};
+      const practices: Record<string, PiecePracticeData> = {};
+
+      await Promise.all(
+        fetchedPieces.map(async (piece: Piece) => {
+          const analysis = await getPieceAnalysis(piece.id);
+          if (analysis) {
+            analyses[piece.id] = analysis;
+          }
+          if (userId) {
+            const practice = await getUserPracticeData(userId, piece.id);
+            if (practice) {
+              practices[piece.id] = practice;
+            }
+          }
+        })
+      );
+
+      setAnalysisData(analyses);
+      setPracticeData(practices);
+      setLoading(false);
+    }
+    load();
+  }, []);
+
+  const filteredPieces = pieces.filter(
+    (piece) =>
+      piece.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      piece.composerShortName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      piece.composerFullName.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const formatDuration = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    if (minutes >= 60) {
+      const hours = Math.floor(minutes / 60);
+      const mins = minutes % 60;
+      return `${hours}시간 ${mins}분`;
+    }
+    return `${minutes}분`;
+  };
+
+  const formatPracticeTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    if (hours > 0) {
+      return `${hours}시간 ${minutes}분`;
+    }
+    return `${minutes}분`;
+  };
+
+  const toggleExpand = (pieceId: string) => {
+    setExpandedPieceId(expandedPieceId === pieceId ? null : pieceId);
+  };
+
+  if (loading) {
+    return (
+      <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
+        <div className="bg-blob-extra" />
+        <div className="animate-pulse space-y-4">
+          <div className="h-10 bg-white/20 rounded-xl" />
+          <div className="h-24 bg-white/20 rounded-xl" />
+          <div className="h-48 bg-white/20 rounded-xl" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
+      <div className="bg-blob-extra" />
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-6">
+        <button
+          onClick={() => safeBack(router)}
+          className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center"
+        >
+          <ArrowLeft className="w-5 h-5 text-gray-600" />
+        </button>
+        <div className="flex-1">
+          <h1 className="text-lg font-bold text-black">내 분석 보관함</h1>
+          <p className="text-xs text-gray-500">AI 분석 완료된 곡 {pieces.length}개</p>
+        </div>
+        <div className="w-10 h-10 rounded-full bg-violet-100 flex items-center justify-center">
+          <Folder className="w-5 h-5 text-violet-600" />
+        </div>
+      </div>
+
+      {/* Search */}
+      <div className="relative mb-4">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <input
+          type="text"
+          placeholder="곡 이름, 작곡가로 검색"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full pl-9 pr-4 py-3 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/20"
+        />
+      </div>
+
+      {/* New Analysis Button */}
+      <Link
+        href="/ai-analysis/new"
+        className="block w-full py-4 mb-6 border-2 border-dashed border-gray-300 rounded-xl text-center text-gray-500 hover:border-violet-400 hover:text-violet-600 transition-colors"
+      >
+        <Plus className="w-5 h-5 inline mr-2" />
+        새로운 곡 분석 요청
+      </Link>
+
+      {/* Analyzed Pieces List */}
+      <div>
+        <h2 className="text-sm font-semibold text-black flex items-center gap-2 mb-3">
+          <Music2 className="w-4 h-4 text-gray-500" />
+          분석된 곡 리스트
+        </h2>
+
+        <div className="space-y-3">
+          {filteredPieces.length === 0 ? (
+            <div className="py-8 text-center text-gray-500 text-sm bg-white rounded-xl border border-gray-200">
+              검색 결과가 없습니다
+            </div>
+          ) : (
+            filteredPieces.map((piece) => {
+              const analysis = analysisData[piece.id];
+              const practice = practiceData[piece.id];
+              const isExpanded = expandedPieceId === piece.id;
+
+              return (
+                <div
+                  key={piece.id}
+                  className="bg-white rounded-xl border border-gray-200 overflow-hidden"
+                >
+                  {/* Piece Header */}
+                  <button
+                    onClick={() => toggleExpand(piece.id)}
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center shrink-0">
+                      {isExpanded ? (
+                        <FolderOpen className="w-5 h-5 text-violet-600" />
+                      ) : (
+                        <Folder className="w-5 h-5 text-violet-600" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-black truncate">
+                        {piece.composerShortName} - {piece.title}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs text-gray-500">{piece.opus}</span>
+                        {piece.key && (
+                          <span className="text-xs text-gray-400">• {piece.key}</span>
+                        )}
+                        {analysis && analysis.overallDifficulty && (
+                          <span className={`text-xs px-1.5 py-0.5 rounded ${difficultyColors[analysis.overallDifficulty]}`}>
+                            {difficultyLabels[analysis.overallDifficulty]}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {practice && (
+                      <div className="text-right shrink-0 mr-2">
+                        <p className="text-xs font-semibold text-violet-600">{practice.completionPercentage}%</p>
+                        <p className="text-xs text-gray-400">완성도</p>
+                      </div>
+                    )}
+                    {isExpanded ? (
+                      <ChevronDown className="w-5 h-5 text-gray-400 shrink-0" />
+                    ) : (
+                      <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
+                    )}
+                  </button>
+
+                  {/* Expanded Content */}
+                  {isExpanded && analysis && (() => {
+                    const sections = (Array.isArray(analysis.sections) ? analysis.sections : []) as unknown as SectionData[];
+                    const measureProgress = (practice?.measureProgress ? (Array.isArray(practice.measureProgress) ? practice.measureProgress : []) : []) as unknown as MeasureProgressData[];
+                    return (
+                    <div className="border-t border-gray-100 bg-gray-50">
+                      {/* Quick Stats */}
+                      <div className="grid grid-cols-3 gap-2 p-4 border-b border-gray-100">
+                        <div className="text-center">
+                          <p className="text-lg font-bold text-black">{analysis.totalMeasures}</p>
+                          <p className="text-xs text-gray-500">마디</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-lg font-bold text-black">{formatDuration(analysis.estimatedDuration ?? 0)}</p>
+                          <p className="text-xs text-gray-500">연주시간</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-lg font-bold text-black">{sections.length}</p>
+                          <p className="text-xs text-gray-500">섹션</p>
+                        </div>
+                      </div>
+
+                      {/* Practice Stats (if available) */}
+                      {practice && (
+                        <div className="p-4 border-b border-gray-100">
+                          <div className="flex items-center gap-2 mb-2">
+                            <BarChart3 className="w-4 h-4 text-violet-500" />
+                            <span className="text-xs font-semibold text-black">내 연습 현황</span>
+                          </div>
+                          <div className="flex items-center gap-4 text-xs">
+                            <div>
+                              <span className="text-gray-500">총 연습: </span>
+                              <span className="font-medium">{formatPracticeTime(practice.totalPracticeTime)}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">세션: </span>
+                              <span className="font-medium">{practice.sessionCount}회</span>
+                            </div>
+                            {practice.averageAccuracy && (
+                              <div>
+                                <span className="text-gray-500">정확도: </span>
+                                <span className="font-medium">{practice.averageAccuracy}%</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Sections List */}
+                      <div className="p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Target className="w-4 h-4 text-gray-500" />
+                          <span className="text-xs font-semibold text-black">마디별 분석</span>
+                        </div>
+                        <div className="space-y-2">
+                          {sections.map((section, idx) => {
+                            const sectionPractice = measureProgress.find(
+                              (p) => p.measureStart === section.startMeasure
+                            );
+
+                            return (
+                              <Link
+                                key={idx}
+                                href={`/ai-analysis/${piece.id}/section/${idx}`}
+                                className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-100 hover:border-violet-200 transition-colors"
+                              >
+                                <div className="flex flex-col items-center shrink-0">
+                                  <span className="text-xs font-bold text-gray-600">
+                                    {section.startMeasure}-{section.endMeasure}
+                                  </span>
+                                  <span className="text-[10px] text-gray-400">마디</span>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-black truncate">
+                                    {section.sectionName}
+                                  </p>
+                                  <div className="flex items-center gap-2 mt-0.5">
+                                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${difficultyColors[section.technicalDifficulty]}`}>
+                                      {difficultyLabels[section.technicalDifficulty]}
+                                    </span>
+                                    <span className="text-[10px] text-gray-400">
+                                      {section.dynamics}
+                                    </span>
+                                  </div>
+                                </div>
+                                {sectionPractice && (
+                                  <div className={`w-3 h-3 rounded-full shrink-0 ${masteryColors[sectionPractice.mastery]}`} />
+                                )}
+                                <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* View Full Analysis Button */}
+                      <div className="p-4 pt-0">
+                        <Link
+                          href={`/ai-analysis/${piece.id}`}
+                          className="flex items-center justify-center gap-2 w-full py-3 bg-gradient-to-r from-violet-500 to-violet-900 text-white rounded-xl text-sm font-semibold"
+                        >
+                          <Sparkles className="w-4 h-4" />
+                          전체 분석 보기
+                        </Link>
+                      </div>
+                    </div>
+                    );
+                  })()}
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      {/* Legend */}
+      <div className="mt-6 p-4 bg-gray-50 rounded-xl">
+        <p className="text-xs font-semibold text-gray-600 mb-2">진행도 표시</p>
+        <div className="flex items-center gap-4 text-xs text-gray-500">
+          <div className="flex items-center gap-1.5">
+            <div className={`w-3 h-3 rounded-full ${masteryColors.not_started}`} />
+            <span>시작 전</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className={`w-3 h-3 rounded-full ${masteryColors.learning}`} />
+            <span>학습 중</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className={`w-3 h-3 rounded-full ${masteryColors.practicing}`} />
+            <span>연습 중</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className={`w-3 h-3 rounded-full ${masteryColors.mastered}`} />
+            <span>완성</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+================================================================================
+[2] 페이지: 새 곡 분석 요청
+파일: src/app/(app)/ai-analysis/new/page.tsx
+================================================================================
+
+"use client";
+
+import { useState, useRef, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { safeBack } from "@/lib/navigation";
+import { ArrowLeft, Brain, Loader2, Music, User } from "lucide-react";
+import { getComposers, type Composer } from "@/lib/queries/composers";
+import { addUserAnalysis } from "@/lib/user-analyses";
+
+interface SearchItem {
+  composer: string;
+  fullName: string;
+  work: string;
+}
+
+interface ComposerEntry {
+  composer: string;
+  fullName: string;
+}
+
+// 분석 가능한 곡 데이터
+const availableAnalysis = [
+  {
+    id: "1",
+    composer: "F. Chopin",
+    keywords: ["ballade", "op.23", "op 23", "no.1", "no 1", "발라드"],
+  },
+  {
+    id: "2",
+    composer: "L. v. Beethoven",
+    keywords: ["sonata no.8", "sonata no 8", "op.13", "op 13", "pathétique", "pathetique", "비창"],
+  },
+  {
+    id: "3",
+    composer: "C. Debussy",
+    keywords: ["clair de lune", "bergamasque", "달빛", "클레르 드 륀"],
+  },
+  {
+    id: "4",
+    composer: "F. Liszt",
+    keywords: ["campanella", "la campanella", "s.141", "etude", "종"],
+  },
+];
+
+// 분석 ID 찾기
+const findAnalysisId = (composer: string, title: string): string | null => {
+  const lowerComposer = composer.toLowerCase();
+  const lowerTitle = title.toLowerCase();
+
+  for (const analysis of availableAnalysis) {
+    // 작곡가 매칭 확인
+    const composerMatch =
+      lowerComposer.includes(analysis.composer.toLowerCase()) ||
+      analysis.composer.toLowerCase().includes(lowerComposer) ||
+      (lowerComposer.includes("chopin") && analysis.composer.includes("Chopin")) ||
+      (lowerComposer.includes("beethoven") && analysis.composer.includes("Beethoven")) ||
+      (lowerComposer.includes("debussy") && analysis.composer.includes("Debussy"));
+
+    if (composerMatch) {
+      // 키워드 매칭 확인
+      for (const keyword of analysis.keywords) {
+        if (lowerTitle.includes(keyword)) {
+          return analysis.id;
+        }
+      }
+    }
+  }
+
+  return null;
+};
+
+export default function NewAnalysisPage() {
+  const router = useRouter();
+  const [title, setTitle] = useState("");
+  const [composer, setComposer] = useState("");
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [composers, setComposers] = useState<Composer[]>([]);
+
+  // Supabase에서 작곡가 목록 로드
+  useEffect(() => {
+    getComposers().then(setComposers);
+  }, []);
+
+  // 작곡가 목록 (자동완성용)
+  const composerList = useMemo<ComposerEntry[]>(
+    () => composers.map((c) => ({ composer: c.shortName, fullName: c.fullName })),
+    [composers]
+  );
+
+  // 검색을 위한 통합 리스트
+  const searchableItems = useMemo<SearchItem[]>(
+    () =>
+      composers.flatMap((c) =>
+        c.works.map((work) => ({ composer: c.shortName, fullName: c.fullName, work }))
+      ),
+    [composers]
+  );
+
+  // 작곡가 자동완성
+  const [composerSuggestions, setComposerSuggestions] = useState<ComposerEntry[]>([]);
+  const [showComposerSuggestions, setShowComposerSuggestions] = useState(false);
+  const composerRef = useRef<HTMLDivElement>(null);
+
+  // 곡 제목 자동완성
+  const [titleSuggestions, setTitleSuggestions] = useState<string[]>([]);
+  const [showTitleSuggestions, setShowTitleSuggestions] = useState(false);
+  const titleRef = useRef<HTMLDivElement>(null);
+
+  // 작곡가 필터링
+  const filterComposers = (query: string) => {
+    if (query.length < 2) {
+      setComposerSuggestions([]);
+      setShowComposerSuggestions(false);
+      return;
+    }
+
+    const lowerQuery = query.toLowerCase();
+    const filtered = composerList.filter(
+      (c) =>
+        c.composer.toLowerCase().includes(lowerQuery) ||
+        c.fullName.toLowerCase().includes(lowerQuery)
+    );
+
+    setComposerSuggestions(filtered);
+    setShowComposerSuggestions(filtered.length > 0);
+  };
+
+  // 선택된 작곡가의 곡 목록 필터링
+  const filterTitles = (query: string) => {
+    if (query.length < 2) {
+      setTitleSuggestions([]);
+      setShowTitleSuggestions(false);
+      return;
+    }
+
+    const lowerQuery = query.toLowerCase();
+    let works: string[] = [];
+
+    // 선택된 작곡가가 있으면 그 작곡가의 곡만 필터링
+    if (composer) {
+      const selectedComposer = composers.find(
+        (c) => c.shortName === composer || c.fullName === composer
+      );
+      if (selectedComposer) {
+        works = selectedComposer.works.filter((w) =>
+          w.toLowerCase().includes(lowerQuery)
+        );
+      }
+    } else {
+      // 선택된 작곡가가 없을 때만 전체에서 검색
+      works = searchableItems
+        .filter((item) => item.work.toLowerCase().includes(lowerQuery))
+        .map((item) => `${item.work} (${item.composer})`);
+      // 중복 제거
+      works = [...new Set(works)];
+    }
+
+    setTitleSuggestions(works.slice(0, 8));
+    setShowTitleSuggestions(works.length > 0);
+  };
+
+  // 작곡가 선택
+  const selectComposer = (item: ComposerEntry) => {
+    setComposer(item.composer);
+    setShowComposerSuggestions(false);
+    setTitle(""); // 작곡가 변경 시 곡 제목 초기화
+  };
+
+  // 곡 제목 선택
+  const selectTitle = (work: string) => {
+    // "(작곡가)" 부분이 있으면 분리
+    const match = work.match(/^(.+) \((.+)\)$/);
+    if (match) {
+      setTitle(match[1]);
+      setComposer(match[2]);
+    } else {
+      setTitle(work);
+    }
+    setShowTitleSuggestions(false);
+  };
+
+  // 외부 클릭 시 자동완성 닫기
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (composerRef.current && !composerRef.current.contains(event.target as Node)) {
+        setShowComposerSuggestions(false);
+      }
+      if (titleRef.current && !titleRef.current.contains(event.target as Node)) {
+        setShowTitleSuggestions(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleComposerChange = (value: string) => {
+    setComposer(value);
+    filterComposers(value);
+  };
+
+  const handleTitleChange = (value: string) => {
+    setTitle(value);
+    filterTitles(value);
+  };
+
+  const handleAnalyze = async () => {
+    if (!title || !composer) return;
+
+    setIsAnalyzing(true);
+
+    // 분석 ID 찾기
+    const analysisId = findAnalysisId(composer, title);
+
+    // 짧은 로딩 효과 (500ms)
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    if (analysisId) {
+      // 사용자 분석 기록에 추가
+      addUserAnalysis({ id: analysisId, composer, title });
+      // 분석 데이터가 있으면 해당 페이지로 이동
+      router.push(`/ai-analysis/${analysisId}`);
+    } else {
+      // 분석 데이터가 없으면 알림
+      setIsAnalyzing(false);
+      alert(`"${composer} - ${title}" 곡의 분석 데이터가 아직 준비되지 않았습니다.\n\n현재 분석 가능한 곡:\n• F. Chopin - Ballade No.1 Op.23\n• L. v. Beethoven - Piano Sonata No.8 Op.13\n• C. Debussy - Clair de Lune\n• F. Liszt - Etude S.141 No.3`);
+    }
+  };
+
+  const canAnalyze = title.trim() && composer.trim();
+
+  return (
+    <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
+      <div className="bg-blob-extra" />
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-6">
+        <button
+          onClick={() => safeBack(router)}
+          className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5 text-muted-foreground" />
+        </button>
+        <div>
+          <h1 className="text-lg font-bold text-foreground">새 곡 분석</h1>
+          <p className="text-xs text-muted-foreground">곡 정보를 입력하세요</p>
+        </div>
+      </div>
+
+      {/* Input Form */}
+      <div className="space-y-4 mb-6">
+        {/* Composer */}
+        <div className="relative" ref={composerRef}>
+          <label className="text-sm font-medium text-foreground mb-1.5 block">
+            작곡가 *
+          </label>
+          <input
+            type="text"
+            placeholder="예: Chopin, Bach, Mozart"
+            value={composer}
+            onChange={(e) => handleComposerChange(e.target.value)}
+            onFocus={() => {
+              if (composer.length >= 2) filterComposers(composer);
+            }}
+            className="w-full px-4 py-3 rounded-xl border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+          />
+          <p className="text-xs text-muted-foreground mt-1">2글자 이상 입력하면 자동완성됩니다</p>
+
+          {/* Composer Suggestions */}
+          {showComposerSuggestions && composerSuggestions.length > 0 && (
+            <div className="absolute left-0 right-0 top-full mt-1 bg-card border border-border rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto">
+              {composerSuggestions.map((item, index) => (
+                <button
+                  key={`${item.composer}-${index}`}
+                  onClick={() => selectComposer(item)}
+                  className="w-full px-4 py-3 flex items-center gap-3 hover:bg-secondary/50 transition-colors border-b border-border last:border-b-0 text-left"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <User className="w-4 h-4 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-foreground text-sm">{item.composer}</p>
+                    <p className="text-xs text-muted-foreground">{item.fullName}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Title */}
+        <div className="relative" ref={titleRef}>
+          <label className="text-sm font-medium text-foreground mb-1.5 block">
+            곡 제목 *
+          </label>
+          <input
+            type="text"
+            placeholder={composer ? `${composer}의 곡 검색...` : "예: Ballade, Sonata, Nocturne"}
+            value={title}
+            onChange={(e) => handleTitleChange(e.target.value)}
+            onFocus={() => {
+              if (title.length >= 2) filterTitles(title);
+            }}
+            className="w-full px-4 py-3 rounded-xl border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+          />
+
+          {/* Title Suggestions */}
+          {showTitleSuggestions && titleSuggestions.length > 0 && (
+            <div className="absolute left-0 right-0 top-full mt-1 bg-card border border-border rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto">
+              {titleSuggestions.map((work, index) => (
+                <button
+                  key={`${work}-${index}`}
+                  onClick={() => selectTitle(work)}
+                  className="w-full px-4 py-3 flex items-center gap-3 hover:bg-secondary/50 transition-colors border-b border-border last:border-b-0 text-left"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center shrink-0">
+                    <Music className="w-4 h-4 text-violet-600" />
+                  </div>
+                  <p className="font-medium text-foreground text-sm truncate">{work}</p>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* What AI Analyzes */}
+      <div className="bg-card rounded-xl border border-border p-4 mb-6">
+        <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
+          <Brain className="w-4 h-4 text-primary" />
+          AI가 분석하는 항목
+        </h3>
+        <ul className="space-y-2 text-sm text-muted-foreground">
+          <li className="flex items-start gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+            <span><strong className="text-foreground">곡 배경</strong> - 작곡 시기, 헌정, 초연 정보</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+            <span><strong className="text-foreground">작곡가 설명</strong> - 생애, 음악적 특징</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+            <span><strong className="text-foreground">시대적 맥락</strong> - 음악사적 위치, 영향</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+            <span><strong className="text-foreground">형식·주제·동기</strong> - 구조 분석</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+            <span><strong className="text-foreground">화성 진행</strong> - 로마숫자 분석 (I-IV-V-I 등)</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+            <span><strong className="text-foreground">연습 포인트</strong> - 템포, 페달, 프레이징 제안</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+            <span><strong className="text-foreground">참고 자료</strong> - 관련 논문, 레퍼런스 링크</span>
+          </li>
+        </ul>
+      </div>
+
+      {/* Notice */}
+      <div className="bg-amber-50 rounded-xl border border-amber-200 p-4 mb-6">
+        <p className="text-sm text-amber-800">
+          <strong>정확성 안내:</strong> AI는 검증된 음악학 자료를 바탕으로 분석합니다.
+          불확실한 정보는 제공하지 않으며, 출처를 명시합니다.
+        </p>
+      </div>
+
+      {/* Analyze Button */}
+      <button
+        onClick={handleAnalyze}
+        disabled={!canAnalyze || isAnalyzing}
+        className="w-full py-4 rounded-xl bg-primary text-white font-semibold flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {isAnalyzing ? (
+          <>
+            <Loader2 className="w-5 h-5 animate-spin" />
+            분석 중...
+          </>
+        ) : (
+          <>
+            <Brain className="w-5 h-5" />
+            AI 분석 시작
+          </>
+        )}
+      </button>
+    </div>
+  );
+}
+
+
+================================================================================
+[3] 페이지: 곡 상세 분석 (4곡 하드코딩 DB)
+파일: src/app/(app)/ai-analysis/[id]/page.tsx
+================================================================================
+
+"use client";
+
+import { useParams, useRouter } from "next/navigation";
+import { safeBack } from "@/lib/navigation";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { ArrowLeft, Music, User, Clock, BookOpen, Hash, Lightbulb, FileText, ExternalLink, Target, ChevronRight, BarChart3, Play } from "lucide-react";
+import { saveAnalyzedSong } from "@/lib/song-analysis-store";
+import {
+  getPieceById,
+  getPieceAnalysis,
+  getUserPracticeData,
+} from "@/lib/queries/pieces";
+import type { PieceAnalysis as QueryPieceAnalysis, PiecePracticeData as QueryPiecePracticeData } from "@/lib/queries/pieces";
+import { getUserId } from "@/lib/user-id";
+
+interface SectionData {
+  startMeasure: number;
+  endMeasure: number;
+  sectionName: string;
+  technicalDifficulty: string;
+  dynamics: string;
+}
+
+interface MeasureProgressData {
+  measureStart: number;
+  mastery: string;
+}
+
+const difficultyColors: Record<string, string> = {
+  easy: "bg-green-100 text-green-700",
+  medium: "bg-yellow-100 text-yellow-700",
+  hard: "bg-orange-100 text-orange-700",
+  very_hard: "bg-red-100 text-red-700",
+};
+
+const difficultyLabels: Record<string, string> = {
+  easy: "쉬움",
+  medium: "보통",
+  hard: "어려움",
+  very_hard: "매우 어려움",
+};
+
+const masteryColors: Record<string, string> = {
+  not_started: "bg-gray-200",
+  learning: "bg-yellow-400",
+  practicing: "bg-blue-400",
+  mastered: "bg-green-500",
+};
+
+// 곡별 분석 데이터베이스
+const analysisDatabase: Record<string, any> = {
+  "1": {
+    id: "1",
+    title: "Ballade No.1 in G minor",
+    opus: "Op.23",
+    composer: "Frédéric Chopin",
+    composerLifespan: "1810-1849",
+    year: 1835,
+    dedication: "Baron Nathaniel von Stockhausen",
+    premiere: "1836년, 라이프치히",
+    duration: "약 9-10분",
+    key: "G minor",
+    period: "Romantic",
+    composerBio: `폴란드 출신의 작곡가이자 피아니스트. 파리에서 활동하며 피아노 음악의 새로운 영역을 개척했다.
+쇼팽은 피아노의 가능성을 극대화한 작곡가로, 녹턴, 마주르카, 폴로네이즈, 에튀드, 발라드 등 다양한 장르에서 독창적인 작품을 남겼다.`,
+    background: `쇼팽의 4개 발라드 중 첫 번째 작품으로, 폴란드 시인 아담 미츠키에비치(Adam Mickiewicz)의 서사시 "콘라트 발렌로트"에서 영감을 받았다고 알려져 있다.
+1831년 바르샤바 봉기 실패 후 파리로 망명한 쇼팽이 조국에 대한 그리움과 비극적 정서를 담아 작곡했다.
+1835년 완성되어 1836년 출판되었으며, 피아노 발라드라는 새로운 장르를 확립한 작품으로 평가받는다.`,
+    historicalContext: `19세기 전반 낭만주의 시대, 민족주의 음악이 부상하던 시기의 작품이다.
+폴란드의 11월 봉기(1830-1831) 실패 후 많은 폴란드 예술가들이 파리로 망명했으며, 쇼팽도 이 시기 파리에 정착했다.
+이 곡은 기존의 소나타 형식을 따르지 않고 자유로운 서사적 구조를 채택하여, 낭만주의 시대 형식적 혁신의 대표적 예시가 되었다.`,
+    formAnalysis: {
+      overview: "변형된 소나타 형식과 론도 형식의 결합",
+      sections: [
+        { name: "서주 (Largo)", measures: "1-7", description: "불안정한 G minor 화성, 서사의 시작을 알림" },
+        { name: "제1주제 (Moderato)", measures: "8-36", description: "G minor, 서정적이고 슬픈 멜로디" },
+        { name: "제2주제", measures: "68-93", description: "E♭ major, 밝고 서정적인 대조" },
+        { name: "발전부", measures: "94-165", description: "두 주제의 발전과 변형" },
+        { name: "코다 (Presto con fuoco)", measures: "208-264", description: "격렬한 옥타브 패시지, 비극적 종결" },
+      ],
+    },
+    themes: [
+      { name: "제1주제", description: "하행하는 6도 도약과 순차 진행이 특징. 폴란드 민요적 요소가 느껴지는 애상적 선율.", measures: "8-36" },
+      { name: "제2주제", description: "E♭ major의 서정적 선율. 왈츠와 유사한 반주 패턴 위에 노래하는 듯한 멜로디.", measures: "68-93" },
+    ],
+    harmonyAnalysis: {
+      overview: "G minor를 중심으로 3도 관계 조성(E♭ major)으로의 이동이 특징적",
+      keyProgressions: [
+        { section: "서주", keys: "G minor", roman: "i" },
+        { section: "제1주제", keys: "G minor → B♭ major", roman: "i → III" },
+        { section: "제2주제", keys: "E♭ major", roman: "VI" },
+        { section: "코다", keys: "G minor", roman: "i" },
+      ],
+      notableProgressions: [
+        { name: "서주의 나폴리 화음", progression: "i - ♭II6 - V7 - i", description: "긴장감 조성" },
+        { name: "제1주제 종지", progression: "i - iv - V7 - i", description: "전통적 단조 종지" },
+      ],
+    },
+    practicePoints: [
+      { category: "템포", points: ["서주 Largo: ♩= 약 40-50", "Moderato 제1주제: ♩= 약 66-72", "Presto con fuoco 코다: ♩= 약 176-184"] },
+      { category: "페달", points: ["서주: 화성 변화에 따른 신중한 페달 교체", "제1주제: 멜로디 프레이징에 맞춘 부분 페달"] },
+      { category: "기술적 난점", points: ["mm. 8-36: 왼손 아르페지오의 균등한 터치", "mm. 208-264: 옥타브 지구력과 정확성"] },
+    ],
+    references: [
+      { type: "도서", title: "Chopin: The Four Ballades", author: "Jim Samson", source: "Cambridge University Press, 1992", isbn: "ISBN 978-0521386159" },
+    ],
+    imslp: {
+      title: "Ballade No.1, Op.23",
+      composer: "Frédéric Chopin",
+      url: "https://imslp.org/wiki/Ballade_No.1,_Op.23_(Chopin,_Fr%C3%A9d%C3%A9ric)",
+      editions: [
+        { name: "Breitkopf & Härtel (1878)", editor: "Carl Mikuli" },
+        { name: "Peters (1879)", editor: "Herrmann Scholtz" },
+      ],
+    },
+  },
+
+  "2": {
+    id: "2",
+    title: "Piano Sonata No.8 in C minor",
+    opus: "Op.13 'Pathétique'",
+    composer: "Ludwig van Beethoven",
+    composerLifespan: "1770-1827",
+    year: 1798,
+    dedication: "Prince Karl von Lichnowsky",
+    premiere: "1799년, 빈",
+    duration: "약 18-20분",
+    key: "C minor",
+    period: "Classical/Early Romantic",
+    composerBio: `독일 본 출신의 작곡가이자 피아니스트. 고전주의와 낭만주의의 가교 역할을 한 서양 음악사의 거장이다.
+교향곡, 협주곡, 소나타, 현악 4중주 등 모든 장르에서 걸작을 남겼으며, 청력을 잃은 후에도 작곡 활동을 계속했다.`,
+    background: `베토벤 초기 피아노 소나타의 대표작으로, '비창(Pathétique)'이라는 부제는 베토벤 자신이 붙인 것이다.
+1798년 작곡되어 1799년 출판되었으며, 당시 베토벤의 후원자였던 리히노프스키 공작에게 헌정되었다.
+베토벤이 청력 상실의 조짐을 느끼기 시작한 시기의 작품으로, 내면의 고뇌가 반영되어 있다.`,
+    historicalContext: `18세기 말 고전주의에서 낭만주의로의 전환기 작품이다.
+프랑스 혁명(1789) 이후 격변하는 유럽 사회에서, 개인의 감정 표현이 중시되기 시작했다.
+이 소나타는 고전적 형식 안에서 강렬한 감정 표현을 담아, 낭만주의 피아노 음악의 선구적 작품으로 평가받는다.`,
+    formAnalysis: {
+      overview: "3악장 구성의 소나타 형식",
+      sections: [
+        { name: "1악장 Grave - Allegro", measures: "1-310", description: "C minor, 소나타 형식. 느린 서주와 격정적인 주부" },
+        { name: "2악장 Adagio cantabile", measures: "1-73", description: "A♭ major, 론도 형식. 서정적이고 노래하는 선율" },
+        { name: "3악장 Rondo: Allegro", measures: "1-210", description: "C minor, 론도 형식. 1악장 제2주제를 연상시키는 주제" },
+      ],
+    },
+    themes: [
+      { name: "1악장 서주 주제", description: "Grave의 장중하고 비극적인 점음표 리듬. 전 악장에 걸쳐 회귀함.", measures: "1-10" },
+      { name: "1악장 제1주제", description: "C minor의 급박한 상행 아르페지오와 트레몰로.", measures: "11-27" },
+      { name: "2악장 주제", description: "A♭ major의 서정적 선율. 피아노 문헌 중 가장 아름다운 멜로디 중 하나.", measures: "1-8" },
+    ],
+    harmonyAnalysis: {
+      overview: "C minor를 중심으로, 관계조와의 대비가 뚜렷함",
+      keyProgressions: [
+        { section: "1악장 서주", keys: "C minor", roman: "i" },
+        { section: "1악장 제1주제", keys: "C minor", roman: "i" },
+        { section: "1악장 제2주제", keys: "E♭ minor → E♭ major", roman: "iii → III" },
+        { section: "2악장", keys: "A♭ major", roman: "VI" },
+        { section: "3악장", keys: "C minor", roman: "i" },
+      ],
+      notableProgressions: [
+        { name: "서주의 감7화음", progression: "i - vii°7 - i", description: "극적 긴장감" },
+        { name: "2악장 주제 화성", progression: "I - V7 - I", description: "안정적이고 서정적" },
+      ],
+    },
+    practicePoints: [
+      { category: "템포", points: ["Grave 서주: ♩= 약 40-50, 위엄있게", "Allegro molto: ♩= 약 138-152", "Adagio cantabile: ♩= 약 56-63"] },
+      { category: "페달", points: ["1악장 서주: 화성마다 깨끗한 페달 교체", "2악장: 레가토를 위한 섬세한 페달링, 베이스 지속"] },
+      { category: "기술적 난점", points: ["1악장: 빠른 옥타브 트레몰로", "2악장: 왼손 반주 위 오른손 선율의 균형", "3악장: 빠른 스케일 패시지"] },
+    ],
+    references: [
+      { type: "도서", title: "Beethoven: The Music and the Life", author: "Lewis Lockwood", source: "W. W. Norton, 2003", isbn: "ISBN 978-0393050813" },
+    ],
+    imslp: {
+      title: "Piano Sonata No.8, Op.13",
+      composer: "Ludwig van Beethoven",
+      url: "https://imslp.org/wiki/Piano_Sonata_No.8,_Op.13_(Beethoven,_Ludwig_van)",
+      editions: [
+        { name: "Breitkopf & Härtel (1862)", editor: "Carl Reinecke" },
+        { name: "Peters", editor: "Louis Köhler" },
+      ],
+    },
+  },
+
+  "3": {
+    id: "3",
+    title: "Clair de Lune",
+    opus: "Suite bergamasque, L.75 No.3",
+    composer: "Claude Debussy",
+    composerLifespan: "1862-1918",
+    year: 1905,
+    dedication: "없음 (원곡 1890년 작곡, 1905년 개정 출판)",
+    premiere: "1905년 출판 후 초연",
+    duration: "약 5분",
+    key: "D♭ major",
+    period: "Impressionist",
+    composerBio: `프랑스 생제르맹앙레 출신의 작곡가. 인상주의 음악의 창시자로 불린다.
+전통적인 화성 체계를 벗어나 온음음계, 교회선법, 병행화음 등을 활용하여 새로운 음향 세계를 개척했다.
+오페라 "펠레아스와 멜리장드", 관현악곡 "바다", "목신의 오후 전주곡" 등이 대표작이다.`,
+    background: `'베르가마스크 모음곡'의 세 번째 곡으로, 폴 베를렌(Paul Verlaine)의 시 "달빛(Clair de lune)"에서 영감을 받았다.
+1890년경 초고가 작성되었으나, 1905년 대폭 개정되어 출판되었다.
+제목은 "달빛"을 의미하며, 인상주의 음악의 대표작으로 널리 사랑받는 작품이다.`,
+    historicalContext: `19세기 말-20세기 초 프랑스 인상주의 시대의 작품이다.
+인상파 화가들(모네, 르누아르 등)과 상징주의 시인들(말라르메, 베를렌 등)의 예술 운동과 맥을 같이한다.
+독일 낭만주의의 강렬한 감정 표현에서 벗어나, 섬세한 색채와 분위기를 중시하는 새로운 미학을 제시했다.`,
+    formAnalysis: {
+      overview: "자유로운 3부 형식 (A-B-A')",
+      sections: [
+        { name: "A 섹션", measures: "1-26", description: "D♭ major, 몽환적인 주제 제시" },
+        { name: "B 섹션", measures: "27-42", description: "약간의 조성 변화, 더 유동적인 움직임" },
+        { name: "A' 섹션 + 코다", measures: "43-72", description: "주제 재현 및 조용한 종결" },
+      ],
+    },
+    themes: [
+      { name: "주요 주제", description: "D♭ major의 평온하고 몽환적인 선율. 아르페지오 반주 위에 떠다니는 듯한 멜로디.", measures: "1-8" },
+      { name: "B섹션 주제", description: "더 유동적인 리듬, 왼손의 넓은 아르페지오가 특징.", measures: "27-34" },
+    ],
+    harmonyAnalysis: {
+      overview: "D♭ major를 중심으로, 비기능적 화성 진행과 병행화음 사용",
+      keyProgressions: [
+        { section: "A 섹션", keys: "D♭ major", roman: "I" },
+        { section: "B 섹션", keys: "C♯ minor 영역 → E major", roman: "i(enharmonic) → II" },
+        { section: "A' 섹션", keys: "D♭ major", roman: "I" },
+      ],
+      notableProgressions: [
+        { name: "병행 3화음", progression: "I - ♭VII - ♭VI - ♭VII - I", description: "인상주의적 색채" },
+        { name: "9화음 사용", progression: "I9 - IV9", description: "몽환적 분위기 조성" },
+      ],
+    },
+    practicePoints: [
+      { category: "템포", points: ["Andante très expressif: ♩= 약 66-72", "Tempo rubato: 자연스러운 흐름, 기계적 박자 지양", "종결부: 점점 느려지며 사라지듯이"] },
+      { category: "페달", points: ["화성 변화에 따른 부분 페달 필수", "베이스 음을 울리면서 상성부 명확하게", "잔향을 살리되 혼탁함 방지"] },
+      { category: "기술적 난점", points: ["양손 간 선율과 반주의 명확한 분리", "왼손 넓은 아르페지오의 레가토", "pp~p 다이나믹 내에서의 미세한 표현"] },
+    ],
+    references: [
+      { type: "도서", title: "Debussy: His Life and Mind", author: "Edward Lockspeiser", source: "Cambridge University Press, 1978", isbn: "" },
+    ],
+    imslp: {
+      title: "Suite bergamasque, L.75",
+      composer: "Claude Debussy",
+      url: "https://imslp.org/wiki/Suite_bergamasque_(Debussy,_Claude)",
+      editions: [
+        { name: "Durand (1905)", editor: "Original edition" },
+        { name: "Dover Publications", editor: "Reprint" },
+      ],
+    },
+  },
+
+  "4": {
+    id: "4",
+    title: "La Campanella",
+    opus: "Grandes études de Paganini, S.141 No.3",
+    composer: "Franz Liszt",
+    composerLifespan: "1811-1886",
+    year: 1851,
+    dedication: "Clara Schumann",
+    premiere: "1851년 개정판 출판",
+    duration: "약 5분",
+    key: "G♯ minor",
+    period: "Romantic",
+    composerBio: `헝가리 출신의 작곡가이자 피아니스트로, 19세기 최고의 비르투오조 피아니스트로 평가받는다.
+리스트는 피아노 기교의 한계를 확장시켰으며, 교향시라는 새로운 장르를 개척했다.
+바이마르에서 활동하며 바그너, 브람스 등 후대 작곡가들에게 큰 영향을 미쳤다.`,
+    background: `파가니니의 바이올린 협주곡 2번 3악장 '라 캄파넬라'를 피아노를 위해 편곡한 작품이다.
+1838년 초판(S.140)을 거쳐 1851년 대폭 개정되어 현재의 형태(S.141)가 되었다.
+파가니니의 초인적 바이올린 기교를 피아노로 재현하며, 종소리를 모방하는 고음역의 반복음이 특징이다.`,
+    historicalContext: `19세기 비르투오조 시대의 대표적 작품이다.
+파가니니와 리스트로 대표되는 기교주의 음악의 절정을 보여준다.
+당시 파리 살롱에서 리스트의 연주는 열광적인 '리스트마니아'를 일으켰다.`,
+    formAnalysis: {
+      overview: "변주 형식 기반의 자유로운 구성",
+      sections: [
+        { name: "도입부", measures: "1-14", description: "G♯ minor, 고음역의 종소리 모티프 제시" },
+        { name: "주제", measures: "15-30", description: "파가니니 원곡의 주제, 높은 음역의 반복음" },
+        { name: "변주 1", measures: "31-50", description: "왼손 도약을 동반한 기교적 변주" },
+        { name: "변주 2", measures: "51-80", description: "빠른 아르페지오와 옥타브" },
+        { name: "코다", measures: "81-끝", description: "기교적 절정과 화려한 종결" },
+      ],
+    },
+    themes: [
+      { name: "종소리 모티프", description: "고음역의 반복되는 단음. D♯ 음이 종소리처럼 울린다.", measures: "1-14" },
+      { name: "파가니니 주제", description: "원곡의 우아하고 춤추는 듯한 선율.", measures: "15-30" },
+    ],
+    harmonyAnalysis: {
+      overview: "G♯ minor를 중심으로 E major와의 대비",
+      keyProgressions: [
+        { section: "도입부", keys: "G♯ minor", roman: "i" },
+        { section: "주제", keys: "G♯ minor", roman: "i" },
+        { section: "변주", keys: "E major - G♯ minor", roman: "VI - i" },
+        { section: "코다", keys: "G♯ minor", roman: "i" },
+      ],
+      notableProgressions: [
+        { name: "주제 화성", progression: "i - V7 - i", description: "단순하지만 효과적인 진행" },
+        { name: "변주부 전조", progression: "i - VI - iv - V - i", description: "관계 장조로의 일시적 이동" },
+      ],
+    },
+    practicePoints: [
+      { category: "템포", points: ["Allegretto: ♩= 약 160-176", "무리한 속도보다 정확성이 중요", "점진적 템포 향상 권장"] },
+      { category: "기술", points: ["고음역 반복음: 손목의 유연한 회전 사용", "넓은 도약: 시선을 목표 건반에 미리 고정", "옥타브 트레몰로: 팔 전체의 이완"] },
+      { category: "페달", points: ["반복음 구간: 페달 최소화하여 명료함 유지", "멜로디 구간: 레가토를 위한 적절한 페달링"] },
+    ],
+    references: [
+      { type: "도서", title: "The Virtuoso Liszt", author: "Dana Gooley", source: "Cambridge University Press, 2004", isbn: "" },
+    ],
+    imslp: {
+      title: "Grandes études de Paganini, S.141",
+      composer: "Franz Liszt",
+      url: "https://imslp.org/wiki/Grandes_%C3%A9tudes_de_Paganini,_S.141_(Liszt,_Franz)",
+      editions: [
+        { name: "Breitkopf & Härtel", editor: "Liszt Stiftung" },
+        { name: "Editio Musica Budapest", editor: "Sulyok/Mező" },
+      ],
+    },
+  },
+};
+
+export default function AnalysisDetailPage() {
+  const params = useParams();
+  const router = useRouter();
+  const id = params.id as string;
+
+  const analysis = analysisDatabase[id];
+
+  const [pieceAnalysis, setPieceAnalysis] = useState<QueryPieceAnalysis | null>(null);
+  const [practiceData, setPracticeData] = useState<QueryPiecePracticeData | null>(null);
+
+  useEffect(() => {
+    async function load() {
+      const userId = getUserId();
+      const pieceIdMap: Record<string, string> = {
+        "1": "piece_001",
+        "2": "piece_002",
+        "3": "piece_003",
+        "4": "piece_004",
+        "5": "piece_005",
+      };
+      const pieceId = pieceIdMap[id] ?? id;
+      const analysisData = await getPieceAnalysis(pieceId);
+      if (analysisData) setPieceAnalysis(analysisData);
+      if (userId) {
+        const practice = await getUserPracticeData(userId, pieceId);
+        if (practice) setPracticeData(practice);
+      }
+    }
+    load();
+  }, [id]);
+
+  // 분석 기록 저장 (이미 분석된 곡이면 최근 조회로 업데이트)
+  useEffect(() => {
+    if (analysis) {
+      saveAnalyzedSong({
+        id: analysis.id,
+        title: analysis.title,
+        opus: analysis.opus,
+        composer: analysis.composer,
+      });
+    }
+  }, [analysis]);
+
+  const formatPracticeTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    if (hours > 0) {
+      return `${hours}시간 ${minutes}분`;
+    }
+    return `${minutes}분`;
+  };
+
+  const pieceIdMap: Record<string, string> = {
+    "1": "piece_001",
+    "2": "piece_002",
+    "3": "piece_003",
+    "4": "piece_004",
+    "5": "piece_005",
+  };
+
+  if (!analysis) {
+    return (
+      <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-violet">
+      <div className="bg-blob-extra" />
+        <button onClick={() => safeBack(router)} className="flex items-center gap-2 text-muted-foreground mb-6">
+          <ArrowLeft className="w-5 h-5" />
+          <span>뒤로</span>
+        </button>
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">분석 데이터를 찾을 수 없습니다.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
+      <div className="bg-blob-extra" />
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-6">
+        <button
+          onClick={() => safeBack(router)}
+          className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5 text-muted-foreground" />
+        </button>
+        <div>
+          <h1 className="text-lg font-bold text-foreground">곡 분석</h1>
+          <p className="text-xs text-muted-foreground">AI 음악학 분석</p>
+        </div>
+      </div>
+
+      {/* Song Header */}
+      <div className="bg-card rounded-xl p-4 border border-border shadow-sm mb-4">
+        <div className="flex items-start gap-3">
+          <div className="w-14 h-14 bg-primary/10 rounded-xl flex items-center justify-center shrink-0">
+            <Music className="w-7 h-7 text-primary" />
+          </div>
+          <div className="flex-1">
+            <h2 className="font-bold text-foreground">{analysis.composer}</h2>
+            <p className="text-sm text-muted-foreground">{analysis.title} {analysis.opus}</p>
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              <span className="text-xs px-2 py-0.5 rounded-full bg-secondary">{analysis.key}</span>
+              <span className="text-xs px-2 py-0.5 rounded-full bg-secondary">{analysis.period}</span>
+              <span className="text-xs px-2 py-0.5 rounded-full bg-secondary">{analysis.year}</span>
+              <span className="text-xs px-2 py-0.5 rounded-full bg-secondary">{analysis.duration}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Info */}
+      <div className="grid grid-cols-2 gap-2 mb-4">
+        <div className="bg-card rounded-xl p-3 border border-border">
+          <p className="text-xs text-muted-foreground mb-1">헌정</p>
+          <p className="text-sm font-medium text-foreground">{analysis.dedication}</p>
+        </div>
+        <div className="bg-card rounded-xl p-3 border border-border">
+          <p className="text-xs text-muted-foreground mb-1">초연</p>
+          <p className="text-sm font-medium text-foreground">{analysis.premiere}</p>
+        </div>
+      </div>
+
+      {/* Composer Bio */}
+      <Section title="작곡가" icon={User}>
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          <strong className="text-foreground">{analysis.composer}</strong> ({analysis.composerLifespan})
+        </p>
+        <p className="text-sm text-muted-foreground leading-relaxed mt-2 whitespace-pre-line">
+          {analysis.composerBio}
+        </p>
+      </Section>
+
+      {/* Background */}
+      <Section title="곡 배경" icon={BookOpen}>
+        <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+          {analysis.background}
+        </p>
+      </Section>
+
+      {/* Historical Context */}
+      <Section title="시대적 맥락" icon={Clock}>
+        <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+          {analysis.historicalContext}
+        </p>
+      </Section>
+
+      {/* Form Analysis */}
+      <Section title="형식 분석" icon={Hash}>
+        <p className="text-sm text-muted-foreground mb-3">{analysis.formAnalysis.overview}</p>
+        <div className="space-y-2">
+          {analysis.formAnalysis.sections.map((section: any, idx: number) => (
+            <div key={idx} className="bg-secondary/50 rounded-lg p-3">
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-medium text-foreground text-sm">{section.name}</span>
+                <span className="text-xs text-primary font-mono">mm. {section.measures}</span>
+              </div>
+              <p className="text-xs text-muted-foreground">{section.description}</p>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      {/* Themes */}
+      <Section title="주제·동기" icon={Music}>
+        <div className="space-y-3">
+          {analysis.themes.map((theme: any, idx: number) => (
+            <div key={idx} className="border-l-2 border-primary pl-3">
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-medium text-foreground text-sm">{theme.name}</span>
+                <span className="text-xs text-primary font-mono">mm. {theme.measures}</span>
+              </div>
+              <p className="text-xs text-muted-foreground">{theme.description}</p>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      {/* Harmony Analysis */}
+      <Section title="화성 분석" icon={Hash}>
+        <p className="text-sm text-muted-foreground mb-3">{analysis.harmonyAnalysis.overview}</p>
+
+        <h4 className="text-xs font-semibold text-foreground mb-2">조성 진행</h4>
+        <div className="overflow-x-auto mb-4">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-border">
+                <th className="text-left py-2 text-muted-foreground font-medium">구간</th>
+                <th className="text-left py-2 text-muted-foreground font-medium">조성</th>
+                <th className="text-left py-2 text-muted-foreground font-medium">Roman</th>
+              </tr>
+            </thead>
+            <tbody>
+              {analysis.harmonyAnalysis.keyProgressions.map((prog: any, idx: number) => (
+                <tr key={idx} className="border-b border-border/50">
+                  <td className="py-2 text-foreground">{prog.section}</td>
+                  <td className="py-2 text-muted-foreground">{prog.keys}</td>
+                  <td className="py-2 font-mono text-primary">{prog.roman}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <h4 className="text-xs font-semibold text-foreground mb-2">주요 화성 진행</h4>
+        <div className="space-y-2">
+          {analysis.harmonyAnalysis.notableProgressions.map((prog: any, idx: number) => (
+            <div key={idx} className="bg-secondary/50 rounded-lg p-3">
+              <span className="text-sm font-medium text-foreground">{prog.name}</span>
+              <p className="text-xs font-mono text-primary mb-1">{prog.progression}</p>
+              <p className="text-xs text-muted-foreground">{prog.description}</p>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      {/* Practice Points */}
+      <Section title="연습 포인트" icon={Lightbulb}>
+        <div className="space-y-4">
+          {analysis.practicePoints.map((category: any, idx: number) => (
+            <div key={idx}>
+              <h4 className="text-sm font-semibold text-foreground mb-2">{category.category}</h4>
+              <ul className="space-y-1.5">
+                {category.points.map((point: string, pidx: number) => (
+                  <li key={pidx} className="text-xs text-muted-foreground flex items-start gap-2">
+                    <span className="w-1 h-1 rounded-full bg-primary mt-1.5 shrink-0" />
+                    <span>{point}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      {/* Section-by-Section Analysis */}
+      {pieceAnalysis && (() => {
+        const sections = (Array.isArray(pieceAnalysis.sections) ? pieceAnalysis.sections : []) as unknown as SectionData[];
+        const measureProgress = (practiceData?.measureProgress ? (Array.isArray(practiceData.measureProgress) ? practiceData.measureProgress : []) : []) as unknown as MeasureProgressData[];
+        return (
+        <Section title="마디별 상세 분석" icon={Target}>
+          {practiceData && (
+            <div className="mb-4 p-3 bg-violet-50 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <BarChart3 className="w-4 h-4 text-violet-500" />
+                <span className="text-xs font-semibold text-black">내 연습 현황</span>
+              </div>
+              <div className="flex items-center gap-4 text-xs">
+                <div>
+                  <span className="text-gray-500">총 연습: </span>
+                  <span className="font-medium">{formatPracticeTime(practiceData.totalPracticeTime)}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">완성도: </span>
+                  <span className="font-medium text-violet-600">{practiceData.completionPercentage}%</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            {sections.map((section, idx) => {
+              const sectionPractice = measureProgress.find(
+                (p) => p.measureStart === section.startMeasure
+              );
+
+              return (
+                <Link
+                  key={idx}
+                  href={`/ai-analysis/${pieceIdMap[id]}/section/${idx}`}
+                  className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100 hover:border-violet-200 transition-colors"
+                >
+                  <div className="flex flex-col items-center shrink-0 w-14">
+                    <span className="text-xs font-bold text-gray-600">
+                      {section.startMeasure}-{section.endMeasure}
+                    </span>
+                    <span className="text-[10px] text-gray-400">마디</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-black truncate">
+                      {section.sectionName}
+                    </p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded ${difficultyColors[section.technicalDifficulty]}`}>
+                        {difficultyLabels[section.technicalDifficulty]}
+                      </span>
+                      <span className="text-[10px] text-gray-400">
+                        {section.dynamics}
+                      </span>
+                    </div>
+                  </div>
+                  {sectionPractice && (
+                    <div className={`w-3 h-3 rounded-full shrink-0 ${masteryColors[sectionPractice.mastery]}`} />
+                  )}
+                  <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* Practice Button */}
+          <Link
+            href={`/practice?piece=${pieceIdMap[id]}`}
+            className="flex items-center justify-center gap-2 w-full py-3 mt-4 bg-gradient-to-r from-violet-500 to-violet-900 text-white rounded-xl text-sm font-semibold"
+          >
+            <Play className="w-4 h-4 fill-white" />
+            이 곡 연습 시작하기
+          </Link>
+        </Section>
+      ); })()}
+
+      {/* IMSLP Sheet Music */}
+      <Section title="무료 악보 (IMSLP)" icon={Music}>
+        <div className="bg-gradient-to-br from-primary/5 to-violet-500/5 rounded-xl border border-primary/20 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1">
+              <p className="text-sm font-medium text-foreground">{analysis.imslp.title}</p>
+              <p className="text-xs text-muted-foreground mb-2">{analysis.imslp.composer}</p>
+              <p className="text-xs text-muted-foreground mb-2">
+                IMSLP에서 퍼블릭 도메인 악보를 무료로 다운로드할 수 있습니다.
+              </p>
+              <div className="flex flex-wrap gap-1">
+                {analysis.imslp.editions.map((ed: any, idx: number) => (
+                  <span key={idx} className="text-[10px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
+                    {ed.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <a
+              href={analysis.imslp.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium flex items-center gap-1.5 hover:bg-primary/90 transition-colors shrink-0"
+            >
+              <ExternalLink className="w-4 h-4" />
+              IMSLP
+            </a>
+          </div>
+        </div>
+      </Section>
+
+      {/* References */}
+      <Section title="참고 문헌" icon={FileText}>
+        <p className="text-xs text-muted-foreground mb-3">
+          아래 자료는 검증된 음악학 문헌입니다. 도서관이나 서점에서 확인하세요.
+        </p>
+        <div className="space-y-3">
+          {analysis.references.map((ref: any, idx: number) => (
+            <div key={idx} className="bg-secondary/50 rounded-lg p-3">
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">
+                {ref.type}
+              </span>
+              <p className="text-sm font-medium text-foreground mt-1">{ref.title}</p>
+              <p className="text-xs text-muted-foreground">{ref.author}</p>
+              <p className="text-xs text-muted-foreground">{ref.source}</p>
+              {ref.isbn && <p className="text-xs text-muted-foreground font-mono">{ref.isbn}</p>}
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      {/* Disclaimer */}
+      <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+        <p className="text-xs text-amber-800 text-center">
+          <strong>주의:</strong> 본 분석은 참고용이며, 정확한 학습을 위해
+          <br />
+          위 참고 자료의 원문을 직접 확인하시기 바랍니다.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function Section({ title, icon: Icon, children }: { title: string; icon: any; children: React.ReactNode }) {
+  return (
+    <div className="bg-card rounded-xl border border-border shadow-sm mb-4 overflow-hidden">
+      <div className="px-4 py-3 bg-muted/50 border-b border-border">
+        <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm">
+          <Icon className="w-4 h-4 text-primary" />
+          {title}
+        </h3>
+      </div>
+      <div className="p-4">{children}</div>
+    </div>
+  );
+}
+
+
+================================================================================
+[4] 페이지: 섹션 상세 (템포/테크닉/연습조언)
+파일: src/app/(app)/ai-analysis/[id]/section/[sectionIndex]/page.tsx
+================================================================================
+
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
+import { safeBack } from "@/lib/navigation";
+import Link from "next/link";
+import {
+  ArrowLeft,
+  Play,
+  Music2,
+  Gauge,
+  Volume2,
+  Sparkles,
+  Clock,
+  Target,
+  Lightbulb,
+  ChevronLeft,
+  ChevronRight,
+  BarChart3
+} from "lucide-react";
+import {
+  getPieceById,
+  getPieceAnalysis,
+  getUserPracticeData,
+} from "@/lib/queries/pieces";
+import type { Piece, PieceAnalysis, PiecePracticeData } from "@/lib/queries/pieces";
+import { getUserId } from "@/lib/user-id";
+
+interface SectionData {
+  startMeasure: number;
+  endMeasure: number;
+  sectionName: string;
+  technicalDifficulty: string;
+  dynamics: string;
+  rhythmPattern?: string;
+  suggestedTempo?: { practice: number; min: number; max: number };
+  techniques?: string[];
+  expression?: string[];
+  practiceNotes?: string;
+}
+
+interface MeasureProgressData {
+  measureStart: number;
+  mastery: string;
+  practiceCount: number;
+  practiceTime: number;
+  lastPracticedAt?: string;
+}
+
+const difficultyColors: Record<string, string> = {
+  easy: "bg-green-100 text-green-700 border-green-200",
+  medium: "bg-yellow-100 text-yellow-700 border-yellow-200",
+  hard: "bg-orange-100 text-orange-700 border-orange-200",
+  very_hard: "bg-red-100 text-red-700 border-red-200",
+};
+
+const difficultyLabels: Record<string, string> = {
+  easy: "쉬움",
+  medium: "보통",
+  hard: "어려움",
+  very_hard: "매우 어려움",
+};
+
+const masteryBg: Record<string, string> = {
+  not_started: "bg-gray-100",
+  learning: "bg-yellow-50",
+  practicing: "bg-blue-50",
+  mastered: "bg-green-50",
+};
+
+const masteryLabels: Record<string, string> = {
+  not_started: "시작 전",
+  learning: "학습 중",
+  practicing: "연습 중",
+  mastered: "완성",
+};
+
+export default function SectionDetailPage() {
+  const router = useRouter();
+  const params = useParams();
+  const pieceId = params.id as string;
+  const sectionIndex = parseInt(params.sectionIndex as string, 10);
+
+  const [piece, setPiece] = useState<Piece | null>(null);
+  const [analysis, setAnalysis] = useState<PieceAnalysis | null>(null);
+  const [sections, setSections] = useState<SectionData[]>([]);
+  const [section, setSection] = useState<SectionData | null>(null);
+  const [practiceProgress, setPracticeProgress] = useState<MeasureProgressData | null>(null);
+
+  useEffect(() => {
+    async function load() {
+      const userId = getUserId();
+      const pieceData = await getPieceById(pieceId);
+      if (pieceData) setPiece(pieceData);
+
+      const analysisData = await getPieceAnalysis(pieceId);
+      if (analysisData) {
+        setAnalysis(analysisData);
+        const parsedSections = (Array.isArray(analysisData.sections) ? analysisData.sections : []) as unknown as SectionData[];
+        setSections(parsedSections);
+        if (parsedSections[sectionIndex]) {
+          const sectionData = parsedSections[sectionIndex];
+          setSection(sectionData);
+
+          if (userId) {
+            const practiceData = await getUserPracticeData(userId, pieceId);
+            if (practiceData) {
+              const measureProgress = (practiceData.measureProgress ? (Array.isArray(practiceData.measureProgress) ? practiceData.measureProgress : []) : []) as unknown as MeasureProgressData[];
+              const progress = measureProgress.find(
+                (p) => p.measureStart === sectionData.startMeasure
+              );
+              if (progress) setPracticeProgress(progress);
+            }
+          }
+        }
+      }
+    }
+    load();
+  }, [pieceId, sectionIndex]);
+
+  if (!piece || !analysis || !section) {
+    return (
+      <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-violet">
+      <div className="bg-blob-extra" />
+        <div className="text-center py-12 text-gray-500">
+          섹션 정보를 불러오는 중...
+        </div>
+      </div>
+    );
+  }
+
+  const hasPrevSection = sectionIndex > 0;
+  const hasNextSection = sectionIndex < sections.length - 1;
+
+  const formatPracticeTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    if (hours > 0) {
+      return `${hours}시간 ${minutes}분`;
+    }
+    return `${minutes}분`;
+  };
+
+  return (
+    <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
+      <div className="bg-blob-extra" />
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-6">
+        <button
+          onClick={() => safeBack(router)}
+          className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center"
+        >
+          <ArrowLeft className="w-5 h-5 text-gray-600" />
+        </button>
+        <div className="flex-1">
+          <p className="text-xs text-gray-500">{piece.composerShortName}</p>
+          <h1 className="text-lg font-bold text-black truncate">{piece.title}</h1>
+        </div>
+        <div className="text-right">
+          <p className="text-xs text-gray-400">섹션 {sectionIndex + 1}/{sections.length}</p>
+        </div>
+      </div>
+
+      {/* Section Title */}
+      <div className={`rounded-xl p-4 mb-4 ${practiceProgress ? masteryBg[practiceProgress.mastery] : "bg-gray-50"}`}>
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-lg font-bold text-black">{section.sectionName}</h2>
+          <span className={`text-xs px-2 py-1 rounded-full border ${difficultyColors[section.technicalDifficulty]}`}>
+            {difficultyLabels[section.technicalDifficulty]}
+          </span>
+        </div>
+        <div className="flex items-center gap-4 text-sm text-gray-600">
+          <span className="font-medium">{section.startMeasure} - {section.endMeasure} 마디</span>
+          <span>|</span>
+          <span>{section.rhythmPattern}</span>
+          <span>|</span>
+          <span>{section.dynamics}</span>
+        </div>
+        {practiceProgress && (
+          <div className="mt-3 pt-3 border-t border-gray-200/50">
+            <p className="text-xs text-gray-500">
+              현재 상태: <span className="font-semibold">{masteryLabels[practiceProgress.mastery]}</span>
+              {practiceProgress.practiceCount > 0 && (
+                <> · {practiceProgress.practiceCount}회 연습</>
+              )}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Tempo Info */}
+      {section.suggestedTempo && (
+        <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Gauge className="w-4 h-4 text-violet-500" />
+            <h3 className="text-sm font-semibold text-black">템포 가이드</h3>
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="text-center p-3 bg-gray-50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">연습 템포</p>
+              <p className="text-xl font-bold text-violet-600">{section.suggestedTempo.practice}</p>
+              <p className="text-xs text-gray-400">BPM</p>
+            </div>
+            <div className="text-center p-3 bg-gray-50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">최소</p>
+              <p className="text-xl font-bold text-gray-600">{section.suggestedTempo.min}</p>
+              <p className="text-xs text-gray-400">BPM</p>
+            </div>
+            <div className="text-center p-3 bg-gray-50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">최대</p>
+              <p className="text-xl font-bold text-gray-600">{section.suggestedTempo.max}</p>
+              <p className="text-xs text-gray-400">BPM</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Techniques */}
+      {section.techniques && section.techniques.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Music2 className="w-4 h-4 text-violet-500" />
+            <h3 className="text-sm font-semibold text-black">필요 테크닉</h3>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {section.techniques.map((technique, idx) => (
+              <span
+                key={idx}
+                className="px-3 py-1.5 bg-violet-50 text-violet-700 rounded-full text-xs font-medium"
+              >
+                {technique}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Expression */}
+      {section.expression && section.expression.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Volume2 className="w-4 h-4 text-violet-500" />
+            <h3 className="text-sm font-semibold text-black">표현 지시어</h3>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {section.expression.map((exp, idx) => (
+              <span
+                key={idx}
+                className="px-3 py-1.5 bg-amber-50 text-amber-700 rounded-full text-xs font-medium italic"
+              >
+                {exp}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Practice Notes */}
+      {section.practiceNotes && (
+        <div className="bg-gradient-to-br from-violet-50 to-white rounded-xl border border-violet-100 p-4 mb-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Lightbulb className="w-4 h-4 text-violet-500" />
+            <h3 className="text-sm font-semibold text-black">AI 연습 조언</h3>
+          </div>
+          <p className="text-sm text-gray-700 leading-relaxed">
+            {section.practiceNotes}
+          </p>
+        </div>
+      )}
+
+      {/* My Practice Stats */}
+      {practiceProgress && (
+        <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
+          <div className="flex items-center gap-2 mb-3">
+            <BarChart3 className="w-4 h-4 text-violet-500" />
+            <h3 className="text-sm font-semibold text-black">내 연습 기록</h3>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="text-center p-3 bg-gray-50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">연습 횟수</p>
+              <p className="text-xl font-bold text-black">{practiceProgress.practiceCount}회</p>
+            </div>
+            <div className="text-center p-3 bg-gray-50 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">연습 시간</p>
+              <p className="text-xl font-bold text-black">{formatPracticeTime(practiceProgress.practiceTime)}</p>
+            </div>
+          </div>
+          {practiceProgress.lastPracticedAt && (
+            <p className="text-xs text-gray-400 mt-3 text-center">
+              마지막 연습: {new Date(practiceProgress.lastPracticedAt).toLocaleDateString("ko-KR")}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Section Navigation */}
+      <div className="flex items-center gap-3 mb-4">
+        {hasPrevSection ? (
+          <Link
+            href={`/ai-analysis/${pieceId}/section/${sectionIndex - 1}`}
+            className="flex-1 flex items-center justify-center gap-2 py-3 bg-gray-100 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-200 transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            이전 섹션
+          </Link>
+        ) : (
+          <div className="flex-1" />
+        )}
+
+        {hasNextSection ? (
+          <Link
+            href={`/ai-analysis/${pieceId}/section/${sectionIndex + 1}`}
+            className="flex-1 flex items-center justify-center gap-2 py-3 bg-gray-100 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-200 transition-colors"
+          >
+            다음 섹션
+            <ChevronRight className="w-4 h-4" />
+          </Link>
+        ) : (
+          <div className="flex-1" />
+        )}
+      </div>
+
+      {/* Practice Button */}
+      <Link
+        href={`/practice?piece=${pieceId}&measures=${section.startMeasure}-${section.endMeasure}`}
+        className="flex items-center justify-center gap-2 w-full py-4 bg-gradient-to-r from-violet-500 to-violet-900 text-white rounded-xl text-base font-semibold"
+      >
+        <Play className="w-5 h-5 fill-white" />
+        이 구간 연습하기
+      </Link>
+    </div>
+  );
+}
+
+
+================================================================================
+[5] API: V1 단일 호출 분석 (GPT-4o)
+파일: src/app/api/analyze-song/route.ts
+================================================================================
+
+import { NextResponse } from "next/server";
+import OpenAI from "openai";
+import type { SongAIInfo } from "@/types/song-analysis";
+
+// OpenAI 클라이언트를 런타임에 생성 (빌드 시 에러 방지)
+function getOpenAIClient(): OpenAI | null {
+  if (!process.env.OPENAI_API_KEY) {
+    return null;
+  }
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+}
+
+/** JSON 블록 추출 헬퍼 */
+function extractJSON(text: string): string {
+  // ```json ... ``` 블록에서 추출
+  const jsonBlockMatch = text.match(/```json\s*([\s\S]*?)```/);
+  if (jsonBlockMatch) return jsonBlockMatch[1].trim();
+
+  // { ... } 블록 직접 추출
+  const braceMatch = text.match(/\{[\s\S]*\}/);
+  if (braceMatch) return braceMatch[0].trim();
+
+  return text.trim();
+}
+
+/** SongAIInfo 구조 검증 및 기본값 보완 */
+function validateSongAIInfo(
+  data: Record<string, unknown>,
+  id: string,
+  composer: string,
+  title: string
+): SongAIInfo {
+  return {
+    id,
+    composer: (data.composer as string) || composer,
+    composerFull: (data.composerFull as string) || composer,
+    composerImage: data.composerImage as string | undefined,
+    title: (data.title as string) || title,
+    opus: (data.opus as string) || "",
+    year: (data.year as string) || "",
+    period: (data.period as string) || "클래식",
+    difficulty: (["초급", "중급", "고급", "전문가"].includes(
+      data.difficulty as string
+    )
+      ? data.difficulty
+      : "중급") as SongAIInfo["difficulty"],
+    keySignature: (data.keySignature as string) || "",
+    tempo: (data.tempo as string) || "",
+    duration: (data.duration as string) || "",
+    composerBackground:
+      (data.composerBackground as string) || `${composer}에 대한 정보입니다.`,
+    historicalContext:
+      (data.historicalContext as string) ||
+      "이 곡의 시대적 배경 정보입니다.",
+    workBackground:
+      (data.workBackground as string) || "이 작품의 배경 정보입니다.",
+    structure: Array.isArray(data.structure)
+      ? (data.structure as SongAIInfo["structure"])
+      : [
+          {
+            section: "전체",
+            measures: "",
+            description: "곡 구조 분석 정보입니다.",
+          },
+        ],
+    technicalTips: Array.isArray(data.technicalTips)
+      ? (data.technicalTips as string[])
+      : ["천천히 연습하며 정확한 음을 짚어보세요."],
+    musicalTips: Array.isArray(data.musicalTips)
+      ? (data.musicalTips as string[])
+      : ["작곡가의 의도를 생각하며 연주해보세요."],
+    famousPerformers: Array.isArray(data.famousPerformers)
+      ? (data.famousPerformers as string[])
+      : [],
+  };
+}
+
+export async function POST(request: Request) {
+  try {
+    const { composer, title, id } = await request.json();
+
+    if (!composer || !title) {
+      return NextResponse.json(
+        { error: "composer와 title은 필수입니다." },
+        { status: 400 }
+      );
+    }
+
+    const openai = getOpenAIClient();
+    if (!openai) {
+      return NextResponse.json(
+        { error: "OPENAI_API_KEY가 설정되지 않았습니다." },
+        { status: 500 }
+      );
+    }
+
+    const prompt = `당신은 클래식 피아노 음악 전문가이자 음악학 박사입니다. 다음 곡에 대한 **학술적으로 검증된** 상세 분석 정보를 JSON 형태로 작성해주세요.
+
+작곡가: ${composer}
+곡 제목: ${title}
+
+## 분석의 전제 조건 (필수)
+1. **모르면 모른다고 해**: 확실한 근거(악보, 학술 자료)가 없는 부분은 "확인된 자료 부족"으로 표기하거나 해당 필드를 비워둘 것.
+2. **출처 명시**: 배경 설명이나 형식 분석 시, 참고한 에디션(Henle, Wiener Urtext, Peters 등)이나 문헌의 맥락을 언급할 것.
+3. **악보 데이터 충돌 시 폐기**: 분석 내용 중 악보 데이터와 충돌하는 내용이 감지되면 해당 내용을 제외할 것.
+
+## 정보 층위 분리 (Layered Information)
+
+### Fact Layer (악보 기반) - 단정적 표현 사용
+- 마디 수, 박자 변화, 반복 기호, 실제 적힌 템포 지시어
+- "악보상 ~로 표기됨" 형식으로 기술
+- 예: "악보상 Allegro con brio (♩=160)로 표기됨"
+
+### Evidence Layer (문헌 기반) - 출처 언급 필수
+- 작곡 배경, 학술적 분석, 역사적 맥락
+- 출처나 각주가 가능한 정보만 기술
+- 예: "New Grove Dictionary에 따르면...", "작곡가의 1830년 편지에서..."
+
+### Opinion Layer (해석/팁) - 제안 형식 사용
+- 연주자별 해석 차이, 테크닉 가이드
+- "~로 해석될 여지가 있음", "~를 고려해볼 수 있음" 형식
+- 특정 연주자의 해석인지, 보편적 관행인지 구분
+
+## 정합성 자가 검증 (출력 전 확인)
+1. 기술된 마디 번호가 실제 악보의 구조와 일치하는가?
+2. 테크닉 팁이 악보에 표기된 도약, 화음 구조와 물리적으로 연결되는가?
+3. 변주곡/소나타 등의 경우 각 섹션 특징이 실제 음형(Figuration)에 근거하는가?
+4. 추상적 표현("화려하다", "아름답다")을 구체적 음악 요소로 대체했는가?
+
+아래 JSON 형식에 맞게 한국어로 작성하세요. 반드시 유효한 JSON만 출력하세요.
+
+{
+  "composer": "작곡가 약칭 (예: F. Chopin)",
+  "composerFull": "작곡가 전체 이름과 생몰년 (예: Frédéric François Chopin, 1810-1849)",
+  "title": "곡 제목 (원어 표기)",
+  "opus": "작품번호 (정확한 카탈로그 번호)",
+  "year": "작곡년도 (확인된 경우만, 미상이면 빈 문자열)",
+  "period": "음악 시대 (바로크/고전/낭만/인상주의/근현대 중 하나)",
+  "difficulty": "난이도 (초급/중급/고급/전문가 중 하나)",
+  "keySignature": "조성 (예: G minor, B-flat major)",
+  "tempo": "악보상 템포 지시어 (예: Largo - Moderato - Presto)",
+  "duration": "표준 연주 시간 (예: 약 9-10분)",
+  "composerBackground": "작곡가 배경 (8-10문장, 역사적 사실 기반)",
+  "historicalContext": "시대적 상황 (8-10문장, 작곡 당시 상황)",
+  "workBackground": "작품 배경 (8-10문장, 검증된 정보만)",
+  "structure": [
+    { "section": "섹션명", "measures": "마디 범위 (예: 1-8)", "description": "해당 섹션의 음악적 특징 (3-4문장)" }
+  ],
+  "technicalTips": ["구체적인 테크닉 팁 (마디 번호 포함)"],
+  "musicalTips": ["음악적 해석 팁"],
+  "famousPerformers": ["연주자명 - 해석 특징"]
+}
+
+## 상세 작성 지침
+
+### composerBackground (작곡가 배경) - 8-10문장 [Evidence Layer]
+- 정확한 출생일, 출생지, 사망일 (검증된 정보만)
+- 음악 교육 이력 (스승, 학교)
+- 주요 활동 도시와 시기
+- 음악 양식의 특징 (구체적 음악 요소로 설명)
+- 피아노 음악사에서의 공헌
+- 동시대 작곡가들과의 관계
+
+### historicalContext (시대적 상황) - 8-10문장 [Evidence Layer]
+- 작곡 당시의 역사적 사건 (연도 명시)
+- 음악계의 주요 흐름
+- 작곡가의 개인사 (문헌에서 확인된 경우만)
+- 이 장르/형식의 발전 맥락
+- 당시 청중과 비평가의 반응 (출처가 있는 경우만)
+
+### workBackground (작품 배경) - 8-10문장 [Evidence Layer]
+- 작곡 동기 (작곡가의 편지, 일기 등 1차 자료에서 확인된 경우)
+- 정확한 작곡 시기 (불확실하면 "정확한 시기 미상")
+- 헌정자와 그 관계 (악보 초판에 명시된 경우만)
+- 초연 정보 (날짜, 장소, 연주자 - 기록이 있는 경우만)
+- 출판사와 초판 연도
+- 자필 악보 보관 장소 (알려진 경우)
+
+### structure (곡 구조) - 반드시 악보 기반 [Fact Layer]
+**중요**: 표준 에디션(Henle, Wiener Urtext, Peters 등)의 마디 번호를 기준으로 정확하게 작성.
+- 마디 번호가 확실하지 않으면 해당 섹션을 제외하거나 "확인 필요"로 표기
+- 각 섹션의 정확한 시작-끝 마디 (예: "1-32마디")
+- 조성 변화 명시 (예: "g단조 → B♭장조")
+- 특징적인 음형(Figuration) 근거로 설명 (예: "16분음표 아르페지오 패턴")
+- 소나타/론도/변주곡 등 형식 분석
+- 변주곡의 경우 각 변주의 특성을 음악적 요소로 설명
+
+### technicalTips (테크닉 팁) - 6-8개 [Opinion Layer]
+- 구체적인 마디 번호 명시 (예: "23-28마디의 옥타브 패시지")
+- 실제 악보에 나타나는 도약, 연타, 복합 리듬의 구체적 위치
+- 물리적으로 해결 가능한 연습법만 제안
+- "~를 고려해볼 수 있음" 형식 사용
+- 보편적 관행인지, 특정 교수법인지 구분
+
+### musicalTips (음악적 해석 팁) - 6-8개 [Opinion Layer]
+- 프레이징 단위와 호흡점 (악보상 슬러 기준으로)
+- 악보에 표기된 다이나믹 구조 분석
+- 루바토 적용 제안 (단정적 표현 금지)
+- 특정 연주자의 해석인지, 보편적 관행인지 구분
+- "~로 해석될 여지가 있음" 형식 사용
+
+### famousPerformers (유명 연주자) - 5-6명
+- 이 곡의 정평 있는 녹음을 남긴 연주자만 포함
+- 각 연주자의 해석 특징을 구체적으로 설명 (템포, 루바토, 페달링 등)
+- 녹음 연도나 음반 레이블 (알려진 경우)
+- 예: "Raymond Lewenthal (1961, Columbia) - 극적인 대비와 빠른 템포"
+
+## 절대 금지 사항
+- 마디 번호를 추측하지 마세요. 확실하지 않으면 "마디 번호 확인 필요" 또는 "전반부/중반부/후반부"로 표현
+- 작곡년도가 불확실하면 빈 문자열("")로 두세요
+- 존재하지 않는 헌정자나 초연 정보를 만들지 마세요
+- "화려하다", "아름답다" 같은 추상적 표현 대신 구체적 음악 요소로 설명
+- '~이다'라는 단정적 표현 대신 사실은 "악보상 ~로 표기됨", 의견은 "~로 해석될 여지가 있음"
+- JSON 외에 다른 텍스트는 출력하지 마세요`;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      max_tokens: 8192,
+      temperature: 0.3,
+    });
+
+    const responseText = completion.choices[0]?.message?.content || "";
+
+    console.log("GPT raw response:", responseText.substring(0, 500));
+
+    const jsonStr = extractJSON(responseText);
+    const parsed = JSON.parse(jsonStr);
+
+    console.log("Parsed fields - year:", parsed.year, "duration:", parsed.duration, "opus:", parsed.opus);
+
+    const validated = validateSongAIInfo(parsed, id || "new", composer, title);
+
+    return NextResponse.json(validated);
+  } catch (error) {
+    console.error("Song analysis API error:", error);
+
+    const errorMessage =
+      error instanceof Error ? error.message : "알 수 없는 오류";
+    return NextResponse.json(
+      { error: `곡 분석 중 오류가 발생했습니다: ${errorMessage}` },
+      { status: 500 }
+    );
+  }
+}
+
+
+================================================================================
+[6] API: V2 4-Phase 파이프라인 (Perplexity+GPT)
+파일: src/app/api/analyze-song-v2/route.ts
+================================================================================
+
+import { NextResponse } from "next/server";
+import OpenAI from "openai";
+import { getCachedAnalysis, saveCachedAnalysis, deleteCachedAnalysis, updateAnalysisById } from "@/lib/song-analysis-db";
+import { supabaseServer } from "@/lib/supabase-server";
+import {
+  createReferenceSearchPrompt,
+  createPhase1Prompt,
+  createPhase2Prompt,
+  createPhase3Prompt,
+  createPhase4Prompt,
+  createMusicologistPrompt,
+  createMusicXmlPrompt,
+  createStructureOnlyPrompt,
+  createDetailAnalysisPrompt,
+  createExtraTechniquePrompt,
+  isLargeWork,
+} from "@/lib/analysis-prompts";
+import type {
+  SongAnalysis,
+  SongAnalysisContentV2,
+  AnalyzeSongRequest,
+  AnalyzeSongResponse,
+  DifficultyLevel,
+  VerificationStatus,
+  StructureAnalysisV2,
+  PracticeMethod,
+  RecommendedPerformanceV2,
+  SongOverview,
+  ComposerLife,
+  HistoricalBackground,
+  SongCharacteristics,
+} from "@/types/song-analysis";
+
+/** OpenAI 클라이언트 생성 */
+function getOpenAIClient(): OpenAI | null {
+  if (!process.env.OPENAI_API_KEY) {
+    return null;
+  }
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+}
+
+/** JSON 블록 추출 (Perplexity citations [1][2] 등 제거) */
+function extractJSON(text: string): string {
+  // Perplexity citation 제거: [1], [2][3], [1][2][3] 등
+  let cleaned = text.replace(/\[(\d+)\]/g, "");
+
+  const jsonBlockMatch = cleaned.match(/```json\s*([\s\S]*?)```/);
+  if (jsonBlockMatch) cleaned = jsonBlockMatch[1].trim();
+  else {
+    const braceMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (braceMatch) cleaned = braceMatch[0].trim();
+    else cleaned = cleaned.trim();
+  }
+
+  // JSON 내부 마크다운 서식 제거: **bold**, *italic*
+  cleaned = cleaned.replace(/\*\*([^*]+)\*\*/g, "$1");
+  cleaned = cleaned.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, "$1");
+
+  // 일본어 카타카나/히라가나 제거 (예: "カデンツ" → "")
+  cleaned = cleaned.replace(/[\u3040-\u309F\u30A0-\u30FF]+/g, "");
+
+  return cleaned;
+}
+
+/** 안전한 JSON 파싱: 실패 시 GPT로 재포맷 */
+async function safeParseJSON(
+  text: string,
+  openai: OpenAI,
+  label: string,
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Promise<Record<string, any>> {
+  const jsonStr = extractJSON(text);
+  try {
+    return JSON.parse(jsonStr);
+  } catch {
+    console.log(`[${label}] JSON 파싱 실패 → GPT로 재포맷`);
+    const reformatted = await callGPT(
+      openai,
+      `다음 텍스트에서 JSON 객체만 추출하여 유효한 JSON으로 변환하십시오. 텍스트 설명이나 마크다운은 제거하고 순수 JSON만 출력하십시오.\n\n${text}`,
+      8192,
+      0.1,
+    );
+    return JSON.parse(extractJSON(reformatted));
+  }
+}
+
+/** 고유 ID 생성 */
+function generateId(): string {
+  return `analysis_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
+/** "확인 필요" 문구 필터링 */
+function filterNeedsReview(text: string | undefined): string | undefined {
+  if (!text) return undefined;
+  if (text.includes("확인 필요") || text.includes("문헌 확인") || text === "확인 필요") {
+    return undefined;
+  }
+  return text;
+}
+
+/** Perplexity 클라이언트 (메인 분석 엔진) */
+function getPerplexityClient(): OpenAI | null {
+  if (!process.env.PERPLEXITY_API_KEY) {
+    return null;
+  }
+  return new OpenAI({
+    apiKey: process.env.PERPLEXITY_API_KEY,
+    baseURL: "https://api.perplexity.ai",
+  });
+}
+
+/** GPT 호출 (보조/폴백용) */
+async function callGPT(
+  openai: OpenAI,
+  prompt: string,
+  maxTokens: number = 8192,
+  temperature: number = 0.1,
+): Promise<string> {
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4o",
+    messages: [
+      {
+        role: "system",
+        content: "반드시 한국어로만 응답하세요. 일본어, 중국어는 절대 사용하지 마세요. 고유명사(인명, 지명, 작품명)는 원어 표기를 허용합니다. 확실하지 않은 정보는 빈 문자열(\"\")로 반환하고 절대 추측하여 작성하지 마세요. JSON 외에 다른 텍스트는 출력하지 마세요.",
+      },
+      { role: "user", content: prompt },
+    ],
+    max_tokens: maxTokens,
+    temperature,
+    top_p: 0.2,
+  });
+  return completion.choices[0]?.message?.content || "";
+}
+
+/** Perplexity 호출 (메인) */
+async function callPerplexity(
+  prompt: string,
+  maxTokens: number = 8192,
+): Promise<string | null> {
+  const perplexity = getPerplexityClient();
+  if (!perplexity) return null;
+
+  try {
+    const completion = await perplexity.chat.completions.create({
+      model: "sonar-pro",
+      messages: [
+        {
+          role: "system",
+          content: "반드시 한국어로만 응답하세요. 일본어, 중국어는 절대 사용하지 마세요. 고유명사(인명, 지명, 작품명)는 원어 표기를 허용합니다. 확실하지 않은 정보는 빈 문자열(\"\")로 반환하고 절대 추측하여 작성하지 마세요. JSON 외에 다른 텍스트는 출력하지 마세요.",
+        },
+        { role: "user", content: prompt },
+      ],
+      max_tokens: maxTokens,
+      temperature: 0.1,
+    });
+    return completion.choices[0]?.message?.content || null;
+  } catch (error) {
+    console.error("[Perplexity] 호출 실패:", error instanceof Error ? error.message : error);
+    return null;
+  }
+}
+
+/** AI 호출: Perplexity 우선, 실패 시 GPT 폴백 */
+async function callAI(
+  openai: OpenAI,
+  prompt: string,
+  maxTokens: number = 8192,
+  label: string = "",
+): Promise<string> {
+  // 1차: Perplexity (웹 검색 기반, 정확도 높음)
+  const perplexityResult = await callPerplexity(prompt, maxTokens);
+  if (perplexityResult) {
+    console.log(`[${label}] Perplexity 응답 (${perplexityResult.length}자)`);
+    return perplexityResult;
+  }
+
+  // 2차: GPT 폴백
+  console.log(`[${label}] Perplexity 실패 → GPT 폴백`);
+  return callGPT(openai, prompt, maxTokens, 0.2);
+}
+
+/** Phase 0: 레퍼런스 데이터 검색 (Perplexity sonar-pro) */
+async function searchMusicReference(
+  composer: string,
+  title: string,
+): Promise<string | null> {
+  const perplexity = getPerplexityClient();
+  if (!perplexity) {
+    console.log("[Phase 0] PERPLEXITY_API_KEY 미설정 — 레퍼런스 검색 건너뜀");
+    return null;
+  }
+
+  try {
+    console.log("[Phase 0] Perplexity 레퍼런스 검색 중...");
+    const prompt = createReferenceSearchPrompt(composer, title);
+    const completion = await perplexity.chat.completions.create({
+      model: "sonar-pro",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 4096,
+      temperature: 0.1,
+    });
+
+    const result = completion.choices[0]?.message?.content || null;
+    if (result) {
+      console.log(`[Phase 0] 레퍼런스 확보: ${result.length}자`);
+    }
+    return result;
+  } catch (error) {
+    console.error("[Phase 0] Perplexity 검색 실패:", error instanceof Error ? error.message : error);
+    return null;
+  }
+}
+
+// ── 4-Phase 파이프라인 ──
+
+async function runPhase1(
+  openai: OpenAI,
+  composer: string,
+  title: string,
+  musicXml?: string,
+  referenceData?: string | null,
+): Promise<{ meta: SongAnalysis["meta"]; song_overview: SongOverview }> {
+  console.log("[Phase 1] 데이터 검증 + 곡 개요...");
+  const prompt = createPhase1Prompt(composer, title, musicXml, referenceData || undefined);
+  const text = await callAI(openai, prompt, 4096, "Phase 1");
+  const parsed = await safeParseJSON(text, openai, "Phase 1");
+
+  const meta: SongAnalysis["meta"] = {
+    composer: parsed.meta?.composer || composer,
+    title: parsed.meta?.title || title,
+    opus: filterNeedsReview(parsed.meta?.opus) || "",
+    key: filterNeedsReview(parsed.meta?.key) || "",
+    difficulty_level: (
+      ["Beginner", "Intermediate", "Advanced", "Virtuoso"].includes(parsed.meta?.difficulty_level)
+        ? parsed.meta.difficulty_level
+        : "Intermediate"
+    ) as DifficultyLevel,
+  };
+
+  const song_overview: SongOverview = {
+    title_original: parsed.song_overview?.title_original || title,
+    title_korean: parsed.song_overview?.title_korean || undefined,
+    composition_period: parsed.song_overview?.composition_period || "",
+    tempo_marking: parsed.song_overview?.tempo_marking || "",
+    genre: parsed.song_overview?.genre || "",
+    form: parsed.song_overview?.form || "",
+    musical_features: Array.isArray(parsed.song_overview?.musical_features)
+      ? parsed.song_overview.musical_features
+      : [],
+  };
+
+  console.log(`[Phase 1] Done: ${meta.composer} - ${meta.title} (${meta.opus})`);
+  return { meta, song_overview };
+}
+
+async function runPhase2(
+  openai: OpenAI,
+  composer: string,
+  title: string,
+  opus: string,
+  verifiedMeta?: { composer: string; title: string; opus: string; key: string },
+): Promise<{
+  composer_life: ComposerLife;
+  historical_background: HistoricalBackground;
+  song_characteristics: SongCharacteristics;
+}> {
+  console.log("[Phase 2] 인문학적 배경...");
+  const prompt = createPhase2Prompt(composer, title, opus, verifiedMeta);
+  const text = await callAI(openai, prompt, 8192, "Phase 2");
+  const parsed = await safeParseJSON(text, openai, "Phase 2");
+
+  const composer_life: ComposerLife = {
+    summary: parsed.composer_life?.summary || "",
+    timeline: Array.isArray(parsed.composer_life?.timeline) ? parsed.composer_life.timeline : [],
+    at_composition: parsed.composer_life?.at_composition || "",
+  };
+
+  const historical_background: HistoricalBackground = {
+    era_characteristics: parsed.historical_background?.era_characteristics || "",
+    contemporary_composers: parsed.historical_background?.contemporary_composers || "",
+    musical_movement: parsed.historical_background?.musical_movement || "",
+  };
+
+  const song_characteristics: SongCharacteristics = {
+    composition_background: parsed.song_characteristics?.composition_background || "",
+    form_and_structure: parsed.song_characteristics?.form_and_structure || "",
+    technique: parsed.song_characteristics?.technique || "",
+    literary_dramatic: parsed.song_characteristics?.literary_dramatic || "",
+    conclusion: parsed.song_characteristics?.conclusion || "",
+  };
+
+  console.log(`[Phase 2] Done`);
+  return { composer_life, historical_background, song_characteristics };
+}
+
+async function runPhase3(
+  openai: OpenAI,
+  composer: string,
+  title: string,
+  opus: string,
+  musicXml?: string,
+  referenceData?: string | null,
+  verifiedMeta?: { composer: string; title: string; opus: string; key: string },
+): Promise<{ structure_analysis_v2: StructureAnalysisV2 }> {
+  console.log("[Phase 3] 구조/화성 분석...");
+  const prompt = createPhase3Prompt(composer, title, opus, musicXml, referenceData || undefined, verifiedMeta);
+  const text = await callAI(openai, prompt, 8192, "Phase 3");
+  const parsed = await safeParseJSON(text, openai, "Phase 3");
+
+  const structure_analysis_v2: StructureAnalysisV2 = {
+    sections: Array.isArray(parsed.structure_analysis_v2?.sections)
+      ? parsed.structure_analysis_v2.sections
+      : [],
+    harmony_table: Array.isArray(parsed.structure_analysis_v2?.harmony_table)
+      ? parsed.structure_analysis_v2.harmony_table
+      : [],
+  };
+
+  console.log(`[Phase 3] Done: ${structure_analysis_v2.sections.length} sections, ${structure_analysis_v2.harmony_table.length} harmony rows`);
+  return { structure_analysis_v2 };
+}
+
+async function runPhase4(
+  openai: OpenAI,
+  composer: string,
+  title: string,
+  opus: string,
+  sectionNames: string[],
+): Promise<{
+  practice_method: PracticeMethod;
+  recommended_performances_v2: RecommendedPerformanceV2[];
+}> {
+  console.log("[Phase 4] 연습법 + 4주 루틴 + 추천 연주...");
+  const prompt = createPhase4Prompt(composer, title, opus, sectionNames);
+  const text = await callAI(openai, prompt, 8192, "Phase 4");
+  const parsed = await safeParseJSON(text, openai, "Phase 4");
+
+  const practice_method: PracticeMethod = {
+    technique_summary: Array.isArray(parsed.practice_method?.technique_summary)
+      ? parsed.practice_method.technique_summary
+      : [],
+    section_guides: Array.isArray(parsed.practice_method?.section_guides)
+      ? parsed.practice_method.section_guides
+      : [],
+    weekly_routine: Array.isArray(parsed.practice_method?.weekly_routine)
+      ? parsed.practice_method.weekly_routine
+      : [],
+  };
+
+  const recommended_performances_v2: RecommendedPerformanceV2[] = Array.isArray(
+    parsed.recommended_performances_v2
+  )
+    ? parsed.recommended_performances_v2
+    : [];
+
+  console.log(`[Phase 4] Done: ${practice_method.section_guides.length} guides, ${practice_method.weekly_routine.length} weeks, ${recommended_performances_v2.length} performances`);
+  return { practice_method, recommended_performances_v2 };
+}
+
+/** Phase 1 meta와 Phase 2/3 결과의 교차검증 */
+function crossValidateMeta(
+  phase1Meta: SongAnalysis["meta"],
+  phase2Result: {
+    composer_life: ComposerLife;
+    historical_background: HistoricalBackground;
+    song_characteristics: SongCharacteristics;
+  },
+  phase3Result: { structure_analysis_v2: StructureAnalysisV2 },
+): void {
+  const fields: Array<{ name: string; phase1Value: string }> = [
+    { name: "composer", phase1Value: phase1Meta.composer },
+    { name: "title", phase1Value: phase1Meta.title },
+    { name: "opus", phase1Value: phase1Meta.opus },
+    { name: "key", phase1Value: phase1Meta.key },
+  ];
+
+  for (const { name, phase1Value } of fields) {
+    if (!phase1Value) continue;
+
+    // Phase 2 텍스트에서 불일치 검사
+    const phase2Texts = [
+      phase2Result.composer_life.summary,
+      phase2Result.composer_life.at_composition,
+      phase2Result.song_characteristics.composition_background,
+    ].join(" ");
+
+    // Phase 3 섹션에서 불일치 검사
+    const phase3Texts = phase3Result.structure_analysis_v2.sections
+      .map((s) => `${s.key_signature} ${s.tempo}`)
+      .join(" ");
+
+    const allTexts = `${phase2Texts} ${phase3Texts}`;
+
+    // opus/key 불일치 감지 (다른 작품번호나 조성이 언급된 경우)
+    if (name === "opus" && phase1Value && allTexts.includes("Op.") && !allTexts.includes(phase1Value)) {
+      console.warn(`[CrossValidate] ${name} 불일치 감지: Phase 1="${phase1Value}" — Phase 2/3 텍스트에서 다른 값 발견. Phase 1 값 우선 적용.`);
+    }
+  }
+
+  console.log(`[CrossValidate] Phase 1 meta 교차검증 완료: ${phase1Meta.composer} - ${phase1Meta.title} (${phase1Meta.opus}, ${phase1Meta.key})`);
+}
+
+/** 4-Phase 파이프라인 실행 (V2) */
+async function runV2Pipeline(
+  openai: OpenAI,
+  composer: string,
+  title: string,
+  musicXml?: string,
+): Promise<SongAnalysis> {
+  // Phase 0: 레퍼런스 데이터 검색 (Perplexity)
+  const referenceData = await searchMusicReference(composer, title);
+
+  // Phase 1: 데이터 검증 + 곡 개요 (레퍼런스 데이터 주입)
+  const { meta, song_overview } = await runPhase1(openai, composer, title, musicXml, referenceData);
+
+  // Phase 2 & 3: 병렬 실행 (Phase 1 meta를 검증 기준값으로 주입)
+  const verifiedMeta = { composer: meta.composer, title: meta.title, opus: meta.opus, key: meta.key };
+  const [phase2Result, phase3Result] = await Promise.all([
+    runPhase2(openai, meta.composer, meta.title, meta.opus, verifiedMeta),
+    runPhase3(openai, meta.composer, meta.title, meta.opus, musicXml, referenceData, verifiedMeta),
+  ]);
+
+  // Phase 1 meta와 Phase 2/3 결과 교차검증
+  crossValidateMeta(meta, phase2Result, phase3Result);
+
+  // Phase 4: Phase 3 결과 기반
+  const sectionNames = phase3Result.structure_analysis_v2.sections.map((s) => s.section);
+  const phase4Result = await runPhase4(
+    openai,
+    meta.composer,
+    meta.title,
+    meta.opus,
+    sectionNames.length > 0 ? sectionNames : ["전체"],
+  );
+
+  // 하위 호환 필드 자동 생성
+  const composer_background = phase2Result.composer_life.summary;
+  const historical_context = phase2Result.historical_background.era_characteristics;
+  const work_background = phase2Result.song_characteristics.composition_background;
+
+  const structure_analysis = phase3Result.structure_analysis_v2.sections.map((s) => ({
+    section: s.section,
+    measures: s.measures,
+    key_tempo: `${s.key_signature} / ${s.time_signature} / ${s.tempo}`,
+    character: s.mood,
+    description: s.description,
+  }));
+
+  const technique_tips = phase4Result.practice_method.section_guides.map((g) => ({
+    section: g.section,
+    problem: "",
+    category: undefined as undefined,
+    solution: g.guide,
+    practice: "",
+  }));
+
+  const musical_interpretation = phase2Result.song_characteristics.conclusion;
+
+  const recommended_performances = phase4Result.recommended_performances_v2.map((p) => ({
+    artist: p.artist,
+    year: p.year,
+    comment: p.comment,
+  }));
+
+  // 희귀 작곡가 체크
+  const rareComposers = [
+    "alkan", "godowsky", "sorabji", "busoni", "thalberg",
+    "medtner", "lyapunov", "moszkowski", "scharwenka"
+  ];
+  const isRareComposer = rareComposers.some(
+    (rc) => composer.toLowerCase().includes(rc)
+  );
+
+  const content: SongAnalysisContentV2 = {
+    // 하위 호환 V1 필드
+    composer_background,
+    historical_context,
+    work_background,
+    structure_analysis,
+    technique_tips,
+    musical_interpretation,
+    recommended_performances,
+    // V2 신규 필드
+    song_overview,
+    composer_life: phase2Result.composer_life,
+    historical_background: phase2Result.historical_background,
+    song_characteristics: phase2Result.song_characteristics,
+    structure_analysis_v2: phase3Result.structure_analysis_v2,
+    practice_method: phase4Result.practice_method,
+    recommended_performances_v2: phase4Result.recommended_performances_v2,
+  };
+
+  return {
+    id: generateId(),
+    meta,
+    content,
+    verification_status: isRareComposer ? "Needs Review" : "Verified",
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    schema_version: 2,
+  };
+}
+
+// ── 기존 V1 파이프라인 (하위 호환) ──
+
+function parseAndValidateResponse(
+  responseText: string,
+  composer: string,
+  title: string
+): SongAnalysis {
+  const jsonStr = extractJSON(responseText);
+  const parsed = JSON.parse(jsonStr);
+
+  const rareComposers = [
+    "alkan", "godowsky", "sorabji", "busoni", "thalberg",
+    "medtner", "lyapunov", "moszkowski", "scharwenka"
+  ];
+  const isRareComposer = rareComposers.some(
+    (rc) => composer.toLowerCase().includes(rc)
+  );
+
+  const analysis: SongAnalysis = {
+    id: generateId(),
+    meta: {
+      composer: parsed.meta?.composer || composer,
+      title: parsed.meta?.title || title,
+      opus: filterNeedsReview(parsed.meta?.opus) || "",
+      key: filterNeedsReview(parsed.meta?.key) || "",
+      difficulty_level: (
+        ["Beginner", "Intermediate", "Advanced", "Virtuoso"].includes(
+          parsed.meta?.difficulty_level
+        )
+          ? parsed.meta.difficulty_level
+          : "Intermediate"
+      ) as DifficultyLevel,
+    },
+    content: {
+      composer_background:
+        parsed.content?.composer_background || "작곡가 정보를 확인할 수 없습니다.",
+      historical_context:
+        parsed.content?.historical_context || "시대적 배경 정보를 확인할 수 없습니다.",
+      work_background:
+        parsed.content?.work_background || "작품 배경 정보를 확인할 수 없습니다.",
+      structure_analysis: Array.isArray(parsed.content?.structure_analysis)
+        ? parsed.content.structure_analysis.map((s: Record<string, string>) => ({
+            section: s.section || "섹션",
+            measures: filterNeedsReview(s.measures),
+            key_tempo: filterNeedsReview(s.key_tempo),
+            character: filterNeedsReview(s.character),
+            description: filterNeedsReview(s.description) || "",
+          }))
+        : [{ section: "전체", description: "" }],
+      technique_tips: Array.isArray(parsed.content?.technique_tips)
+        ? parsed.content.technique_tips.map((t: Record<string, string> | string) =>
+            typeof t === "string"
+              ? { section: "전체", problem: t, category: undefined, solution: "", practice: "" }
+              : {
+                  section: t.section || "전체",
+                  problem: t.problem || "",
+                  category: ["Physiological", "Interpretative", "Structural"].includes(t.category)
+                    ? t.category as "Physiological" | "Interpretative" | "Structural"
+                    : undefined,
+                  solution: t.solution || "",
+                  practice: t.practice || "",
+                }
+          )
+        : [{ section: "전체", problem: "", category: undefined, solution: "", practice: "" }],
+      musical_interpretation:
+        parsed.content?.musical_interpretation || "해석 가이드 정보 확인 필요",
+      recommended_performances: Array.isArray(
+        parsed.content?.recommended_performances
+      )
+        ? parsed.content.recommended_performances
+        : [],
+    },
+    verification_status: (
+      isRareComposer ? "Needs Review" : (parsed.verification_status || "Needs Review")
+    ) as VerificationStatus,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    schema_version: 1,
+  };
+
+  return analysis;
+}
+
+async function runV1Pipeline(
+  openai: OpenAI,
+  composer: string,
+  title: string,
+  sheetMusicImages?: string[],
+  musicXml?: string,
+): Promise<SongAnalysis> {
+  const hasImages = sheetMusicImages && sheetMusicImages.length > 0;
+  const hasMusicXml = musicXml && musicXml.length > 0;
+
+  if (hasMusicXml) {
+    console.log(`[V1 MusicXML] ${title} - ${musicXml!.length} chars`);
+    const xmlPrompt = createMusicXmlPrompt(composer, title, musicXml!);
+    const responseText = await callGPT(openai, xmlPrompt, 16384);
+    return parseAndValidateResponse(responseText, composer, title);
+  }
+
+  if (isLargeWork(title) && !hasImages) {
+    console.log(`[V1 Large Work] ${title} - two-pass analysis`);
+    return runV1LargeWorkPipeline(openai, composer, title);
+  }
+
+  // 일반 작품
+  const prompt = createMusicologistPrompt(composer, title);
+
+  let messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[];
+  if (hasImages) {
+    const imagePromptPrefix = `\n\n[악보 이미지 분석 지침]\n첨부된 악보 이미지를 반드시 참조하여 분석하십시오.`;
+    const contentParts: OpenAI.Chat.Completions.ChatCompletionContentPart[] = [
+      { type: "text", text: prompt + imagePromptPrefix },
+      ...sheetMusicImages!.map((img): OpenAI.Chat.Completions.ChatCompletionContentPart => ({
+        type: "image_url",
+        image_url: { url: img, detail: "high" },
+      })),
+    ];
+    messages = [{ role: "user", content: contentParts }];
+  } else {
+    messages = [{ role: "user", content: prompt }];
+  }
+
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4o",
+    messages,
+    max_tokens: 16384,
+    temperature: 0.2,
+    top_p: 0.2,
+  });
+
+  let responseText = completion.choices[0]?.message?.content || "";
+
+  // Vision 거절 시 텍스트 전용으로 fallback
+  if (hasImages && (responseText.startsWith("I'm sorry") || responseText.startsWith("I can't") || responseText.startsWith("Sorry"))) {
+    console.log("[V1 Vision Fallback] Retrying text-only...");
+    if (isLargeWork(title)) {
+      return runV1LargeWorkPipeline(openai, composer, title);
+    }
+    const fallbackCompletion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 16384,
+      temperature: 0.5,
+      top_p: 0.3,
+    });
+    responseText = fallbackCompletion.choices[0]?.message?.content || "";
+  }
+
+  return parseAndValidateResponse(responseText, composer, title);
+}
+
+async function runV1LargeWorkPipeline(
+  openai: OpenAI,
+  composer: string,
+  title: string,
+): Promise<SongAnalysis> {
+  // Call 1: 구조 분석
+  const structurePrompt = createStructureOnlyPrompt(composer, title);
+  const structureText = await callGPT(openai, structurePrompt, 16384);
+  const structureJson = JSON.parse(extractJSON(structureText));
+  const structureAnalysis: Array<{ section: string; measures?: string; key_tempo?: string; character?: string; description: string }> =
+    Array.isArray(structureJson.structure_analysis) ? structureJson.structure_analysis : [];
+
+  console.log(`[V1 Large Call 1] ${structureAnalysis.length} sections`);
+  const sectionNames = structureAnalysis.map((s) => s.section);
+
+  // Call 2: 상세 분석
+  const detailPrompt = createDetailAnalysisPrompt(composer, title, sectionNames);
+  const detailText = await callGPT(openai, detailPrompt, 16384);
+  const detailJson = JSON.parse(extractJSON(detailText));
+  let allTechniqueTips = detailJson.content?.technique_tips || [];
+
+  // 누락 섹션 보완
+  const coveredSections = new Set(
+    allTechniqueTips.map((t: { section: string }) =>
+      t.section.replace(/\s*\(.*\)/, "").trim()
+    )
+  );
+  const missingSections = sectionNames.filter((s) => !coveredSections.has(s));
+
+  if (missingSections.length > 0) {
+    console.log(`[V1 Large] Missing ${missingSections.length} sections → extra calls`);
+    const BATCH_SIZE = 12;
+    for (let i = 0; i < missingSections.length; i += BATCH_SIZE) {
+      const batch = missingSections.slice(i, i + BATCH_SIZE);
+      const extraPrompt = createExtraTechniquePrompt(
+        composer, title, batch, Math.floor(i / BATCH_SIZE), Math.ceil(missingSections.length / BATCH_SIZE)
+      );
+      const extraText = await callGPT(openai, extraPrompt, 16384);
+      try {
+        const extraJson = JSON.parse(extractJSON(extraText));
+        if (Array.isArray(extraJson.technique_tips)) {
+          allTechniqueTips = [...allTechniqueTips, ...extraJson.technique_tips];
+        }
+      } catch { /* skip */ }
+    }
+  }
+
+  const mergedResponse = JSON.stringify({
+    meta: detailJson.meta || { composer, title },
+    content: {
+      composer_background: detailJson.content?.composer_background || "",
+      historical_context: detailJson.content?.historical_context || "",
+      work_background: detailJson.content?.work_background || "",
+      structure_analysis: structureAnalysis,
+      technique_tips: allTechniqueTips,
+      musical_interpretation: detailJson.content?.musical_interpretation || "",
+      recommended_performances: detailJson.content?.recommended_performances || [],
+    },
+    verification_status: detailJson.verification_status || "Needs Review",
+  });
+
+  return parseAndValidateResponse(mergedResponse, composer, title);
+}
+
+// ── API 핸들러 ──
+
+export async function POST(request: Request) {
+  try {
+    const body: AnalyzeSongRequest = await request.json();
+    let { composer, title, forceRefresh = false, sheetMusicImages, musicXml } = body;
+    const { pdfStoragePath, musicxmlStoragePath, useStoredSource, useV2 = true } = body;
+
+    if (!composer || !title) {
+      const response: AnalyzeSongResponse = {
+        success: false,
+        error: "composer와 title은 필수입니다.",
+      };
+      return NextResponse.json(response, { status: 400 });
+    }
+
+    // ── 관리자: 저장된 악보로 재분석 ──
+    let storedPdfPath: string | undefined = pdfStoragePath;
+    let storedMusicxmlPath: string | undefined = musicxmlStoragePath;
+
+    if (useStoredSource) {
+      forceRefresh = true;
+      const existing = await getCachedAnalysis(composer, title);
+
+      if (existing?.musicxml_storage_path) {
+        console.log(`[Stored Source] Downloading MusicXML: ${existing.musicxml_storage_path}`);
+        try {
+          const { data } = await supabaseServer.storage
+            .from("sheet-music")
+            .download(existing.musicxml_storage_path);
+          if (data) {
+            musicXml = await data.text();
+            console.log(`[Stored Source] MusicXML loaded: ${musicXml.length} chars`);
+          }
+        } catch (e) {
+          console.error("[Stored Source] MusicXML download failed:", e);
+        }
+        storedPdfPath = existing.pdf_storage_path;
+        storedMusicxmlPath = existing.musicxml_storage_path;
+      } else if (existing?.pdf_storage_path) {
+        console.log(`[Stored Source] Downloading PDF: ${existing.pdf_storage_path}`);
+        try {
+          const { data } = await supabaseServer.storage
+            .from("sheet-music")
+            .download(existing.pdf_storage_path);
+          if (data) {
+            const pdfBuffer = await data.arrayBuffer();
+            const pdfBlob = new Blob([pdfBuffer], { type: "application/pdf" });
+
+            const OMR_URL = process.env.OMR_SERVER_URL;
+            if (OMR_URL) {
+              const formData = new FormData();
+              formData.append("file", pdfBlob, "input.pdf");
+              try {
+                const omrRes = await fetch(`${OMR_URL}/convert-to-musicxml`, {
+                  method: "POST",
+                  body: formData,
+                  signal: AbortSignal.timeout(630000),
+                });
+                if (omrRes.ok) {
+                  const omrResult = await omrRes.json();
+                  if (omrResult.musicxml) {
+                    musicXml = omrResult.musicxml;
+                    console.log(`[Stored Source] OMR MusicXML: ${musicXml!.length} chars`);
+                  }
+                }
+              } catch {
+                console.log("[Stored Source] OMR MusicXML failed, trying images");
+              }
+
+              if (!musicXml) {
+                const imgForm = new FormData();
+                imgForm.append("file", pdfBlob, "input.pdf");
+                try {
+                  const imgRes = await fetch(`${OMR_URL}/convert-to-images`, {
+                    method: "POST",
+                    body: imgForm,
+                  });
+                  if (imgRes.ok) {
+                    const imgResult = await imgRes.json();
+                    sheetMusicImages = imgResult.images;
+                  }
+                } catch {
+                  console.error("[Stored Source] Image conversion also failed");
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.error("[Stored Source] PDF download failed:", e);
+        }
+        storedPdfPath = existing.pdf_storage_path;
+        storedMusicxmlPath = existing.musicxml_storage_path;
+      }
+    }
+
+    const hasImages = sheetMusicImages && sheetMusicImages.length > 0;
+    const hasMusicXml = musicXml && musicXml.length > 0;
+
+    // 1. 캐시 확인
+    if (!forceRefresh && !hasImages && !hasMusicXml) {
+      const cachedAnalysis = await getCachedAnalysis(composer, title);
+      if (cachedAnalysis) {
+        console.log(`[Cache HIT] ${composer} - ${title}`);
+        const response: AnalyzeSongResponse = {
+          success: true,
+          data: cachedAnalysis,
+          cached: true,
+        };
+        return NextResponse.json(response);
+      }
+    }
+
+    console.log(`[Cache MISS] ${composer} - ${title} - Calling AI (V2=${useV2})...`);
+
+    // 2. OpenAI API 호출
+    const openai = getOpenAIClient();
+    if (!openai) {
+      const response: AnalyzeSongResponse = {
+        success: false,
+        error: "OPENAI_API_KEY가 설정되지 않았습니다.",
+      };
+      return NextResponse.json(response, { status: 500 });
+    }
+
+    let analysis: SongAnalysis;
+
+    if (useV2) {
+      // ── V2 4-Phase 파이프라인 ──
+      analysis = await runV2Pipeline(openai, composer, title, hasMusicXml ? musicXml : undefined);
+    } else {
+      // ── V1 기존 파이프라인 ──
+      analysis = await runV1Pipeline(
+        openai,
+        composer,
+        title,
+        hasImages ? sheetMusicImages : undefined,
+        hasMusicXml ? musicXml : undefined,
+      );
+    }
+
+    // 저장 경로 보존
+    if (storedPdfPath) {
+      analysis.pdf_storage_path = storedPdfPath;
+    }
+    if (storedMusicxmlPath) {
+      analysis.musicxml_storage_path = storedMusicxmlPath;
+    }
+    if (!analysis.pdf_storage_path || !analysis.musicxml_storage_path) {
+      const existingForPaths = await getCachedAnalysis(composer, title);
+      if (!analysis.pdf_storage_path && existingForPaths?.pdf_storage_path) {
+        analysis.pdf_storage_path = existingForPaths.pdf_storage_path;
+      }
+      if (!analysis.musicxml_storage_path && existingForPaths?.musicxml_storage_path) {
+        analysis.musicxml_storage_path = existingForPaths.musicxml_storage_path;
+      }
+    }
+
+    // 캐시 저장
+    await saveCachedAnalysis(analysis, composer, title);
+    console.log(`[Cache SAVED] ${composer} - ${title} (schema_version=${analysis.schema_version})`);
+
+    const response: AnalyzeSongResponse = {
+      success: true,
+      data: analysis,
+      cached: false,
+    };
+
+    return NextResponse.json(response);
+  } catch (error) {
+    console.error("Song analysis API v2 error:", error);
+
+    const errorMessage =
+      error instanceof Error ? error.message : "알 수 없는 오류";
+    const response: AnalyzeSongResponse = {
+      success: false,
+      error: `곡 분석 중 오류가 발생했습니다: ${errorMessage}`,
+    };
+    return NextResponse.json(response, { status: 500 });
+  }
+}
+
+/** 분석 삭제 */
+export async function DELETE(request: Request) {
+  try {
+    const { id } = await request.json();
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: "id가 필요합니다" },
+        { status: 400 }
+      );
+    }
+    const result = await deleteCachedAnalysis(id);
+    if (result) {
+      return NextResponse.json({ success: true });
+    }
+    return NextResponse.json(
+      { success: false, error: "삭제 실패" },
+      { status: 500 }
+    );
+  } catch (error) {
+    console.error("Delete analysis error:", error);
+    return NextResponse.json(
+      { success: false, error: "삭제 실패" },
+      { status: 500 }
+    );
+  }
+}
+
+/** 분석 데이터 직접 수정 (관리자용) */
+export async function PATCH(request: Request) {
+  try {
+    const { id, analysis } = await request.json();
+    if (!id || !analysis) {
+      return NextResponse.json(
+        { success: false, error: "id와 analysis가 필요합니다" },
+        { status: 400 }
+      );
+    }
+
+    const result = await updateAnalysisById(id, analysis);
+    if (result) {
+      return NextResponse.json({ success: true });
+    }
+    return NextResponse.json(
+      { success: false, error: "업데이트 실패" },
+      { status: 500 }
+    );
+  } catch (error) {
+    console.error("Patch analysis error:", error);
+    return NextResponse.json(
+      { success: false, error: "업데이트 실패" },
+      { status: 500 }
+    );
+  }
+}
+
+/** 캐시된 분석 목록 조회 */
+export async function GET() {
+  try {
+    const { getAllCachedAnalyses } = await import("@/lib/song-analysis-db");
+    const analyses = await getAllCachedAnalyses();
+    return NextResponse.json({
+      success: true,
+      data: analyses,
+      count: analyses.length,
+    });
+  } catch (error) {
+    console.error("Get cached analyses error:", error);
+    return NextResponse.json(
+      { success: false, error: "캐시 조회 실패" },
+      { status: 500 }
+    );
+  }
+}
+
+
+================================================================================
+[7] LIB: Phase 0~4 프롬프트 모음
+파일: src/lib/analysis-prompts.ts
+================================================================================
+
+/**
+ * AI 곡 분석 프롬프트 모듈
+ * Phase 0 (레퍼런스 검색) + 4-Phase 파이프라인 + 기존 호환 프롬프트
+ */
+
+// ── 공통 자기 검증 프로토콜 ──
+
+const SELF_VERIFICATION_PROTOCOL = `
+[자기 검증 프로토콜]
+응답을 최종 출력하기 전에 반드시 아래 3단계 검증을 수행하십시오:
+1차: 작품번호(Opus), 작곡 연도, 초연 데이터가 문헌과 일치하는가?
+2차: 마디 번호와 조성이 Urtext(원전판) 기반인가?
+3차: 한국어 출력이 완전한가? (영어 문장이 섞여 있지 않은가?)
+
+검증 실패 시: 불확실한 항목은 "문헌 확인 필요"로 표기하되, 구조와 내용 자체는 반드시 완성할 것.
+`;
+
+const KOREAN_OUTPUT_RULE = `🚨 모든 출력은 반드시 한국어로 작성하십시오. (고유명사, 음악 용어만 원어 병기 가능)
+🚨 절대 마크다운 서식을 사용하지 마십시오. **bold**, *italic*, ##heading, - list 등 마크다운 문법 금지. 순수 텍스트만 출력할 것.
+🚨 일본어(カタカナ, ひらがな, 漢字 음독) 절대 금지. "カデンツ" 같은 일본어 표기 대신 반드시 한국어("카덴차") 또는 원어("Kadenz", "cadenza")를 사용할 것.
+🚨 손가락 번호(1-2-3-4-5 운지법) 절대 금지. 오류가 많으므로 운지 지시를 포함하지 말 것. 대신 손목/팔 동작, 터치 방법, 연습 아이디어 등 신체 감각 기반 조언을 할 것.`;
+
+// ── Phase 0: 레퍼런스 데이터 검색 (Perplexity용) ──
+
+export function createReferenceSearchPrompt(composer: string, title: string): string {
+  return `I need accurate, verified musical reference data for this classical piano piece:
+
+Composer: ${composer}
+Title: ${title}
+
+Search IMSLP, Wikipedia, Henle Verlag, and music theory databases for the following FACTUAL information.
+
+**CRITICAL: If the title contains "No.X" (e.g., "Op.40 No.6"), search for information about THAT SPECIFIC piece only, NOT the entire collection.**
+
+**Required output format — fill in every field for EVERY movement:**
+
+PIECE INFO:
+- Full title: [original language title]
+- Opus/Catalogue: [e.g., Op.10 No.3]
+- Overall key: [e.g., D major]
+- Year composed: [e.g., 1798]
+- Number of movements: [e.g., 4]
+- Henle difficulty: [e.g., Level 7, if available]
+
+MOVEMENT 1:
+- Tempo marking: [e.g., Presto]
+- Key: [e.g., D major]
+- Time signature: [e.g., 2/2]
+- Form: [e.g., Sonata-allegro form]
+- Number of measures: [e.g., 353]
+- Notable modulations: [e.g., to A major in second theme, to B minor in development]
+
+MOVEMENT 2:
+- Tempo marking: [e.g., Largo e mesto]
+- Key: [e.g., D minor]
+- Time signature: [e.g., 6/8]
+- Form: [e.g., Sonata form]
+- Number of measures: [e.g., 87]
+- Notable modulations: [e.g., to B-flat major, to F major]
+
+MOVEMENT 3:
+(same fields)
+
+MOVEMENT 4:
+(same fields)
+
+(Continue for all movements.)
+
+🚨 CRITICAL RULES:
+- You MUST provide key, time signature, and tempo marking for EVERY movement — these are the most important fields.
+- Search specifically for "[composer] [piece] analysis", "[piece] IMSLP", and "[piece] score" to find structural info.
+- For time signatures: these are standard musical knowledge for well-known classical repertoire. If you know the typical time signature (e.g., a Presto sonata movement is commonly in 2/2, a Menuetto is in 3/4), PROVIDE IT directly. Do NOT write "not specified" or "verify via score" — just give the value.
+- For measure counts: provide approximate counts if exact counts aren't available. Write "approx. 350" rather than "not found".
+- Do NOT hedge or add "verify via IMSLP" caveats. Give the best available answer directly.
+- Do NOT skip any movement.`;
+}
+
+// ── Phase 1: 데이터 검증 + 곡 개요 ──
+
+export function createPhase1Prompt(composer: string, title: string, musicXml?: string, referenceData?: string): string {
+  const xmlSection = musicXml
+    ? `\n\n[MusicXML 데이터]\n아래 MusicXML 데이터에서 조성, 박자, 템포, 마디 수를 직접 읽어 사용하십시오.\n\`\`\`xml\n${musicXml.substring(0, 30000)}\n\`\`\``
+    : '';
+
+  const refSection = referenceData
+    ? `\n\n[🔍 웹 검색 레퍼런스 데이터 — 이 데이터를 1차 출처로 사용하십시오]\n${referenceData}\n\n🚨 위 레퍼런스의 조성, 작품번호, 작곡시기 등 팩트 데이터를 반드시 따르십시오.\n레퍼런스와 상충하는 정보를 생성하지 마십시오.`
+    : '\n\n🚨 확실하지 않은 정보(조성, 작품번호, 작곡시기)는 추측하지 말고 "문헌 확인 필요"로 표기하십시오.';
+
+  return `당신은 세계적인 음악학자(Musicologist)입니다.
+
+작곡가: ${composer}
+곡 제목: ${title}
+${xmlSection}
+${refSection}
+
+${KOREAN_OUTPUT_RULE}
+
+**[Phase 1 임무: 데이터 검증 + 곡의 개요]**
+
+이 곡의 기본 정보를 학술적으로 검증하고, 곡의 개요를 작성하십시오.
+
+**검증 항목:**
+- 작곡가 이름의 정확한 표기 (원어)
+- 작품번호(Opus/Catalogue), 조성, 작곡 시기
+- 난이도 평가 근거
+
+**곡의 개요 작성 기준 (아래 예시 수준으로 상세히 작성):**
+
+[예시 1 - 베토벤 소나타 2번 (다악장 소나타)]
+- composition_period: "1795년경 빈에서 작곡, 1796년 출판, 스승 요제프 하이든에게 헌정된 세 개의 소나타(Op.2)의 하나."
+- tempo_marking: "1악장 Allegro vivace – A장조, 2/4, 소나타 형식. / 2악장 Largo appassionato – D장조, 3/4, 3부/론도적 구조의 느린 악장. / 3악장 Scherzo. Allegretto – A장조, 3/4, 스케르초 + 트리오의 3부분 형식. / 4악장 Rondo. Grazioso – A장조, 4/4, 소나타-론도 형식."
+
+[예시 2 - 슈만 어린이의 정경 Op.15 (소품 모음집 — 소품마다 고유 제목이 있는 경우)]
+- composition_period: "1838년 작곡, 클라라에게 보낸 편지에서 영감받은 13개의 성격소품집."
+- tempo_marking: "No.1 Von fremden Ländern und Menschen (낯선 나라와 사람들) – G장조, 2/4 / No.2 Curiose Geschichte (신기한 이야기) – D장조, 3/4 / No.3 Hasche-Mann (술래잡기) – B단조, 2/4 / ... / No.7 Träumerei (꿈) – F장조, 4/4 / ... / No.13 Der Dichter spricht (시인이 말하다) – G장조, 4/4"
+
+[예시 3 - 슈만 나비 Op.2 (소품 모음집 — 고유 제목 없이 번호만 있는 경우)]
+- composition_period: "1831년경 작곡, 1832년 출판. 장 폴의 소설 '말년의 광란'에서 영감받은 12개의 짧은 성격소품집."
+- tempo_marking: "Introduzione: Moderato – D장조, 3/4 / No.1: Waltz – D장조, 3/4 / No.2: Prestissimo – Eb장조, 2/4 / ... / No.12 (Finale): Allegro – D장조, 2/4"
+
+- genre: 장르적 성격을 문장으로 서술 (예: "전형적 고전 소나타지만..." 또는 "12개의 짧은 성격소품으로 이루어진 피아노 모음곡...")
+- musical_features: 곡 전체를 관통하는 한 문장 요약
+
+**핵심 규칙:**
+- 🚨🚨 **최우선 규칙**: 곡 제목에 "No.X" 등 개별 번호가 명시되어 있으면, 그 **해당 곡 하나만** 분석하십시오. 모음집 전체를 분석하지 마십시오! 예: "Eight Concert Etudes Op.40 No.6" → No.6만 분석. "Kinderszenen Op.15 No.7 Träumerei" → No.7만 분석. tempo_marking에도 해당 곡의 빠르기만 기재하십시오.
+- 모음집 전체를 분석하는 경우(제목에 개별 번호가 없는 경우)에만 아래 규칙을 적용:
+  - tempo_marking 필드에는 반드시 모든 악장/섹션/소품을 나열할 것
+  - 🚨 다악장 소나타/협주곡 → "1악장", "2악장" 표기
+  - 🚨 소품 모음집 → 각 소품의 **고유 제목이 있으면 반드시 원어 제목 + 한국어 번역을 함께** 표기 (예: "Träumerei (꿈)", "Pierrot (피에로)"). 고유 제목이 없으면 "No.1", "No.2" 사용. 절대 "악장"이라 부르지 말 것!
+  - 🚨 변주곡 → "Theme", "Var.1", "Var.2" 표기
+- 단악장 곡이면 전체 구조를 서술
+- genre 필드는 장르 한 단어가 아니라, 이 곡의 장르적 성격을 문장으로 서술
+- musical_features는 곡 전체를 한두 문장으로 압축한 "핵심 요약"
+
+${SELF_VERIFICATION_PROTOCOL}
+
+JSON만 출력:
+{
+  "meta": {
+    "composer": "작곡가 이름 (원어 표기)",
+    "title": "곡 제목 (원어)",
+    "opus": "작품번호 (예: Op.23, BWV 846)",
+    "key": "조성 (예: G minor, C major)",
+    "difficulty_level": "Beginner/Intermediate/Advanced/Virtuoso"
+  },
+  "song_overview": {
+    "title_original": "원어 정식 제목",
+    "title_korean": "한국어 제목 (있다면)",
+    "composition_period": "작곡·초연 시기 상세 (작곡 연도, 출판 연도, 헌정 정보 등을 포함한 문장)",
+    "tempo_marking": "악장 구성 및 빠르기 (모든 악장을 나열: 1악장 Allegro – A장조, 2/4, 소나타 형식. / 2악장 ...)",
+    "genre": "장르적 성격 (문장으로 서술)",
+    "form": "전체 형식 개요",
+    "musical_features": ["이 곡 전체를 관통하는 음악적 특징 한두 문장 요약"]
+  }
+}
+
+JSON만 출력하십시오.`;
+}
+
+// ── Phase 2: 인문학적 배경 (생애, 시대, 곡 특징) ──
+
+export function createPhase2Prompt(
+  composer: string,
+  title: string,
+  opus: string,
+  verifiedMeta?: { composer: string; title: string; opus: string; key: string },
+): string {
+  const metaVerification = verifiedMeta
+    ? `\n\n[🔒 Phase 1 검증 기준값 — 아래 정보를 정답으로 간주하고, 이와 다른 정보를 생성하지 마십시오]
+- 작곡가: ${verifiedMeta.composer}
+- 곡 제목: ${verifiedMeta.title}
+- 작품번호: ${verifiedMeta.opus}
+- 조성: ${verifiedMeta.key}`
+    : '';
+
+  return `당신은 세계적인 음악학자(Musicologist)이자 음악사 전문가입니다.
+
+작곡가: ${composer}
+곡 제목: ${title}
+작품번호: ${opus}
+${metaVerification}
+
+${KOREAN_OUTPUT_RULE}
+
+**[Phase 2 임무: 인문학적 배경 — 작곡가 생애, 시대적 배경, 곡의 특징]**
+
+🚨🚨 **최우선 규칙**: 곡 제목에 "No.X" 등 개별 번호가 명시되어 있으면, 그 **해당 곡 하나만** 분석하십시오. 모음집 전체를 분석하지 마십시오! 예: "Eight Concert Etudes Op.40 No.6" → No.6 Pastorale만 분석.
+
+**참조 문헌:**
+- Grove Dictionary of Music and Musicians
+- New Grove Online, RILM
+- 각 작곡가별 전문 연구서 (예: Chopin → Jim Samson, Eigeldinger / Schumann → John Daverio)
+- Urtext 원전판 서문 (Henle, Bärenreiter, Wiener)
+
+**2. 작곡가 생애 작성 기준:**
+- summary: 작곡가 생애 전체 요약
+- timeline: 3-5개 시기로 나누되, 반드시 "이 곡이 작곡된 시기"를 별도 항목으로 포함
+  - 예: "Op.2 시기 (1795-1796) – 이 소나타의 정확한 위치" 같은 식으로, 곡과 직접 연관된 시기를 명시
+  - 각 시기 설명에서 해당 시기의 주요 사건, 작품, 예술적 발전 방향을 구체적으로 서술
+- at_composition: 이 곡 작곡 당시의 구체적 상황
+
+**3. 시대적 배경 작성 기준:**
+- era_characteristics: 음악사적 위치 + 이 곡의 역할 (예: "빈 고전주의가 절정에 이르던 시기...")
+- contemporary_composers: 동시대 작곡가와의 관계
+- musical_movement: 형식적 실험, 이 곡이 음악사에서 보여주는 혁신/실험적 요소
+
+**4. 곡의 특징 작성 기준 (가장 중요 — 각 구성 단위별 상세 서술):**
+
+🚨 **구성 단위 구분 규칙:**
+- 다악장 소나타/협주곡 → "1악장", "2악장" 단위로 서술
+- 소품 모음집(Papillons, Kinderszenen, Carnaval 등) → 각 소품의 **고유 제목이 있으면 원어 제목(한국어 번역)** 단위로 서술 (예: "Träumerei (꿈)", "Pierrot (피에로)"). 고유 제목이 없으면 "No.1", "No.2" 사용. 각 소품의 고유한 성격·분위기를 개별적으로 다룰 것. 절대 "악장"이라 부르지 말 것!
+- 변주곡 → "주제(Theme)", "변주 1", "변주 2" 단위로 서술
+
+- composition_background (4-1. 작곡 배경 및 예술적 맥락): 작곡 동기, 헌정, 출판 경위, 예술적 위치
+- form_and_structure (4-2. 음악 형식·구조적 특징): 반드시 각 구성 단위별로 서술할 것!
+  다악장 예: "1악장 Allegro vivace – 소나타 형식. 경쾌한 동기... / 2악장 Largo appassionato..."
+  소품집 예: "No.1 Moderato – D장조, 왈츠 형식. 가면무도회 개시를 암시... / No.2 Prestissimo – Eb장조, 격렬한 아르페지오..."
+  각 단위의 주제 성격, 전개 방식, 구조적 특징을 개별 서술
+- technique (4-3. 기교적 특징): 각 구성 단위별 핵심 기교를 서술. 절대 손가락 번호 금지!
+- literary_dramatic (4-4. 문학적·극적 특징): 각 구성 단위별 문학적/극적 성격을 서술
+- conclusion: 이 곡의 음악사적 의의
+
+${SELF_VERIFICATION_PROTOCOL}
+
+JSON만 출력:
+{
+  "composer_life": {
+    "summary": "한국어 8-10문장 — 작곡가 생애 전체 요약",
+    "timeline": [
+      { "period": "시기명 + 연도 (예: 본 시절·유년기 (1770-1792))", "description": "한국어 5-7문장 — 해당 시기 상세 설명" },
+      { "period": "이 곡의 시기 + 연도 (예: Op.2 시기 (1795-1796) – 이 소나타의 정확한 위치)", "description": "한국어 5-7문장 — 이 곡이 작곡된 맥락" },
+      { "period": "이후 시기 + 연도", "description": "한국어 5-7문장" }
+    ],
+    "at_composition": "한국어 5-8문장 — 작곡 당시 구체적 상황"
+  },
+  "historical_background": {
+    "era_characteristics": "한국어 5-8문장 — 음악사적 위치 + 이 작곡가의 역할",
+    "contemporary_composers": "한국어 5-7문장 — 동시대 작곡가와의 관계/영향",
+    "musical_movement": "한국어 5-7문장 — 이 곡이 보여주는 형식적 실험/혁신"
+  },
+  "song_characteristics": {
+    "composition_background": "한국어 5-8문장 — 4-1. 작곡 배경 및 예술적 맥락",
+    "form_and_structure": "한국어 15-25문장 — 4-2. 각 구성 단위별 음악 형식·구조 상세 서술 (소나타→악장별, 소품집→각 소품별, 변주곡→각 변주별)",
+    "technique": "한국어 10-15문장 — 4-3. 각 구성 단위별 기교적 특징 (손가락 번호 절대 금지! 터치/동작/호흡 중심)",
+    "literary_dramatic": "한국어 10-15문장 — 4-4. 각 구성 단위별 문학적·극적 특징",
+    "conclusion": "한국어 5-7문장 — 이 곡의 음악사적 의의와 현대적 가치"
+  }
+}
+
+JSON만 출력하십시오.`;
+}
+
+// ── Phase 3: 구조/화성 분석 ──
+
+export function createPhase3Prompt(
+  composer: string,
+  title: string,
+  opus: string,
+  musicXml?: string,
+  referenceData?: string,
+  verifiedMeta?: { composer: string; title: string; opus: string; key: string },
+): string {
+  const xmlSection = musicXml
+    ? `\n\n[MusicXML 데이터]\n아래 MusicXML에서 정확한 마디 번호, 조성, 박자, 음형을 직접 읽어 사용하십시오.\n\`\`\`xml\n${musicXml.substring(0, 60000)}\n\`\`\``
+    : '';
+
+  const refSection = referenceData
+    ? `\n\n[🔍 웹 검색 레퍼런스 데이터 — 이 데이터가 1차 출처입니다. 반드시 사용하십시오.]\n${referenceData}\n\n🚨 절대 규칙:\n1. 레퍼런스에 명시된 조성(key), 박자(time signature), 템포(tempo marking), 마디 수를 **그대로** 사용하십시오.\n2. 레퍼런스에 "Key: D major, Time signature: 2/2"라고 되어 있으면, key_signature는 "D major", time_signature는 "2/2"여야 합니다.\n3. 레퍼런스에 "typically 6/8" 또는 "approx. 87 measures" 등이 있으면, 그 값을 그대로 사용하십시오 (6/8, mm. 1-87).\n4. "문헌 확인 필요"는 레퍼런스에 해당 정보가 전혀 없을 때만 사용하십시오.\n5. 레퍼런스와 상충하는 정보를 절대 생성하지 마십시오.`
+    : '\n\n🚨 확실하지 않은 조성, 박자, 마디 번호는 추측하지 말고 "문헌 확인 필요"로 표기하십시오.';
+
+  const metaVerification = verifiedMeta
+    ? `\n\n[🔒 Phase 1 검증 기준값 — 아래 정보를 정답으로 간주하고, 이와 다른 정보를 생성하지 마십시오]
+- 작곡가: ${verifiedMeta.composer}
+- 곡 제목: ${verifiedMeta.title}
+- 작품번호: ${verifiedMeta.opus}
+- 조성: ${verifiedMeta.key}`
+    : '';
+
+  return `당신은 세계적인 음악 이론가(Music Theorist)이자 화성학 전문가입니다.
+
+작곡가: ${composer}
+곡 제목: ${title}
+작품번호: ${opus}
+${metaVerification}
+${xmlSection}
+${refSection}
+
+${KOREAN_OUTPUT_RULE}
+
+**[Phase 3 임무: 구조 분석 및 분위기 분석]**
+
+🚨🚨 **최우선 규칙**: 곡 제목에 "No.X" 등 개별 번호가 명시되어 있으면, 그 **해당 곡 하나만** 분석하십시오. 모음집 전체를 분석하지 마십시오!
+
+**🚨 핵심 원칙: 마디 번호 대신 "구간 이름 + 역할" 중심으로 분석할 것!**
+
+각 구성 단위의 내부를 구간별로 나누어, 다음 4가지 관점을 서술하십시오:
+1. 구간 이름 (section 필드): 구성 단위 + 구간명
+2. 역할 (measures 필드): 이 구간의 형식적 역할을 서술 (예: "주제 제시, 성격 규정", "조성 이동, 긴장 형성", "회귀·강화")
+3. 조성·화성 이미지 (key_signature 필드): 조성과 화성 진행의 핵심 (예: "A장조, 명료한 I–V 진행, 하행 삼화음·스케일")
+4. 분위기·표현 (mood 필드 + description 필드)
+
+🚨 **구성 단위 구분 — 반드시 따를 것:**
+- 다악장 소나타/협주곡 → section에 "1악장:", "2악장:" 접두어 사용
+  예: "1악장: 도입·제1주제 영역", "2악장: A 주제 (첫 등장)"
+- 소품 모음집(Papillons, Kinderszenen, Carnaval, Waldszenen 등) → 각 소품의 **고유 제목이 있으면 원어 제목(한국어 번역)을 section 접두어로 사용**. 고유 제목이 없으면 "No.N:" 사용. 절대 "악장"이라 부르지 말 것!
+  고유 제목 있는 예: "Träumerei (꿈): 주제 제시", "Pierrot (피에로): A 주제 영역"
+  고유 제목 없는 예: "No.1: A 주제 영역", "No.2: 도입부"
+  각 소품은 독립된 성격소품이며, 소품별 고유한 성격·조성·분위기를 개별적으로 분석할 것
+- 변주곡 → "주제:", "Var.1:", "Var.2:" 접두어 사용
+
+**예시 1 (베토벤 소나타 1악장):**
+- section: "1악장: 도입·제1주제 영역"
+- measures: "주제 제시, 성격 규정"
+- key_signature: "A장조, 명료한 I–V 진행, 하행 삼화음·스케일"
+- time_signature: "2/4"
+- tempo: "Allegro vivace"
+- mood: "명랑·유쾌, 구조적으로 치밀한 활력"
+- description: "경쾌한 동기, 삼도·육도 도약, 스케일 진행이 결합된 활달한 제1주제."
+
+**예시 2 (슈만 어린이의 정경 — 고유 제목이 있는 소품집):**
+- section: "Träumerei (꿈): 주제 제시"
+- measures: "서정적 주제 제시, 몽환적 성격 규정"
+- key_signature: "F장조, 부드러운 I-IV-V 진행"
+- time_signature: "4/4"
+- tempo: "Langsam"
+- mood: "몽환적이고 서정적인 꿈결, 순수한 동심"
+- description: "넓은 아치형 선율이 부드럽게 펼쳐지며, 어린 시절의 꿈을 그리는 가장 유명한 성격소품."
+
+**예시 3 (슈만 나비 — 고유 제목 없이 번호만 있는 소품집):**
+- section: "No.1: A 주제 영역"
+- measures: "왈츠 주제 제시, 무도회 성격 규정"
+- key_signature: "D장조, 명료한 I-V-I 순환"
+- time_signature: "3/4"
+- tempo: "Waltz"
+- mood: "우아하고 경쾌한 왈츠, 나비의 가벼운 날갯짓"
+- description: "왈츠 리듬의 주제 동기 반복, 나비의 날갯짓 같은 가벼운 텍스처."
+
+**🚨 절대 규칙:**
+- 모든 구성 단위의 내부 구간을 빠짐없이 나열할 것 (단위당 2-8개 구간)
+- 소나타 형식: 도입·제1주제, 전이부, 제2주제, 종결부, 전개부, 재현부·코다
+- 론도 형식: A 주제, B 에피소드, A' 회귀, C 에피소드, A'' + 코다
+- 스케르초: 스케르초 주제, 트리오, 스케르초 회귀
+- 변주곡: 주제 + 각 변주
+- 짧은 소품(성격소품): A 주제, 대비부/중간부, 재현/코다 (소품 길이에 맞게 2-4개 구간)
+- measures 필드에는 마디 번호가 아닌 "역할/기능"을 서술할 것
+- 하나라도 누락하면 분석 실패
+
+${SELF_VERIFICATION_PROTOCOL}
+
+JSON만 출력:
+{
+  "structure_analysis_v2": {
+    "sections": [
+      {
+        "section": "구성단위: 구간 이름 (소나타 예: '1악장: 도입·제1주제', 소품집 예: 'Träumerei (꿈): 주제 제시' 또는 'No.1: A 주제 영역')",
+        "measures": "이 구간의 역할 (예: 주제 제시, 성격 규정)",
+        "key_signature": "조성·화성 이미지 (예: A장조, 명료한 I–V 진행)",
+        "time_signature": "박자 (예: 2/4)",
+        "tempo": "템포 지시어 (예: Allegro vivace)",
+        "mood": "한국어 분위기·표현 요약",
+        "description": "한국어 1-2문장 — 음악적 특징, 주요 동기, 텍스처 상세"
+      }
+    ],
+    "harmony_table": [
+      {
+        "measure": "구간명 (소나타 예: '1악장 제시부 도입', 소품집 예: 'No.3 A 주제')",
+        "beat": "위치 설명",
+        "chord": "코드명 (예: Gm, D7, Eb+)",
+        "roman_numeral": "로마숫자 분석 (예: i, V7, bVI)",
+        "function": "기능 (예: Tonic, Dominant, Neapolitan)",
+        "voice_leading": "성부진행 특이사항",
+        "pedal": "페달 포인트 여부",
+        "note": "한국어 비고"
+      }
+    ]
+  }
+}
+
+**화성 분석 테이블 지침:**
+- 전체 곡을 커버하되, **화성적으로 중요한 지점** 위주로 (15-30행)
+- 조바꿈, 감7화음, 증6화음, 나폴리탄, 페달 포인트 등 주목할 화성 반드시 포함
+
+JSON만 출력하십시오.`;
+}
+
+// ── Phase 4: 연습법 + 4주 루틴 + 추천 연주 ──
+
+export function createPhase4Prompt(
+  composer: string,
+  title: string,
+  opus: string,
+  sectionNames: string[]
+): string {
+  return `당신은 세계적인 피아노 교수법 전문가이자 연주 코치입니다.
+
+작곡가: ${composer}
+곡 제목: ${title}
+작품번호: ${opus}
+
+이 곡의 구조 (총 ${sectionNames.length}개 섹션):
+${sectionNames.map((s, i) => `${i + 1}. ${s}`).join('\n')}
+
+${KOREAN_OUTPUT_RULE}
+
+**[Phase 4 임무: 연습법 + 4주(28일) 루틴 + 추천 연주]**
+
+🚨🚨 **최우선 규칙**: 곡 제목에 "No.X" 등 개별 번호가 명시되어 있으면, 그 **해당 곡 하나만** 분석하십시오. 모음집 전체를 분석하지 마십시오!
+
+**절대 금지:**
+- "느리게 연습하세요", "반복 연습하세요" 등 일반론
+- 손가락 번호(1-2-3-4-5 운지법) 절대 금지 — 오류가 많으므로 제외
+- 동일한 솔루션을 여러 섹션에 반복 사용
+- YouTube URL 추측/생성 (확실한 경우만 포함)
+
+**연습법 작성 원칙:**
+- 손가락 번호 대신: 손목/팔 동작, 터치 방법, 신체 감각, 창의적 비유를 사용
+- 예: "손가락 끝은 가볍게, 손목과 팔은 더 가벼운 방향(위쪽)으로 움직여, 소리가 바닥으로 눌리지 않고 공중으로 뜨는 느낌을 추구"
+- 예: "주제 동기를 떼어내어 다양한 리듬(긴–짧–짧 등)으로 연습해 손의 균형을 잡기"
+- 예: "오른손 선율만 노래처럼 불러보고, 왼손·내성은 별도로 코러스처럼 연습"
+
+${SELF_VERIFICATION_PROTOCOL}
+
+JSON만 출력:
+{
+  "practice_method": {
+    "technique_summary": [
+      { "category": "음정", "items": ["이 곡에 필요한 음정 연습 — 스케일, 아르페지오, 도약 등 구체적 항목"] },
+      { "category": "기본기", "items": ["이 곡에 필요한 기본기 — 터치, 손가락 독립, 타건 방법 등"] },
+      { "category": "기교 테크닉", "items": ["이 곡의 핵심 기교 — 빠른 패시지, 옥타브, 트릴, 알베르티 베이스 등"] },
+      { "category": "감정표현", "items": ["이 곡의 감정 표현 — 프레이즈, 다이내믹, 호흡, 루바토 등"] },
+      { "category": "리듬감각", "items": ["이 곡의 리듬 — 박자감, 악장별 리듬 특성 등"] },
+      { "category": "형식인식", "items": ["이 곡의 형식 — 구간별 구조 파악, 연습 시 형식 활용법 등"] }
+    ],
+    "section_guides": [
+      {
+        "section": "악장명 (예: 1악장 Allegro vivace)",
+        "guide": "한국어 8-15문장 — 이 악장의 핵심 기술 + 구체적 연습 아이디어. 손가락 번호 금지! 대신 창의적 연습법, 신체 동작, 비유적 표현을 사용. 예: 주제 동기를 떼어내어 다양한 리듬으로 연습, 화성 진행만 잡고 음형을 얹는 순서로 연습, 손뼉·발 디딤으로 리듬만 먼저 익히기 등."
+      }
+    ],
+    "weekly_routine": [
+      {
+        "week": 1,
+        "theme": "1주차 테마 (예: 1악장 완성)",
+        "days": [
+          {
+            "day": "1일차",
+            "focus": "집중 영역 (예: 1악장 도입·제1주제)",
+            "tasks": [
+              "기본기: 조성 스케일 + 관련 기초 연습",
+              "기교: 양손 따로 연습 → 해당 구간 핵심 테크닉",
+              "표현: 다이내믹/터치/프레이즈 실험",
+              "리듬·형식: 박자감/구조 인식 연습",
+              "연결 연주: 이전 구간과 연결하여 통과"
+            ]
+          },
+          {
+            "day": "2일차",
+            "focus": "집중 영역",
+            "tasks": ["기본기: ...", "기교: 양손 따로 연습 → ...", "표현: ...", "리듬·형식: ...", "연결 연주: ..."]
+          }
+        ]
+      }
+    ]
+  },
+  "recommended_performances_v2": [
+    {
+      "artist": "연주자 이름 (세계적 프로 연주자만)",
+      "year": "녹음/영상 연도",
+      "comment": "한국어로 이 연주의 해석적 특징과 추천 이유 2-3문장",
+      "youtube_url": "정확한 YouTube URL (확실한 경우만, 불확실하면 빈 문자열)"
+    }
+  ]
+}
+
+**4주(28일) 루틴 상세 지침:**
+- 반드시 4주, 각 주 7일, 총 28일을 모두 작성할 것!
+- 각 일의 tasks는 정확히 5개: "기본기:", "기교:", "표현:", "리듬·형식:", "연결 연주:"
+- 시간(분) 표기 금지! 간결한 한 줄로 핵심만 서술
+- day 필드: "N일차" 형식 (예: "1일차", "8일차")
+- focus 필드: "해당 구간명 + 목표" (예: "1악장 도입·제1주제", "2악장 A주제 완벽화")
+
+**각 task 작성 형식 (아래 예시를 정확히 따를 것):**
+- 기본기: 해당일 구간에 맞는 조성 스케일/아르페지오 + 부가 연습 (예: "D장조 스케일(레가토, pp→ff)")
+- 기교: 반드시 "양손 따로 연습 →" 으로 시작 + 해당 구간 핵심 테크닉 (예: "양손 따로 연습 → 보이싱 (상성부/중성부/베이스 구분)")
+- 표현: 다이내믹/터치/프레이즈/대비 실험 (예: "A→B 전환 극적 대비 (터치·템포 변화 실험)")
+- 리듬·형식: 박자감/구조 인식/메트로놈 (예: "론도적 구조(A-B-C-A) 머릿속 지도 그리기")
+- 연결 연주: 이전 구간과 연결하여 흐름 연습 (예: "1악장 가볍게 + 2악장 A주제")
+
+**실제 예시 (2주차 8-10일차):**
+8일차 focus: "2악장 A주제 완벽화"
+  "기본기: D장조 스케일(레가토, pp→ff)"
+  "기교: 양손 따로 연습 → 보이싱 (상성부/중성부/베이스 구분)"
+  "표현: A주제 노래하듯 + 크레센도 실험"
+  "리듬·형식: A-B-A 구조 악보에 색연필 표시"
+  "연결 연주: 1악장 가볍게 + 2악장 A주제"
+
+9일차 focus: "2악장 B에피소드"
+  "기본기: B단조 스케일 + 크로마틱"
+  "기교: 양손 따로 연습 → 격정적 화음 (다이내믹 극대화)"
+  "표현: A→B 전환 극적 대비 (터치·템포 변화 실험)"
+  "리듬·형식: 3/4 내부 리듬(1+2+3 세분화)"
+  "연결 연주: 2악장 A-B-A 전체 흐름"
+
+10일차 focus: "2악장 C에피소드"
+  "기본기: F#단조 스케일 + 아르페지오"
+  "기교: 양손 따로 연습 → 대위법 성부 (각 성부 따로→합)"
+  "표현: 성부별 음색 차별화 (멜로디/코러스/베이스)"
+  "리듬·형식: 론도적 구조(A-B-C-A) 머릿속 지도 그리기"
+  "연결 연주: 2악장 전체 앞뒤 연결"
+
+**주차별 커리큘럼:**
+- 1주차 (1-7일차): 첫 번째 악장 완성
+  - 매일 새 구간을 하나씩 추가해가며 확장
+- 2주차 (8-14일차): 두 번째 악장 완성 + 세 번째 악장 시작
+- 3주차 (15-21일차): 나머지 악장 완성 + 암보 시작
+- 4주차 (22-28일차): 전곡 통과 + 무대 완성
+
+단악장 곡이면 1주차부터 구간별로 나누어 진행.
+
+**추천 연주 (필수 준수):**
+- 반드시 세계적으로 인정받는 프로 연주자(피아니스트)의 공연/녹음만 추천할 것
+- 예시: Martha Argerich, Krystian Zimerman, Maurizio Pollini, Vladimir Horowitz, Sviatoslav Richter, Lang Lang, Yuja Wang, Daniil Trifonov, Grigory Sokolov, Claudio Arrau 등
+- 절대 금지: 튜토리얼 채널, 레슨 영상, 아마추어 연주, 무명 연주자
+- 3-5개의 명연주를 추천하되, 다양한 해석 스타일 포함
+
+JSON만 출력하십시오.`;
+}
+
+// ── 기존 호환 프롬프트 (route.ts에서 이전) ──
+
+/** 소품집/모음곡 형태 감지 (악장이 아닌 개별 소품으로 구성된 작품) */
+export function isCharacterPieceCollection(title: string): boolean {
+  const lower = title.toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const collectionKeywords = [
+    "papillons", "kinderszenen", "scenes from childhood",
+    "carnaval", "kreisleriana", "waldszenen",
+    "novelletten", "albumblatter", "bunte blatter",
+    "phantasiestucke", "fantasiestucke", "nachtstucke",
+    "pictures at an exhibition", "전람회의 그림",
+    "goyescas", "iberia",
+    "annees de pelerinage", "순례의 해",
+    "preludes op.28", "preludes, op.28",
+    "etudes-tableaux", "études-tableaux",
+    "well-tempered", "평균율", "wohltemperierte",
+    "songs without words", "무언가",
+    "moments musicaux", "impromptus",
+    "consolations", "liebestraume",
+  ];
+  return collectionKeywords.some((k) => lower.includes(k));
+}
+
+/** 대형 작품 감지 */
+export function isLargeWork(title: string): boolean {
+  const lower = title.toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  if (lower.includes("variation") || lower.includes("변주")) return true;
+  const largeKeywords = [
+    "kreisleriana", "kinderszenen", "carnaval", "papillons", "waldszenen",
+    "novelletten", "études-tableaux", "etudes-tableaux", "etudes d'execution",
+    "transcendental", "paganini etude", "preludes op.28", "preludes, op.28",
+    "well-tempered", "평균율", "wohltemperierte", "scenes from childhood",
+    "pictures at an exhibition", "전람회의 그림", "goyescas", "iberia",
+    "annees de pelerinage", "순례의 해", "goldberg", "diabelli",
+    "enigma", "symphonic etudes", "교향적 연습곡",
+    "festin d'esope", "festin d esope", "le festin",
+    "rhapsody on a theme", "rapsodie sur un theme",
+    "chaconne", "passacaglia",
+  ];
+  return largeKeywords.some((k) => lower.includes(k));
+}
+
+/** 구조 분석 전용 프롬프트 (대형 작품용) */
+export function createStructureOnlyPrompt(composer: string, title: string): string {
+  return `당신은 세계적인 음악학자(Musicologist)입니다.
+
+작곡가: ${composer}
+곡 제목: ${title}
+
+${KOREAN_OUTPUT_RULE}
+
+이 곡의 **모든 구성 단위**를 빠짐없이 분석하십시오.
+
+🚨 **절대 규칙**: 하나라도 누락하면 분석 실패로 간주합니다.
+- 변주곡 → Theme + 모든 Variation (Var.1, Var.2, ...)
+- 소품 모음집(Papillons, Kinderszenen, Carnaval 등) → 각 소품의 **고유 제목이 있으면 원어 제목(한국어 번역)으로** 표기 (예: "Träumerei (꿈)", "Pierrot (피에로)"). 고유 제목이 없으면 "No.1", "No.2" 사용. 절대 "악장"이라 부르지 말 것! 각 소품의 고유한 성격을 개별 분석
+- 소나타 다악장 → 각 악장 내부 구조까지 (1악장, 2악장, ...)
+
+각 항목에 포함할 내용:
+- section: 형식에 맞는 섹션명 (소나타: "1악장: ...", 소품집 고유제목: "Träumerei (꿈): ...", 소품집 번호: "No.1: ...", 변주곡: "Var.1: ...")
+- measures: 마디 범위
+- key_tempo: 조성, 박자, 템포 지시
+- character: 한 문장 성격 묘사
+- description: 1-2문장 핵심 특징
+
+${SELF_VERIFICATION_PROTOCOL}
+
+JSON만 출력:
+{
+  "structure_analysis": [
+    {
+      "section": "섹션명",
+      "measures": "마디 범위",
+      "key_tempo": "조성/박자/템포",
+      "character": "한 문장 성격",
+      "description": "1-2문장 설명"
+    }
+  ]
+}`;
+}
+
+/** 상세 분석 프롬프트 (대형 작품용 — 구조 확보 후) */
+export function createDetailAnalysisPrompt(
+  composer: string,
+  title: string,
+  sectionNames: string[]
+): string {
+  return `당신은 **세계적인 피아노 교수법 전문가**이자 **음악학자**입니다.
+
+작곡가: ${composer}
+곡 제목: ${title}
+
+이 곡의 구조는 이미 분석되었습니다 (총 ${sectionNames.length}개 섹션):
+${sectionNames.map((s, i) => `${i + 1}. ${s}`).join("\n")}
+
+${KOREAN_OUTPUT_RULE}
+
+${SELF_VERIFICATION_PROTOCOL}
+
+JSON 출력:
+{
+  "meta": {
+    "composer": "작곡가",
+    "title": "곡 제목 (원어)",
+    "opus": "작품번호",
+    "key": "조성",
+    "difficulty_level": "Beginner/Intermediate/Advanced/Virtuoso"
+  },
+  "content": {
+    "composer_background": "한국어 5-8문장",
+    "historical_context": "한국어 5-8문장",
+    "work_background": "한국어 5-8문장",
+    "technique_tips": [
+      {
+        "section": "섹션명 (mm. 마디범위, 화성 정보)",
+        "problem": "한국어 — 기술적 난관",
+        "category": "Physiological/Interpretative/Structural",
+        "solution": "한국어 — 구체적 해결책",
+        "practice": "한국어 — 변형 연습법"
+      }
+    ],
+    "musical_interpretation": "한국어 5-8문장",
+    "recommended_performances": [
+      { "artist": "연주자 이름", "year": "연도", "comment": "한국어 특징 설명" }
+    ]
+  },
+  "verification_status": "Verified/Needs Review"
+}
+
+### technique_tips 지침
+- 최소 ${Math.min(sectionNames.length, 15)}개 작성
+- 중복 금지, 각 섹션 고유의 솔루션
+- [Physiological]: 근육 이완, 손가락 독립, 팔 무게, 손목 회전
+- [Interpretative]: 페달링, Voicing, Agogic, 루바토
+- [Structural]: 형식 호흡법, 섹션별 연습 전략, 템포 설계
+
+JSON만 출력하십시오.`;
+}
+
+/** 추가 technique_tips 프롬프트 (대형 작품 — 누락 섹션 보완) */
+export function createExtraTechniquePrompt(
+  composer: string,
+  title: string,
+  sectionNames: string[],
+  batchIndex: number,
+  totalBatches: number
+): string {
+  return `당신은 **세계적인 피아노 교수법 전문가**입니다.
+
+작곡가: ${composer}
+곡 제목: ${title}
+
+${KOREAN_OUTPUT_RULE}
+
+아래 섹션들에 대한 technique_tips를 작성하십시오 (${batchIndex + 1}/${totalBatches} 배치):
+
+${sectionNames.map((s, i) => `${i + 1}. ${s}`).join("\n")}
+
+각 섹션마다 반드시 1개의 technique_tip을 작성하십시오.
+
+${SELF_VERIFICATION_PROTOCOL}
+
+JSON만 출력:
+{
+  "technique_tips": [
+    {
+      "section": "섹션명 (mm. 마디범위, 화성 정보)",
+      "problem": "한국어 — 기술적 난관",
+      "category": "Physiological/Interpretative/Structural",
+      "solution": "한국어 — 구체적 해결책",
+      "practice": "한국어 — 변형 연습법"
+    }
+  ]
+}
+
+JSON만 출력하십시오.`;
+}
+
+/** 기존 단일 호출 프롬프트 (V1 호환) */
+export function createMusicologistPrompt(composer: string, title: string): string {
+  return `당신은 **세계적인 피아노 교수법 전문가**이자 **음악학자(Musicologist)**입니다.
+
+작곡가: ${composer}
+곡 제목: ${title}
+
+${KOREAN_OUTPUT_RULE}
+
+${SELF_VERIFICATION_PROTOCOL}
+
+JSON 출력:
+{
+  "meta": {
+    "composer": "작곡가 이름",
+    "title": "곡 제목 (원어)",
+    "opus": "작품번호",
+    "key": "조성",
+    "difficulty_level": "Beginner/Intermediate/Advanced/Virtuoso"
+  },
+  "content": {
+    "composer_background": "한국어 8-10문장",
+    "historical_context": "한국어 8-10문장",
+    "work_background": "한국어 8-10문장",
+    "structure_analysis": [
+      {
+        "section": "섹션명",
+        "measures": "마디 범위",
+        "key_tempo": "조성/박자/템포",
+        "character": "한국어 성격 묘사",
+        "description": "한국어 상세 설명"
+      }
+    ],
+    "technique_tips": [
+      {
+        "section": "섹션명 (mm. 마디범위)",
+        "problem": "한국어 기술적 난관",
+        "category": "Physiological/Interpretative/Structural",
+        "solution": "한국어 구체적 해결책",
+        "practice": "한국어 변형 연습법"
+      }
+    ],
+    "musical_interpretation": "한국어 8-10문장",
+    "recommended_performances": [
+      { "artist": "연주자 이름", "year": "연도", "comment": "한국어 특징 설명" }
+    ]
+  },
+  "verification_status": "Verified/Needs Review"
+}
+
+🚨 모든 섹션/악장/변주를 빠짐없이 분석할 것!
+
+JSON만 출력하십시오.`;
+}
+
+/** MusicXML 기반 분석 프롬프트 */
+export function createMusicXmlPrompt(composer: string, title: string, musicXml: string): string {
+  const truncated = musicXml.length > 60000 ? musicXml.substring(0, 60000) + "\n<!-- ... truncated -->" : musicXml;
+
+  return `당신은 **세계적인 피아노 교수법 전문가**이자 **음악학자(Musicologist)**입니다.
+
+작곡가: ${composer}
+곡 제목: ${title}
+
+아래는 이 곡의 **MusicXML 데이터**입니다.
+
+\`\`\`xml
+${truncated}
+\`\`\`
+
+[MusicXML 분석 지침]
+- <measure> 태그에서 정확한 마디 번호 사용
+- <note>, <pitch>에서 실제 음형과 리듬 패턴 파악
+- <dynamics>, <direction>에서 다이내믹과 연주 지시 확인
+- <key>, <time>에서 조성, 박자 확인
+
+${KOREAN_OUTPUT_RULE}
+
+${SELF_VERIFICATION_PROTOCOL}
+
+JSON 출력:
+{
+  "meta": {
+    "composer": "작곡가",
+    "title": "곡 제목 (원어)",
+    "opus": "작품번호",
+    "key": "조성",
+    "difficulty_level": "Beginner/Intermediate/Advanced/Virtuoso"
+  },
+  "content": {
+    "composer_background": "한국어 8-10문장",
+    "historical_context": "한국어 8-10문장",
+    "work_background": "한국어 8-10문장",
+    "structure_analysis": [
+      {
+        "section": "섹션명",
+        "measures": "마디 범위 (MusicXML 기반)",
+        "key_tempo": "조성/박자/템포",
+        "character": "한국어 성격 묘사",
+        "description": "한국어 상세 설명"
+      }
+    ],
+    "technique_tips": [
+      {
+        "section": "섹션명 (mm. 마디, 화성 정보)",
+        "problem": "한국어 기술적 난관",
+        "category": "Physiological/Interpretative/Structural",
+        "solution": "한국어 구체적 해결책",
+        "practice": "한국어 변형 연습법"
+      }
+    ],
+    "musical_interpretation": "한국어 8-10문장",
+    "recommended_performances": [
+      { "artist": "연주자 이름", "year": "연도", "comment": "한국어 특징 설명" }
+    ]
+  },
+  "verification_status": "Verified"
+}
+
+JSON만 출력하십시오.`;
+}
+
+
+================================================================================
+[8] LIB: Supabase 캐시 CRUD
+파일: src/lib/song-analysis-db.ts
+================================================================================
+
+import { supabaseServer } from "@/lib/supabase-server";
+import type { SongAnalysis } from "@/types/song-analysis";
+import type { Json } from "@/types/database";
+
+const supabase = supabaseServer;
+
+/** 캐시 키 생성 (작곡가_제목 형식) - 검색용 정규화 */
+export function createCacheKey(composer: string, title: string): string {
+  const normalizedComposer = composer.toLowerCase().trim().replace(/\s+/g, "_");
+  const normalizedTitle = title.toLowerCase().trim().replace(/\s+/g, "_");
+  return `${normalizedComposer}__${normalizedTitle}`;
+}
+
+/** Supabase에서 분석 데이터 조회 (작곡가 + 제목으로 검색) */
+export async function getCachedAnalysis(
+  composer: string,
+  title: string
+): Promise<SongAnalysis | null> {
+  try {
+    // 정확한 매칭 시도 (case-insensitive)
+    const { data, error } = await supabase
+      .from("song_analyses")
+      .select("*")
+      .ilike("composer", composer.trim())
+      .ilike("title", title.trim())
+      .limit(1)
+      .single();
+
+    if (error || !data) {
+      // 부분 매칭 시도 (작곡가 성만으로 검색)
+      const composerParts = composer.trim().split(" ");
+      const lastName = composerParts[composerParts.length - 1];
+
+      const { data: partialData, error: partialError } = await supabase
+        .from("song_analyses")
+        .select("*")
+        .ilike("composer", `%${lastName}%`)
+        .ilike("title", `%${title.trim()}%`)
+        .limit(1)
+        .single();
+
+      if (partialError || !partialData) {
+        return null;
+      }
+
+      return reconstructAnalysis(partialData);
+    }
+
+    return reconstructAnalysis(data);
+  } catch {
+    console.error("[Supabase] getCachedAnalysis error");
+    return null;
+  }
+}
+
+/** DB row에서 SongAnalysis 객체 복원 */
+function reconstructAnalysis(row: {
+  id: string;
+  composer: string;
+  title: string;
+  content: unknown;
+  key: string | null;
+  opus: string | null;
+  difficulty_level: string | null;
+  verification_status: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}): SongAnalysis {
+  // content에 전체 SongAnalysis가 저장되어 있으면 그대로 사용
+  const content = row.content as Record<string, unknown>;
+
+  if (content && content.meta && content.content) {
+    const restored = content as unknown as SongAnalysis;
+    // Supabase row ID를 사용 (content 내부 자체 생성 ID 대신)
+    restored.id = row.id;
+    restored.updated_at = row.updated_at || restored.updated_at;
+    restored.created_at = row.created_at || restored.created_at;
+    // schema_version이 저장되어 있으면 유지, 없으면 V2 필드 존재 여부로 판단
+    if (!restored.schema_version) {
+      const c = restored.content as unknown as Record<string, unknown>;
+      restored.schema_version = (c && ('song_overview' in c || 'composer_life' in c)) ? 2 : 1;
+    }
+    return restored;
+  }
+
+  // 개별 컬럼에서 복원 (fallback)
+  return {
+    id: row.id,
+    meta: {
+      composer: row.composer,
+      title: row.title,
+      opus: row.opus || "",
+      key: row.key || "",
+      difficulty_level: (row.difficulty_level as SongAnalysis["meta"]["difficulty_level"]) || "Intermediate",
+    },
+    content: content as unknown as SongAnalysis["content"],
+    verification_status: (row.verification_status as SongAnalysis["verification_status"]) || "Needs Review",
+    created_at: row.created_at || new Date().toISOString(),
+    updated_at: row.updated_at || new Date().toISOString(),
+    schema_version: 1,
+  };
+}
+
+/** Supabase에 분석 데이터 저장 (upsert) */
+export async function saveCachedAnalysis(
+  analysis: SongAnalysis,
+  originalComposer?: string,
+  originalTitle?: string
+): Promise<void> {
+  try {
+    const composer = analysis.meta.composer;
+    const title = analysis.meta.title;
+
+    // 이미 존재하는지 확인
+    const { data: existing } = await supabase
+      .from("song_analyses")
+      .select("id")
+      .ilike("composer", composer.trim())
+      .ilike("title", title.trim())
+      .limit(1)
+      .single();
+
+    if (existing) {
+      // 업데이트
+      const { error } = await supabase
+        .from("song_analyses")
+        .update({
+          content: analysis as unknown as Json,
+          key: analysis.meta.key || null,
+          opus: analysis.meta.opus || null,
+          difficulty_level: analysis.meta.difficulty_level,
+          verification_status: analysis.verification_status,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existing.id);
+
+      if (error) {
+        console.error("[Supabase] update error:", error.message);
+      } else {
+        console.log(`[Supabase] Updated: ${composer} - ${title}`);
+      }
+    } else {
+      // 새로 삽입
+      const { error } = await supabase
+        .from("song_analyses")
+        .insert({
+          composer: composer.trim(),
+          title: title.trim(),
+          content: analysis as unknown as Json,
+          key: analysis.meta.key || null,
+          opus: analysis.meta.opus || null,
+          difficulty_level: analysis.meta.difficulty_level,
+          verification_status: analysis.verification_status,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+
+      if (error) {
+        console.error("[Supabase] insert error:", error.message);
+      } else {
+        console.log(`[Supabase] Saved: ${composer} - ${title}`);
+      }
+    }
+
+    // 원본 키가 다르면 기존 원본 키 row 삭제 (중복 방지)
+    if (
+      originalComposer &&
+      originalTitle &&
+      (originalComposer.trim().toLowerCase() !== composer.trim().toLowerCase() ||
+        originalTitle.trim().toLowerCase() !== title.trim().toLowerCase())
+    ) {
+      await supabase
+        .from("song_analyses")
+        .delete()
+        .ilike("composer", originalComposer.trim())
+        .ilike("title", originalTitle.trim());
+      console.log(`[Supabase] Cleaned duplicate: ${originalComposer} - ${originalTitle}`);
+    }
+  } catch (error) {
+    console.error("[Supabase] saveCachedAnalysis error:", error);
+  }
+}
+
+/** ID 기반 분석 데이터 직접 업데이트 (관리자 수정용) */
+export async function updateAnalysisById(
+  id: string,
+  analysis: SongAnalysis
+): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from("song_analyses")
+      .update({
+        content: analysis as unknown as Json,
+        composer: analysis.meta.composer.trim(),
+        title: analysis.meta.title.trim(),
+        key: analysis.meta.key || null,
+        opus: analysis.meta.opus || null,
+        difficulty_level: analysis.meta.difficulty_level,
+        verification_status: analysis.verification_status,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id);
+
+    if (error) {
+      console.error("[Supabase] updateAnalysisById error:", error.message);
+      return false;
+    }
+    console.log(`[Supabase] Updated by ID: ${id}`);
+    return true;
+  } catch (error) {
+    console.error("[Supabase] updateAnalysisById error:", error);
+    return false;
+  }
+}
+
+/** 캐시에서 분석 데이터 삭제 (id 기반) */
+export async function deleteCachedAnalysis(
+  id: string
+): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from("song_analyses")
+      .delete()
+      .eq("id", id);
+
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+/** 모든 분석 목록 조회 */
+export async function getAllCachedAnalyses(): Promise<SongAnalysis[]> {
+  try {
+    const { data, error } = await supabase
+      .from("song_analyses")
+      .select("*")
+      .order("updated_at", { ascending: false });
+
+    if (error || !data) {
+      console.error("[Supabase] getAllCachedAnalyses error:", error?.message);
+      return [];
+    }
+
+    // 같은 분석(id)이 여러 키로 저장된 경우 중복 제거
+    const analyses = data.map(reconstructAnalysis);
+    const seen = new Set<string>();
+    return analyses.filter((a) => {
+      const key = a.id;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  } catch {
+    console.error("[Supabase] getAllCachedAnalyses error");
+    return [];
+  }
+}
+
+/** 캐시 통계 */
+export async function getCacheStats(): Promise<{
+  totalCount: number;
+  verifiedCount: number;
+  needsReviewCount: number;
+}> {
+  try {
+    const { count: totalCount } = await supabase
+      .from("song_analyses")
+      .select("*", { count: "exact", head: true });
+
+    const { count: verifiedCount } = await supabase
+      .from("song_analyses")
+      .select("*", { count: "exact", head: true })
+      .eq("verification_status", "Verified");
+
+    const { count: needsReviewCount } = await supabase
+      .from("song_analyses")
+      .select("*", { count: "exact", head: true })
+      .eq("verification_status", "Needs Review");
+
+    return {
+      totalCount: totalCount || 0,
+      verifiedCount: verifiedCount || 0,
+      needsReviewCount: needsReviewCount || 0,
+    };
+  } catch {
+    return { totalCount: 0, verifiedCount: 0, needsReviewCount: 0 };
+  }
+}
+
+/** 검증 상태 업데이트 */
+export async function updateVerificationStatus(
+  composer: string,
+  title: string,
+  status: SongAnalysis["verification_status"]
+): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from("song_analyses")
+      .update({
+        verification_status: status,
+        updated_at: new Date().toISOString(),
+      })
+      .ilike("composer", composer.trim())
+      .ilike("title", title.trim());
+
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+
+================================================================================
+[9] LIB: localStorage 분석 기록
+파일: src/lib/song-analysis-store.ts
+================================================================================
+
+// localStorage 기반 곡 분석 기록 저장소
+
+export interface AnalyzedSong {
+  id: string;
+  title: string;
+  opus?: string;
+  composer: string;
+  analyzedAt: string; // ISO date string
+}
+
+const STORAGE_KEY = "grit-on-analyzed-songs";
+
+// 분석된 곡 목록 가져오기
+export function getAnalyzedSongs(): AnalyzedSong[] {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const data = localStorage.getItem(STORAGE_KEY);
+    if (!data) return [];
+    return JSON.parse(data);
+  } catch {
+    return [];
+  }
+}
+
+// 분석된 곡 추가/업데이트
+export function saveAnalyzedSong(song: Omit<AnalyzedSong, "analyzedAt">): void {
+  if (typeof window === "undefined") return;
+
+  const songs = getAnalyzedSongs();
+  const existingIndex = songs.findIndex(s => s.id === song.id);
+
+  const newSong: AnalyzedSong = {
+    ...song,
+    analyzedAt: new Date().toISOString(),
+  };
+
+  if (existingIndex >= 0) {
+    // 이미 있으면 업데이트 (최근 본 것으로)
+    songs[existingIndex] = newSong;
+  } else {
+    // 새로 추가
+    songs.unshift(newSong);
+  }
+
+  // 최대 20개까지만 저장
+  const trimmed = songs.slice(0, 20);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
+}
+
+// 최근 분석한 곡 가져오기 (최근순 정렬)
+export function getRecentAnalyzedSongs(limit: number = 5): AnalyzedSong[] {
+  const songs = getAnalyzedSongs();
+  return songs
+    .sort((a, b) => new Date(b.analyzedAt).getTime() - new Date(a.analyzedAt).getTime())
+    .slice(0, limit);
+}
+
+// 분석 기록 삭제
+export function removeAnalyzedSong(id: string): void {
+  if (typeof window === "undefined") return;
+
+  const songs = getAnalyzedSongs();
+  const filtered = songs.filter(s => s.id !== id);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+}
+
+// 이미 분석된 곡인지 확인
+export function isAlreadyAnalyzed(id: string): boolean {
+  const songs = getAnalyzedSongs();
+  return songs.some(s => s.id === id);
+}
+
+
+================================================================================
+[10] LIB: 사용자별 분석 기록 관리
+파일: src/lib/user-analyses.ts
+================================================================================
+
+/** 사용자가 실제로 분석한 곡 ID를 localStorage에서 관리 */
+
+const USER_ANALYSES_KEY = "sempre-user-analyses";
+
+export interface UserAnalysis {
+  id: string;
+  composer: string;
+  title: string;
+  analyzedAt: string;
+}
+
+export function getUserAnalyses(): UserAnalysis[] {
+  if (typeof window === "undefined") return [];
+  const raw = localStorage.getItem(USER_ANALYSES_KEY);
+  if (!raw) return [];
+  try {
+    return JSON.parse(raw) as UserAnalysis[];
+  } catch {
+    return [];
+  }
+}
+
+export function addUserAnalysis(analysis: Omit<UserAnalysis, "analyzedAt">): void {
+  if (typeof window === "undefined") return;
+  const list = getUserAnalyses();
+  // 중복 방지
+  if (list.some((a) => a.id === analysis.id)) return;
+  const updated = [
+    { ...analysis, analyzedAt: new Date().toISOString() },
+    ...list,
+  ];
+  localStorage.setItem(USER_ANALYSES_KEY, JSON.stringify(updated));
+}
+
+export function removeUserAnalysis(id: string): void {
+  if (typeof window === "undefined") return;
+  const list = getUserAnalyses().filter((a) => a.id !== id);
+  localStorage.setItem(USER_ANALYSES_KEY, JSON.stringify(list));
+}
+
+
+================================================================================
+파일 구조 요약
+================================================================================
+
+src/
+├── app/(app)/ai-analysis/
+│   ├── page.tsx                          ← [1] 분석 보관함 목록
+│   ├── new/page.tsx                      ← [2] 새 곡 분석 요청
+│   └── [id]/
+│       ├── page.tsx                      ← [3] 곡 상세 분석 (4곡 하드코딩 DB)
+│       └── section/[sectionIndex]/
+│           └── page.tsx                  ← [4] 섹션 상세 (템포/테크닉/연습조언)
+├── app/api/
+│   ├── analyze-song/route.ts             ← [5] V1 분석 API (GPT-4o)
+│   └── analyze-song-v2/route.ts          ← [6] V2 4-Phase 파이프라인 (Perplexity+GPT)
+└── lib/
+    ├── analysis-prompts.ts               ← [7] Phase 0~4 프롬프트 모음
+    ├── song-analysis-db.ts               ← [8] Supabase 캐시 CRUD
+    ├── song-analysis-store.ts            ← [9] localStorage 분석 기록
+    └── user-analyses.ts                  ← [10] 사용자별 분석 기록

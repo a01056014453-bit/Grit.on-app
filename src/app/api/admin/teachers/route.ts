@@ -32,3 +32,65 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({ teachers: data ?? [] });
 }
+
+/** PATCH /api/admin/teachers — 승인/거절 처리 */
+export async function PATCH(request: NextRequest) {
+  if (!(await checkAdmin(request))) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const body = await request.json();
+  const { id, action, reason } = body as { id: string; action: string; reason?: string };
+
+  if (!id || !action) {
+    return NextResponse.json({ error: "Missing id or action" }, { status: 400 });
+  }
+
+  const { data: row } = await db.from("teachers").select("career").eq("id", id).single();
+  if (!row) {
+    return NextResponse.json({ error: "Teacher not found" }, { status: 404 });
+  }
+
+  const career = (row.career as Record<string, unknown>) ?? {};
+  const verification = (career.verification as Record<string, unknown>) ?? {};
+
+  if (action === "approve") {
+    await db
+      .from("teachers")
+      .update({
+        verified: true,
+        career: {
+          ...career,
+          verification: {
+            ...verification,
+            status: "approved",
+            reviewedAt: new Date().toISOString(),
+          },
+        },
+      })
+      .eq("id", id);
+
+    return NextResponse.json({ success: true });
+  }
+
+  if (action === "reject") {
+    await db
+      .from("teachers")
+      .update({
+        career: {
+          ...career,
+          verification: {
+            ...verification,
+            status: "rejected",
+            reviewedAt: new Date().toISOString(),
+            rejectReason: reason ?? "서류 미비",
+          },
+        },
+      })
+      .eq("id", id);
+
+    return NextResponse.json({ success: true });
+  }
+
+  return NextResponse.json({ error: "Unknown action" }, { status: 400 });
+}

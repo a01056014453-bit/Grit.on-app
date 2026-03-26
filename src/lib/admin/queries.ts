@@ -58,8 +58,8 @@ export async function getUserDetail(userId: string) {
 export async function getWAUTrend(): Promise<{ week: string; users: number }[]> {
   const res = await fetch("/api/admin/stats");
   if (!res.ok) return [];
-  // TODO: 별도 WAU API 추가 시 교체
-  return [];
+  const data = await res.json();
+  return data.wauTrend ?? [];
 }
 
 // ─── 선생님 목록 ───
@@ -69,6 +69,22 @@ export async function getTeachers() {
   if (!res.ok) return [];
   const data = await res.json();
   return data.teachers ?? [];
+}
+
+// ─── 분석 데이터 ───
+
+export async function getAnalytics() {
+  const res = await fetch("/api/admin/analytics");
+  if (!res.ok) return { eventCounts: {}, dauTrend: [], deviceBreakdown: {}, pwaInstallCount: 0 };
+  return res.json();
+}
+
+// ─── App Store 데이터 ───
+
+export async function getAppStoreStats() {
+  const res = await fetch("/api/admin/appstore");
+  if (!res.ok) return { configured: false, downloads: null, appInfo: null };
+  return res.json();
 }
 
 // ─── 곡 DB ───
