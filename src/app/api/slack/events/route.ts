@@ -86,9 +86,15 @@ export async function POST(req: NextRequest) {
 
   if (isAppMention || isDirectMessage) {
     // Slack은 3초 내 200 응답 필요 → 비동기 처리
-    handleAgentMessage(event).catch((err) =>
-      console.error('[slack-agent] Error:', err)
-    );
+    handleAgentMessage(event).catch(async (err) => {
+      console.error('[slack-agent] Error:', err);
+      try {
+        await slack.chat.postMessage({
+          channel: event.channel,
+          text: `:x: 봇 에러: ${err instanceof Error ? err.message : String(err)}`,
+        });
+      } catch { /* ignore */ }
+    });
   }
 
   return NextResponse.json({ ok: true });
