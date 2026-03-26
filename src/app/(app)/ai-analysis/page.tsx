@@ -208,6 +208,75 @@ export default function AIAnalysisPage() {
     }
   }, []);
 
+  // localStorage → DB 동기화 (마이그레이션)
+  useEffect(() => {
+    const MIGRATION_FLAG = "sempre-analysis-migrated";
+    if (typeof window === "undefined") return;
+    if (localStorage.getItem(MIGRATION_FLAG)) return;
+
+    async function migrateLocalData() {
+      try {
+        // 1) sempre-user-analyses에서 분석 ID 수집
+        const rawAnalyses = localStorage.getItem("sempre-user-analyses");
+        const analysisIds: string[] = [];
+        const composerTitlePairs: { composer: string; title: string }[] = [];
+
+        if (rawAnalyses) {
+          try {
+            const parsed = JSON.parse(rawAnalyses) as { id: string; composer: string; title: string }[];
+            for (const item of parsed) {
+              if (item.id) analysisIds.push(item.id);
+              if (item.composer && item.title) {
+                composerTitlePairs.push({ composer: item.composer, title: item.title });
+              }
+            }
+          } catch {
+            // JSON 파싱 실패 시 무시
+          }
+        }
+
+        // 2) grit-on-my-library에서 composer+title 수집
+        const rawLibrary = localStorage.getItem("grit-on-my-library");
+        if (rawLibrary) {
+          try {
+            const libraryKeys = JSON.parse(rawLibrary) as string[];
+            for (const key of libraryKeys) {
+              const parts = key.split("__");
+              if (parts.length === 2) {
+                composerTitlePairs.push({ composer: parts[0], title: parts[1] });
+              }
+            }
+          } catch {
+            // JSON 파싱 실패 시 무시
+          }
+        }
+
+        // 데이터가 없으면 마이그레이션 완료 처리
+        if (analysisIds.length === 0 && composerTitlePairs.length === 0) {
+          localStorage.setItem(MIGRATION_FLAG, "true");
+          return;
+        }
+
+        // 3) API 호출하여 동기화
+        const res = await fetch("/api/song-analysis/sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ analysisIds, composerTitlePairs }),
+        });
+
+        if (res.ok) {
+          // 동기화 성공 → 마이그레이션 완료 플래그
+          localStorage.setItem(MIGRATION_FLAG, "true");
+          console.log("[migration] localStorage → DB 동기화 완료");
+        }
+      } catch (err) {
+        console.error("[migration] 동기화 실패:", err);
+      }
+    }
+
+    migrateLocalData();
+  }, []);
+
   useEffect(() => {
     async function load() {
       const userId = getUserId();

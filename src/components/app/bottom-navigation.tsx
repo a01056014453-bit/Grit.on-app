@@ -23,7 +23,7 @@ interface NavItem {
 const studentNavItems: NavItem[] = [
   { href: "/", icon: Home, label: "홈", exact: true },
   { href: "/practice", icon: Play, label: "연습" },
-  { href: "/analysis", icon: Zap, label: "AI분석" },
+  { href: "/ai-analysis", icon: Zap, label: "AI분석" },
   { href: "/ranking", icon: Trophy, label: "랭킹" },
   { href: "/profile", icon: User, label: "프로필" },
 ];

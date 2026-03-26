@@ -29,7 +29,6 @@ import {
   Shield,
   ToggleLeft,
   ToggleRight,
-  Sparkles,
 } from "lucide-react";
 import { motion, Variants } from "framer-motion";
 import { Modal } from "@/components/ui/modal";
@@ -869,28 +868,6 @@ export default function ProfilePage() {
             </div>
           </motion.button>
         ))}
-      </motion.div>
-
-      {/* ─── AI 곡 분석 보관함 바로가기 ─── */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.2, ease: "easeOut" }}
-        className="mb-6"
-      >
-        <Link
-          href="/ai-analysis"
-          className="flex items-center gap-3 px-4 py-4 bg-white/40 backdrop-blur-xl rounded-3xl border border-white/50 shadow-sm hover:bg-white/50 transition-colors"
-        >
-          <div className="w-10 h-10 rounded-xl bg-violet-100/60 flex items-center justify-center shrink-0">
-            <Sparkles className="w-5 h-5 text-violet-600" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-gray-900">내 보관함</p>
-            <p className="text-xs text-gray-500">AI 곡 분석 결과 보기</p>
-          </div>
-          <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
-        </Link>
       </motion.div>
 
       {/* ─── Practice Insights ─── */}
