@@ -56,10 +56,10 @@ export async function GET(request: NextRequest): Promise<NextResponse<AppStoreRe
   }
 
   if (!isConfigured()) {
-    console.error("[admin/appstore] 환경변수 누락 — ISSUER:", !!process.env.APP_STORE_ISSUER_ID, "KEY:", !!process.env.APP_STORE_KEY_ID, "PK:", !!process.env.APP_STORE_PRIVATE_KEY);
+    console.error("[admin/appstore] 환경변수 누락 — ISSUER:", !!process.env.APPSTORE_ISSUER_ID, "KEY:", !!process.env.APPSTORE_KEY_ID, "PK:", !!process.env.APPSTORE_PRIVATE_KEY);
     return NextResponse.json({
       configured: false,
-      message: "APP_STORE_ISSUER_ID, APP_STORE_KEY_ID, APP_STORE_PRIVATE_KEY 환경변수를 설정하세요",
+      message: "APPSTORE_ISSUER_ID, APPSTORE_KEY_ID, APPSTORE_PRIVATE_KEY 환경변수를 설정하세요",
       downloads: null,
       appInfo: null,
     });

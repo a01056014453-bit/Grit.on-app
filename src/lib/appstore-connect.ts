@@ -81,9 +81,9 @@ export interface DownloadMetrics {
 
 // ─── 설정 ────────────────────────────────────────────────────────
 
-const ISSUER_ID = process.env.APP_STORE_ISSUER_ID ?? "";
-const KEY_ID = process.env.APP_STORE_KEY_ID ?? "";
-const PRIVATE_KEY_RAW = process.env.APP_STORE_PRIVATE_KEY ?? "";
+const ISSUER_ID = process.env.APPSTORE_ISSUER_ID ?? "";
+const KEY_ID = process.env.APPSTORE_KEY_ID ?? "";
+const PRIVATE_KEY_RAW = process.env.APPSTORE_PRIVATE_KEY ?? "";
 const APP_ID = process.env.APPSTORE_APP_ID ?? "6760019130";
 const BASE_URL = "https://api.appstoreconnect.apple.com/v1";
 
