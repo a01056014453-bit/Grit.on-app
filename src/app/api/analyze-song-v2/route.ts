@@ -1072,6 +1072,19 @@ export async function POST(request: NextRequest) {
     const { pdfStoragePath, musicxmlStoragePath, useStoredSource, useV2 = true } = body;
     const instrument = ((body as unknown as Record<string, unknown>).instrument as AnalysisInstrument) || "piano";
 
+    // 인증된 유저 ID 가져오기
+    let authUserId: string | null = null;
+    try {
+      const { createServerClient } = await import("@supabase/ssr");
+      const supabaseAuth = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        { cookies: { getAll() { return request.cookies.getAll(); }, setAll() {} } },
+      );
+      const { data: { user } } = await supabaseAuth.auth.getUser();
+      authUserId = user?.id ?? null;
+    } catch { /* 비인증 허용 */ }
+
     if (!composer || !title) {
       const response: AnalyzeSongResponse = {
         success: false,
@@ -1219,7 +1232,7 @@ export async function POST(request: NextRequest) {
         analysis.musicxml_storage_path = existingForPaths.musicxml_storage_path;
     }
 
-    await saveCachedAnalysis(analysis, composer, title);
+    await saveCachedAnalysis(analysis, composer, title, authUserId);
     console.log(`[Cache SAVED] ${composer} - ${title} (schema_version=${analysis.schema_version})`);
 
     const response: AnalyzeSongResponse = {

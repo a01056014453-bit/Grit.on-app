@@ -104,7 +104,8 @@ function reconstructAnalysis(row: {
 export async function saveCachedAnalysis(
   analysis: SongAnalysis,
   originalComposer?: string,
-  originalTitle?: string
+  originalTitle?: string,
+  userId?: string | null,
 ): Promise<void> {
   try {
     const composer = analysis.meta.composer;
@@ -140,9 +141,7 @@ export async function saveCachedAnalysis(
       }
     } else {
       // 새로 삽입 + 실제 DB ID 반환
-      const { data: inserted, error } = await supabase
-        .from("song_analyses")
-        .insert({
+      const insertData: Record<string, unknown> = {
           composer: composer.trim(),
           title: title.trim(),
           content: analysis as unknown as Json,
@@ -152,7 +151,12 @@ export async function saveCachedAnalysis(
           verification_status: analysis.verification_status,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-        })
+        };
+      if (userId) insertData.user_id = userId;
+
+      const { data: inserted, error } = await supabase
+        .from("song_analyses")
+        .insert(insertData)
         .select("id")
         .single();
 

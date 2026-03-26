@@ -74,40 +74,21 @@ export default function AIAnalysisPage() {
   useEffect(() => {
     async function load() {
       const userId = getUserId();
-      // localStorage에서 본인 분석 목록 (ID는 DB와 다를 수 있음)
-      const localList = getUserAnalyses();
-
-      // DB에서 올바른 ID로 매핑
-      if (localList.length > 0) {
-        try {
-          const res = await fetch("/api/song-analysis/list");
-          if (res.ok) {
-            const { data: dbList } = await res.json();
-            if (dbList && dbList.length > 0) {
-              // localStorage 항목을 DB ID로 매핑
-              const mapped = localList.map((local) => {
-                const dbMatch = dbList.find((db: { composer: string; title: string }) =>
-                  db.composer.toLowerCase().includes(local.composer.toLowerCase()) ||
-                  local.composer.toLowerCase().includes(db.composer.toLowerCase())
-                    ? db.title.toLowerCase().includes(local.title.toLowerCase()) ||
-                      local.title.toLowerCase().includes(db.title.toLowerCase())
-                    : false
-                );
-                return dbMatch ? { ...local, id: dbMatch.id } : local;
-              });
-              setUserAnalyses(mapped);
-            } else {
-              setUserAnalyses(localList);
-            }
-          } else {
-            setUserAnalyses(localList);
+      // DB에서 본인 분석 목록 직접 조회 (localStorage 의존 제거)
+      try {
+        const res = await fetch("/api/song-analysis/list");
+        if (res.ok) {
+          const { data: dbList } = await res.json();
+          if (dbList && dbList.length > 0) {
+            setUserAnalyses(dbList.map((item: { id: string; composer: string; title: string; created_at: string }) => ({
+              id: item.id,
+              composer: item.composer,
+              title: item.title,
+              analyzedAt: item.created_at || "",
+            })));
           }
-        } catch {
-          setUserAnalyses(localList);
         }
-      } else {
-        setUserAnalyses(localList);
-      }
+      } catch { /* 네트워크 실패 시 빈 목록 */ }
       const fetchedPieces = await getAnalyzedPieces();
       setPieces(fetchedPieces);
 
