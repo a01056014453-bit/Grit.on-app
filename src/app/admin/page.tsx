@@ -19,6 +19,7 @@ interface PreAnalyzeStatus {
   remaining: number;
   progress: number;
   byCategory: Record<string, { total: number; done: number }>;
+  byInstrument: Record<string, { total: number; done: number; label: string }>;
   totalDbAnalyses: number;
 }
 
@@ -261,6 +262,19 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* 악기별 */}
+          <div className="mt-4">
+            <p className="text-xs font-semibold text-gray-500 mb-2">악기별</p>
+            <div className="grid grid-cols-6 gap-2">
+              {Object.entries(preAnalyze.byInstrument).map(([key, { total, done, label }]) => (
+                <div key={key} className="text-center p-2 bg-gray-50 rounded-lg">
+                  <p className="text-[10px] text-gray-500">{label}</p>
+                  <p className="text-sm font-bold text-gray-900">{done}<span className="text-[10px] text-gray-400">/{total}</span></p>
+                </div>
+              ))}
+            </div>
           </div>
 
           {preAnalyze.remaining > 0 && (

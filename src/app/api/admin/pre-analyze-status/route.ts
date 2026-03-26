@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { supabaseServer } from "@/lib/supabase-server";
-import { POPULAR_PIECES } from "@/lib/data/popular-pieces";
+import { POPULAR_PIECES, INSTRUMENT_LABELS, type InstrumentType } from "@/lib/data/popular-pieces";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabaseServer as any;
@@ -46,6 +46,7 @@ export async function GET(request: NextRequest) {
       composer: piece.composer,
       title: piece.title,
       category: piece.category,
+      instrument: piece.instrument,
       analyzed: !!found,
       analysisId: found?.id,
       analyzedAt: found?.created_at,
@@ -54,16 +55,27 @@ export async function GET(request: NextRequest) {
   });
 
   const analyzedCount = matched.filter((m) => m.analyzed).length;
-  const byCategory = {
+  const byCategory: Record<string, { total: number; done: number }> = {
     입시: { total: 0, done: 0 },
     콩쿠르: { total: 0, done: 0 },
     레슨: { total: 0, done: 0 },
     교양: { total: 0, done: 0 },
   };
 
+  const byInstrument: Record<string, { total: number; done: number; label: string }> = {};
+  for (const key of Object.keys(INSTRUMENT_LABELS)) {
+    byInstrument[key] = { total: 0, done: 0, label: INSTRUMENT_LABELS[key as InstrumentType] };
+  }
+
   for (const m of matched) {
     byCategory[m.category].total++;
     if (m.analyzed) byCategory[m.category].done++;
+
+    const inst = (m as unknown as { instrument: string }).instrument;
+    if (byInstrument[inst]) {
+      byInstrument[inst].total++;
+      if (m.analyzed) byInstrument[inst].done++;
+    }
   }
 
   return NextResponse.json({
@@ -72,6 +84,7 @@ export async function GET(request: NextRequest) {
     remaining: POPULAR_PIECES.length - analyzedCount,
     progress: Math.round((analyzedCount / POPULAR_PIECES.length) * 100),
     byCategory,
+    byInstrument,
     totalDbAnalyses: analysisList.length,
     pieces: matched,
   });
