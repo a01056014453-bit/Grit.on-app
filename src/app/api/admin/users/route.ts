@@ -29,7 +29,19 @@ export async function GET(request: NextRequest) {
   const limit = parseInt(url.searchParams.get("limit") ?? "100");
   const offset = parseInt(url.searchParams.get("offset") ?? "0");
 
-  // 1. 프로필 목록
+  // 1. Auth 사용자 목록 (실제 가입일 포함)
+  const { data: { users: authUsers } } = await supabaseServer.auth.admin.listUsers({
+    page: Math.floor(offset / limit) + 1,
+    perPage: limit,
+  });
+
+  // Auth 가입일 매핑 (user.id → created_at)
+  const authCreatedMap: Record<string, string> = {};
+  for (const au of authUsers ?? []) {
+    authCreatedMap[au.id] = au.created_at;
+  }
+
+  // 2. 프로필 목록
   const { data: profiles, count } = await db
     .from("profiles")
     .select("*", { count: "exact" })
@@ -63,13 +75,13 @@ export async function GET(request: NextRequest) {
     (recentSessions ?? []).map((s: any) => s.user_id),
   );
 
-  // 4. 오늘 가입자 수 (DB에서 직접 카운트 — 타임존 안전)
+  // 4. 오늘 가입자 수 (Auth 기준)
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
-  const { count: todaySignupCount } = await db
-    .from("profiles")
-    .select("id", { count: "exact", head: true })
-    .gte("created_at", todayStart.toISOString());
+  const todayIso = todayStart.toISOString();
+  const todaySignupCount = (authUsers ?? []).filter(
+    (au) => au.created_at >= todayIso,
+  ).length;
 
   // 5. 전체 연습 경험 사용자 수
   const { data: allPracticedUsers } = await db
@@ -95,8 +107,7 @@ export async function GET(request: NextRequest) {
     sessionCount: sessionCounts[p.id] ?? 0,
     isWeeklyActive: weeklyActiveIds.has(p.id),
     hasPracticed: practicedUserIds.has(p.id),
-    createdAt: p.created_at,
-    updatedAt: p.updated_at,
+    createdAt: authCreatedMap[p.id] ?? p.created_at,
   }));
 
   return NextResponse.json({
