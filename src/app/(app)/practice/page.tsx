@@ -553,6 +553,29 @@ function PracticePageContent() {
     };
   }, [isRecording]);
 
+  // SPA 네비게이션 감지: 녹음 중 다른 페이지로 이동하면 확인 후 중단
+  useEffect(() => {
+    if (!isRecording) return;
+
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const link = target.closest("a[href]") as HTMLAnchorElement | null;
+      if (!link) return;
+      const href = link.getAttribute("href") ?? "";
+      if (href.startsWith("/") && !href.startsWith("/practice")) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (window.confirm("연습 중입니다. 연습을 중단하고 이동하시겠습니까?")) {
+          // 강제 이동 (연습 세션은 자동 저장됨)
+          window.location.href = href;
+        }
+      }
+    };
+
+    document.addEventListener("click", handleClick, true);
+    return () => document.removeEventListener("click", handleClick, true);
+  }, [isRecording]);
+
   // Manage wake lock based on recording state
   useEffect(() => {
     if (isRecording && !isPaused) {
@@ -1423,6 +1446,30 @@ function PracticePageContent() {
         <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2 mb-4 flex items-center gap-2 text-xs text-green-700">
           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
           화면 자동 꺼짐 방지 활성화됨
+        </div>
+      )}
+
+      {/* Selected Song Card - 곡 선택 후 표시 */}
+      {selectedSong && !activeDrill && !isRecording && (
+        <div className="bg-gradient-to-r from-primary/5 to-violet-50 border border-primary/20 rounded-2xl p-4 mb-4 animate-in slide-in-from-top duration-300">
+          <div className="flex items-start gap-3">
+            <div className="w-12 h-12 bg-gradient-to-br from-primary to-violet-600 rounded-xl flex items-center justify-center shrink-0">
+              <Music2 className="w-6 h-6 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-gray-900 truncate">{selectedSong.title}</p>
+              {(selectedSong as any).composer && (
+                <p className="text-sm text-gray-500 mt-0.5">{(selectedSong as any).composer}</p>
+              )}
+              <p className="text-xs text-primary mt-1">곡이 선택되었습니다. 시작 버튼을 누르세요</p>
+            </div>
+            <button
+              onClick={() => setSelectedSong(null)}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       )}
 

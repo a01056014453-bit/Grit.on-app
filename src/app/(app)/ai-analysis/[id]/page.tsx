@@ -659,16 +659,14 @@ export default function AnalysisDetailPage() {
                 <p className="text-xs text-muted-foreground mt-1">
                   {perf.comment}
                 </p>
-                {perf.youtube_url && (
-                  <a
-                    href={perf.youtube_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs text-primary mt-1 hover:underline"
-                  >
-                    <Play className="w-3 h-3" /> YouTube에서 듣기
-                  </a>
-                )}
+                <a
+                  href={perf.youtube_url || `https://www.youtube.com/results?search_query=${encodeURIComponent(`${perf.artist} ${meta.composer} ${meta.title}`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-primary mt-1 hover:underline"
+                >
+                  <Play className="w-3 h-3" /> YouTube에서 듣기
+                </a>
               </div>
             ))}
           </div>
@@ -676,21 +674,32 @@ export default function AnalysisDetailPage() {
       ) : content.recommended_performances?.length ? (
         <Section title="추천 연주" icon={Play}>
           <div className="space-y-3">
-            {content.recommended_performances.map((perf, i) => (
-              <div key={i} className="bg-secondary/50 rounded-lg p-3">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium text-foreground text-sm">
-                    {perf.artist}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {perf.year}
-                  </span>
+            {content.recommended_performances.map((perf, i) => {
+              const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(`${perf.artist} ${meta.composer} ${meta.title}`)}`;
+              return (
+                <div key={i} className="bg-secondary/50 rounded-lg p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-foreground text-sm">
+                      {perf.artist}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {perf.year}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {perf.comment}
+                  </p>
+                  <a
+                    href={(perf as any).youtube_url || searchUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-primary mt-1.5 hover:underline"
+                  >
+                    <Play className="w-3 h-3" /> YouTube에서 듣기
+                  </a>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {perf.comment}
-                </p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </Section>
       ) : null}
