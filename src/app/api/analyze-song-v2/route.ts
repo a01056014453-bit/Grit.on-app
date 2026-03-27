@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import OpenAI from "openai";
+import { z } from "zod";
 import {
   createReferenceSearchPrompt,
   createPhase1Prompt,
@@ -28,7 +29,7 @@ import {
 import { searchAcademicSources } from "@/lib/phase0-academic";
 import { getScoreFactsFromIMSLP } from "@/lib/imslp-vision-pipeline";
 import { getCachedAnalysis, saveCachedAnalysis } from "@/lib/song-analysis-db";
-import { songAnalysisV2Limiter } from "@/lib/rate-limiters";
+import { checkRateLimit } from "@/lib/rate-limiters";
 import { getClientIdentifier, rateLimitResponse } from "@/lib/api-utils";
 import { supabaseServer } from "@/lib/supabase-server";
 import type { SongAnalysis, AnalyzeSongResponse } from "@/types/song-analysis";
@@ -39,12 +40,34 @@ import type { SongAnalysis, AnalyzeSongResponse } from "@/types/song-analysis";
 
 export const maxDuration = 300;
 
+// ── Zod 요청 스키마 ──
+const AnalyzeSongRequestSchema = z.object({
+  composer: z.string().min(1, "작곡가는 필수입니다.").max(100),
+  title: z.string().min(1, "곡 제목은 필수입니다.").max(200),
+  instrument: z.string().max(50).optional().default("piano"),
+  forceRefresh: z.boolean().optional().default(false),
+});
+
 const ADMIN_EMAILS = new Set([
   "jisoo@withsempre.com",
   "a01056014453@gmail.com",
 ]);
 
 type AnalysisInstrument = string;
+
+/** Pro 사용자 확인 (profiles.subscription_tier) */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function isProUser(userId: string | null): Promise<boolean> {
+  if (!userId) return false;
+  try {
+    const { data } = await (supabaseServer as any)
+      .from("profiles")
+      .select("subscription_tier")
+      .eq("id", userId)
+      .single();
+    return data?.subscription_tier === "pro";
+  } catch { return false; }
+}
 
 // ════════════════════════════════════════════════════════
 // GPT / Perplexity 호출 헬퍼
@@ -202,31 +225,38 @@ export async function POST(request: NextRequest) {
     } catch { /* 비인증 허용 */ }
 
     const isAdmin = authEmail ? ADMIN_EMAILS.has(authEmail.toLowerCase()) : false;
+    const proUser = isAdmin || await isProUser(authUserId);
 
-    // ── Rate Limit (어드민 무제한) ──
+    // ── Rate Limit (어드민 무제한, Pro 하루5회, Free 하루1회) ──
     if (!isAdmin) {
       const identifier = getClientIdentifier(request);
-      const limit = songAnalysisV2Limiter(identifier);
-      if (!limit.success) {
-        return rateLimitResponse(limit.resetAt, "곡 분석은 하루에 1회만 가능합니다. 내일 다시 시도해주세요.");
+      const tier = proUser ? "pro" : "free";
+      const allowed = checkRateLimit(identifier, tier);
+      if (!allowed) {
+        const msg = proUser
+          ? "Pro 플랜 일일 한도(5회)를 초과했습니다."
+          : "곡 분석은 하루에 1회만 가능합니다. 내일 다시 시도해주세요.";
+        return NextResponse.json({ success: false, error: msg } as AnalyzeSongResponse, { status: 429 });
       }
     } else {
       console.log(`[Admin] ${authEmail} — rate limit 무제한`);
     }
 
-    // ── 요청 파싱 ──
-    const body = await request.json();
-    const composer: string = body.composer;
-    const title: string = body.title;
-    const instrument: AnalysisInstrument = body.instrument ?? "piano";
-    const forceRefresh: boolean = body.forceRefresh ?? false;
-
-    if (!composer || !title) {
-      return NextResponse.json({ success: false, error: "composer와 title은 필수입니다." } as AnalyzeSongResponse, { status: 400 });
+    // ── 요청 파싱 + Zod 검증 ──
+    const rawBody = await request.json();
+    const parsed = AnalyzeSongRequestSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: parsed.error.errors[0]?.message ?? "요청 형식이 잘못되었습니다." } as AnalyzeSongResponse,
+        { status: 400 }
+      );
     }
+    const { composer, title, instrument, forceRefresh } = parsed.data;
 
-    // ── 캐시 확인 (어드민은 항상 재분석) ──
-    if (!isAdmin && !forceRefresh) {
+    // ── 캐시 확인 ──
+    // 어드민: 항상 재분석 / Pro: forceRefresh 허용 / Free: 캐시 강제
+    const effectiveForceRefresh = isAdmin ? true : (proUser ? forceRefresh : false);
+    if (!effectiveForceRefresh) {
       const cached = await getCachedAnalysis(composer, title);
       if (cached) {
         console.log(`[Cache HIT] ${composer} - ${title}`);

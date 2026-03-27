@@ -429,18 +429,14 @@ export function createPhase3Prompt(
   composer: string,
   title: string,
   opus: string,
-  instrument?: string,
-  musicXmlOrLockedFacts?: string,
+  confirmedKeyOrInstrument?: string,
+  lockedFactsBlockOrMusicXml?: string,
   referenceData?: string,
-  verifiedMeta?: { composer: string; title: string; opus: string; key: string }
+  hasScoreOrVerifiedMeta?: boolean | { composer: string; title: string; opus: string; key: string }
 ): string {
-  const hasScore = false; // Vision 파이프라인 통합 시 true로 변경
-  const lockedBlock = musicXmlOrLockedFacts ?? buildLockedFactsBlock(
-    verifiedMeta?.composer ?? composer,
-    verifiedMeta?.title ?? title,
-    verifiedMeta?.opus ?? opus,
-    verifiedMeta?.key ?? ""
-  );
+  // 하위 호환: 7번째 인자가 boolean이면 새 시그니처, object면 기존 시그니처
+  const hasScore = typeof hasScoreOrVerifiedMeta === "boolean" ? hasScoreOrVerifiedMeta : false;
+  const lockedBlock = lockedFactsBlockOrMusicXml ?? buildLockedFactsBlock(composer, title, opus, confirmedKeyOrInstrument ?? "");
   const ref = referenceData ?? "";
 
   return `
