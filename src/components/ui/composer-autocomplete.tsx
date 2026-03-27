@@ -1,29 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { User, Music } from "lucide-react";
 import { getComposers, type Composer } from "@/lib/queries/composers";
-
-/** 위키피디아에서 작곡가 썸네일 가져오기 (캐시) */
-const imageCache = new Map<string, string>();
-
-async function getComposerImage(fullName: string): Promise<string> {
-  if (imageCache.has(fullName)) return imageCache.get(fullName)!;
-
-  try {
-    const res = await fetch(
-      `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(fullName)}`,
-    );
-    if (!res.ok) return "";
-    const data = await res.json();
-    const url = data.thumbnail?.source ?? "";
-    imageCache.set(fullName, url);
-    return url;
-  } catch {
-    imageCache.set(fullName, "");
-    return "";
-  }
-}
 
 interface ComposerAutocompleteProps {
   value: string;
@@ -43,6 +22,28 @@ interface TitleAutocompleteProps {
   className?: string;
 }
 
+/** 작곡가 이미지 캐시 (서버 API에서 가져온 결과) */
+let _composerImages: Record<string, string> | null = null;
+let _imagesFetched = false;
+
+async function loadComposerImages(): Promise<Record<string, string>> {
+  if (_composerImages) return _composerImages;
+  if (_imagesFetched) return {};
+
+  _imagesFetched = true;
+  try {
+    const res = await fetch("/api/composers/images");
+    if (res.ok) {
+      const data = await res.json();
+      _composerImages = data.images ?? {};
+      return _composerImages as Record<string, string>;
+    }
+  } catch {
+    // 이미지 로드 실패 — 기능에 영향 없음
+  }
+  return {};
+}
+
 /** 작곡가 자동완성 입력 */
 export function ComposerAutocomplete({
   value,
@@ -54,11 +55,12 @@ export function ComposerAutocomplete({
 }: ComposerAutocompleteProps) {
   const [composers, setComposers] = useState<Composer[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [composerImages, setComposerImages] = useState<Record<string, string>>({});
+  const [images, setImages] = useState<Record<string, string>>({});
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     getComposers().then(setComposers);
+    loadComposerImages().then(setImages);
   }, []);
 
   useEffect(() => {
@@ -71,24 +73,15 @@ export function ComposerAutocomplete({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const filtered = value.length >= 2
-    ? composers.filter(
-        (c) =>
-          c.shortName.toLowerCase().includes(value.toLowerCase()) ||
-          c.fullName.toLowerCase().includes(value.toLowerCase())
-      )
-    : [];
-
-  // 필터된 작곡가의 이미지 로드
-  useEffect(() => {
-    filtered.forEach((c) => {
-      if (!composerImages[c.fullName] && composerImages[c.fullName] !== "") {
-        getComposerImage(c.fullName).then((url) => {
-          if (url) setComposerImages((prev) => ({ ...prev, [c.fullName]: url }));
-        });
-      }
-    });
-  }, [filtered.map((c) => c.id).join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
+  const filtered = useMemo(() => {
+    if (value.length < 2) return [];
+    const lower = value.toLowerCase();
+    return composers.filter(
+      (c) =>
+        c.shortName.toLowerCase().includes(lower) ||
+        c.fullName.toLowerCase().includes(lower),
+    );
+  }, [value, composers]);
 
   const handleChange = (v: string) => {
     onChange(v);
@@ -118,29 +111,30 @@ export function ComposerAutocomplete({
       />
       {showSuggestions && filtered.length > 0 && (
         <div className="absolute left-0 right-0 top-full mt-1 bg-card border border-border rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto">
-          {filtered.map((c) => (
-            <button
-              key={c.id}
-              onClick={() => handleSelect(c)}
-              className="w-full px-4 py-3 flex items-center gap-3 hover:bg-secondary/50 transition-colors border-b border-border last:border-b-0 text-left"
-            >
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0 overflow-hidden">
-                {composerImages[c.fullName] ? (
-                  <img
-                    src={composerImages[c.fullName]}
-                    alt={c.shortName}
-                    className="w-10 h-10 object-cover"
-                  />
-                ) : (
-                  <User className="w-4 h-4 text-primary" />
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-foreground text-sm">{c.shortName}</p>
-                <p className="text-xs text-muted-foreground truncate">{c.fullName}</p>
-              </div>
-            </button>
-          ))}
+          {filtered.map((c) => {
+            const imgUrl = images[c.fullName];
+            return (
+              <button
+                key={c.id}
+                onClick={() => handleSelect(c)}
+                className="w-full px-4 py-3 flex items-center gap-3 hover:bg-secondary/50 transition-colors border-b border-border last:border-b-0 text-left"
+              >
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0 overflow-hidden">
+                  {imgUrl ? (
+                    <img src={imgUrl} alt="" className="w-10 h-10 object-cover" />
+                  ) : (
+                    <span className="text-sm font-bold text-primary">
+                      {c.shortName.charAt(0)}
+                    </span>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-foreground text-sm">{c.shortName}</p>
+                  <p className="text-xs text-muted-foreground truncate">{c.fullName}</p>
+                </div>
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
@@ -174,13 +168,13 @@ export function TitleAutocomplete({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const getFilteredWorks = useCallback(() => {
+  const filtered = useMemo(() => {
     if (value.length < 2) return [];
     const lowerQuery = value.toLowerCase();
 
     if (composer) {
       const selected = composers.find(
-        (c) => c.shortName === composer || c.fullName === composer
+        (c) => c.shortName === composer || c.fullName === composer,
       );
       if (selected) {
         return selected.works
@@ -189,7 +183,6 @@ export function TitleAutocomplete({
       }
     }
 
-    // 작곡가 미선택 시 전체 검색
     const results: string[] = [];
     for (const c of composers) {
       for (const w of c.works) {
@@ -201,15 +194,12 @@ export function TitleAutocomplete({
     return [...new Set(results)].slice(0, 8);
   }, [value, composer, composers]);
 
-  const filtered = getFilteredWorks();
-
   const handleChange = (v: string) => {
     onChange(v);
     setShowSuggestions(v.length >= 2);
   };
 
   const handleSelect = (work: string) => {
-    // "(작곡가)" 부분 분리
     const match = work.match(/^(.+) \((.+)\)$/);
     onChange(match ? match[1] : work);
     setShowSuggestions(false);
