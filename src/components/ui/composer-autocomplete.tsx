@@ -4,6 +4,27 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { User, Music } from "lucide-react";
 import { getComposers, type Composer } from "@/lib/queries/composers";
 
+/** 위키피디아에서 작곡가 썸네일 가져오기 (캐시) */
+const imageCache = new Map<string, string>();
+
+async function getComposerImage(fullName: string): Promise<string> {
+  if (imageCache.has(fullName)) return imageCache.get(fullName)!;
+
+  try {
+    const res = await fetch(
+      `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(fullName)}`,
+    );
+    if (!res.ok) return "";
+    const data = await res.json();
+    const url = data.thumbnail?.source ?? "";
+    imageCache.set(fullName, url);
+    return url;
+  } catch {
+    imageCache.set(fullName, "");
+    return "";
+  }
+}
+
 interface ComposerAutocompleteProps {
   value: string;
   onChange: (value: string) => void;
@@ -33,6 +54,7 @@ export function ComposerAutocomplete({
 }: ComposerAutocompleteProps) {
   const [composers, setComposers] = useState<Composer[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [composerImages, setComposerImages] = useState<Record<string, string>>({});
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -56,6 +78,17 @@ export function ComposerAutocomplete({
           c.fullName.toLowerCase().includes(value.toLowerCase())
       )
     : [];
+
+  // 필터된 작곡가의 이미지 로드
+  useEffect(() => {
+    filtered.forEach((c) => {
+      if (!composerImages[c.fullName] && composerImages[c.fullName] !== "") {
+        getComposerImage(c.fullName).then((url) => {
+          if (url) setComposerImages((prev) => ({ ...prev, [c.fullName]: url }));
+        });
+      }
+    });
+  }, [filtered.map((c) => c.id).join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleChange = (v: string) => {
     onChange(v);
@@ -91,8 +124,16 @@ export function ComposerAutocomplete({
               onClick={() => handleSelect(c)}
               className="w-full px-4 py-3 flex items-center gap-3 hover:bg-secondary/50 transition-colors border-b border-border last:border-b-0 text-left"
             >
-              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                <User className="w-4 h-4 text-primary" />
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0 overflow-hidden">
+                {composerImages[c.fullName] ? (
+                  <img
+                    src={composerImages[c.fullName]}
+                    alt={c.shortName}
+                    className="w-10 h-10 object-cover"
+                  />
+                ) : (
+                  <User className="w-4 h-4 text-primary" />
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-foreground text-sm">{c.shortName}</p>
