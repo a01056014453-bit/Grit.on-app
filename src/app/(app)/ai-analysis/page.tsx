@@ -449,7 +449,7 @@ export default function AIAnalysisPage() {
           <ArrowLeft className="w-5 h-5 text-gray-600" />
         </button>
         <div className="flex-1">
-          <h1 className="text-lg font-bold text-black">내 분석 보관함</h1>
+          <h1 className="text-lg font-bold text-black">AI 분석</h1>
           <p className="text-xs text-gray-500">AI 분석 완료된 곡 {totalCount}개</p>
         </div>
         <div className="w-10 h-10 rounded-full bg-violet-100 flex items-center justify-center">
