@@ -28,7 +28,7 @@ import {
 } from "@/lib/analysis-prompts";
 import { searchAcademicSources } from "@/lib/phase0-academic";
 import { getScoreFactsFromIMSLP } from "@/lib/imslp-vision-pipeline";
-import { getCachedAnalysis, saveCachedAnalysis } from "@/lib/song-analysis-db";
+import { getCachedAnalysis, saveCachedAnalysis, addToUserHistory } from "@/lib/song-analysis-db";
 import { checkRateLimit } from "@/lib/rate-limiters";
 import { getClientIdentifier, rateLimitResponse } from "@/lib/api-utils";
 import { supabaseServer } from "@/lib/supabase-server";
@@ -492,6 +492,13 @@ export async function POST(request: NextRequest) {
 
     // ── DB 저장 ──
     await saveCachedAnalysis(analysis, composer, title).catch((e) =>
+
+    // 유저 보관함에 기록 (403 방지)
+    if (userId && analysis.id) {
+      await addToUserHistory(userId, analysis.id).catch((e) =>
+        console.error("[DB] 히스토리 저장 실패:", e)
+      );
+    }
       console.error("[DB] 저장 실패:", e)
     );
 
