@@ -28,6 +28,11 @@ export const pdfConvertLimiter = createRateLimiter({
   maxRequests: 10,
 });
 
+/** AI 곡 분석 rate limit 확인 (route.ts에서 호출) */
+export function checkRateLimit(identifier: string): boolean {
+  return songAnalysisV2Limiter(identifier).success;
+}
+
 /** 도움 요청 생성 */
 export const helpRequestLimiter = createRateLimiter({
   interval: TEN_MINUTES,
