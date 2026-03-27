@@ -1,15 +1,40 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { safeBack } from "@/lib/navigation";
 import { ArrowLeft, Brain, Loader2, Music, User, Bell, CheckCircle2 } from "lucide-react";
 import { getComposers, type Composer } from "@/lib/queries/composers";
 import { addUserAnalysis } from "@/lib/user-analyses";
-import type { AnalyzeSongResponse } from "@/types/song-analysis";
+
+// ── 타입 정의 ──
 
 interface ComposerEntry { composer: string; fullName: string; }
 interface SearchItem { composer: string; fullName: string; work: string; }
+
+/** POST /api/analyze-song-v2/start 응답 */
+interface AnalysisStartResponse {
+  success: boolean;
+  error?: string;
+  cached?: boolean;
+  result_id?: string;
+  job_id?: string;
+  message?: string;
+}
+
+/** GET /api/analyze-song-v2/status 응답 */
+interface JobStatusResponse {
+  success: boolean;
+  job_id: string;
+  status: "processing" | "done" | "failed";
+  result_id?: string;
+  error_message?: string;
+  composer: string;
+  title: string;
+  elapsed_seconds: number;
+}
+
+// ── 유틸 함수 ──
 
 function getUserInstrument(): string {
   if (typeof window === "undefined") return "piano";
@@ -28,13 +53,6 @@ function getUserInstrument(): string {
   return "piano";
 }
 
-async function requestNotificationPermission(): Promise<boolean> {
-  if (!("Notification" in window)) return false;
-  if (Notification.permission === "granted") return true;
-  if (Notification.permission === "denied") return false;
-  return (await Notification.requestPermission()) === "granted";
-}
-
 function sendAnalysisCompleteNotification(composer: string, title: string, resultId: string) {
   if (!("Notification" in window) || Notification.permission !== "granted") return;
   const n = new Notification("분석 완료!", {
@@ -46,22 +64,7 @@ function sendAnalysisCompleteNotification(composer: string, title: string, resul
   n.onclick = () => { window.focus(); window.location.href = `/ai-analysis/${resultId}`; n.close(); };
 }
 
-function startDirectPolling(jobId: string, composer: string, title: string, onDone: (resultId: string) => void) {
-  const interval = setInterval(async () => {
-    try {
-      const res = await fetch(`/api/analyze-song-v2/status?job_id=${jobId}`);
-      const data = await res.json();
-      if (data.status === "done" && data.result_id) {
-        clearInterval(interval);
-        onDone(data.result_id);
-        sendAnalysisCompleteNotification(composer, title, data.result_id);
-      } else if (data.status === "failed") {
-        clearInterval(interval);
-      }
-    } catch { /* 계속 폴링 */ }
-  }, 3000);
-  setTimeout(() => clearInterval(interval), 10 * 60 * 1000);
-}
+// ── 컴포넌트 ──
 
 export default function NewAnalysisPage() {
   const router = useRouter();
@@ -81,9 +84,21 @@ export default function NewAnalysisPage() {
   const [showTitleSuggestions, setShowTitleSuggestions] = useState(false);
   const titleRef = useRef<HTMLDivElement>(null);
 
+  // 폴링 interval ref (cleanup용)
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     getComposers().then(setComposers);
     if ("Notification" in window) setNotificationGranted(Notification.permission === "granted");
+  }, []);
+
+  // 컴포넌트 언마운트 시 폴링 정리
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+      if (pollingTimeoutRef.current) clearTimeout(pollingTimeoutRef.current);
+    };
   }, []);
 
   const composerList = useMemo<ComposerEntry[]>(
@@ -93,15 +108,15 @@ export default function NewAnalysisPage() {
     () => composers.flatMap((c) => c.works.map((work) => ({ composer: c.shortName, fullName: c.fullName, work }))), [composers]
   );
 
-  const filterComposers = (query: string) => {
+  const filterComposers = useCallback((query: string) => {
     if (query.length < 2) { setComposerSuggestions([]); setShowComposerSuggestions(false); return; }
     const q = query.toLowerCase();
     const filtered = composerList.filter((c) => c.composer.toLowerCase().includes(q) || c.fullName.toLowerCase().includes(q));
     setComposerSuggestions(filtered);
     setShowComposerSuggestions(filtered.length > 0);
-  };
+  }, [composerList]);
 
-  const filterTitles = (query: string) => {
+  const filterTitles = useCallback((query: string) => {
     if (query.length < 2) { setTitleSuggestions([]); setShowTitleSuggestions(false); return; }
     const q = query.toLowerCase();
     let works: string[] = [];
@@ -113,14 +128,17 @@ export default function NewAnalysisPage() {
     }
     setTitleSuggestions(works.slice(0, 8));
     setShowTitleSuggestions(works.length > 0);
-  };
+  }, [composer, composers, searchableItems]);
 
-  const selectComposer = (item: ComposerEntry) => { setComposer(item.composer); setShowComposerSuggestions(false); setTitle(""); };
-  const selectTitle = (work: string) => {
+  const selectComposer = useCallback((item: ComposerEntry) => {
+    setComposer(item.composer); setShowComposerSuggestions(false); setTitle("");
+  }, []);
+
+  const selectTitle = useCallback((work: string) => {
     const match = work.match(/^(.+) \((.+)\)$/);
     if (match) { setTitle(match[1]); setComposer(match[2]); } else { setTitle(work); }
     setShowTitleSuggestions(false);
-  };
+  }, []);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -131,12 +149,63 @@ export default function NewAnalysisPage() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  const requestNotification = useCallback(async () => {
+    if (!("Notification" in window)) return false;
+    if (Notification.permission === "granted") return true;
+    if (Notification.permission === "denied") return false;
+    return (await Notification.requestPermission()) === "granted";
+  }, []);
+
+  // 폴링 시작 (에러 카운트 + cleanup 지원)
+  const startPolling = useCallback((jobId: string, comp: string, ttl: string) => {
+    let errorCount = 0;
+    const MAX_ERRORS = 10;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/analyze-song-v2/status?job_id=${jobId}`);
+        const data: JobStatusResponse = await res.json();
+
+        if (data.status === "done" && data.result_id) {
+          clearInterval(interval);
+          // 보관함에 추가
+          addUserAnalysis({ id: data.result_id, composer: comp, title: ttl });
+          sendAnalysisCompleteNotification(comp, ttl, data.result_id);
+          // 결과 페이지로 자동 이동 (탭이 열려있으면)
+          router.push(`/ai-analysis/${data.result_id}`);
+        } else if (data.status === "failed") {
+          clearInterval(interval);
+          setAnalyzeError(data.error_message ?? "분석에 실패했습니다.");
+          setAnalysisStarted(false);
+        }
+        errorCount = 0; // 성공 시 리셋
+      } catch {
+        errorCount++;
+        if (errorCount >= MAX_ERRORS) {
+          clearInterval(interval);
+          setAnalyzeError("서버 연결이 불안정합니다. 잠시 후 AI 분석 페이지에서 확인해주세요.");
+        }
+      }
+    }, 3000);
+
+    pollingRef.current = interval;
+
+    // 10분 타임아웃
+    const timeout = setTimeout(() => {
+      clearInterval(interval);
+      setAnalyzeError("분석 시간이 초과되었습니다. AI 분석 페이지에서 결과를 확인해주세요.");
+      setAnalysisStarted(false);
+    }, 10 * 60 * 1000);
+
+    pollingTimeoutRef.current = timeout;
+  }, [router]);
+
   const handleAnalyze = async () => {
     if (!title || !composer) return;
     setIsAnalyzing(true);
     setAnalyzeError("");
 
-    const hasPermission = await requestNotificationPermission();
+    const hasPermission = await requestNotification();
     setNotificationGranted(hasPermission);
 
     try {
@@ -146,7 +215,7 @@ export default function NewAnalysisPage() {
         body: JSON.stringify({ composer, title, instrument: getUserInstrument() }),
       });
 
-      const result = await res.json();
+      const result: AnalysisStartResponse = await res.json();
 
       if (!result.success) {
         setAnalyzeError(result.error || "분석 시작에 실패했습니다.");
@@ -161,16 +230,13 @@ export default function NewAnalysisPage() {
         return;
       }
 
-      // 새 분석 시작 → 폴링
-      const jobId = result.job_id;
-      setActiveJobId(jobId);
-      setAnalysisStarted(true);
-      setIsAnalyzing(false);
-
-      startDirectPolling(jobId, composer, title, (resultId) => {
-        addUserAnalysis({ id: resultId, composer, title });
-        try { localStorage.setItem(`sempre-analysis-${resultId}`, "pending"); } catch {}
-      });
+      // 새 분석 → 폴링
+      if (result.job_id) {
+        setActiveJobId(result.job_id);
+        setAnalysisStarted(true);
+        setIsAnalyzing(false);
+        startPolling(result.job_id, composer, title);
+      }
     } catch {
       setAnalyzeError("네트워크 오류가 발생했습니다.");
       setIsAnalyzing(false);
@@ -179,7 +245,7 @@ export default function NewAnalysisPage() {
 
   const canAnalyze = title.trim() && composer.trim();
 
-  // ── 분석 시작 후 화면 ──
+  // ── 분석 진행 중 화면 ──
   if (analysisStarted && activeJobId) {
     return (
       <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
@@ -206,7 +272,7 @@ export default function NewAnalysisPage() {
           </div>
           <p className="text-sm text-muted-foreground">
             AI가 분석 중입니다. 1~2분 소요됩니다.
-            <strong className="text-foreground"> 이 페이지에서 나가도 됩니다.</strong>
+            <strong className="text-foreground"> 완료되면 자동으로 결과 페이지로 이동합니다.</strong>
           </p>
         </div>
 
@@ -221,8 +287,8 @@ export default function NewAnalysisPage() {
               <>
                 <Bell className="w-5 h-5 text-amber-600 shrink-0" />
                 <div>
-                  <p className="text-sm text-amber-800">알림 권한이 없어 이 탭을 열어두셔야 합니다.</p>
-                  <button onClick={async () => setNotificationGranted(await requestNotificationPermission())} className="text-xs text-amber-700 underline mt-1">
+                  <p className="text-sm text-amber-800">알림을 허용하면 다른 페이지에서도 완료를 알려드립니다.</p>
+                  <button onClick={async () => setNotificationGranted(await requestNotification())} className="text-xs text-amber-700 underline mt-1">
                     알림 허용하기
                   </button>
                 </div>
@@ -231,8 +297,18 @@ export default function NewAnalysisPage() {
           </div>
         </div>
 
+        {analyzeError && (
+          <div className="bg-red-50 rounded-xl border border-red-200 p-4 mb-4">
+            <p className="text-sm text-red-700">{analyzeError}</p>
+          </div>
+        )}
+
         <button
-          onClick={() => { setAnalysisStarted(false); setActiveJobId(null); setTitle(""); setComposer(""); }}
+          onClick={() => {
+            if (pollingRef.current) clearInterval(pollingRef.current);
+            if (pollingTimeoutRef.current) clearTimeout(pollingTimeoutRef.current);
+            setAnalysisStarted(false); setActiveJobId(null); setTitle(""); setComposer(""); setAnalyzeError("");
+          }}
           className="w-full py-3 rounded-xl border border-border text-sm font-medium text-muted-foreground hover:bg-secondary/50 transition-colors"
         >
           다른 곡 분석하기
@@ -241,7 +317,7 @@ export default function NewAnalysisPage() {
     );
   }
 
-  // ── 기본 입력 화면 ──
+  // ── 입력 화면 ──
   return (
     <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
       <div className="bg-blob-extra" />
