@@ -17,7 +17,8 @@ import {
   Target,
   Folder,
   FolderOpen,
-  Trash2
+  Trash2,
+  Loader2
 } from "lucide-react";
 import {
   getAnalyzedPieces,
@@ -26,14 +27,122 @@ import {
 } from "@/lib/queries/pieces";
 import type { Piece, PieceAnalysis, PiecePracticeData } from "@/lib/queries/pieces";
 import { getUserId } from "@/lib/user-id";
-import { removeUserAnalysis } from "@/lib/user-analyses";
+import { addUserAnalysis, removeUserAnalysis } from "@/lib/user-analyses";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
+import { ComposerAutocomplete, TitleAutocomplete } from "@/components/ui/composer-autocomplete";
 
 interface UserAnalysis {
   id: string;
   composer: string;
   title: string;
   analyzedAt: string;
+}
+
+/** 인라인 분석 요청 폼 — 작곡가/곡명 입력 + 바로 분석 */
+function InlineAnalysisForm({ onAnalyzed }: { onAnalyzed: (id: string, composer: string, title: string) => void }) {
+  const [composer, setComposer] = useState("");
+  const [title, setTitle] = useState("");
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [error, setError] = useState("");
+  const [phase, setPhase] = useState("");
+
+  const getUserInstrument = (): string => {
+    try {
+      const profile = localStorage.getItem("sempre-user-profile");
+      if (profile) {
+        const parsed = JSON.parse(profile);
+        const inst = parsed.instruments?.[0];
+        const map: Record<string, string> = {
+          "피아노": "piano", "바이올린": "violin", "첼로": "cello",
+          "비올라": "viola", "플루트": "flute", "클라리넷": "clarinet", "기타": "guitar",
+        };
+        return map[inst] ?? inst ?? "piano";
+      }
+    } catch {}
+    return "piano";
+  };
+
+  const handleAnalyze = async () => {
+    if (!composer.trim() || !title.trim()) return;
+    setIsAnalyzing(true);
+    setError("");
+    setPhase("AI 분석 요청 중...");
+
+    try {
+      const res = await fetch("/api/analyze-song-v2", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          composer: composer.trim(),
+          title: title.trim(),
+          instrument: getUserInstrument(),
+        }),
+      });
+      const result = await res.json();
+
+      if (!result.success || !result.data) {
+        setError(result.error || "분석에 실패했습니다.");
+        setIsAnalyzing(false);
+        return;
+      }
+
+      // 캐시
+      try {
+        localStorage.setItem(`sempre-analysis-${result.data.id}`, JSON.stringify(result.data));
+      } catch {}
+
+      setPhase("분석 완료!");
+      onAnalyzed(result.data.id, composer.trim(), title.trim());
+    } catch {
+      setError("네트워크 오류가 발생했습니다.");
+      setIsAnalyzing(false);
+    }
+  };
+
+  return (
+    <div className="mb-6 bg-white rounded-2xl border border-violet-200 p-4">
+      <p className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+        <Sparkles className="w-4 h-4 text-violet-500" />
+        곡 분석하기
+      </p>
+
+      <div className="space-y-3">
+        <ComposerAutocomplete
+          value={composer}
+          onChange={setComposer}
+          placeholder="작곡가 (예: Chopin)"
+        />
+        <TitleAutocomplete
+          value={title}
+          onChange={setTitle}
+          composer={composer}
+          placeholder="곡 제목 (예: Ballade No.1)"
+        />
+      </div>
+
+      {error && (
+        <p className="text-xs text-red-500 mt-2">{error}</p>
+      )}
+
+      <button
+        onClick={handleAnalyze}
+        disabled={isAnalyzing || !composer.trim() || !title.trim()}
+        className="w-full mt-3 py-3 rounded-xl bg-gradient-to-r from-violet-500 to-violet-700 text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
+      >
+        {isAnalyzing ? (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin" />
+            {phase || "분석 중..."}
+          </>
+        ) : (
+          <>
+            <Sparkles className="w-4 h-4" />
+            분석 시작
+          </>
+        )}
+      </button>
+    </div>
+  );
 }
 
 interface SectionData {
@@ -469,14 +578,17 @@ export default function AIAnalysisPage() {
         />
       </div>
 
-      {/* New Analysis Button */}
-      <Link
-        href="/ai-analysis/new"
-        className="block w-full py-4 mb-6 border-2 border-dashed border-gray-300 rounded-xl text-center text-gray-500 hover:border-violet-400 hover:text-violet-600 transition-colors"
-      >
-        <Plus className="w-5 h-5 inline mr-2" />
-        새로운 곡 분석 요청
-      </Link>
+      {/* 인라인 분석 요청 폼 */}
+      <InlineAnalysisForm
+        onAnalyzed={(id, composer, title) => {
+          addUserAnalysis({ id, composer, title });
+          setUserAnalyses((prev) => [
+            { id, composer, title, analyzedAt: new Date().toISOString() },
+            ...prev.filter((a) => a.id !== id),
+          ]);
+          router.push(`/ai-analysis/${id}`);
+        }}
+      />
 
       {/* User AI Analyses — 스와이프로 삭제 */}
       {filteredUserAnalyses.length > 0 && (
