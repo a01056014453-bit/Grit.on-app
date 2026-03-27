@@ -472,7 +472,7 @@ async function runPhase1(
 ): Promise<{ meta: SongAnalysis["meta"]; song_overview: SongOverview }> {
   console.log("[Phase 1] 데이터 검증 + 곡 개요...");
 
-  const prompt = createPhase1Prompt(composer, title, musicXml, enrichedReference || undefined, instrument);
+  const prompt = createPhase1Prompt(composer, title, musicXml ?? "", enrichedReference ?? undefined, instrument ?? undefined);
   const text = await callGPT(openai, prompt, 4096, 0.1);
   const parsed = await safeParseJSON(text, openai, "Phase 1");
 
@@ -559,7 +559,7 @@ async function runPhase3(
 ): Promise<{ structure_analysis_v2: StructureAnalysisV2 }> {
   console.log("[Phase 3] 구조/화성 분석...");
 
-  const prompt = createPhase3Prompt(composer, title, opus, musicXml, enrichedReference || undefined, verifiedMeta, instrument);
+  const prompt = createPhase3Prompt(composer, title, opus, instrument, musicXml, enrichedReference ?? undefined, verifiedMeta);
   const text = await callGPT(openai, prompt, 12000, 0.1);
   const parsed = await safeParseJSON(text, openai, "Phase 3");
 
