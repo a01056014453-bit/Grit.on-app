@@ -255,12 +255,19 @@ export async function POST(request: NextRequest) {
 
     // ── 캐시 확인 ──
     // 어드민: 항상 재분석 / Pro: forceRefresh 허용 / Free: 캐시 강제
+    // schema_version < 2 인 캐시는 구 파이프라인 결과 → 무조건 재분석
+    const CURRENT_SCHEMA_VERSION = 2;
     const effectiveForceRefresh = isAdmin ? true : (proUser ? forceRefresh : false);
     if (!effectiveForceRefresh) {
       const cached = await getCachedAnalysis(composer, title);
       if (cached) {
-        console.log(`[Cache HIT] ${composer} - ${title}`);
-        return NextResponse.json({ success: true, data: cached, cached: true } as AnalyzeSongResponse);
+        const cachedVersion = (cached as { schema_version?: number }).schema_version ?? 1;
+        if (cachedVersion < CURRENT_SCHEMA_VERSION) {
+          console.log(`[Cache STALE] ${composer} - ${title} | schema_version: ${cachedVersion} → 재분석`);
+        } else {
+          console.log(`[Cache HIT] ${composer} - ${title} | schema_version: ${cachedVersion}`);
+          return NextResponse.json({ success: true, data: cached, cached: true } as AnalyzeSongResponse);
+        }
       }
     }
 
