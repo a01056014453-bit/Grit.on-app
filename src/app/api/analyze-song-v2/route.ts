@@ -656,69 +656,45 @@ async function searchYoutubeUrls(
   title: string,
   performances: RecommendedPerformanceV2[],
 ): Promise<RecommendedPerformanceV2[]> {
-  const perplexity = getPerplexityClient();
-  if (!perplexity || performances.length === 0) return performances;
+  const apiKey = process.env.YOUTUBE_API_KEY;
+  if (!apiKey || performances.length === 0) return performances;
 
-  console.log(`[YouTube] ${performances.length}명 연주자 YouTube URL 검색 중...`);
+  console.log(`[YouTube] ${performances.length}명 연주자 YouTube Data API 검색 중...`);
 
-  const artistList = performances
-    .map((p, i) => `${i + 1}. ${p.artist}`)
-    .join("\n");
+  const results = await Promise.allSettled(
+    performances.map(async (perf) => {
+      try {
+        const query = `${perf.artist} ${composer} ${title}`;
+        const params = new URLSearchParams({
+          part: "snippet",
+          q: query,
+          type: "video",
+          maxResults: "1",
+          videoCategoryId: "10",
+          key: apiKey,
+        });
 
-  try {
-    const completion = await perplexity.chat.completions.create({
-      model: "sonar-pro",
-      messages: [
-        {
-          role: "user",
-          content: `Find YouTube video URLs for these pianists performing "${composer} - ${title}":
+        const res = await fetch(`https://www.googleapis.com/youtube/v3/search?${params}`);
+        if (!res.ok) return { artist: perf.artist, url: "" };
 
-${artistList}
+        const data = await res.json();
+        const videoId = data.items?.[0]?.id?.videoId;
 
-For each pianist, find ONE best YouTube video of them performing this specific piece.
-Search youtube.com for: "[artist name] ${composer} ${title}"
+        return {
+          artist: perf.artist,
+          url: videoId ? `https://www.youtube.com/watch?v=${videoId}` : "",
+        };
+      } catch {
+        return { artist: perf.artist, url: "" };
+      }
+    }),
+  );
 
-Reply ONLY in this exact JSON format (no other text):
-{
-  "urls": [
-    { "artist": "artist name", "url": "https://www.youtube.com/watch?v=..." },
-    { "artist": "artist name", "url": "" }
-  ]
-}
-
-Rules:
-- Only include URLs from youtube.com or youtu.be
-- If no video found for a pianist, use empty string ""
-- Do NOT guess or fabricate URLs
-- Prefer official recordings, full performances (not excerpts)`,
-        },
-      ],
-      max_tokens: 1024,
-      temperature: 0.1,
-    });
-
-    const result = completion.choices[0]?.message?.content || "";
-    const jsonStr = extractJSON(result);
-    const parsed = JSON.parse(jsonStr);
-    const urls: Array<{ artist: string; url: string }> = Array.isArray(parsed.urls) ? parsed.urls : [];
-
-    // URL을 연주자에 매칭
-    return performances.map((p) => {
-      const match = urls.find(
-        (u) => u.artist && (
-          p.artist.toLowerCase().includes(u.artist.toLowerCase()) ||
-          u.artist.toLowerCase().includes(p.artist.toLowerCase())
-        ),
-      );
-      return {
-        ...p,
-        youtube_url: match?.url || p.youtube_url || "",
-      };
-    });
-  } catch (error) {
-    console.error("[YouTube] URL 검색 실패:", error instanceof Error ? error.message : error);
-    return performances;
-  }
+  return performances.map((p, i) => {
+    const result = results[i];
+    const url = result.status === "fulfilled" ? result.value.url : "";
+    return { ...p, youtube_url: url || p.youtube_url || "" };
+  });
 }
 
 // ── V2 파이프라인 ──────────────────────────────────────────────────
