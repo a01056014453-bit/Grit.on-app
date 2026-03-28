@@ -100,7 +100,7 @@ function InlineAnalysisForm({ onAnalyzed }: { onAnalyzed: (id: string, composer:
           composer: composer.trim(),
           title: title.trim(),
         });
-        router.push(`/ai-analysis/new?${params.toString()}`);
+        window.location.href = `/ai-analysis/new?${params.toString()}`;
       }
     } catch {
       setError("네트워크 오류가 발생했습니다.");
