@@ -1,18 +1,15 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { safeBack } from "@/lib/navigation";
-import { ArrowLeft, Brain, Loader2, Music, User, Bell, CheckCircle2 } from "lucide-react";
-import { getComposers, type Composer } from "@/lib/queries/composers";
+import { ArrowLeft, Brain, Loader2, Bell, CheckCircle2 } from "lucide-react";
+import { ComposerAutocomplete, TitleAutocomplete } from "@/components/ui/composer-autocomplete";
 import { addUserAnalysis } from "@/lib/user-analyses";
+import { createBrowserClient } from "@supabase/ssr";
 
 // ── 타입 정의 ──
 
-interface ComposerEntry { composer: string; fullName: string; }
-interface SearchItem { composer: string; fullName: string; work: string; }
-
-/** POST /api/analyze-song-v2/start 응답 */
 interface AnalysisStartResponse {
   success: boolean;
   error?: string;
@@ -22,19 +19,21 @@ interface AnalysisStartResponse {
   message?: string;
 }
 
-/** GET /api/analyze-song-v2/status 응답 */
 interface JobStatusResponse {
   success: boolean;
-  job_id: string;
   status: "processing" | "done" | "failed";
   result_id?: string;
   error_message?: string;
-  composer: string;
-  title: string;
-  elapsed_seconds: number;
 }
 
-// ── 유틸 함수 ──
+// ── 유틸 ──
+
+function getSupabaseBrowser() {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
 
 function getUserInstrument(): string {
   if (typeof window === "undefined") return "piano";
@@ -51,6 +50,13 @@ function getUserInstrument(): string {
     }
   } catch {}
   return "piano";
+}
+
+async function requestNotificationPermission(): Promise<boolean> {
+  if (!("Notification" in window)) return false;
+  if (Notification.permission === "granted") return true;
+  if (Notification.permission === "denied") return false;
+  return (await Notification.requestPermission()) === "granted";
 }
 
 function sendAnalysisCompleteNotification(composer: string, title: string, resultId: string) {
@@ -71,29 +77,19 @@ export default function NewAnalysisPage() {
   const [title, setTitle] = useState("");
   const [composer, setComposer] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [composers, setComposers] = useState<Composer[]>([]);
   const [analysisStarted, setAnalysisStarted] = useState(false);
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [notificationGranted, setNotificationGranted] = useState(false);
   const [analyzeError, setAnalyzeError] = useState("");
 
-  const [composerSuggestions, setComposerSuggestions] = useState<ComposerEntry[]>([]);
-  const [showComposerSuggestions, setShowComposerSuggestions] = useState(false);
-  const composerRef = useRef<HTMLDivElement>(null);
-  const [titleSuggestions, setTitleSuggestions] = useState<string[]>([]);
-  const [showTitleSuggestions, setShowTitleSuggestions] = useState(false);
-  const titleRef = useRef<HTMLDivElement>(null);
-
-  // 폴링 interval ref (cleanup용)
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    getComposers().then(setComposers);
     if ("Notification" in window) setNotificationGranted(Notification.permission === "granted");
   }, []);
 
-  // 컴포넌트 언마운트 시 폴링 정리
+  // 언마운트 시 폴링 정리
   useEffect(() => {
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current);
@@ -101,65 +97,16 @@ export default function NewAnalysisPage() {
     };
   }, []);
 
-  const composerList = useMemo<ComposerEntry[]>(
-    () => composers.map((c) => ({ composer: c.shortName, fullName: c.fullName })), [composers]
-  );
-  const searchableItems = useMemo<SearchItem[]>(
-    () => composers.flatMap((c) => c.works.map((work) => ({ composer: c.shortName, fullName: c.fullName, work }))), [composers]
-  );
+  // 완료 콜백 통합
+  const handleAnalysisComplete = useCallback((resultId: string, comp: string, ttl: string) => {
+    sendAnalysisCompleteNotification(comp, ttl, resultId);
+    addUserAnalysis({ id: resultId, composer: comp, title: ttl });
+    router.push(`/ai-analysis/${resultId}`);
+  }, [router]);
 
-  const filterComposers = useCallback((query: string) => {
-    if (query.length < 2) { setComposerSuggestions([]); setShowComposerSuggestions(false); return; }
-    const q = query.toLowerCase();
-    const filtered = composerList.filter((c) => c.composer.toLowerCase().includes(q) || c.fullName.toLowerCase().includes(q));
-    setComposerSuggestions(filtered);
-    setShowComposerSuggestions(filtered.length > 0);
-  }, [composerList]);
-
-  const filterTitles = useCallback((query: string) => {
-    if (query.length < 2) { setTitleSuggestions([]); setShowTitleSuggestions(false); return; }
-    const q = query.toLowerCase();
-    let works: string[] = [];
-    if (composer) {
-      const sel = composers.find((c) => c.shortName === composer || c.fullName === composer);
-      if (sel) works = sel.works.filter((w) => w.toLowerCase().includes(q));
-    } else {
-      works = [...new Set(searchableItems.filter((i) => i.work.toLowerCase().includes(q)).map((i) => `${i.work} (${i.composer})`))];
-    }
-    setTitleSuggestions(works.slice(0, 8));
-    setShowTitleSuggestions(works.length > 0);
-  }, [composer, composers, searchableItems]);
-
-  const selectComposer = useCallback((item: ComposerEntry) => {
-    setComposer(item.composer); setShowComposerSuggestions(false); setTitle("");
-  }, []);
-
-  const selectTitle = useCallback((work: string) => {
-    const match = work.match(/^(.+) \((.+)\)$/);
-    if (match) { setTitle(match[1]); setComposer(match[2]); } else { setTitle(work); }
-    setShowTitleSuggestions(false);
-  }, []);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (composerRef.current && !composerRef.current.contains(e.target as Node)) setShowComposerSuggestions(false);
-      if (titleRef.current && !titleRef.current.contains(e.target as Node)) setShowTitleSuggestions(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  const requestNotification = useCallback(async () => {
-    if (!("Notification" in window)) return false;
-    if (Notification.permission === "granted") return true;
-    if (Notification.permission === "denied") return false;
-    return (await Notification.requestPermission()) === "granted";
-  }, []);
-
-  // 폴링 시작 (에러 카운트 + cleanup 지원)
+  // 폴링 시작
   const startPolling = useCallback((jobId: string, comp: string, ttl: string) => {
     let errorCount = 0;
-    const MAX_ERRORS = 10;
 
     const interval = setInterval(async () => {
       try {
@@ -168,50 +115,50 @@ export default function NewAnalysisPage() {
 
         if (data.status === "done" && data.result_id) {
           clearInterval(interval);
-          // 보관함에 추가
-          addUserAnalysis({ id: data.result_id, composer: comp, title: ttl });
-          sendAnalysisCompleteNotification(comp, ttl, data.result_id);
-          // 결과 페이지로 자동 이동 (탭이 열려있으면)
-          router.push(`/ai-analysis/${data.result_id}`);
+          handleAnalysisComplete(data.result_id, comp, ttl);
         } else if (data.status === "failed") {
           clearInterval(interval);
           setAnalyzeError(data.error_message ?? "분석에 실패했습니다.");
           setAnalysisStarted(false);
         }
-        errorCount = 0; // 성공 시 리셋
+        errorCount = 0;
       } catch {
         errorCount++;
-        if (errorCount >= MAX_ERRORS) {
+        if (errorCount >= 10) {
           clearInterval(interval);
-          setAnalyzeError("서버 연결이 불안정합니다. 잠시 후 AI 분석 페이지에서 확인해주세요.");
+          setAnalyzeError("서버 연결이 불안정합니다. AI 분석 페이지에서 확인해주세요.");
         }
       }
     }, 3000);
 
     pollingRef.current = interval;
-
-    // 10분 타임아웃
-    const timeout = setTimeout(() => {
+    pollingTimeoutRef.current = setTimeout(() => {
       clearInterval(interval);
-      setAnalyzeError("분석 시간이 초과되었습니다. AI 분석 페이지에서 결과를 확인해주세요.");
+      setAnalyzeError("분석 시간이 초과되었습니다.");
       setAnalysisStarted(false);
     }, 10 * 60 * 1000);
-
-    pollingTimeoutRef.current = timeout;
-  }, [router]);
+  }, [handleAnalysisComplete]);
 
   const handleAnalyze = async () => {
     if (!title || !composer) return;
     setIsAnalyzing(true);
     setAnalyzeError("");
 
-    const hasPermission = await requestNotification();
+    const hasPermission = await requestNotificationPermission();
     setNotificationGranted(hasPermission);
 
     try {
+      // Supabase 세션에서 토큰 가져오기
+      const supabase = getSupabaseBrowser();
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token ?? "";
+
       const res = await fetch("/api/analyze-song-v2/start", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ composer, title, instrument: getUserInstrument() }),
       });
 
@@ -281,14 +228,14 @@ export default function NewAnalysisPage() {
             {notificationGranted ? (
               <>
                 <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" />
-                <p className="text-sm text-green-800">완료 시 <strong>알림</strong>을 보내드립니다.</p>
+                <p className="text-sm text-green-800">완료 시 <strong>알림</strong>을 보내드립니다. 자동으로 이동합니다.</p>
               </>
             ) : (
               <>
                 <Bell className="w-5 h-5 text-amber-600 shrink-0" />
                 <div>
-                  <p className="text-sm text-amber-800">알림을 허용하면 다른 페이지에서도 완료를 알려드립니다.</p>
-                  <button onClick={async () => setNotificationGranted(await requestNotification())} className="text-xs text-amber-700 underline mt-1">
+                  <p className="text-sm text-amber-800">이 탭이 열려있으면 완료 시 자동 이동합니다. 다른 앱에서도 알림을 받으려면:</p>
+                  <button onClick={async () => setNotificationGranted(await requestNotificationPermission())} className="text-xs text-amber-700 underline mt-1">
                     알림 허용하기
                   </button>
                 </div>
@@ -332,47 +279,18 @@ export default function NewAnalysisPage() {
       </div>
 
       <div className="space-y-4 mb-6">
-        <div className="relative" ref={composerRef}>
-          <label className="text-sm font-medium text-foreground mb-1.5 block">작곡가 *</label>
-          <input type="text" placeholder="예: Chopin, Bach, Mozart" value={composer}
-            onChange={(e) => { setComposer(e.target.value); filterComposers(e.target.value); }}
-            onFocus={() => { if (composer.length >= 2) filterComposers(composer); }}
-            className="w-full px-4 py-3 rounded-xl border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
-          <p className="text-xs text-muted-foreground mt-1">2글자 이상 입력하면 자동완성됩니다</p>
-          {showComposerSuggestions && composerSuggestions.length > 0 && (
-            <div className="absolute left-0 right-0 top-full mt-1 bg-card border border-border rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto">
-              {composerSuggestions.map((item, i) => (
-                <button key={`${item.composer}-${i}`} onClick={() => selectComposer(item)}
-                  className="w-full px-4 py-3 flex items-center gap-3 hover:bg-secondary/50 transition-colors border-b border-border last:border-b-0 text-left">
-                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0"><User className="w-4 h-4 text-primary" /></div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-foreground text-sm">{item.composer}</p>
-                    <p className="text-xs text-muted-foreground">{item.fullName}</p>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="relative" ref={titleRef}>
-          <label className="text-sm font-medium text-foreground mb-1.5 block">곡 제목 *</label>
-          <input type="text" placeholder={composer ? `${composer}의 곡 검색...` : "예: Ballade, Sonata, Nocturne"} value={title}
-            onChange={(e) => { setTitle(e.target.value); filterTitles(e.target.value); }}
-            onFocus={() => { if (title.length >= 2) filterTitles(title); }}
-            className="w-full px-4 py-3 rounded-xl border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
-          {showTitleSuggestions && titleSuggestions.length > 0 && (
-            <div className="absolute left-0 right-0 top-full mt-1 bg-card border border-border rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto">
-              {titleSuggestions.map((work, i) => (
-                <button key={`${work}-${i}`} onClick={() => selectTitle(work)}
-                  className="w-full px-4 py-3 flex items-center gap-3 hover:bg-secondary/50 transition-colors border-b border-border last:border-b-0 text-left">
-                  <div className="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center shrink-0"><Music className="w-4 h-4 text-violet-600" /></div>
-                  <p className="font-medium text-foreground text-sm truncate">{work}</p>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        <ComposerAutocomplete
+          value={composer}
+          onChange={(v) => { setComposer(v); setTitle(""); }}
+          label="작곡가 *"
+          placeholder="예: Chopin, Bach, Mozart"
+        />
+        <TitleAutocomplete
+          value={title}
+          onChange={setTitle}
+          composer={composer}
+          label="곡 제목 *"
+        />
       </div>
 
       <div className="bg-card rounded-xl border border-border p-4 mb-6">
