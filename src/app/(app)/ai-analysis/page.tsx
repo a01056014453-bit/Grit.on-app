@@ -39,37 +39,36 @@ interface UserAnalysis {
 }
 
 /** 인라인 분석 요청 폼 — 작곡가/곡명 입력 + 바로 분석 */
+function getUserInstrument(): string {
+  try {
+    const profile = localStorage.getItem("sempre-user-profile");
+    if (profile) {
+      const parsed = JSON.parse(profile);
+      const inst = parsed.instruments?.[0];
+      const map: Record<string, string> = {
+        "피아노": "piano", "바이올린": "violin", "첼로": "cello",
+        "비올라": "viola", "플루트": "flute", "클라리넷": "clarinet", "기타": "guitar",
+      };
+      return map[inst] ?? inst ?? "piano";
+    }
+  } catch {}
+  return "piano";
+}
+
 function InlineAnalysisForm({ onAnalyzed }: { onAnalyzed: (id: string, composer: string, title: string) => void }) {
+  const router = useRouter();
   const [composer, setComposer] = useState("");
   const [title, setTitle] = useState("");
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
   const [error, setError] = useState("");
-  const [phase, setPhase] = useState("");
-
-  const getUserInstrument = (): string => {
-    try {
-      const profile = localStorage.getItem("sempre-user-profile");
-      if (profile) {
-        const parsed = JSON.parse(profile);
-        const inst = parsed.instruments?.[0];
-        const map: Record<string, string> = {
-          "피아노": "piano", "바이올린": "violin", "첼로": "cello",
-          "비올라": "viola", "플루트": "flute", "클라리넷": "clarinet", "기타": "guitar",
-        };
-        return map[inst] ?? inst ?? "piano";
-      }
-    } catch {}
-    return "piano";
-  };
 
   const handleAnalyze = async () => {
     if (!composer.trim() || !title.trim()) return;
-    setIsAnalyzing(true);
+    setIsStarting(true);
     setError("");
-    setPhase("AI 분석 요청 중...");
 
     try {
-      const res = await fetch("/api/analyze-song-v2", {
+      const res = await fetch("/api/analyze-song-v2/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -78,24 +77,34 @@ function InlineAnalysisForm({ onAnalyzed }: { onAnalyzed: (id: string, composer:
           instrument: getUserInstrument(),
         }),
       });
+
       const result = await res.json();
 
-      if (!result.success || !result.data) {
-        setError(result.error || "분석에 실패했습니다.");
-        setIsAnalyzing(false);
+      if (!result.success) {
+        setError(result.error || "분석 시작에 실패했습니다.");
+        setIsStarting(false);
         return;
       }
 
-      // 캐시
-      try {
-        localStorage.setItem(`sempre-analysis-${result.data.id}`, JSON.stringify(result.data));
-      } catch {}
+      // 캐시 히트 → 바로 결과 페이지
+      if (result.cached && result.result_id) {
+        onAnalyzed(result.result_id, composer.trim(), title.trim());
+        router.push(`/ai-analysis/${result.result_id}`);
+        return;
+      }
 
-      setPhase("분석 완료!");
-      onAnalyzed(result.data.id, composer.trim(), title.trim());
+      // 새 분석 → new/page.tsx로 리다이렉트 (job_id + 곡 정보 전달)
+      if (result.job_id) {
+        const params = new URLSearchParams({
+          job_id: result.job_id,
+          composer: composer.trim(),
+          title: title.trim(),
+        });
+        router.push(`/ai-analysis/new?${params.toString()}`);
+      }
     } catch {
       setError("네트워크 오류가 발생했습니다.");
-      setIsAnalyzing(false);
+      setIsStarting(false);
     }
   };
 
@@ -120,19 +129,17 @@ function InlineAnalysisForm({ onAnalyzed }: { onAnalyzed: (id: string, composer:
         />
       </div>
 
-      {error && (
-        <p className="text-xs text-red-500 mt-2">{error}</p>
-      )}
+      {error && <p className="text-xs text-red-500 mt-2">{error}</p>}
 
       <button
         onClick={handleAnalyze}
-        disabled={isAnalyzing || !composer.trim() || !title.trim()}
+        disabled={isStarting || !composer.trim() || !title.trim()}
         className="w-full mt-3 py-3 rounded-xl bg-gradient-to-r from-violet-500 to-violet-700 text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
       >
-        {isAnalyzing ? (
+        {isStarting ? (
           <>
             <Loader2 className="w-4 h-4 animate-spin" />
-            {phase || "분석 중..."}
+            분석 시작 중...
           </>
         ) : (
           <>
