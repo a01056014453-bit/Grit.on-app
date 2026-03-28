@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { User, Music } from "lucide-react";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { Music } from "lucide-react";
 import { getComposers, type Composer } from "@/lib/queries/composers";
 
 interface ComposerAutocompleteProps {
   value: string;
   onChange: (value: string) => void;
+  onSelectComposer?: (composer: Composer) => void;
   placeholder?: string;
   label?: string;
   className?: string;
@@ -22,14 +23,13 @@ interface TitleAutocompleteProps {
   className?: string;
 }
 
-/** 작곡가 이미지 캐시 (서버 API에서 가져온 결과) */
+/** 작곡가 이미지 캐시 (모듈 레벨 — 한 번만 fetch) */
 let _composerImages: Record<string, string> | null = null;
 let _imagesFetched = false;
 
-async function loadComposerImages(): Promise<Record<string, string>> {
+export async function loadComposerImages(): Promise<Record<string, string>> {
   if (_composerImages) return _composerImages;
   if (_imagesFetched) return {};
-
   _imagesFetched = true;
   try {
     const res = await fetch("/api/composers/images");
@@ -38,16 +38,15 @@ async function loadComposerImages(): Promise<Record<string, string>> {
       _composerImages = data.images ?? {};
       return _composerImages as Record<string, string>;
     }
-  } catch {
-    // 이미지 로드 실패 — 기능에 영향 없음
-  }
+  } catch {}
   return {};
 }
 
-/** 작곡가 자동완성 입력 */
+/** 작곡가 자동완성 입력 (선택 후 입력창 왼쪽에 얼굴 표시) */
 export function ComposerAutocomplete({
   value,
   onChange,
+  onSelectComposer,
   placeholder = "예: Chopin, Bach, Mozart",
   label,
   className = "",
@@ -56,6 +55,7 @@ export function ComposerAutocomplete({
   const [composers, setComposers] = useState<Composer[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [images, setImages] = useState<Record<string, string>>({});
+  const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -73,6 +73,10 @@ export function ComposerAutocomplete({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (!value) setSelectedImageUrl(null);
+  }, [value]);
+
   const filtered = useMemo(() => {
     if (value.length < 2) return [];
     const lower = value.toLowerCase();
@@ -85,13 +89,18 @@ export function ComposerAutocomplete({
 
   const handleChange = (v: string) => {
     onChange(v);
+    setSelectedImageUrl(null);
     setShowSuggestions(v.length >= 2);
   };
 
   const handleSelect = (c: Composer) => {
     onChange(c.shortName);
+    setSelectedImageUrl(images[c.fullName] ?? null);
     setShowSuggestions(false);
+    onSelectComposer?.(c);
   };
+
+  const hasImage = !!selectedImageUrl;
 
   return (
     <div className={`relative ${className}`} ref={ref}>
@@ -100,15 +109,22 @@ export function ComposerAutocomplete({
           {label}
         </label>
       )}
-      <input
-        type="text"
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => handleChange(e.target.value)}
-        onFocus={() => { if (value.length >= 2) setShowSuggestions(true); }}
-        className="w-full px-4 py-3 rounded-xl border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-        autoFocus={autoFocus}
-      />
+      <div className="relative flex items-center">
+        {hasImage && (
+          <div className="absolute left-3 w-7 h-7 rounded-full overflow-hidden shrink-0 z-10">
+            <img src={selectedImageUrl!} alt="" className="w-7 h-7 object-cover" />
+          </div>
+        )}
+        <input
+          type="text"
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => handleChange(e.target.value)}
+          onFocus={() => { if (value.length >= 2) setShowSuggestions(true); }}
+          className={`w-full ${hasImage ? "pl-12" : "px-4"} pr-4 py-3 rounded-xl border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/20`}
+          autoFocus={autoFocus}
+        />
+      </div>
       {showSuggestions && filtered.length > 0 && (
         <div className="absolute left-0 right-0 top-full mt-1 bg-card border border-border rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto">
           {filtered.map((c) => {
@@ -141,7 +157,7 @@ export function ComposerAutocomplete({
   );
 }
 
-/** 곡 제목 자동완성 입력 (작곡가 선택 후) */
+/** 곡 제목 자동완성 입력 */
 export function TitleAutocomplete({
   value,
   onChange,
@@ -171,7 +187,6 @@ export function TitleAutocomplete({
   const filtered = useMemo(() => {
     if (value.length < 2) return [];
     const lowerQuery = value.toLowerCase();
-
     if (composer) {
       const selected = composers.find(
         (c) => c.shortName === composer || c.fullName === composer,
@@ -182,7 +197,6 @@ export function TitleAutocomplete({
           .slice(0, 8);
       }
     }
-
     const results: string[] = [];
     for (const c of composers) {
       for (const w of c.works) {

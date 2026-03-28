@@ -149,7 +149,7 @@ export default function AnalysisDetailPage() {
             이전 버전에서 저장된 데이터일 수 있습니다.
           </p>
           <a
-            href="/ai-analysis/new"
+            href="/ai-analysis"
             className="inline-block px-6 py-3 bg-violet-500 text-white text-sm font-semibold rounded-xl"
           >
             새로 분석하기

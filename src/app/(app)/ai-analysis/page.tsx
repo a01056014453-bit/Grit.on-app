@@ -7,10 +7,8 @@ import { safeBack } from "@/lib/navigation";
 import {
   ArrowLeft,
   Search,
-  Plus,
   ChevronRight,
   ChevronDown,
-  Clock,
   Sparkles,
   Music2,
   BarChart3,
@@ -18,7 +16,8 @@ import {
   Folder,
   FolderOpen,
   Trash2,
-  Loader2
+  Loader2,
+  Brain,
 } from "lucide-react";
 import {
   getAnalyzedPieces,
@@ -29,7 +28,9 @@ import type { Piece, PieceAnalysis, PiecePracticeData } from "@/lib/queries/piec
 import { getUserId } from "@/lib/user-id";
 import { addUserAnalysis, removeUserAnalysis } from "@/lib/user-analyses";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
-import { ComposerAutocomplete, TitleAutocomplete } from "@/components/ui/composer-autocomplete";
+import { ComposerAutocomplete, TitleAutocomplete, loadComposerImages } from "@/components/ui/composer-autocomplete";
+
+// ── 타입 ──
 
 interface UserAnalysis {
   id: string;
@@ -38,118 +39,19 @@ interface UserAnalysis {
   analyzedAt: string;
 }
 
-/** 인라인 분석 요청 폼 — 작곡가/곡명 입력 + 바로 분석 */
-function getUserInstrument(): string {
-  try {
-    const profile = localStorage.getItem("sempre-user-profile");
-    if (profile) {
-      const parsed = JSON.parse(profile);
-      const inst = parsed.instruments?.[0];
-      const map: Record<string, string> = {
-        "피아노": "piano", "바이올린": "violin", "첼로": "cello",
-        "비올라": "viola", "플루트": "flute", "클라리넷": "clarinet", "기타": "guitar",
-      };
-      return map[inst] ?? inst ?? "piano";
-    }
-  } catch {}
-  return "piano";
+interface AnalysisStartResponse {
+  success: boolean;
+  error?: string;
+  cached?: boolean;
+  result_id?: string;
+  job_id?: string;
 }
 
-function InlineAnalysisForm({ onAnalyzed }: { onAnalyzed: (id: string, composer: string, title: string) => void }) {
-  const router = useRouter();
-  const [composer, setComposer] = useState("");
-  const [title, setTitle] = useState("");
-  const [isStarting, setIsStarting] = useState(false);
-  const [error, setError] = useState("");
-
-  const handleAnalyze = async () => {
-    if (!composer.trim() || !title.trim()) return;
-    setIsStarting(true);
-    setError("");
-
-    try {
-      const res = await fetch("/api/analyze-song-v2/start", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          composer: composer.trim(),
-          title: title.trim(),
-          instrument: getUserInstrument(),
-        }),
-      });
-
-      const result = await res.json();
-
-      if (!result.success) {
-        setError(result.error || "분석 시작에 실패했습니다.");
-        setIsStarting(false);
-        return;
-      }
-
-      // 캐시 히트 → 바로 결과 페이지
-      if (result.cached && result.result_id) {
-        onAnalyzed(result.result_id, composer.trim(), title.trim());
-        router.push(`/ai-analysis/${result.result_id}`);
-        return;
-      }
-
-      // 새 분석 → new/page.tsx로 리다이렉트 (job_id + 곡 정보 전달)
-      if (result.job_id) {
-        const params = new URLSearchParams({
-          job_id: result.job_id,
-          composer: composer.trim(),
-          title: title.trim(),
-        });
-        window.location.href = `/ai-analysis/new?${params.toString()}`;
-      }
-    } catch {
-      setError("네트워크 오류가 발생했습니다.");
-      setIsStarting(false);
-    }
-  };
-
-  return (
-    <div className="mb-6 bg-white rounded-2xl border border-violet-200 p-4">
-      <p className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-        <Sparkles className="w-4 h-4 text-violet-500" />
-        곡 분석하기
-      </p>
-
-      <div className="space-y-3">
-        <ComposerAutocomplete
-          value={composer}
-          onChange={setComposer}
-          placeholder="작곡가 (예: Chopin)"
-        />
-        <TitleAutocomplete
-          value={title}
-          onChange={setTitle}
-          composer={composer}
-          placeholder="곡 제목 (예: Ballade No.1)"
-        />
-      </div>
-
-      {error && <p className="text-xs text-red-500 mt-2">{error}</p>}
-
-      <button
-        onClick={handleAnalyze}
-        disabled={isStarting || !composer.trim() || !title.trim()}
-        className="w-full mt-3 py-3 rounded-xl bg-gradient-to-r from-violet-500 to-violet-700 text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
-      >
-        {isStarting ? (
-          <>
-            <Loader2 className="w-4 h-4 animate-spin" />
-            분석 시작 중...
-          </>
-        ) : (
-          <>
-            <Sparkles className="w-4 h-4" />
-            분석 시작
-          </>
-        )}
-      </button>
-    </div>
-  );
+interface JobStatusResponse {
+  success: boolean;
+  status: "processing" | "done" | "failed";
+  result_id?: string;
+  error_message?: string;
 }
 
 interface SectionData {
@@ -165,42 +67,213 @@ interface MeasureProgressData {
   mastery: string;
 }
 
+// ── 유틸 ──
+
+function getUserInstrument(): string {
+  if (typeof window === "undefined") return "piano";
+  try {
+    const raw = localStorage.getItem("sempre-user-profile");
+    if (!raw) return "piano";
+    const parsed = JSON.parse(raw);
+    const inst = parsed.instruments?.[0];
+    if (!inst || typeof inst !== "string") return "piano";
+    const map: Record<string, string> = {
+      "피아노": "piano", "바이올린": "violin", "첼로": "cello",
+      "비올라": "viola", "플루트": "flute", "클라리넷": "clarinet", "기타": "guitar",
+    };
+    return map[inst] ?? inst;
+  } catch { return "piano"; }
+}
+
+// ── 상수 ──
+
 const difficultyColors: Record<string, string> = {
   easy: "bg-green-100 text-green-700",
   medium: "bg-yellow-100 text-yellow-700",
   hard: "bg-orange-100 text-orange-700",
   very_hard: "bg-red-100 text-red-700",
 };
-
 const difficultyLabels: Record<string, string> = {
-  easy: "쉬움",
-  medium: "보통",
-  hard: "어려움",
-  very_hard: "매우 어려움",
+  easy: "쉬움", medium: "보통", hard: "어려움", very_hard: "매우 어려움",
 };
-
 const masteryColors: Record<string, string> = {
-  not_started: "bg-gray-200",
-  learning: "bg-yellow-400",
-  practicing: "bg-blue-400",
-  mastered: "bg-green-500",
+  not_started: "bg-gray-200", learning: "bg-yellow-400",
+  practicing: "bg-blue-400", mastered: "bg-green-500",
 };
 
-interface SwipeableAnalysisItemProps {
-  analysis: UserAnalysis;
-  onDelete: (id: string) => void;
+// ── 인라인 분석 폼 ──
+
+function InlineAnalysisForm({ onAnalyzed }: { onAnalyzed: (id: string, composer: string, title: string) => void }) {
+  const router = useRouter();
+  const [composer, setComposer] = useState("");
+  const [title, setTitle] = useState("");
+  const [isStarting, setIsStarting] = useState(false);
+  const [isPolling, setIsPolling] = useState(false);
+  const [pollingComposer, setPollingComposer] = useState("");
+  const [pollingTitle, setPollingTitle] = useState("");
+  const [error, setError] = useState("");
+
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
+  const stopPolling = useCallback(() => {
+    if (pollingRef.current) clearInterval(pollingRef.current);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+  }, []);
+
+  const startPolling = useCallback((jobId: string, comp: string, ttl: string) => {
+    let errorCount = 0;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/analyze-song-v2/status?job_id=${jobId}`);
+        const data: JobStatusResponse = await res.json();
+        if (data.status === "done" && data.result_id) {
+          stopPolling();
+          setIsPolling(false);
+          onAnalyzed(data.result_id, comp, ttl);
+          router.push(`/ai-analysis/${data.result_id}`);
+        } else if (data.status === "failed") {
+          stopPolling();
+          setIsPolling(false);
+          setError(data.error_message ?? "분석에 실패했습니다.");
+        }
+        errorCount = 0;
+      } catch {
+        errorCount++;
+        if (errorCount >= 10) {
+          stopPolling();
+          setIsPolling(false);
+          setError("서버 연결이 불안정합니다. 잠시 후 다시 시도해주세요.");
+        }
+      }
+    }, 3000);
+    pollingRef.current = interval;
+    timeoutRef.current = setTimeout(() => {
+      stopPolling();
+      setIsPolling(false);
+      setError("분석 시간이 초과되었습니다. 다시 시도해주세요.");
+    }, 10 * 60 * 1000);
+  }, [stopPolling, onAnalyzed, router]);
+
+  const handleAnalyze = async () => {
+    if (!composer.trim() || !title.trim()) return;
+    setIsStarting(true);
+    setError("");
+    try {
+      const res = await fetch("/api/analyze-song-v2/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          composer: composer.trim(),
+          title: title.trim(),
+          instrument: getUserInstrument(),
+        }),
+      });
+      const result: AnalysisStartResponse = await res.json();
+      if (!result.success) {
+        setError(result.error || "분석 시작에 실패했습니다.");
+        setIsStarting(false);
+        return;
+      }
+      if (result.cached && result.result_id) {
+        onAnalyzed(result.result_id, composer.trim(), title.trim());
+        setIsStarting(false);
+        router.push(`/ai-analysis/${result.result_id}`);
+        return;
+      }
+      if (result.job_id) {
+        setPollingComposer(composer.trim());
+        setPollingTitle(title.trim());
+        setIsStarting(false);
+        setIsPolling(true);
+        setComposer("");
+        setTitle("");
+        startPolling(result.job_id, composer.trim(), title.trim());
+      }
+    } catch {
+      setError("네트워크 오류가 발생했습니다.");
+      setIsStarting(false);
+    }
+  };
+
+  return (
+    <div className="mb-6">
+      {isPolling && (
+        <div className="mb-3 px-4 py-3 bg-violet-50 border border-violet-200 rounded-xl flex items-center gap-3">
+          <Loader2 className="w-4 h-4 text-violet-500 animate-spin shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-violet-700 truncate">
+              {pollingComposer} - {pollingTitle}
+            </p>
+            <p className="text-xs text-violet-500">AI 분석 중... 완료되면 자동으로 추가됩니다</p>
+          </div>
+          <button onClick={() => { stopPolling(); setIsPolling(false); }} className="text-xs text-violet-400 hover:text-violet-600 shrink-0">
+            취소
+          </button>
+        </div>
+      )}
+
+      <ComposerAutocomplete
+        value={composer}
+        onChange={(v) => { setComposer(v); setTitle(""); }}
+        placeholder="작곡가 (예: Chopin)"
+        className="mb-3"
+      />
+      <TitleAutocomplete
+        value={title}
+        onChange={setTitle}
+        composer={composer}
+        placeholder="곡 제목 (예: Ballade No.1)"
+        className="mb-3"
+      />
+
+      {error && <p className="text-xs text-red-500 mb-2">{error}</p>}
+
+      <button
+        onClick={handleAnalyze}
+        disabled={isStarting || isPolling || !composer.trim() || !title.trim()}
+        className="w-full py-3 rounded-xl bg-primary text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
+      >
+        {isStarting ? (
+          <><Loader2 className="w-4 h-4 animate-spin" />분석 시작 중...</>
+        ) : (
+          <><Brain className="w-4 h-4" />AI 분석 시작</>
+        )}
+      </button>
+    </div>
+  );
 }
 
-/** 스와이프 삭제 가능한 분석 아이템 */
-function SwipeableAnalysisItem({ analysis, onDelete }: SwipeableAnalysisItemProps) {
+// ── 스와이프 삭제 아이템 (작곡가 얼굴 이미지) ──
+
+function SwipeableAnalysisItem({ analysis, onDelete, composerImages }: {
+  analysis: UserAnalysis;
+  onDelete: (id: string) => void;
+  composerImages: Record<string, string>;
+}) {
   const [showDelete, setShowDelete] = useState(false);
   const swipeRef = useRef<HTMLDivElement>(null);
   const startXRef = useRef(0);
   const startYRef = useRef(0);
   const currentXRef = useRef(0);
   const isHorizontalRef = useRef<boolean | null>(null);
-  const isSwipingRef = useRef(false);
   const DELETE_THRESHOLD = 70;
+
+  // 작곡가 이미지 매칭 (캐시된 images에서 찾기)
+  const composerImageUrl = (() => {
+    const match = Object.entries(composerImages).find(([fullName]) =>
+      fullName.toLowerCase().includes(analysis.composer.toLowerCase()) ||
+      analysis.composer.toLowerCase().includes(fullName.split(" ").pop()?.toLowerCase() ?? "")
+    );
+    return match?.[1] ?? null;
+  })();
 
   const applyTransform = useCallback((x: number, animate: boolean) => {
     const el = swipeRef.current;
@@ -216,33 +289,27 @@ function SwipeableAnalysisItem({ analysis, onDelete }: SwipeableAnalysisItemProp
     startYRef.current = e.touches[0].clientY;
     currentXRef.current = 0;
     isHorizontalRef.current = null;
-    isSwipingRef.current = false;
   }, []);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     const dx = e.touches[0].clientX - startXRef.current;
     const dy = e.touches[0].clientY - startYRef.current;
-
     if (isHorizontalRef.current === null && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
       isHorizontalRef.current = Math.abs(dx) > Math.abs(dy);
     }
     if (!isHorizontalRef.current) return;
-
     e.preventDefault();
     const clampedX = Math.min(0, Math.max(-DELETE_THRESHOLD, dx));
     currentXRef.current = clampedX;
-    isSwipingRef.current = true;
     setShowDelete(clampedX < 0);
     applyTransform(clampedX, false);
   }, [applyTransform]);
 
   const handleTouchEnd = useCallback(() => {
     const snapOpen = currentXRef.current <= -DELETE_THRESHOLD * 0.6;
-    const finalX = snapOpen ? -DELETE_THRESHOLD : 0;
     setShowDelete(snapOpen);
-    applyTransform(finalX, true);
+    applyTransform(snapOpen ? -DELETE_THRESHOLD : 0, true);
     isHorizontalRef.current = null;
-    isSwipingRef.current = false;
   }, [applyTransform]);
 
   const handleDelete = useCallback(() => {
@@ -253,31 +320,24 @@ function SwipeableAnalysisItem({ analysis, onDelete }: SwipeableAnalysisItemProp
 
   return (
     <div className="relative overflow-hidden rounded-xl">
-      {/* 삭제 버튼 (스와이프 시 노출) */}
       {showDelete && (
         <div className="absolute inset-y-0 right-0 flex items-center">
-          <button
-            onClick={handleDelete}
-            className="h-full w-[70px] bg-red-500 flex items-center justify-center"
-          >
+          <button onClick={handleDelete} className="h-full w-[70px] bg-red-500 flex items-center justify-center">
             <Trash2 className="w-5 h-5 text-white" />
           </button>
         </div>
       )}
-
-      {/* 분석 아이템 — ref로 transform 제어, 인라인 스타일 없음 */}
-      <div
-        ref={swipeRef}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
+      <div ref={swipeRef} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
         <Link
           href={`/ai-analysis/${analysis.id}`}
           className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-gray-200 hover:border-violet-300 transition-colors"
         >
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-100 to-primary/10 flex items-center justify-center shrink-0">
-            <Sparkles className="w-5 h-5 text-violet-600" />
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-100 to-primary/10 flex items-center justify-center shrink-0 overflow-hidden">
+            {composerImageUrl ? (
+              <img src={composerImageUrl} alt="" className="w-10 h-10 object-cover" />
+            ) : (
+              <Sparkles className="w-5 h-5 text-violet-600" />
+            )}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-black truncate">
@@ -294,6 +354,8 @@ function SwipeableAnalysisItem({ analysis, onDelete }: SwipeableAnalysisItemProp
   );
 }
 
+// ── 메인 페이지 ──
+
 export default function AIAnalysisPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
@@ -302,199 +364,131 @@ export default function AIAnalysisPage() {
   const [analysisData, setAnalysisData] = useState<Record<string, PieceAnalysis>>({});
   const [practiceData, setPracticeData] = useState<Record<string, PiecePracticeData>>({});
   const [userAnalyses, setUserAnalyses] = useState<UserAnalysis[]>([]);
+  const [composerImages, setComposerImages] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
-  /** 보관함에서 분석 삭제 (localStorage + DB) */
   const handleDeleteAnalysis = useCallback(async (id: string) => {
-    // localStorage에서 제거
     removeUserAnalysis(id);
     setUserAnalyses((prev) => prev.filter((x) => x.id !== id));
-
-    // DB에서도 삭제 시도
     try {
       const res = await fetch("/api/song-analysis/delete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
       });
-      if (!res.ok) {
-        console.error("[deleteAnalysis] DB 삭제 실패:", res.status);
-      }
+      if (!res.ok) console.error("[deleteAnalysis] DB 삭제 실패:", res.status);
     } catch (err) {
-      console.error("[deleteAnalysis] 네트워크 오류:", err);
+      console.error("[deleteAnalysis] 오류:", err);
     }
   }, []);
 
-  // localStorage → DB 동기화 (마이그레이션)
+  // 마이그레이션
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (localStorage.getItem(STORAGE_KEYS.MIGRATION_DONE)) return;
 
-    /** 배열을 chunkSize 크기의 배치로 분할 */
-    function chunk<T>(arr: T[], chunkSize: number): T[][] {
+    function chunk<T>(arr: T[], size: number): T[][] {
       const result: T[][] = [];
-      for (let i = 0; i < arr.length; i += chunkSize) {
-        result.push(arr.slice(i, i + chunkSize));
-      }
+      for (let i = 0; i < arr.length; i += size) result.push(arr.slice(i, i + size));
       return result;
     }
 
     async function migrateLocalData() {
       try {
-        // 1) sempre-user-analyses에서 분석 ID 수집
         const rawAnalyses = localStorage.getItem(STORAGE_KEYS.USER_ANALYSES);
         const allAnalysisIds: string[] = [];
-        const allComposerTitlePairs: { composer: string; title: string }[] = [];
-
+        const allPairs: { composer: string; title: string }[] = [];
         if (rawAnalyses) {
           try {
             const parsed = JSON.parse(rawAnalyses) as { id: string; composer: string; title: string }[];
             for (const item of parsed) {
               if (item.id) allAnalysisIds.push(item.id);
-              if (item.composer && item.title) {
-                allComposerTitlePairs.push({ composer: item.composer, title: item.title });
-              }
+              if (item.composer && item.title) allPairs.push({ composer: item.composer, title: item.title });
             }
-          } catch {
-            // JSON 파싱 실패 시 무시
-          }
+          } catch {}
         }
-
-        // 2) grit-on-my-library에서 composer+title 수집
         const rawLibrary = localStorage.getItem(STORAGE_KEYS.MY_LIBRARY);
         if (rawLibrary) {
           try {
-            const libraryKeys = JSON.parse(rawLibrary) as string[];
-            for (const key of libraryKeys) {
+            const keys = JSON.parse(rawLibrary) as string[];
+            for (const key of keys) {
               const parts = key.split("__");
-              if (parts.length === 2) {
-                allComposerTitlePairs.push({ composer: parts[0], title: parts[1] });
-              }
+              if (parts.length === 2) allPairs.push({ composer: parts[0], title: parts[1] });
             }
-          } catch {
-            // JSON 파싱 실패 시 무시
-          }
+          } catch {}
         }
-
-        // 데이터가 없으면 마이그레이션 완료 처리
-        if (allAnalysisIds.length === 0 && allComposerTitlePairs.length === 0) {
+        if (allAnalysisIds.length === 0 && allPairs.length === 0) {
           localStorage.setItem(STORAGE_KEYS.MIGRATION_DONE, "true");
           return;
         }
-
-        // 3) 100개씩 배치 처리하여 API 동기화
-        const BATCH_SIZE = 100;
-        const TIMEOUT_MS = 10_000;
-        const idBatches = chunk(allAnalysisIds, BATCH_SIZE);
-        const pairBatches = chunk(allComposerTitlePairs, BATCH_SIZE);
+        const idBatches = chunk(allAnalysisIds, 100);
+        const pairBatches = chunk(allPairs, 100);
         const maxBatches = Math.max(idBatches.length, pairBatches.length);
-        let totalSynced = 0;
         let hasError = false;
-
         for (let i = 0; i < maxBatches; i++) {
-          const analysisIds = idBatches[i] ?? [];
-          const composerTitlePairs = pairBatches[i] ?? [];
-
-          if (analysisIds.length === 0 && composerTitlePairs.length === 0) continue;
-
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
-
+          const tid = setTimeout(() => controller.abort(), 10000);
           try {
             const res = await fetch("/api/song-analysis/sync", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ analysisIds, composerTitlePairs }),
+              body: JSON.stringify({ analysisIds: idBatches[i] ?? [], composerTitlePairs: pairBatches[i] ?? [] }),
               signal: controller.signal,
             });
-
-            if (res.ok) {
-              const body = await res.json();
-              const synced = typeof body?.synced === "number" ? body.synced : 0;
-              totalSynced += synced;
-            } else {
-              console.error(`[migration] 배치 ${i + 1} 동기화 실패: HTTP ${res.status}`);
-              hasError = true;
-            }
-          } catch (err) {
-            if (err instanceof DOMException && err.name === "AbortError") {
-              console.error(`[migration] 배치 ${i + 1} 타임아웃 (${TIMEOUT_MS}ms 초과)`);
-            } else {
-              console.error(`[migration] 배치 ${i + 1} 네트워크 오류:`, err);
-            }
-            hasError = true;
-            // 부분 실패 시 다음 배치 계속 진행
-          } finally {
-            clearTimeout(timeoutId);
-          }
+            if (!res.ok) hasError = true;
+          } catch { hasError = true; }
+          finally { clearTimeout(tid); }
         }
-
-        // 동기화 완료 플래그 설정 + localStorage 정리
         localStorage.setItem(STORAGE_KEYS.MIGRATION_DONE, "true");
-
         if (!hasError) {
-          // 전체 성공 시 마이그레이션 원본 데이터 정리
           localStorage.removeItem(STORAGE_KEYS.USER_ANALYSES);
           localStorage.removeItem(STORAGE_KEYS.MY_LIBRARY);
         }
-
-        console.log(
-          `[migration] localStorage → DB 동기화 완료 (${totalSynced}건 동기화${hasError ? ", 일부 실패" : ""})`
-        );
       } catch (err) {
-        console.error("[migration] 동기화 실패:", err);
+        console.error("[migration] 실패:", err);
       }
     }
-
     migrateLocalData();
   }, []);
 
+  // 데이터 로드
   useEffect(() => {
     async function load() {
       const userId = getUserId();
 
-      // 서버에서 본인 분석 목록 조회 (user_id 필터는 서버에서 처리)
+      // 작곡가 이미지 한 번 로드
+      loadComposerImages().then(setComposerImages);
+
+      // 분석 목록
       try {
         const res = await fetch("/api/song-analysis/list");
         if (res.ok) {
           const { data: dbList } = await res.json();
           if (dbList) {
-            const analyses = (dbList as { id: string; composer: string; title: string; created_at: string }[])
-              .map(item => ({
-                id: item.id,
-                composer: item.composer,
-                title: item.title,
-                analyzedAt: item.created_at || "",
-              }));
-            setUserAnalyses(analyses);
+            setUserAnalyses(
+              (dbList as { id: string; composer: string; title: string; created_at: string }[]).map(
+                (item) => ({ id: item.id, composer: item.composer, title: item.title, analyzedAt: item.created_at || "" })
+              )
+            );
           }
         }
-      } catch {
-        // 네트워크 실패 시 빈 목록
-        setUserAnalyses([]);
-      }
+      } catch { setUserAnalyses([]); }
 
+      // 마디별 분석 곡
       const fetchedPieces = await getAnalyzedPieces();
       setPieces(fetchedPieces);
-
       const analyses: Record<string, PieceAnalysis> = {};
       const practices: Record<string, PiecePracticeData> = {};
-
       await Promise.all(
         fetchedPieces.map(async (piece: Piece) => {
-          const analysis = await getPieceAnalysis(piece.id);
-          if (analysis) {
-            analyses[piece.id] = analysis;
-          }
+          const a = await getPieceAnalysis(piece.id);
+          if (a) analyses[piece.id] = a;
           if (userId) {
-            const practice = await getUserPracticeData(userId, piece.id);
-            if (practice) {
-              practices[piece.id] = practice;
-            }
+            const p = await getUserPracticeData(userId, piece.id);
+            if (p) practices[piece.id] = p;
           }
         })
       );
-
       setAnalysisData(analyses);
       setPracticeData(practices);
       setLoading(false);
@@ -503,10 +497,10 @@ export default function AIAnalysisPage() {
   }, []);
 
   const filteredPieces = pieces.filter(
-    (piece) =>
-      piece.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      piece.composerShortName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      piece.composerFullName.toLowerCase().includes(searchQuery.toLowerCase())
+    (p) =>
+      p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.composerShortName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.composerFullName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const filteredUserAnalyses = userAnalyses.filter(
@@ -517,27 +511,16 @@ export default function AIAnalysisPage() {
 
   const totalCount = userAnalyses.length + pieces.length;
 
-  const formatDuration = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
-    if (minutes >= 60) {
-      const hours = Math.floor(minutes / 60);
-      const mins = minutes % 60;
-      return `${hours}시간 ${mins}분`;
-    }
-    return `${minutes}분`;
+  const formatDuration = (s: number) => {
+    const m = Math.floor(s / 60);
+    if (m >= 60) return `${Math.floor(m / 60)}시간 ${m % 60}분`;
+    return `${m}분`;
   };
 
-  const formatPracticeTime = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    if (hours > 0) {
-      return `${hours}시간 ${minutes}분`;
-    }
-    return `${minutes}분`;
-  };
-
-  const toggleExpand = (pieceId: string) => {
-    setExpandedPieceId(expandedPieceId === pieceId ? null : pieceId);
+  const formatPracticeTime = (s: number) => {
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    return h > 0 ? `${h}시간 ${m}분` : `${m}분`;
   };
 
   if (loading) {
@@ -556,16 +539,14 @@ export default function AIAnalysisPage() {
   return (
     <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
       <div className="bg-blob-extra" />
-      {/* Header */}
+
+      {/* 헤더 */}
       <div className="flex items-center gap-3 mb-6">
-        <button
-          onClick={() => safeBack(router)}
-          className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center"
-        >
+        <button onClick={() => safeBack(router)} className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
           <ArrowLeft className="w-5 h-5 text-gray-600" />
         </button>
         <div className="flex-1">
-          <h1 className="text-lg font-bold text-black">AI 분석</h1>
+          <h1 className="text-lg font-bold text-black">AI 곡 분석</h1>
           <p className="text-xs text-gray-500">AI 분석 완료된 곡 {totalCount}개</p>
         </div>
         <div className="w-10 h-10 rounded-full bg-violet-100 flex items-center justify-center">
@@ -573,7 +554,18 @@ export default function AIAnalysisPage() {
         </div>
       </div>
 
-      {/* Search */}
+      {/* 분석 입력 */}
+      <InlineAnalysisForm
+        onAnalyzed={(id, composer, title) => {
+          addUserAnalysis({ id, composer, title });
+          setUserAnalyses((prev) => [
+            { id, composer, title, analyzedAt: new Date().toISOString() },
+            ...prev.filter((a) => a.id !== id),
+          ]);
+        }}
+      />
+
+      {/* 검색 */}
       <div className="relative mb-4">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
         <input
@@ -585,19 +577,7 @@ export default function AIAnalysisPage() {
         />
       </div>
 
-      {/* 인라인 분석 요청 폼 */}
-      <InlineAnalysisForm
-        onAnalyzed={(id, composer, title) => {
-          addUserAnalysis({ id, composer, title });
-          setUserAnalyses((prev) => [
-            { id, composer, title, analyzedAt: new Date().toISOString() },
-            ...prev.filter((a) => a.id !== id),
-          ]);
-          router.push(`/ai-analysis/${id}`);
-        }}
-      />
-
-      {/* User AI Analyses — 스와이프로 삭제 */}
+      {/* AI 분석한 곡 */}
       {filteredUserAnalyses.length > 0 && (
         <div className="mb-6">
           <h2 className="text-sm font-semibold text-black flex items-center gap-2 mb-3">
@@ -610,200 +590,145 @@ export default function AIAnalysisPage() {
                 key={a.id}
                 analysis={a}
                 onDelete={handleDeleteAnalysis}
+                composerImages={composerImages}
               />
             ))}
           </div>
         </div>
       )}
 
-      {/* Analyzed Pieces List */}
+      {/* 마디별 분석 곡 */}
       {pieces.length > 0 && (
-      <div>
-        <h2 className="text-sm font-semibold text-black flex items-center gap-2 mb-3">
-          <Music2 className="w-4 h-4 text-gray-500" />
-          마디별 분석 곡
-        </h2>
-
-        <div className="space-y-3">
-          {filteredPieces.length === 0 ? (
-            <div className="py-8 text-center text-gray-500 text-sm bg-white rounded-xl border border-gray-200">
-              검색 결과가 없습니다
-            </div>
-          ) : (
-            filteredPieces.map((piece) => {
-              const analysis = analysisData[piece.id];
-              const practice = practiceData[piece.id];
-              const isExpanded = expandedPieceId === piece.id;
-
-              return (
-                <div
-                  key={piece.id}
-                  className="bg-white rounded-xl border border-gray-200 overflow-hidden"
-                >
-                  {/* Piece Header */}
-                  <button
-                    onClick={() => toggleExpand(piece.id)}
-                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left"
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center shrink-0">
-                      {isExpanded ? (
-                        <FolderOpen className="w-5 h-5 text-violet-600" />
-                      ) : (
-                        <Folder className="w-5 h-5 text-violet-600" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-black truncate">
-                        {piece.composerShortName} - {piece.title}
-                      </p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs text-gray-500">{piece.opus}</span>
-                        {piece.key && (
-                          <span className="text-xs text-gray-400">• {piece.key}</span>
-                        )}
-                        {analysis && analysis.overallDifficulty && (
-                          <span className={`text-xs px-1.5 py-0.5 rounded ${difficultyColors[analysis.overallDifficulty]}`}>
-                            {difficultyLabels[analysis.overallDifficulty]}
-                          </span>
-                        )}
+        <div>
+          <h2 className="text-sm font-semibold text-black flex items-center gap-2 mb-3">
+            <Music2 className="w-4 h-4 text-gray-500" />
+            마디별 분석 곡
+          </h2>
+          <div className="space-y-3">
+            {filteredPieces.length === 0 ? (
+              <div className="py-8 text-center text-gray-500 text-sm bg-white rounded-xl border border-gray-200">
+                검색 결과가 없습니다
+              </div>
+            ) : (
+              filteredPieces.map((piece) => {
+                const analysis = analysisData[piece.id];
+                const practice = practiceData[piece.id];
+                const isExpanded = expandedPieceId === piece.id;
+                return (
+                  <div key={piece.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                    <button
+                      onClick={() => setExpandedPieceId(isExpanded ? null : piece.id)}
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left"
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center shrink-0">
+                        {isExpanded ? <FolderOpen className="w-5 h-5 text-violet-600" /> : <Folder className="w-5 h-5 text-violet-600" />}
                       </div>
-                    </div>
-                    {practice && (
-                      <div className="text-right shrink-0 mr-2">
-                        <p className="text-xs font-semibold text-violet-600">{practice.completionPercentage}%</p>
-                        <p className="text-xs text-gray-400">완성도</p>
-                      </div>
-                    )}
-                    {isExpanded ? (
-                      <ChevronDown className="w-5 h-5 text-gray-400 shrink-0" />
-                    ) : (
-                      <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
-                    )}
-                  </button>
-
-                  {/* Expanded Content */}
-                  {isExpanded && analysis && (() => {
-                    const sections = (Array.isArray(analysis.sections) ? analysis.sections : []) as unknown as SectionData[];
-                    const measureProgress = (practice?.measureProgress ? (Array.isArray(practice.measureProgress) ? practice.measureProgress : []) : []) as unknown as MeasureProgressData[];
-                    return (
-                    <div className="border-t border-gray-100 bg-gray-50">
-                      {/* Quick Stats */}
-                      <div className="grid grid-cols-3 gap-2 p-4 border-b border-gray-100">
-                        <div className="text-center">
-                          <p className="text-lg font-bold text-black">{analysis.totalMeasures}</p>
-                          <p className="text-xs text-gray-500">마디</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-lg font-bold text-black">{formatDuration(analysis.estimatedDuration ?? 0)}</p>
-                          <p className="text-xs text-gray-500">연주시간</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-lg font-bold text-black">{sections.length}</p>
-                          <p className="text-xs text-gray-500">섹션</p>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-black truncate">{piece.composerShortName} - {piece.title}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs text-gray-500">{piece.opus}</span>
+                          {piece.key && <span className="text-xs text-gray-400">• {piece.key}</span>}
+                          {analysis?.overallDifficulty && (
+                            <span className={`text-xs px-1.5 py-0.5 rounded ${difficultyColors[analysis.overallDifficulty]}`}>
+                              {difficultyLabels[analysis.overallDifficulty]}
+                            </span>
+                          )}
                         </div>
                       </div>
-
-                      {/* Practice Stats (if available) */}
                       {practice && (
-                        <div className="p-4 border-b border-gray-100">
-                          <div className="flex items-center gap-2 mb-2">
-                            <BarChart3 className="w-4 h-4 text-violet-500" />
-                            <span className="text-xs font-semibold text-black">내 연습 현황</span>
-                          </div>
-                          <div className="flex items-center gap-4 text-xs">
-                            <div>
-                              <span className="text-gray-500">총 연습: </span>
-                              <span className="font-medium">{formatPracticeTime(practice.totalPracticeTime)}</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-500">세션: </span>
-                              <span className="font-medium">{practice.sessionCount}회</span>
-                            </div>
-                            {practice.averageAccuracy && (
-                              <div>
-                                <span className="text-gray-500">정확도: </span>
-                                <span className="font-medium">{practice.averageAccuracy}%</span>
-                              </div>
-                            )}
-                          </div>
+                        <div className="text-right shrink-0 mr-2">
+                          <p className="text-xs font-semibold text-violet-600">{practice.completionPercentage}%</p>
+                          <p className="text-xs text-gray-400">완성도</p>
                         </div>
                       )}
+                      {isExpanded ? <ChevronDown className="w-5 h-5 text-gray-400 shrink-0" /> : <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />}
+                    </button>
 
-                      {/* Sections List */}
-                      <div className="p-4">
-                        <div className="flex items-center gap-2 mb-3">
-                          <Target className="w-4 h-4 text-gray-500" />
-                          <span className="text-xs font-semibold text-black">마디별 분석</span>
+                    {isExpanded && analysis && (() => {
+                      const sections = (Array.isArray(analysis.sections) ? analysis.sections : []) as unknown as SectionData[];
+                      const measureProgress = (practice?.measureProgress ? (Array.isArray(practice.measureProgress) ? practice.measureProgress : []) : []) as unknown as MeasureProgressData[];
+                      return (
+                        <div className="border-t border-gray-100 bg-gray-50">
+                          <div className="grid grid-cols-3 gap-2 p-4 border-b border-gray-100">
+                            <div className="text-center">
+                              <p className="text-lg font-bold text-black">{analysis.totalMeasures}</p>
+                              <p className="text-xs text-gray-500">마디</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-lg font-bold text-black">{formatDuration(analysis.estimatedDuration ?? 0)}</p>
+                              <p className="text-xs text-gray-500">연주시간</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-lg font-bold text-black">{sections.length}</p>
+                              <p className="text-xs text-gray-500">섹션</p>
+                            </div>
+                          </div>
+                          {practice && (
+                            <div className="p-4 border-b border-gray-100">
+                              <div className="flex items-center gap-2 mb-2">
+                                <BarChart3 className="w-4 h-4 text-violet-500" />
+                                <span className="text-xs font-semibold text-black">내 연습 현황</span>
+                              </div>
+                              <div className="flex items-center gap-4 text-xs">
+                                <div><span className="text-gray-500">총 연습: </span><span className="font-medium">{formatPracticeTime(practice.totalPracticeTime)}</span></div>
+                                <div><span className="text-gray-500">세션: </span><span className="font-medium">{practice.sessionCount}회</span></div>
+                                {practice.averageAccuracy && <div><span className="text-gray-500">정확도: </span><span className="font-medium">{practice.averageAccuracy}%</span></div>}
+                              </div>
+                            </div>
+                          )}
+                          <div className="p-4">
+                            <div className="flex items-center gap-2 mb-3">
+                              <Target className="w-4 h-4 text-gray-500" />
+                              <span className="text-xs font-semibold text-black">마디별 분석</span>
+                            </div>
+                            <div className="space-y-2">
+                              {sections.map((section, idx) => {
+                                const sp = measureProgress.find((p) => p.measureStart === section.startMeasure);
+                                return (
+                                  <Link key={idx} href={`/ai-analysis/${piece.id}/section/${idx}`}
+                                    className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-100 hover:border-violet-200 transition-colors">
+                                    <div className="flex flex-col items-center shrink-0">
+                                      <span className="text-xs font-bold text-gray-600">{section.startMeasure}-{section.endMeasure}</span>
+                                      <span className="text-[10px] text-gray-400">마디</span>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-medium text-black truncate">{section.sectionName}</p>
+                                      <div className="flex items-center gap-2 mt-0.5">
+                                        <span className={`text-[10px] px-1.5 py-0.5 rounded ${difficultyColors[section.technicalDifficulty]}`}>
+                                          {difficultyLabels[section.technicalDifficulty]}
+                                        </span>
+                                        <span className="text-[10px] text-gray-400">{section.dynamics}</span>
+                                      </div>
+                                    </div>
+                                    {sp && <div className={`w-3 h-3 rounded-full shrink-0 ${masteryColors[sp.mastery]}`} />}
+                                    <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
+                                  </Link>
+                                );
+                              })}
+                            </div>
+                          </div>
+                          <div className="p-4 pt-0">
+                            <Link href={`/ai-analysis/${piece.id}`}
+                              className="flex items-center justify-center gap-2 w-full py-3 bg-gradient-to-r from-violet-500 to-violet-900 text-white rounded-xl text-sm font-semibold">
+                              <Sparkles className="w-4 h-4" />전체 분석 보기
+                            </Link>
+                          </div>
                         </div>
-                        <div className="space-y-2">
-                          {sections.map((section, idx) => {
-                            const sectionPractice = measureProgress.find(
-                              (p) => p.measureStart === section.startMeasure
-                            );
-
-                            return (
-                              <Link
-                                key={idx}
-                                href={`/ai-analysis/${piece.id}/section/${idx}`}
-                                className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-100 hover:border-violet-200 transition-colors"
-                              >
-                                <div className="flex flex-col items-center shrink-0">
-                                  <span className="text-xs font-bold text-gray-600">
-                                    {section.startMeasure}-{section.endMeasure}
-                                  </span>
-                                  <span className="text-[10px] text-gray-400">마디</span>
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium text-black truncate">
-                                    {section.sectionName}
-                                  </p>
-                                  <div className="flex items-center gap-2 mt-0.5">
-                                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${difficultyColors[section.technicalDifficulty]}`}>
-                                      {difficultyLabels[section.technicalDifficulty]}
-                                    </span>
-                                    <span className="text-[10px] text-gray-400">
-                                      {section.dynamics}
-                                    </span>
-                                  </div>
-                                </div>
-                                {sectionPractice && (
-                                  <div className={`w-3 h-3 rounded-full shrink-0 ${masteryColors[sectionPractice.mastery]}`} />
-                                )}
-                                <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
-                              </Link>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {/* View Full Analysis Button */}
-                      <div className="p-4 pt-0">
-                        <Link
-                          href={`/ai-analysis/${piece.id}`}
-                          className="flex items-center justify-center gap-2 w-full py-3 bg-gradient-to-r from-violet-500 to-violet-900 text-white rounded-xl text-sm font-semibold"
-                        >
-                          <Sparkles className="w-4 h-4" />
-                          전체 분석 보기
-                        </Link>
-                      </div>
-                    </div>
-                    );
-                  })()}
-                </div>
-              );
-            })
-          )}
+                      );
+                    })()}
+                  </div>
+                );
+              })
+            )}
+          </div>
         </div>
-      </div>
       )}
 
-      {/* Empty State */}
       {filteredUserAnalyses.length === 0 && filteredPieces.length === 0 && (
         <div className="py-12 text-center text-gray-500 text-sm">
           {searchQuery ? "검색 결과가 없습니다" : "아직 분석한 곡이 없습니다"}
         </div>
       )}
-
     </div>
   );
 }
