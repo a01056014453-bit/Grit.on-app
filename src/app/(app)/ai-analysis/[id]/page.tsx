@@ -286,9 +286,26 @@ export default function AnalysisDetailPage() {
               <p className="text-xs font-semibold text-foreground mb-1">
                 작곡 당시
               </p>
-              <p className="text-xs text-muted-foreground">
-                {v2.composer_life.at_composition}
-              </p>
+              {typeof v2.composer_life.at_composition === "string" ? (
+                <p className="text-xs text-muted-foreground">
+                  {v2.composer_life.at_composition}
+                </p>
+              ) : (
+                <div className="space-y-1 text-xs text-muted-foreground">
+                  {(v2.composer_life.at_composition as { age_and_location?: string; crisis_or_motivation?: string; concurrent_works?: string; premiere_reception?: string }).age_and_location && (
+                    <p>{(v2.composer_life.at_composition as { age_and_location: string }).age_and_location}</p>
+                  )}
+                  {(v2.composer_life.at_composition as { crisis_or_motivation?: string }).crisis_or_motivation && (
+                    <p>{(v2.composer_life.at_composition as { crisis_or_motivation: string }).crisis_or_motivation}</p>
+                  )}
+                  {(v2.composer_life.at_composition as { concurrent_works?: string }).concurrent_works && (
+                    <p>{(v2.composer_life.at_composition as { concurrent_works: string }).concurrent_works}</p>
+                  )}
+                  {(v2.composer_life.at_composition as { premiere_reception?: string }).premiere_reception && (
+                    <p>{(v2.composer_life.at_composition as { premiere_reception: string }).premiere_reception}</p>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </Section>
