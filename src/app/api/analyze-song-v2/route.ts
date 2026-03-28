@@ -224,7 +224,15 @@ export async function POST(request: NextRequest) {
       authEmail = user?.email ?? null;
     } catch { /* 비인증 허용 */ }
 
-    const isAdmin = authEmail ? ADMIN_EMAILS.has(authEmail.toLowerCase()) : false;
+    // 내부 호출 (cron, start/route.ts) 체크 — rate limit 완전 우회
+    const internalSecret = request.headers.get("x-internal-call");
+    const cronAuth = request.headers.get("authorization");
+    const isInternalCall = !!(
+      (internalSecret && internalSecret === process.env.INTERNAL_CALL_SECRET) ||
+      (cronAuth && cronAuth === `Bearer ${process.env.CRON_SECRET}`)
+    );
+
+    const isAdmin = isInternalCall || (authEmail ? ADMIN_EMAILS.has(authEmail.toLowerCase()) : false);
     const proUser = isAdmin || await isProUser(authUserId);
 
     // ── Rate Limit (어드민 무제한, Pro 하루5회, Free 하루1회) ──
