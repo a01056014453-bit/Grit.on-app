@@ -5,7 +5,7 @@
  * Phase 2: 2-A(사고) + 2-B(생성) 분리
  * Phase 3: description 4문장, harmony_table 조건부
  * Phase 4b: 섹션 데이터 객체 주입
- * 어드민(ADMIN_EMAILS) rate limit 무제한 + 캐시 무시
+ * 어드민(ADMIN_USER_IDS) rate limit 무제한 + 캐시 무시
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -48,10 +48,12 @@ const AnalyzeSongRequestSchema = z.object({
   forceRefresh: z.boolean().optional().default(false),
 });
 
-const ADMIN_EMAILS = new Set([
-  "jisoo@withsempre.com",
-  "a01056014453@gmail.com",
-]);
+/** 어드민 user ID — ADMIN_USER_IDS 환경변수와 동일 체계 */
+function getAdminIds(): Set<string> {
+  return new Set(
+    (process.env.ADMIN_USER_IDS ?? "").split(",").map((s) => s.trim()).filter(Boolean)
+  );
+}
 
 type AnalysisInstrument = string;
 
@@ -240,7 +242,7 @@ export async function POST(request: NextRequest) {
       console.log("[INTERNAL] 내부 호출 rate limit 우회");
     }
 
-    const isAdmin = isInternalCall || (authEmail ? ADMIN_EMAILS.has(authEmail.toLowerCase()) : false);
+    const isAdmin = isInternalCall || (authUserId ? getAdminIds().has(authUserId) : false);
     const proUser = isAdmin || await isProUser(authUserId);
 
     // ── Rate Limit (어드민 무제한, Pro 하루5회, Free 하루1회) ──
@@ -255,7 +257,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: false, error: msg } as AnalyzeSongResponse, { status: 429 });
       }
     } else {
-      console.log(`[Admin] ${authEmail} — rate limit 무제한`);
+      console.log(`[Admin] ${authUserId} — rate limit 무제한`);
     }
 
     // ── 요청 파싱 + Zod 검증 ──
