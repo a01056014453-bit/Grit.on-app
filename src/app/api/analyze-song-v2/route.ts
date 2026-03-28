@@ -450,7 +450,7 @@ export async function POST(request: NextRequest) {
       confirmedComposer, confirmedTitle, confirmedOpus,
       sectionsForRoutine, referenceData, instrument
     );
-    const phase4bRaw = await callGPT(openai, phase4bPrompt, 6000, 0.3);
+    const phase4bRaw = await callGPT(openai, phase4bPrompt, 10000, 0.3);
     const phase4b = await safeParseJSON(phase4bRaw, openai, "Phase 4b");
     console.log("[Phase 4b] 완료");
 
