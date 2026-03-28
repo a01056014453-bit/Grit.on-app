@@ -61,14 +61,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       })();
 
       if (cachedVersion >= 2) {
-        // 히스토리 기록
+        // 히스토리 기록 (테이블 없어도 무시)
         if (userId) {
-          await db
-            .from("user_analysis_history")
-            .upsert(
-              { user_id: userId, song_analysis_id: cached.id },
-              { onConflict: "user_id,song_analysis_id" }
-            ).catch(() => {});
+          try {
+            await db
+              .from("user_analysis_history")
+              .upsert(
+                { user_id: userId, song_analysis_id: cached.id },
+                { onConflict: "user_id,song_analysis_id" }
+              );
+          } catch { /* 테이블 미생성 시 무시 */ }
         }
         return NextResponse.json({
           success: true,
@@ -181,14 +183,16 @@ async function runAnalysisInBackground({
 
     const resultId = result.data.id;
 
-    // 히스토리 기록
+    // 히스토리 기록 (테이블 없어도 무시)
     if (userId && resultId) {
-      await db
-        .from("user_analysis_history")
-        .upsert(
-          { user_id: userId, song_analysis_id: resultId },
-          { onConflict: "user_id,song_analysis_id" }
-        ).catch(() => {});
+      try {
+        await db
+          .from("user_analysis_history")
+          .upsert(
+            { user_id: userId, song_analysis_id: resultId },
+            { onConflict: "user_id,song_analysis_id" }
+          );
+      } catch { /* 무시 */ }
     }
 
     // job 완료
