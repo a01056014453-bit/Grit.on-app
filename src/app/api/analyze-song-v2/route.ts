@@ -224,13 +224,21 @@ export async function POST(request: NextRequest) {
       authEmail = user?.email ?? null;
     } catch { /* 비인증 허용 */ }
 
-    // 내부 호출 (cron, start/route.ts) 체크 — rate limit 완전 우회
-    const internalSecret = request.headers.get("x-internal-call");
-    const cronAuth = request.headers.get("authorization");
-    const isInternalCall = !!(
-      (internalSecret && internalSecret === process.env.INTERNAL_CALL_SECRET) ||
-      (cronAuth && cronAuth === `Bearer ${process.env.CRON_SECRET}`)
-    );
+    // 내부 호출 인증 (cron, start/route.ts 전용) — rate limit 완전 우회
+    // 환경변수 미설정이면 내부 호출 불가 (빈 문자열 비교 방지)
+    const envInternalSecret = process.env.INTERNAL_CALL_SECRET ?? "";
+    const envCronSecret = process.env.CRON_SECRET ?? "";
+
+    const internalSecret = request.headers.get("x-internal-call") ?? "";
+    const cronAuth = request.headers.get("authorization") ?? "";
+
+    const isInternalCall =
+      (envInternalSecret.length >= 16 && internalSecret === envInternalSecret) ||
+      (envCronSecret.length >= 16 && cronAuth === `Bearer ${envCronSecret}`);
+
+    if (isInternalCall) {
+      console.log("[INTERNAL] 내부 호출 rate limit 우회");
+    }
 
     const isAdmin = isInternalCall || (authEmail ? ADMIN_EMAILS.has(authEmail.toLowerCase()) : false);
     const proUser = isAdmin || await isProUser(authUserId);
