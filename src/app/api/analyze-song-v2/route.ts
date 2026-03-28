@@ -234,7 +234,7 @@ export async function POST(request: NextRequest) {
 
     const isInternalCall =
       (envInternalSecret.length >= 16 && internalSecret === envInternalSecret) ||
-      (envCronSecret.length >= 16 && cronAuth === `Bearer ${envCronSecret}`);
+      (envCronSecret.length >= 1 && cronAuth === `Bearer ${envCronSecret}`);
 
     if (isInternalCall) {
       console.log("[INTERNAL] 내부 호출 rate limit 우회");
