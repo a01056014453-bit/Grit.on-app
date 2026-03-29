@@ -715,13 +715,13 @@ export function AnalysisDetailModal({ analysis }: AnalysisDetailModalProps) {
       {v2.composer_life && (
         <section>
           <h4 className="text-sm font-bold text-violet-700 mb-2">작곡가 생애</h4>
-          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap mb-2">{v2.composer_life.summary}</p>
-          {v2.composer_life.timeline.length > 0 && (
+          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap mb-2">{safeString(v2.composer_life.summary)}</p>
+          {Array.isArray(v2.composer_life.timeline) && v2.composer_life.timeline.length > 0 && (
             <div className="space-y-1.5 mb-2">
-              {v2.composer_life.timeline.map((t, i) => (
+              {v2.composer_life.timeline.map((t: any, i: number) => (
                 <div key={i} className="flex gap-2 bg-gray-50 rounded-lg p-2">
-                  <span className="text-xs font-bold text-violet-600 shrink-0 w-24">{t.period}</span>
-                  <span className="text-xs text-gray-600">{t.description}</span>
+                  <span className="text-xs font-bold text-violet-600 shrink-0 w-24">{safeString(t?.period)}</span>
+                  <span className="text-xs text-gray-600">{safeString(t?.description)}</span>
                 </div>
               ))}
             </div>
@@ -729,7 +729,7 @@ export function AnalysisDetailModal({ analysis }: AnalysisDetailModalProps) {
           {v2.composer_life.at_composition && (
             <div className="bg-violet-50 rounded-lg p-3">
               <p className="text-xs font-semibold text-violet-600 mb-1">작곡 당시</p>
-              <p className="text-sm text-gray-700">{v2.composer_life.at_composition}</p>
+              <p className="text-sm text-gray-700">{safeString(v2.composer_life.at_composition)}</p>
             </div>
           )}
         </section>
@@ -739,9 +739,9 @@ export function AnalysisDetailModal({ analysis }: AnalysisDetailModalProps) {
       {v2.historical_background && (
         <section>
           <h4 className="text-sm font-bold text-violet-700 mb-2">시대적 배경</h4>
-          {v2.historical_background.era_characteristics && <p className="text-sm text-gray-700 mb-2">{v2.historical_background.era_characteristics}</p>}
-          {v2.historical_background.contemporary_composers && <p className="text-sm text-gray-700 mb-2">{v2.historical_background.contemporary_composers}</p>}
-          {v2.historical_background.musical_movement && <p className="text-sm text-gray-700">{v2.historical_background.musical_movement}</p>}
+          {v2.historical_background.era_characteristics && <p className="text-sm text-gray-700 mb-2">{safeString(v2.historical_background.era_characteristics)}</p>}
+          {v2.historical_background.contemporary_composers && <p className="text-sm text-gray-700 mb-2">{safeString(v2.historical_background.contemporary_composers)}</p>}
+          {v2.historical_background.musical_movement && <p className="text-sm text-gray-700">{safeString(v2.historical_background.musical_movement)}</p>}
         </section>
       )}
 
@@ -758,7 +758,7 @@ export function AnalysisDetailModal({ analysis }: AnalysisDetailModalProps) {
           ].filter(x => x.value).map((x, i) => (
             <div key={i} className="mb-2">
               <p className="text-xs font-semibold text-violet-600">{x.label}</p>
-              <p className="text-sm text-gray-700">{x.value}</p>
+              <p className="text-sm text-gray-700">{safeString(x.value)}</p>
             </div>
           ))}
         </section>
