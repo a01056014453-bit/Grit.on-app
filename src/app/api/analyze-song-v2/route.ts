@@ -221,7 +221,9 @@ export async function GET(request: NextRequest) {
       );
       const { data: { user } } = await supabaseAuth.auth.getUser();
       isAdmin = !!(user?.id && getAdminIds().has(user.id));
-    } catch {}
+    } catch (err) {
+      console.error("[analyze-song-v2 GET] 어드민 인증 실패:", err);
+    }
 
     if (!isAdmin) {
       return NextResponse.json({ success: false, data: [], error: "관리자 권한이 필요합니다." }, { status: 403 });
