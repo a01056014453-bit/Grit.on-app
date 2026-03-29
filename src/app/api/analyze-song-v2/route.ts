@@ -206,6 +206,55 @@ async function searchYoutubeUrls(
 }
 
 // ════════════════════════════════════════════════════════
+// GET 핸들러 — 분석 목록 조회 (어드민용, service role)
+// ════════════════════════════════════════════════════════
+
+export async function GET() {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabaseServer as any)
+      .from("song_analyses")
+      .select("*")
+      .order("updated_at", { ascending: false });
+
+    if (error) {
+      console.error("[analyze-song-v2 GET] DB 조회 실패:", error.message);
+      return NextResponse.json({ success: false, data: [], error: error.message });
+    }
+
+    // content에서 SongAnalysis 복원
+    const analyses = (data ?? []).map((row: any) => {
+      const content = row.content as Record<string, unknown>;
+      if (content && content.meta && content.content) {
+        const restored = content as unknown as SongAnalysis;
+        restored.id = row.id;
+        restored.created_at = row.created_at || restored.created_at;
+        restored.updated_at = row.updated_at || restored.updated_at;
+        if (!restored.schema_version) {
+          const c = restored.content as unknown as Record<string, unknown>;
+          restored.schema_version = (c && ("song_overview" in c || "composer_life" in c)) ? 2 : 1;
+        }
+        return restored;
+      }
+      return {
+        id: row.id,
+        meta: { composer: row.composer, title: row.title, opus: row.opus || "", key: row.key || "", difficulty_level: row.difficulty_level || "Intermediate" },
+        content: content as unknown as SongAnalysis["content"],
+        verification_status: row.verification_status || "Needs Review",
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+        schema_version: 1,
+      } as SongAnalysis;
+    });
+
+    return NextResponse.json({ success: true, data: analyses });
+  } catch (err) {
+    console.error("[analyze-song-v2 GET] 서버 오류:", err);
+    return NextResponse.json({ success: false, data: [], error: "서버 오류" });
+  }
+}
+
+// ════════════════════════════════════════════════════════
 // POST 핸들러
 // ════════════════════════════════════════════════════════
 
