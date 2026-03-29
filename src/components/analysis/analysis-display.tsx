@@ -76,7 +76,24 @@ function ComposerLifeSection({ content }: { content: SongAnalysisContentV2 }) {
       {life.at_composition && (
         <div className="bg-violet-50/50 rounded-xl p-4 border border-violet-100/50">
           <p className="text-xs font-semibold text-violet-600 mb-1">작곡 당시 상황</p>
-          <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{life.at_composition}</p>
+          {typeof life.at_composition === "string" ? (
+            <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{life.at_composition}</p>
+          ) : (
+            <div className="space-y-2 text-sm text-gray-600 leading-relaxed">
+              {(life.at_composition as any).age_and_location && (
+                <p>{(life.at_composition as any).age_and_location}</p>
+              )}
+              {(life.at_composition as any).crisis_or_motivation && (
+                <p>{(life.at_composition as any).crisis_or_motivation}</p>
+              )}
+              {(life.at_composition as any).concurrent_works && (
+                <p>{(life.at_composition as any).concurrent_works}</p>
+              )}
+              {(life.at_composition as any).premiere_reception && (
+                <p>{(life.at_composition as any).premiere_reception}</p>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
