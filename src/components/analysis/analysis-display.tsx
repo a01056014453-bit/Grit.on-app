@@ -9,6 +9,20 @@ import type {
 } from "@/types/song-analysis";
 import { isV2Content } from "@/types/song-analysis";
 
+/** 안전한 문자열 변환 — 객체가 들어와도 크래시하지 않음 */
+function safeString(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (typeof value === "object") {
+    // 객체면 각 값을 줄바꿈으로 합침
+    return Object.values(value as Record<string, unknown>)
+      .filter((v) => v && typeof v === "string")
+      .join("\n");
+  }
+  return String(value);
+}
+
 // ── 1. 곡의 개요 섹션 ──
 
 function OverviewSection({ content }: { content: SongAnalysisContentV2 }) {
@@ -76,24 +90,7 @@ function ComposerLifeSection({ content }: { content: SongAnalysisContentV2 }) {
       {life.at_composition && (
         <div className="bg-violet-50/50 rounded-xl p-4 border border-violet-100/50">
           <p className="text-xs font-semibold text-violet-600 mb-1">작곡 당시 상황</p>
-          {typeof life.at_composition === "string" ? (
-            <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{life.at_composition}</p>
-          ) : (
-            <div className="space-y-2 text-sm text-gray-600 leading-relaxed">
-              {(life.at_composition as any).age_and_location && (
-                <p>{(life.at_composition as any).age_and_location}</p>
-              )}
-              {(life.at_composition as any).crisis_or_motivation && (
-                <p>{(life.at_composition as any).crisis_or_motivation}</p>
-              )}
-              {(life.at_composition as any).concurrent_works && (
-                <p>{(life.at_composition as any).concurrent_works}</p>
-              )}
-              {(life.at_composition as any).premiere_reception && (
-                <p>{(life.at_composition as any).premiere_reception}</p>
-              )}
-            </div>
-          )}
+          <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{safeString(life.at_composition)}</p>
         </div>
       )}
     </div>
@@ -352,17 +349,17 @@ function V1LegacyDisplay({ analysis, openSections, toggleSection }: {
     {
       icon: <User className="w-5 h-5 text-violet-600" />,
       title: "작곡가 배경",
-      content: <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{content.composer_background}</p>,
+      content: <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{safeString(content.composer_background)}</p>,
     },
     {
       icon: <Globe className="w-5 h-5 text-violet-600" />,
       title: "시대적 상황",
-      content: <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{content.historical_context}</p>,
+      content: <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{safeString(content.historical_context)}</p>,
     },
     {
       icon: <BookOpen className="w-5 h-5 text-violet-600" />,
       title: "작품 배경",
-      content: <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{content.work_background}</p>,
+      content: <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{safeString(content.work_background)}</p>,
     },
     {
       icon: <Layers className="w-5 h-5 text-violet-600" />,
@@ -429,7 +426,7 @@ function V1LegacyDisplay({ analysis, openSections, toggleSection }: {
     {
       icon: <Sparkles className="w-5 h-5 text-violet-600" />,
       title: "음악적 해석",
-      content: <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{content.musical_interpretation}</p>,
+      content: <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{safeString(content.musical_interpretation)}</p>,
     },
     {
       icon: <Users className="w-5 h-5 text-violet-600" />,
@@ -623,15 +620,15 @@ export function AnalysisDetailModal({ analysis }: AnalysisDetailModalProps) {
       <div className="space-y-6">
         <section>
           <h4 className="text-sm font-bold text-violet-700 mb-2">작곡가 배경</h4>
-          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{content.composer_background}</p>
+          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{safeString(content.composer_background)}</p>
         </section>
         <section>
           <h4 className="text-sm font-bold text-violet-700 mb-2">시대적 상황</h4>
-          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{content.historical_context}</p>
+          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{safeString(content.historical_context)}</p>
         </section>
         <section>
           <h4 className="text-sm font-bold text-violet-700 mb-2">작품 배경</h4>
-          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{content.work_background}</p>
+          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{safeString(content.work_background)}</p>
         </section>
         <section>
           <h4 className="text-sm font-bold text-violet-700 mb-2">곡 구조</h4>
@@ -664,7 +661,7 @@ export function AnalysisDetailModal({ analysis }: AnalysisDetailModalProps) {
         </section>
         <section>
           <h4 className="text-sm font-bold text-violet-700 mb-2">음악적 해석</h4>
-          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{content.musical_interpretation}</p>
+          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{safeString(content.musical_interpretation)}</p>
         </section>
         <section>
           <h4 className="text-sm font-bold text-violet-700 mb-2">추천 연주</h4>
