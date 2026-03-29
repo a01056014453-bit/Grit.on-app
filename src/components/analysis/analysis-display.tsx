@@ -69,18 +69,18 @@ function ComposerLifeSection({ content }: { content: SongAnalysisContentV2 }) {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{life.summary}</p>
+      <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{safeString(life.summary)}</p>
 
-      {life.timeline.length > 0 && (
+      {Array.isArray(life.timeline) && life.timeline.length > 0 && (
         <div>
           <p className="text-xs font-semibold text-violet-600 mb-2">생애 타임라인</p>
           <div className="space-y-2">
-            {life.timeline.map((entry, i) => (
+            {life.timeline.map((entry: any, i: number) => (
               <div key={i} className="flex gap-3 bg-violet-50/40 rounded-xl p-3">
                 <div className="shrink-0 w-28">
-                  <span className="text-xs font-bold text-violet-700">{entry.period}</span>
+                  <span className="text-xs font-bold text-violet-700">{safeString(entry?.period)}</span>
                 </div>
-                <p className="text-sm text-gray-600 flex-1">{entry.description}</p>
+                <p className="text-sm text-gray-600 flex-1">{safeString(entry?.description)}</p>
               </div>
             ))}
           </div>
@@ -108,19 +108,19 @@ function HistoricalSection({ content }: { content: SongAnalysisContentV2 }) {
       {bg.era_characteristics && (
         <div>
           <p className="text-xs font-semibold text-violet-600 mb-1">시대 특징</p>
-          <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{bg.era_characteristics}</p>
+          <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{safeString(bg.era_characteristics)}</p>
         </div>
       )}
       {bg.contemporary_composers && (
         <div>
           <p className="text-xs font-semibold text-violet-600 mb-1">동시대 작곡가</p>
-          <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{bg.contemporary_composers}</p>
+          <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{safeString(bg.contemporary_composers)}</p>
         </div>
       )}
       {bg.musical_movement && (
         <div>
           <p className="text-xs font-semibold text-violet-600 mb-1">음악 사조</p>
-          <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{bg.musical_movement}</p>
+          <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{safeString(bg.musical_movement)}</p>
         </div>
       )}
     </div>
@@ -146,7 +146,7 @@ function CharacteristicsSection({ content }: { content: SongAnalysisContentV2 })
       {subsections.map((sub, i) => (
         <div key={i}>
           <p className="text-xs font-semibold text-violet-600 mb-1">{sub.label}</p>
-          <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{sub.value}</p>
+          <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{safeString(sub.value)}</p>
         </div>
       ))}
     </div>
