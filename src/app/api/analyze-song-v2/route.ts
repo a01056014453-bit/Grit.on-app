@@ -209,8 +209,24 @@ async function searchYoutubeUrls(
 // GET 핸들러 — 분석 목록 조회 (어드민용, service role)
 // ════════════════════════════════════════════════════════
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    // 어드민 인증 확인
+    let isAdmin = false;
+    try {
+      const supabaseAuth = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        { cookies: { getAll() { return request.cookies.getAll(); }, setAll() {} } },
+      );
+      const { data: { user } } = await supabaseAuth.auth.getUser();
+      isAdmin = !!(user?.id && getAdminIds().has(user.id));
+    } catch {}
+
+    if (!isAdmin) {
+      return NextResponse.json({ success: false, data: [], error: "관리자 권한이 필요합니다." }, { status: 403 });
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabaseServer as any)
       .from("song_analyses")

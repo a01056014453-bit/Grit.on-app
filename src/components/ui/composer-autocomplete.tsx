@@ -38,7 +38,9 @@ export async function loadComposerImages(): Promise<Record<string, string>> {
       _composerImages = data.images ?? {};
       return _composerImages as Record<string, string>;
     }
-  } catch {}
+  } catch (err) {
+    console.error("[loadComposerImages] 이미지 로드 실패:", err);
+  }
   return {};
 }
 
