@@ -22,6 +22,47 @@ import type {
   SongAnalysisContentV2,
 } from "@/types/song-analysis";
 import { isV2Content, getDifficultyLabel } from "@/types/song-analysis";
+import { loadComposerImages } from "@/components/ui/composer-autocomplete";
+
+/** 작곡가 초상화 컴포넌트 — 위키피디아에서 서버 경유 로드 */
+function ComposerAvatar({ composer }: { composer: string }) {
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    // 서버 API에서 이미지 로드 시도
+    loadComposerImages().then((images) => {
+      // fullName 매칭 시도
+      for (const [name, url] of Object.entries(images)) {
+        if (name.toLowerCase().includes(composer.toLowerCase().split(" ").pop() ?? "") ||
+            composer.toLowerCase().includes(name.toLowerCase().split(" ").pop() ?? "")) {
+          setImageUrl(url);
+          return;
+        }
+      }
+      // 매칭 안 되면 위키피디아 직접 시도 (서버 API 경유)
+      fetch(`/api/composers/images`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fullName: composer }),
+      })
+        .then((r) => r.json())
+        .then((d) => { if (d.imageUrl) setImageUrl(d.imageUrl); })
+        .catch(() => {});
+    });
+  }, [composer]);
+
+  return (
+    <div className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0 overflow-hidden bg-violet-100">
+      {imageUrl ? (
+        <img src={imageUrl} alt={composer} className="w-14 h-14 object-cover" />
+      ) : (
+        <span className="text-lg font-bold text-violet-600">
+          {composer.charAt(0)}
+        </span>
+      )}
+    </div>
+  );
+}
 
 /** localStorage 분석 캐시를 최대 20개로 유지 */
 function cleanupAnalysisCache() {
@@ -182,12 +223,10 @@ export default function AnalysisDetailPage() {
         </div>
       </div>
 
-      {/* Song Header Card */}
+      {/* Song Header Card — 작곡가 위키피디아 초상화 */}
       <div className="bg-card rounded-xl p-4 border border-border shadow-sm mb-4">
         <div className="flex items-start gap-3">
-          <div className="w-14 h-14 bg-primary/10 rounded-xl flex items-center justify-center shrink-0">
-            <Music className="w-7 h-7 text-primary" />
-          </div>
+          <ComposerAvatar composer={meta.composer} />
           <div className="flex-1">
             <h2 className="font-bold text-foreground">{meta.composer}</h2>
             <p className="text-sm text-muted-foreground">
@@ -745,9 +784,9 @@ function Section({
 }) {
   return (
     <div className="bg-card rounded-xl border border-border shadow-sm mb-4 overflow-hidden">
-      <div className="px-4 py-3 bg-muted/50 border-b border-border">
-        <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm">
-          <Icon className="w-4 h-4 text-primary" />
+      <div className="px-4 py-3 bg-violet-50 border-b border-violet-100">
+        <h3 className="font-semibold text-violet-900 flex items-center gap-2 text-sm">
+          <Icon className="w-4 h-4 text-violet-600" />
           {title}
         </h3>
       </div>
