@@ -590,8 +590,8 @@ export async function POST(request: NextRequest) {
       console.error("[DB] 저장 실패:", e)
     );
 
-    // 유저 보관함에 기록
-    if (authUserId && analysis.id) {
+    // 유저 보관함에 기록 (어드민/Cron 분석은 제외 — 자동 분석이 사용자 보관함에 추가되는 것 방지)
+    if (authUserId && analysis.id && !isAdmin) {
       await addToUserHistory(authUserId, analysis.id).catch((e) =>
         console.error("[DB] 히스토리 저장 실패:", e)
       );
