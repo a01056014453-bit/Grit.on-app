@@ -226,7 +226,8 @@ export async function deleteCachedAnalysis(id: string): Promise<boolean> {
       .eq("id", id);
 
     return !error;
-  } catch {
+  } catch (err) {
+    console.error("[Supabase] deleteCachedAnalysis error:", err);
     return false;
   }
 }
@@ -252,8 +253,8 @@ export async function getAllCachedAnalyses(): Promise<SongAnalysis[]> {
       seen.add(key);
       return true;
     });
-  } catch {
-    console.error("[Supabase] getAllCachedAnalyses error");
+  } catch (err) {
+    console.error("[Supabase] getAllCachedAnalyses error:", err);
     return [];
   }
 }
@@ -327,7 +328,8 @@ export async function removeFromUserHistory(
       .eq("song_analysis_id", songAnalysisId);
 
     return !error;
-  } catch {
+  } catch (err) {
+    console.error("[Supabase] removeFromUserHistory error:", err);
     return false;
   }
 }
@@ -348,7 +350,8 @@ export async function checkDailyLimit(userId: string): Promise<boolean> {
       .gte("requested_at", todayStart.toISOString());
 
     return (count ?? 0) === 0;
-  } catch {
+  } catch (err) {
+    console.error("[Supabase] checkDailyLimit error:", err);
     return true; // 에러 시 허용
   }
 }
@@ -379,7 +382,8 @@ export async function getCacheStats(): Promise<{
       verifiedCount: verifiedCount || 0,
       needsReviewCount: needsReviewCount || 0,
     };
-  } catch {
+  } catch (err) {
+    console.error("[Supabase] getCacheStats error:", err);
     return { totalCount: 0, verifiedCount: 0, needsReviewCount: 0 };
   }
 }
@@ -401,7 +405,8 @@ export async function updateVerificationStatus(
       .ilike("title", title.trim());
 
     return !error;
-  } catch {
+  } catch (err) {
+    console.error("[Supabase] updateVerificationStatus error:", err);
     return false;
   }
 }

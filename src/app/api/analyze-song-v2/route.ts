@@ -29,6 +29,7 @@ import {
 import { searchAcademicSources } from "@/lib/phase0-academic";
 import { getScoreFactsFromIMSLP } from "@/lib/imslp-vision-pipeline";
 import { getCachedAnalysis, saveCachedAnalysis, addToUserHistory } from "@/lib/song-analysis-db";
+import { validateAnalysisOutput } from "@/lib/analysis-validation";
 import { checkRateLimit } from "@/lib/rate-limiters";
 import { getClientIdentifier, rateLimitResponse } from "@/lib/api-utils";
 import { supabaseServer } from "@/lib/supabase-server";
@@ -507,6 +508,15 @@ export async function POST(request: NextRequest) {
       updated_at: new Date().toISOString(),
       schema_version: 2,
     };
+
+    // ── 품질 검증 ──
+    const validation = validateAnalysisOutput(analysis);
+    if (validation.errors.length > 0) {
+      console.warn("[Analysis Validation] 에러:", validation.errors.join(", "));
+    }
+    if (validation.warnings.length > 0) {
+      console.log("[Analysis Validation] 경고:", validation.warnings.join(", "));
+    }
 
     // ── DB 저장 ──
     await saveCachedAnalysis(analysis, composer, title).catch((e) =>

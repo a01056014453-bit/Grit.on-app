@@ -102,6 +102,19 @@ export interface ComposerTimelineEntry {
   description: string;
 }
 
+/** Phase 2-B at_composition 상세 타입 */
+export interface AtCompositionDetail {
+  age_and_location?: string;
+  crisis_or_motivation?: string;
+  concurrent_works?: string;
+  premiere_reception?: string;
+}
+
+/** 타입 가드: at_composition이 상세 객체인지 확인 */
+export function isAtCompositionDetail(value: unknown): value is AtCompositionDetail {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 /** 2. 작곡가 생애 */
 export interface ComposerLife {
   summary: string;
