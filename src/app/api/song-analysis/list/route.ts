@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { getUserAnalysisHistory } from "@/lib/song-analysis-db";
+import { supabaseServer } from "@/lib/supabase-server";
 
 type SongAnalysisListItem = {
   id: string;
@@ -17,7 +17,8 @@ type SongAnalysisListResponse =
 
 /**
  * GET /api/song-analysis/list
- * 인증 필수 — 해당 사용자의 개인 보관함 목록 반환
+ * 인증 필수 — 전체 분석 목록 반환 (공유 캐시)
+ * "내 보관함" 필터링은 프론트엔드에서 처리
  */
 export async function GET(request: NextRequest): Promise<NextResponse<SongAnalysisListResponse>> {
   try {
@@ -45,19 +46,23 @@ export async function GET(request: NextRequest): Promise<NextResponse<SongAnalys
       );
     }
 
-    // 개인 보관함에서 조회 (user_analysis_history 기반)
-    const analyses = await getUserAnalysisHistory(user.id);
+    // song_analyses 전체에서 조회 (공유 캐시)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabaseServer as any)
+      .from("song_analyses")
+      .select("id, composer, title, created_at, difficulty_level, key")
+      .order("created_at", { ascending: false })
+      .limit(100);
 
-    const data: SongAnalysisListItem[] = analyses.map((a) => ({
-      id: a.id,
-      composer: a.meta.composer,
-      title: a.meta.title,
-      created_at: a.created_at ?? null,
-      difficulty_level: a.meta.difficulty_level ?? null,
-      key: a.meta.key ?? null,
-    }));
+    if (error) {
+      console.error("[song-analysis/list] DB 조회 실패:", error.message);
+      return NextResponse.json(
+        { error: "분석 목록을 불러올 수 없습니다" },
+        { status: 500 },
+      );
+    }
 
-    return NextResponse.json({ data });
+    return NextResponse.json({ data: data ?? [] });
   } catch (err) {
     console.error("[song-analysis/list] 서버 오류:", err);
     return NextResponse.json(
