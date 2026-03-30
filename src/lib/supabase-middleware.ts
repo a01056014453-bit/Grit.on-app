@@ -36,19 +36,19 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Admin 라우트 보호: 인증 + 허가된 유저만 접근
+  // Admin 라우트 보호: AdminGuard 컴포넌트에서 처리 (이메일/비밀번호 로그인 지원)
+  // 미들웨어에서는 인증되지 않은 비어드민만 차단
   const { pathname } = request.nextUrl;
   if (pathname.startsWith("/admin")) {
-    if (!user) {
-      const loginUrl = new URL("/onboarding/login", request.url);
-      return NextResponse.redirect(loginUrl);
+    if (user) {
+      // 로그인은 되어 있지만 어드민이 아닌 경우만 차단
+      const adminIds = getAdminUserIds();
+      if (adminIds.size > 0 && !adminIds.has(user.id)) {
+        const homeUrl = new URL("/", request.url);
+        return NextResponse.redirect(homeUrl);
+      }
     }
-
-    const adminIds = getAdminUserIds();
-    if (adminIds.size > 0 && !adminIds.has(user.id)) {
-      const homeUrl = new URL("/", request.url);
-      return NextResponse.redirect(homeUrl);
-    }
+    // 로그인 안 된 경우: AdminGuard에서 로그인 폼 표시 (리다이렉트 안 함)
   }
 
   return supabaseResponse;
