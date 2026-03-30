@@ -39,18 +39,8 @@ export async function GET(
     return NextResponse.json({ error: "로그인이 필요합니다" }, { status: 401 });
   }
 
-  // 사용자의 보관함에 해당 분석이 있는지 확인
-  const { data: historyCheck } = await supabaseAny
-    .from("user_analysis_history")
-    .select("song_analysis_id")
-    .eq("user_id", user.id)
-    .eq("song_analysis_id", id)
-    .limit(1)
-    .single();
-
-  if (!historyCheck) {
-    return NextResponse.json({ error: "보관함에 해당 분석이 없습니다" }, { status: 403 });
-  }
+  // song_analyses는 공유 캐시 — 로그인 사용자면 모든 분석 접근 가능
+  // (user_analysis_history는 보관함 목록용이지 접근 제어용이 아님)
 
   // 1. id로 공유 캐시에서 검색
   let { data, error } = await supabaseServer
