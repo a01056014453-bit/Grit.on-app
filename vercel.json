@@ -34,7 +34,7 @@
     },
     {
       "path": "/api/cron/pre-analyze",
-      "schedule": "30 15 * * *"
+      "schedule": "30 15 1 1 *"
     }
   ]
 }
