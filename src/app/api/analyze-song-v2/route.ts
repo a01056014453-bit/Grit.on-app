@@ -101,6 +101,22 @@ async function callGPT(
   return res.choices[0]?.message?.content ?? "";
 }
 
+/** gpt-4o-mini — 사고 단계 등 비용 절감용 (gpt-4o 대비 ~15배 저렴) */
+async function callGPTMini(
+  prompt: string,
+  maxTokens: number,
+  temperature: number
+): Promise<string> {
+  const openai = getOpenAI();
+  const res = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{ role: "user", content: prompt }],
+    max_tokens: maxTokens,
+    temperature,
+  });
+  return res.choices[0]?.message?.content ?? "";
+}
+
 async function callPerplexity(prompt: string, maxTokens = 3000): Promise<string | null> {
   const client = getPerplexityClient();
   if (!client) return null;
@@ -385,7 +401,10 @@ export async function POST(request: NextRequest) {
       }),
     ]);
 
-    const referenceData = perplexityResult.status === "fulfilled" ? perplexityResult.value : "";
+    const referenceDataFull = perplexityResult.status === "fulfilled" ? perplexityResult.value : "";
+    // Phase 1/2에는 전체, Phase 3/4에는 압축 (입력 토큰 절감)
+    const referenceData = referenceDataFull;
+    const referenceDataCompact = referenceDataFull.slice(0, 8000);
     const academic = academicResult.status === "fulfilled" ? academicResult.value : { academic_prompt_injection: "", papers: [] };
     const vision = visionResult.status === "fulfilled" ? visionResult.value : { facts: null, lockedFactsBlock: "", imslpUrl: null };
 
@@ -457,7 +476,8 @@ export async function POST(request: NextRequest) {
       confirmedComposer, confirmedTitle, confirmedOpus, instrument,
       lockedFactsBlock, referenceData, academicInjection
     );
-    const phase2AThinking = await callGPT(openai, phase2APrompt, 2000, 0.7);
+    // Phase 2-A는 사고 단계 — gpt-4o-mini로 비용 절감 (품질 차이 미미)
+    const phase2AThinking = await callGPTMini(phase2APrompt, 2000, 0.7);
     console.log("[Phase 2-A] 완료");
 
     console.log("[Phase 2-B] 콘텐츠 생성 시작");
@@ -478,7 +498,7 @@ export async function POST(request: NextRequest) {
     console.log("[Phase 3] 구조/화성 시작");
     const phase3Prompt = createPhase3Prompt(
       confirmedComposer, confirmedTitle, confirmedOpus,
-      instrument, lockedFactsBlock, referenceData,
+      instrument, lockedFactsBlock, referenceDataCompact,
       { composer: confirmedComposer, title: confirmedTitle, opus: confirmedOpus, key: confirmedKey }
     );
     const phase3Raw = await callGPT(openai, phase3Prompt, 6000, 0.1);
@@ -501,7 +521,7 @@ export async function POST(request: NextRequest) {
     console.log("[Phase 4a] 연습법 시작");
     const phase4aPrompt = createPhase4aPrompt(
       confirmedComposer, confirmedTitle, confirmedOpus,
-      sectionNames, referenceData, instrument
+      sectionNames, referenceDataCompact, instrument
     );
     const phase4aRaw = await callGPT(openai, phase4aPrompt, 4000, 0.3);
     const phase4a = await safeParseJSON(phase4aRaw, openai, "Phase 4a");
@@ -516,9 +536,9 @@ export async function POST(request: NextRequest) {
     console.log("[Phase 4b] 4주 루틴 시작");
     const phase4bPrompt = createPhase4bPrompt(
       confirmedComposer, confirmedTitle, confirmedOpus,
-      sectionsForRoutine, referenceData, instrument
+      sectionsForRoutine, referenceDataCompact, instrument
     );
-    const phase4bRaw = await callGPT(openai, phase4bPrompt, 10000, 0.3);
+    const phase4bRaw = await callGPT(openai, phase4bPrompt, 8000, 0.3);
     const phase4b = await safeParseJSON(phase4bRaw, openai, "Phase 4b");
     console.log("[Phase 4b] 완료");
 
