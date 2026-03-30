@@ -210,7 +210,13 @@ I need accurate musical reference data for this ${inst} piece:
 Composer: ${composer}
 Title: ${title}
 
-Search broadly: IMSLP, Wikipedia, Henle Verlag, Grove Music Online,
+CRITICAL: Search IMSLP (imslp.org) FIRST.
+- Go to the IMSLP page for this piece and extract: Key, Movements, Year, Dedication
+- For each movement: tempo marking, key, time signature
+- Mark each fact as [IMSLP-confirmed] or [other-source]
+- If IMSLP and other sources conflict, IMSLP wins
+
+Also search: Wikipedia, Henle Verlag, Grove Music Online,
 AllMusic, MusicBrainz, sheet music databases, academic papers.
 
 CRITICAL: If the title contains "No.X", search for THAT SPECIFIC piece only.
@@ -479,7 +485,10 @@ Q1. 전체 형식? Q2. 내부 구간? Q3. 각 구간 조성/화성? Q4. 작곡�
 - 푸가: 제시부 / 에피소드 / 스트레토 / 종결
 
 [measures 규칙]
-- 확인됨: "mm.1-32" / 추정 가능: "약 mm.1-30" / 불가: 음악 내용 서술
+- IMSLP/악보에서 확인된 마디만: "mm.1-32"
+- LOCKED FACTS에 총 마디 수가 있으면 비율로 추정 가능: "약 mm.1-30"
+- 확인 안 된 경우: 구간의 음악적 내용을 서술 (예: "E♭장조 주제가 오른손에서 제시되며...")
+- 🚨 마디 번호를 임의로 생성하는 것은 절대 금지. 틀린 마디 번호는 분석 전체를 무효화함
 - 금지: "문헌 확인 필요", 빈 문자열, 동일 문구 반복
 
 [description 규칙 — 구체성 필수]
