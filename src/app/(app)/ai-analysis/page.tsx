@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { trackEvent } from "@/lib/analytics";
 import { safeBack } from "@/lib/navigation";
 import {
   ArrowLeft,
@@ -137,11 +138,13 @@ function InlineAnalysisForm({ onAnalyzed }: { onAnalyzed: (id: string, composer:
         if (data.status === "done" && data.result_id) {
           stopPolling();
           setIsPolling(false);
+          trackEvent({ event: "analysis_completed", properties: { composer: comp, title: ttl, cached: false } });
           onAnalyzed(data.result_id, comp, ttl);
           router.push(`/ai-analysis/${data.result_id}`);
         } else if (data.status === "failed") {
           stopPolling();
           setIsPolling(false);
+          trackEvent({ event: "analysis_failed", properties: { composer: comp, title: ttl, error: data.error_message } });
           setError(data.error_message ?? "분석에 실패했습니다.");
         }
         errorCount = 0;
@@ -166,6 +169,7 @@ function InlineAnalysisForm({ onAnalyzed }: { onAnalyzed: (id: string, composer:
     if (!composer.trim() || !title.trim()) return;
     setIsStarting(true);
     setError("");
+    trackEvent({ event: "analysis_request", properties: { composer: composer.trim(), title: title.trim() } });
     try {
       const res = await fetch("/api/analyze-song-v2/start", {
         method: "POST",

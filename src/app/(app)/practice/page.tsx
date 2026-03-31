@@ -10,7 +10,7 @@ import { pushUserDataDebounced } from "@/lib/sync-user-data";
 import { completePracticeTodo } from "@/lib/practice-todo-store";
 import { addNotification } from "@/lib/notification-store";
 import { formatTime } from "@/lib/format";
-import { trackEvent } from "@/lib/analytics";
+import { trackEvent, generateSessionId, getSessionId, clearSessionId, trackAbandon } from "@/lib/analytics";
 import { getUserSongs, getDrillCards } from "@/lib/queries";
 import { ComposerAutocomplete, TitleAutocomplete } from "@/components/ui/composer-autocomplete";
 import { groupDrillsBySong } from "@/lib/utils-practice";
@@ -256,6 +256,26 @@ function PracticePageContent() {
   today.setHours(0, 0, 0, 0);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const wasRecordingBeforeHiddenRef = useRef(false);
+  const abandonCleanupRef = useRef<(() => void) | null>(null);
+
+  // 연습 중 이탈 추적 (beforeunload + visibilitychange)
+  useEffect(() => {
+    if (isRecording && !isPaused) {
+      abandonCleanupRef.current = trackAbandon({
+        song: selectedSong?.title ?? activeDrill?.title ?? "unknown",
+        duration_before_abandon: totalTime,
+      });
+    } else if (abandonCleanupRef.current) {
+      abandonCleanupRef.current();
+      abandonCleanupRef.current = null;
+    }
+    return () => {
+      if (abandonCleanupRef.current) {
+        abandonCleanupRef.current();
+        abandonCleanupRef.current = null;
+      }
+    };
+  }, [isRecording, isPaused, selectedSong, activeDrill, totalTime]);
 
   // Audio recorder hook with metronome-aware detection
   const {
@@ -602,14 +622,23 @@ function PracticePageContent() {
     };
     setSessionStartTime(new Date());
     setAutoPausedMessage(null);
+    const sessionId = generateSessionId();
     trackEvent({
-      event: "practice_start",
+      event: "practice_start_clicked",
       properties: {
+        session_id: sessionId,
         song: selectedSong?.title ?? activeDrill?.title ?? "unknown",
         type: activeDrill ? "drill" : "song",
       },
     });
     await startRecording();
+    trackEvent({
+      event: "practice_session_started",
+      properties: {
+        session_id: sessionId,
+        song: selectedSong?.title ?? activeDrill?.title ?? "unknown",
+      },
+    });
   }, [startRecording, selectedSong, activeDrill]);
 
   const handleResumeRecording = useCallback(() => {
@@ -678,6 +707,18 @@ function PracticePageContent() {
       const audioUrl = URL.createObjectURL(audioBlob);
       setRecordedAudio({ url: audioUrl, duration: actualTotalTime });
     }
+
+    // 연습 종료 이벤트
+    trackEvent({
+      event: "practice_session_ended",
+      properties: {
+        session_id: getSessionId(),
+        duration_seconds: actualTotalTime,
+        song: selectedSong?.title ?? activeDrill?.title ?? "unknown",
+        completed: true,
+      },
+    });
+    clearSessionId();
 
     // 분석 모달 열기
     setIsAnalysisModalOpen(true);
