@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import { getProfile, getExistingProvider, upsertProfile } from "@/lib/queries/profiles";
 import { pullUserData } from "@/lib/sync-user-data";
+import { trackEvent } from "@/lib/analytics";
 
 const PROVIDER_LABELS: Record<string, string> = {
   google: "Google",
@@ -99,6 +100,7 @@ function AppleCallbackHandler() {
         setStatus("3/3 프로필 확인 중...");
         localStorage.setItem("sempre-auth", "apple");
         localStorage.setItem("grit-on-logged-in", "true");
+        trackEvent({ event: "login_completed", properties: { method: "apple" } });
         localStorage.setItem("grit-on-user-id", authData.user.id);
 
         // 이미 온보딩 완료 → 홈으로

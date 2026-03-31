@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { trackEvent } from "@/lib/analytics";
 import {
   ArrowLeft,
   Trophy,
@@ -268,6 +269,10 @@ export default function RankingPage() {
   const [schools, setSchools] = useState<SchoolOption[]>([]);
 
   const RANKING_CACHE_KEY = "sempre-ranking-cache";
+
+  useEffect(() => {
+    trackEvent({ event: "ranking_viewed" });
+  }, []);
 
   const loadRankings = async (currentFilter?: RankingFilter) => {
     setLoadError(null);

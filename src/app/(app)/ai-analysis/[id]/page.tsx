@@ -3,6 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { safeBack } from "@/lib/navigation";
 import { useEffect, useState } from "react";
+import { trackEvent } from "@/lib/analytics";
 import {
   ArrowLeft,
   Music,
@@ -122,6 +123,7 @@ export default function AnalysisDetailPage() {
         }
         const data: SongAnalysis = await res.json();
         setAnalysis(data);
+        trackEvent({ event: "analysis_viewed", properties: { analysis_id: data.id, composer: data.meta?.composer, title: data.meta?.title } });
 
         // localStorage에 캐시 저장 (최대 20개 유지)
         try {

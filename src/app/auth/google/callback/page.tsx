@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import { getProfile, getExistingProvider, upsertProfile } from "@/lib/queries/profiles";
 import { pullUserData } from "@/lib/sync-user-data";
+import { trackEvent } from "@/lib/analytics";
 
 const PROVIDER_LABELS: Record<string, string> = {
   google: "Google",
@@ -80,6 +81,7 @@ function GoogleCallbackHandler() {
         localStorage.setItem("sempre-auth", "google");
         localStorage.setItem("grit-on-logged-in", "true");
         localStorage.setItem("grit-on-user-id", authData.user.id);
+        trackEvent({ event: "login_completed", properties: { method: "google" } });
 
         // 이미 온보딩 완료한 사용자 → 홈으로
         const onboardingDone = localStorage.getItem("sempre-onboarding-done");

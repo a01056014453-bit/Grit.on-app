@@ -2,13 +2,19 @@
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
+import { useEffect } from "react";
 import { ArrowRight } from "lucide-react";
+import { trackEvent } from "@/lib/analytics";
 
 const WaveText = dynamic(() => import("@/components/reactbits/WaveText"), {
   ssr: false,
 });
 
 export default function LandingPage() {
+  useEffect(() => {
+    trackEvent({ event: "landing_view", properties: { referrer: typeof document !== "undefined" ? document.referrer : "" } });
+  }, []);
+
   return (
     <div className="bg-white text-black font-sans">
       {/* SECTION 1 — Hero */}

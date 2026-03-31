@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { createClient } from "@/lib/supabase-browser";
+import { trackEvent } from "@/lib/analytics";
 
 const PROFILE_KEY = "sempre-user-profile";
 
@@ -68,6 +69,7 @@ export default function LoginRequiredPage() {
   }, [router]);
 
   const handleGoogleLogin = () => {
+    trackEvent({ event: "signup_started", properties: { method: "google" } });
     const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
     const redirectUri = `${window.location.origin}/auth/google/callback`;
     const scope = "email profile openid";
@@ -76,6 +78,7 @@ export default function LoginRequiredPage() {
   };
 
   const handleAppleLogin = () => {
+    trackEvent({ event: "signup_started", properties: { method: "apple" } });
     const clientId = "com.5F62DDJA3X.sempre.web";
     const redirectUri = `${window.location.origin}/auth/apple/callback`;
     const url = `https://appleid.apple.com/auth/authorize?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&response_mode=query`;
