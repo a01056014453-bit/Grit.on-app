@@ -258,25 +258,6 @@ function PracticePageContent() {
   const wasRecordingBeforeHiddenRef = useRef(false);
   const abandonCleanupRef = useRef<(() => void) | null>(null);
 
-  // 연습 중 이탈 추적 (beforeunload + visibilitychange)
-  useEffect(() => {
-    if (isRecording && !isPaused) {
-      abandonCleanupRef.current = trackAbandon({
-        song: selectedSong?.title ?? activeDrill?.title ?? "unknown",
-        duration_before_abandon: totalTime,
-      });
-    } else if (abandonCleanupRef.current) {
-      abandonCleanupRef.current();
-      abandonCleanupRef.current = null;
-    }
-    return () => {
-      if (abandonCleanupRef.current) {
-        abandonCleanupRef.current();
-        abandonCleanupRef.current = null;
-      }
-    };
-  }, [isRecording, isPaused, selectedSong, activeDrill, totalTime]);
-
   // Audio recorder hook with metronome-aware detection
   const {
     isRecording,
@@ -591,6 +572,25 @@ function PracticePageContent() {
     }
     return () => setPracticeRecording(false);
   }, [isRecording, isPaused, pauseRecording]);
+
+  // 연습 중 이탈 추적 (beforeunload + visibilitychange)
+  useEffect(() => {
+    if (isRecording && !isPaused) {
+      abandonCleanupRef.current = trackAbandon({
+        song: selectedSong?.title ?? activeDrill?.title ?? "unknown",
+        duration_before_abandon: totalTime,
+      });
+    } else if (abandonCleanupRef.current) {
+      abandonCleanupRef.current();
+      abandonCleanupRef.current = null;
+    }
+    return () => {
+      if (abandonCleanupRef.current) {
+        abandonCleanupRef.current();
+        abandonCleanupRef.current = null;
+      }
+    };
+  }, [isRecording, isPaused, selectedSong, activeDrill, totalTime]);
 
   // Manage wake lock based on recording state
   useEffect(() => {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase-server";
-import { EventTypeEnum } from "@/lib/analytics";
+import type { EventType } from "@/lib/analytics";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabaseServer as any;
@@ -12,8 +12,7 @@ export async function POST(request: NextRequest) {
     const { event, userId, properties, timestamp, userAgent, platform, standalone } = body;
 
     // 유효성 검사: event 타입 확인
-    const parsed = EventTypeEnum.safeParse(event);
-    if (!parsed.success) {
+    if (!event || typeof event !== "string") {
       return NextResponse.json(
         { error: "유효하지 않은 이벤트 타입입니다." },
         { status: 400 },
@@ -21,7 +20,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { error } = await db.from("user_events").insert({
-      event: parsed.data,
+      event,
       user_id: userId || null,
       properties: properties || null,
       user_agent: userAgent || null,
