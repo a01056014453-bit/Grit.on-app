@@ -21,9 +21,12 @@ import { STORAGE_KEYS } from "@/lib/storage-keys";
 import type {
   SongAnalysis,
   SongAnalysisContentV2,
+  AnySongAnalysis,
+  SongAnalysisV3,
 } from "@/types/song-analysis";
-import { isV2Content, getDifficultyLabel } from "@/types/song-analysis";
+import { isV2Content, isSongAnalysisV3 } from "@/types/song-analysis";
 import { loadComposerImages } from "@/components/ui/composer-autocomplete";
+import { V3Display } from "@/components/analysis/v3-display";
 
 /** 작곡가 초상화 컴포넌트 — 위키피디아에서 서버 경유 로드 */
 function ComposerAvatar({ composer }: { composer: string }) {
@@ -85,7 +88,7 @@ export default function AnalysisDetailPage() {
   const router = useRouter();
   const id = params.id as string;
 
-  const [analysis, setAnalysis] = useState<SongAnalysis | null>(null);
+  const [analysis, setAnalysis] = useState<AnySongAnalysis | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -121,9 +124,21 @@ export default function AnalysisDetailPage() {
           if (!analysis) setError("분석 데이터를 찾을 수 없습니다.");
           return;
         }
-        const data: SongAnalysis = await res.json();
+        const data: AnySongAnalysis = await res.json();
         setAnalysis(data);
-        trackEvent({ event: "analysis_viewed", properties: { analysis_id: data.id, composer: data.meta?.composer, title: data.meta?.title } });
+
+        // V3/legacy에서 composer/title 안전 추출
+        const displayComposer = isSongAnalysisV3(data)
+          ? data.meta.work.composer_display
+          : (data as SongAnalysis).meta.composer;
+        const displayTitle = isSongAnalysisV3(data)
+          ? data.meta.work.canonical_title
+          : (data as SongAnalysis).meta.title;
+        const displayOpus = isSongAnalysisV3(data)
+          ? (data.meta.work.opus_catalogue ?? "")
+          : (data as SongAnalysis).meta.opus;
+
+        trackEvent({ event: "analysis_viewed", properties: { analysis_id: data.id, composer: displayComposer, title: displayTitle } });
 
         // localStorage에 캐시 저장 (최대 20개 유지)
         try {
@@ -148,9 +163,9 @@ export default function AnalysisDetailPage() {
 
         saveAnalyzedSong({
           id: data.id,
-          title: data.meta.title,
-          opus: data.meta.opus,
-          composer: data.meta.composer,
+          title: displayTitle,
+          opus: displayOpus,
+          composer: displayComposer,
         });
       } catch {
         if (!analysis) setError("데이터를 불러오는 중 오류가 발생했습니다.");
@@ -202,7 +217,71 @@ export default function AnalysisDetailPage() {
     );
   }
 
-  const { meta, content } = analysis;
+  // ── V3 분기: 완전히 다른 UI ──
+  if (isSongAnalysisV3(analysis)) {
+    const v3 = analysis as SongAnalysisV3;
+    const work = v3.meta.work;
+    return (
+      <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
+        <div className="bg-blob-extra" />
+
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-6">
+          <button
+            onClick={() => safeBack(router)}
+            className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5 text-muted-foreground" />
+          </button>
+          <div>
+            <h1 className="text-lg font-bold text-foreground">연습 코칭</h1>
+            <p className="text-xs text-muted-foreground">AI 연습 가이드</p>
+          </div>
+        </div>
+
+        {/* Song Header */}
+        <div className="bg-card rounded-xl p-4 border border-border shadow-sm mb-4">
+          <div className="flex items-start gap-3">
+            <ComposerAvatar composer={work.composer_display} />
+            <div className="flex-1">
+              <h2 className="font-bold text-foreground">{work.composer_display}</h2>
+              <p className="text-sm text-muted-foreground">
+                {work.canonical_title}
+                {work.opus_catalogue ? ` ${work.opus_catalogue}` : ""}
+              </p>
+              <div className="flex flex-wrap items-center gap-2 mt-2">
+                {work.key && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-secondary">
+                    {work.key}
+                  </span>
+                )}
+                {work.subtitle && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-secondary">
+                    {work.subtitle}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <V3Display analysis={v3} />
+
+        {/* Disclaimer */}
+        <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+          <p className="text-xs text-amber-800 text-center">
+            <strong>주의:</strong> 본 분석은 AI 기반 참고 자료이며,
+            <br />
+            정확한 학습을 위해 전문 자료를 함께 참고하시기 바랍니다.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── V1/V2 레거시 렌더링 ──
+  const legacyAnalysis = analysis as SongAnalysis;
+  const { meta, content } = legacyAnalysis;
   const v2: SongAnalysisContentV2 | null = isV2Content(content)
     ? content
     : null;
@@ -238,11 +317,6 @@ export default function AnalysisDetailPage() {
               {meta.key && (
                 <span className="text-xs px-2 py-0.5 rounded-full bg-secondary">
                   {meta.key}
-                </span>
-              )}
-              {meta.difficulty_level && (
-                <span className="text-xs px-2 py-0.5 rounded-full bg-secondary">
-                  {getDifficultyLabel(meta.difficulty_level)}
                 </span>
               )}
             </div>

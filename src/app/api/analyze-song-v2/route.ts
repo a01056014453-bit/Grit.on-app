@@ -1,10 +1,18 @@
 /**
  * analyze-song-v2/route.ts — 전면 개편
  *
- * Phase 0: Perplexity + 학술논문 + IMSLP Vision 병렬
- * Phase 2: 2-A(사고) + 2-B(생성) 분리
- * Phase 3: description 4문장, harmony_table 조건부
- * Phase 4b: 섹션 데이터 객체 주입
+ * V2 파이프라인 (기존):
+ *   Phase 0: Perplexity + 학술논문 + IMSLP Vision 병렬
+ *   Phase 2: 2-A(사고) + 2-B(생성) 분리
+ *   Phase 3: description 4문장, harmony_table 조건부
+ *   Phase 4b: 섹션 데이터 객체 주입
+ *
+ * V3 파이프라인 (신규 — analysisVersion: 3):
+ *   Phase 0: 동일 (Perplexity + IMSLP Vision 재사용)
+ *   Phase A: Meta/Facts — 작품 식별 + work_type + verified_facts
+ *   Phase B: Coaching — summary + demands + challenges + pitfalls + plan
+ *   Phase C: Guides + Recordings — movement/collection guides + 추천 음반
+ *
  * 어드민(ADMIN_USER_IDS) rate limit 무제한 + 캐시 무시
  */
 
@@ -26,14 +34,35 @@ import {
   KOREAN_OUTPUT_RULE,
   type SectionForRoutine,
 } from "@/lib/analysis-prompts";
+import {
+  createV3MetaPrompt,
+  createV3CoachingPrompt,
+  createV3GuidesPrompt,
+  inferWorkTypeHint,
+} from "@/lib/analysis-prompts-v3";
 import { searchAcademicSources } from "@/lib/phase0-academic";
 import { getScoreFactsFromIMSLP } from "@/lib/imslp-vision-pipeline";
 import { getCachedAnalysis, saveCachedAnalysis, addToUserHistory } from "@/lib/song-analysis-db";
-import { validateAnalysisOutput } from "@/lib/analysis-validation";
+import { validateAnalysisOutput, validateAnalysisOutputV3 } from "@/lib/analysis-validation";
 import { checkRateLimit } from "@/lib/rate-limiters";
 import { getClientIdentifier, rateLimitResponse } from "@/lib/api-utils";
 import { supabaseServer } from "@/lib/supabase-server";
 import type { SongAnalysis, AnalyzeSongResponse } from "@/types/song-analysis";
+import type {
+  SongAnalysisV3,
+  AnalysisContentV3,
+  CanonicalWorkRef,
+  VerifiedFact,
+  WorkType,
+  TechnicalDemand,
+  MusicalChallenge,
+  Pitfall,
+  PracticePlan,
+  WorkSummary,
+  RecommendedRecording,
+  MovementGuide,
+  CollectionPieceGuide,
+} from "@/types/song-analysis";
 
 // ════════════════════════════════════════════════════════
 // 설정
@@ -47,6 +76,8 @@ const AnalyzeSongRequestSchema = z.object({
   title: z.string().min(1, "곡 제목은 필수입니다.").max(200),
   instrument: z.string().max(50).optional().default("piano"),
   forceRefresh: z.boolean().optional().default(false),
+  /** V3 파이프라인 사용 — 3이면 V3, 미지정이면 기존 V2 */
+  analysisVersion: z.literal(3).optional(),
 });
 
 /** 어드민 user ID — ADMIN_USER_IDS 환경변수와 동일 체계 */
@@ -132,6 +163,59 @@ async function callPerplexity(prompt: string, maxTokens = 3000): Promise<string 
     return null;
   }
 }
+
+// ════════════════════════════════════════════════════════
+// V3 전용: structured output 헬퍼
+// ════════════════════════════════════════════════════════
+
+const V3_SYSTEM_PROMPT = `당신은 클래식 음악 연습 코치이자 음악학 박사입니다.
+
+🚨 출력 규칙:
+- 반드시 유효한 JSON만 출력하십시오. JSON 외 텍스트, 마크다운, 설명 절대 금지.
+- 모든 텍스트는 한국어로 작성하십시오. 음악 용어·고유명사만 원어 병기 가능.
+- 확인되지 않은 마디 번호, 화성, 연도를 추측하지 마십시오.
+- "베토벤은 고전과 낭만을 잇는 다리" 같은 백과사전 문장 금지.
+- "팔 무게를 사용하세요", "프레이즈를 살려서" 같은 범용 조언 금지.
+- 이 곡에 특화된 구체적 연습 코칭만 작성하십시오.
+- 난이도(difficulty)나 난이도 라벨은 생성하지 마십시오.
+- 반복 금지. 모든 항목의 내용이 서로 달라야 합니다.`;
+
+/** V3 전용 GPT 호출 — response_format: json_object + system prompt */
+async function callGPTJson(
+  openai: OpenAI,
+  userPrompt: string,
+  maxTokens: number,
+  temperature: number,
+  phase: string,
+): Promise<Record<string, unknown>> {
+  const res = await openai.chat.completions.create({
+    model: "gpt-4o",
+    messages: [
+      { role: "system", content: V3_SYSTEM_PROMPT },
+      { role: "user", content: userPrompt },
+    ],
+    max_tokens: maxTokens,
+    temperature,
+    response_format: { type: "json_object" },
+  });
+
+  const raw = res.choices[0]?.message?.content;
+  if (!raw) {
+    throw new Error(`[${phase}] GPT 응답 비어있음`);
+  }
+
+  try {
+    return JSON.parse(raw) as Record<string, unknown>;
+  } catch {
+    // response_format: json_object이므로 파싱 실패는 극히 드묾
+    console.error(`[${phase}] JSON 파싱 실패 (structured output에서):`, raw.slice(0, 200));
+    throw new Error(`[${phase}] JSON 파싱 실패`);
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// Legacy: safeParseJSON (V1/V2 전용)
+// ════════════════════════════════════════════════════════
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function safeParseJSON(text: string, openai: OpenAI, phase: string): Promise<any> {
@@ -353,22 +437,26 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    const { composer, title, instrument, forceRefresh } = parsed.data;
+    const { composer, title, instrument, forceRefresh, analysisVersion } = parsed.data;
+    const useV3 = analysisVersion === 3;
 
     // ── 캐시 확인 ──
     // 어드민: 항상 재분석 / Pro: forceRefresh 허용 / Free: 캐시 강제
-    // schema_version < 2 인 캐시는 구 파이프라인 결과 → 무조건 재분석
-    const CURRENT_SCHEMA_VERSION = 2;
+    // V3 요청 시 CURRENT_SCHEMA_VERSION을 3으로 설정하여 V2 캐시를 stale 처리
+    const CURRENT_SCHEMA_VERSION = useV3 ? 3 : 2;
     const effectiveForceRefresh = isAdmin ? true : (proUser ? forceRefresh : false);
     if (!effectiveForceRefresh) {
       const cached = await getCachedAnalysis(composer, title);
       if (cached) {
-        const cachedVersion = (cached as { schema_version?: number }).schema_version ?? 1;
+        // V3는 schema_version: 3 (required), legacy는 optional
+        const cachedVersion = "schema_version" in cached
+          ? (cached.schema_version as number ?? 1)
+          : 1;
         if (cachedVersion < CURRENT_SCHEMA_VERSION) {
           console.log(`[Cache STALE] ${composer} - ${title} | schema_version: ${cachedVersion} → 재분석`);
         } else {
           console.log(`[Cache HIT] ${composer} - ${title} | schema_version: ${cachedVersion}`);
-          return NextResponse.json({ success: true, data: cached, cached: true } as AnalyzeSongResponse);
+          return NextResponse.json({ success: true, data: cached, cached: true });
         }
       }
     }
@@ -416,7 +504,75 @@ export async function POST(request: NextRequest) {
     console.log(`[Phase 0] 완료 — 논문: ${paperCount}개 | Vision: ${vision.facts ? "성공" : "없음"}`);
 
     // ══════════════════════════════════════════════════════
-    // Phase 1: 곡 개요
+    // V3 파이프라인 분기
+    // ══════════════════════════════════════════════════════
+
+    if (useV3) {
+      const v3Result = await runV3Pipeline({
+        composer, title, instrument,
+        referenceData, referenceDataCompact,
+        vision, academicInjection,
+        openai, isAdmin,
+        authUserId,
+        startTime,
+      });
+
+      if (!v3Result.success) {
+        return NextResponse.json(
+          { success: false, error: v3Result.error } as AnalyzeSongResponse,
+          { status: 500 }
+        );
+      }
+
+      // V3 품질 검증 — 실패 시 저장 금지
+      const v3Analysis = v3Result.data!;
+      const v3Validation = validateAnalysisOutputV3({ content: v3Analysis.content });
+      if (!v3Validation.valid) {
+        console.error("[V3 Validation] 검증 실패:", v3Validation.errors.join(", "));
+        return NextResponse.json(
+          { success: false, error: `V3 품질 검증 실패: ${v3Validation.errors[0]}` },
+          { status: 422 }
+        );
+      }
+      if (v3Validation.warnings.length > 0) {
+        console.log("[V3 Validation] 경고:", v3Validation.warnings.join(", "));
+      }
+
+      // V3 결과 저장 — SongAnalysis 호환 형태로 래핑하여 기존 DB에 저장
+      const v3ForDb: SongAnalysis = {
+        id: v3Analysis.id,
+        meta: {
+          composer: v3Analysis.meta.work.composer_display,
+          title: v3Analysis.meta.work.canonical_title,
+          opus: v3Analysis.meta.work.opus_catalogue ?? "",
+          key: v3Analysis.meta.work.key ?? "",
+          difficulty_level: "Intermediate",  // V3는 difficulty 미생성 — DB 호환용 기본값
+        },
+        content: v3Analysis as unknown as SongAnalysis["content"],
+        verification_status: v3Analysis.verification_status,
+        created_at: v3Analysis.created_at,
+        updated_at: v3Analysis.updated_at,
+        schema_version: 3,
+      };
+
+      await saveCachedAnalysis(v3ForDb, composer, title).catch((e) =>
+        console.error("[DB] V3 저장 실패:", e)
+      );
+
+      if (authUserId && v3Analysis.id && !isAdmin) {
+        await addToUserHistory(authUserId, v3Analysis.id).catch((e) =>
+          console.error("[DB] V3 히스토리 저장 실패:", e)
+        );
+      }
+
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+      console.log(`[V3 Analysis DONE] ${composer} - ${title} | ${elapsed}s | admin: ${isAdmin}`);
+
+      return NextResponse.json({ success: true, data: v3Analysis, cached: false });
+    }
+
+    // ══════════════════════════════════════════════════════
+    // Phase 1: 곡 개요 (기존 V2 파이프라인)
     // ══════════════════════════════════════════════════════
 
     const visionForLocked = vision.facts ? {
@@ -631,5 +787,274 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ success: false, error: "곡 분석 중 오류가 발생했습니다." } as AnalyzeSongResponse, { status: 500 });
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// V3 파이프라인
+// ════════════════════════════════════════════════════════
+
+interface V3PipelineInput {
+  composer: string;
+  title: string;
+  instrument: string;
+  referenceData: string;
+  referenceDataCompact: string;
+  vision: {
+    facts: { locked: { overall_key: string | null; movements: unknown[] }; confidence: string } | null;
+    lockedFactsBlock: string;
+    imslpUrl: string | null;
+  };
+  academicInjection: string;
+  openai: OpenAI;
+  isAdmin: boolean;
+  authUserId: string | null;
+  startTime: number;
+}
+
+interface V3PipelineResult {
+  success: boolean;
+  data?: SongAnalysisV3;
+  error?: string;
+}
+
+async function runV3Pipeline(input: V3PipelineInput): Promise<V3PipelineResult> {
+  const {
+    composer, title, instrument,
+    referenceData, referenceDataCompact,
+    vision, academicInjection,
+    openai,
+  } = input;
+
+  try {
+    // ── Vision locked block (Phase 0에서 재사용) ──
+    const visionForLocked = vision.facts ? {
+      overall_key: vision.facts.locked.overall_key,
+      movements: vision.facts.locked.movements as Array<{
+        number: number; tempo_marking: string | null;
+        key: string | null; time_signature: string | null;
+      }>,
+      confidence: vision.facts.confidence,
+    } : null;
+    const visionLockedBlock = buildLockedFactsBlock(composer, title, "", "", visionForLocked);
+
+    // ══════════════════════════════════════════════════════
+    // Phase A: Meta / Facts
+    // ══════════════════════════════════════════════════════
+
+    // ══════════════════════════════════════════════════════
+    // Phase A: Meta / Facts (structured output)
+    // ══════════════════════════════════════════════════════
+
+    console.log("[V3 Phase A] Meta/Facts 시작");
+    const phaseAPrompt = createV3MetaPrompt(
+      composer, title, instrument, referenceData, visionLockedBlock
+    );
+    const phaseA = await callGPTJson(openai, phaseAPrompt, 2000, 0.1, "V3-A");
+
+    // work 추출 + 안전한 기본값
+    const rawWork = (phaseA.work ?? {}) as Record<string, unknown>;
+    const work: CanonicalWorkRef = {
+      composer_display: String(rawWork.composer_display ?? composer),
+      composer_normalized: String(rawWork.composer_normalized ?? composer.toLowerCase().split(" ").pop() ?? composer.toLowerCase()),
+      canonical_title: String(rawWork.canonical_title ?? title),
+      subtitle: rawWork.subtitle ? String(rawWork.subtitle) : undefined,
+      opus_catalogue: rawWork.opus_catalogue ? String(rawWork.opus_catalogue) : undefined,
+      work_number: typeof rawWork.work_number === "number" ? rawWork.work_number : undefined,
+      key: String(rawWork.key || vision.facts?.locked?.overall_key || ""),
+      source_work_id: rawWork.source_work_id ? String(rawWork.source_work_id) : undefined,
+    };
+
+    const workType: WorkType = (
+      ["single_movement_piece", "multi_movement_sonata", "suite_or_collection", "variation_set", "unknown"]
+        .includes(String(phaseA.work_type))
+        ? String(phaseA.work_type)
+        : inferWorkTypeHint(title, referenceData)
+    ) as WorkType;
+
+    const verifiedFacts: VerifiedFact[] = Array.isArray(phaseA.verified_facts)
+      ? (phaseA.verified_facts as Record<string, unknown>[]).map((f) => ({
+          label: String(f.label ?? ""),
+          value: String(f.value ?? ""),
+          source: (["IMSLP", "MusicXML", "Manual", "Model-Inferred"].includes(String(f.source)) ? String(f.source) : "Model-Inferred") as VerifiedFact["source"],
+          confidence: (["high", "medium", "low"].includes(String(f.confidence)) ? String(f.confidence) : "low") as VerifiedFact["confidence"],
+        }))
+      : [];
+
+    if (!work.canonical_title || !workType) {
+      throw new Error("[V3-A] 필수 필드 누락: canonical_title 또는 work_type");
+    }
+
+    console.log(`[V3 Phase A] 완료 — work_type: ${workType}, facts: ${verifiedFacts.length}개`);
+
+    // ══════════════════════════════════════════════════════
+    // Phase B: Coaching Core (structured output)
+    // ══════════════════════════════════════════════════════
+
+    const verifiedFactsJson = JSON.stringify(verifiedFacts, null, 2);
+
+    console.log("[V3 Phase B] Coaching 시작");
+    const phaseBPrompt = createV3CoachingPrompt(
+      work.composer_display,
+      work.canonical_title,
+      work.opus_catalogue ?? "",
+      instrument,
+      workType,
+      verifiedFactsJson,
+      referenceData,
+    );
+    const phaseB = await callGPTJson(openai, phaseBPrompt, 6000, 0.3, "V3-B");
+
+    // 필수 필드 추출 + 검증
+    const rawSummary = phaseB.summary as Record<string, unknown> | undefined;
+    if (!rawSummary || !rawSummary.one_liner) {
+      throw new Error("[V3-B] 필수 필드 누락: summary.one_liner");
+    }
+    const summary: WorkSummary = {
+      one_liner: String(rawSummary.one_liner),
+      context_for_practice: String(rawSummary.context_for_practice ?? ""),
+      structural_overview: String(rawSummary.structural_overview ?? ""),
+      artistic_intent: String(rawSummary.artistic_intent ?? ""),
+    };
+
+    const technicalDemands: TechnicalDemand[] = Array.isArray(phaseB.technical_demands)
+      ? (phaseB.technical_demands as Record<string, unknown>[]).map((d) => ({
+          category: String(d.category ?? "other") as TechnicalDemand["category"],
+          title: String(d.title ?? ""),
+          description: String(d.description ?? ""),
+          location: d.location ? String(d.location) : undefined,
+          severity: (["critical", "major", "moderate"].includes(String(d.severity)) ? String(d.severity) : "moderate") as TechnicalDemand["severity"],
+        }))
+      : [];
+
+    const musicalChallenges: MusicalChallenge[] = Array.isArray(phaseB.musical_challenges)
+      ? (phaseB.musical_challenges as Record<string, unknown>[]).map((ch) => ({
+          title: String(ch.title ?? ""),
+          description: String(ch.description ?? ""),
+          location: ch.location ? String(ch.location) : undefined,
+          reference_interpretation: ch.reference_interpretation ? String(ch.reference_interpretation) : undefined,
+        }))
+      : [];
+
+    const pitfalls: Pitfall[] = Array.isArray(phaseB.pitfalls)
+      ? (phaseB.pitfalls as Record<string, unknown>[]).map((p) => ({
+          title: String(p.title ?? ""),
+          mistake: String(p.mistake ?? ""),
+          cause: String(p.cause ?? ""),
+          fix: String(p.fix ?? ""),
+          location: p.location ? String(p.location) : undefined,
+        }))
+      : [];
+
+    const rawPlan = phaseB.practice_plan as Record<string, unknown> | undefined;
+    if (!rawPlan || !Array.isArray(rawPlan.phases) || rawPlan.phases.length === 0) {
+      throw new Error("[V3-B] 필수 필드 누락: practice_plan.phases");
+    }
+    const practicePlan: PracticePlan = {
+      estimated_duration: String(rawPlan.estimated_duration ?? "4-6주"),
+      recommended_order: rawPlan.recommended_order ? String(rawPlan.recommended_order) : undefined,
+      phases: (rawPlan.phases as Record<string, unknown>[]).map((ph) => ({
+        phase: Number(ph.phase ?? 0),
+        title: String(ph.title ?? ""),
+        goal: String(ph.goal ?? ""),
+        duration: String(ph.duration ?? ""),
+        tasks: Array.isArray(ph.tasks)
+          ? (ph.tasks as Record<string, unknown>[]).map((t) => ({
+              instruction: String(t.instruction ?? ""),
+              target: t.target ? String(t.target) : undefined,
+              minutes: typeof t.minutes === "number" ? t.minutes : undefined,
+              related_demand: t.related_demand ? String(t.related_demand) as TechnicalDemand["category"] : undefined,
+            }))
+          : [],
+      })),
+    };
+
+    console.log(`[V3 Phase B] 완료 — demands: ${technicalDemands.length}, challenges: ${musicalChallenges.length}, pitfalls: ${pitfalls.length}, phases: ${practicePlan.phases.length}`);
+
+    // ══════════════════════════════════════════════════════
+    // Phase C: Guides + Recordings (structured output)
+    // ══════════════════════════════════════════════════════
+
+    console.log("[V3 Phase C] Guides+Recordings 시작");
+    const phaseCPrompt = createV3GuidesPrompt(
+      work.composer_display,
+      work.canonical_title,
+      work.opus_catalogue ?? "",
+      instrument,
+      workType,
+      verifiedFactsJson,
+      referenceDataCompact,
+    );
+    const phaseC = await callGPTJson(openai, phaseCPrompt, 6000, 0.3, "V3-C");
+
+    let movementGuides: MovementGuide[] | undefined;
+    let collectionGuides: CollectionPieceGuide[] | undefined;
+
+    if (workType === "multi_movement_sonata" && Array.isArray(phaseC.movement_guides)) {
+      movementGuides = phaseC.movement_guides as MovementGuide[];
+    }
+    if ((workType === "suite_or_collection" || workType === "variation_set") && Array.isArray(phaseC.collection_guides)) {
+      collectionGuides = phaseC.collection_guides as CollectionPieceGuide[];
+    }
+
+    // Recordings + YouTube
+    let recordings: RecommendedRecording[] = Array.isArray(phaseC.recommended_recordings)
+      ? (phaseC.recommended_recordings as Record<string, unknown>[]).map((r) => ({
+          artist: String(r.artist ?? ""),
+          year: r.year ? String(r.year) : undefined,
+          label: r.label ? String(r.label) : undefined,
+          why: String(r.why ?? ""),
+          youtube_url: r.youtube_url ? String(r.youtube_url) : undefined,
+          listen_for: r.listen_for ? String(r.listen_for) : undefined,
+        }))
+      : [];
+
+    // YouTube URL 채우기
+    const recordingsForYt = recordings.map((r) => ({ artist: r.artist, youtube_url: r.youtube_url }));
+    const ytResults = await searchYoutubeUrls(work.composer_display, work.canonical_title, recordingsForYt);
+    recordings = recordings.map((r, i) => ({
+      ...r,
+      youtube_url: (ytResults[i] as { youtube_url?: string })?.youtube_url || r.youtube_url,
+    }));
+
+    console.log(`[V3 Phase C] 완료 — movements: ${movementGuides?.length ?? 0}, collection: ${collectionGuides?.length ?? 0}, recordings: ${recordings.length}`);
+
+    // ══════════════════════════════════════════════════════
+    // V3 결과 조립 — difficulty 없음
+    // ══════════════════════════════════════════════════════
+
+    const hasScore = !!(vision.facts && vision.facts.confidence !== "low" && vision.facts.locked.movements.length > 0);
+
+    const v3Content: AnalysisContentV3 = {
+      work_type: workType,
+      verified_facts: verifiedFacts,
+      summary,
+      technical_demands: technicalDemands,
+      musical_challenges: musicalChallenges,
+      practice_plan: practicePlan,
+      pitfalls,
+      recommended_recordings: recordings,
+      movement_guides: movementGuides,
+      collection_guides: collectionGuides,
+    };
+
+    const v3Analysis: SongAnalysisV3 = {
+      id: `analysis_v3_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      schema_version: 3,
+      meta: { work },
+      content: v3Content,
+      verification_status: hasScore ? "Verified" : "Needs Review",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    return { success: true, data: v3Analysis };
+
+  } catch (err) {
+    console.error("[V3 Pipeline] 오류:", err);
+    return {
+      success: false,
+      error: `V3 파이프라인 오류: ${err instanceof Error ? err.message : "알 수 없는 오류"}`,
+    };
   }
 }

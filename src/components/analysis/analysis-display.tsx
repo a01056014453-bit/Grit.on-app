@@ -6,8 +6,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import type {
   SongAnalysis,
   SongAnalysisContentV2,
+  AnySongAnalysis,
+  SongAnalysisV3,
 } from "@/types/song-analysis";
-import { isV2Content } from "@/types/song-analysis";
+import { isV2Content, isSongAnalysisV3 } from "@/types/song-analysis";
+import { V3Display } from "./v3-display";
 
 /** 안전한 문자열 변환 — 객체가 들어와도 크래시하지 않음 */
 function safeString(value: unknown): string {
@@ -580,7 +583,7 @@ function V2Display({ analysis, openSections, toggleSection }: {
 // ── 메인 공유 컴포넌트 ──
 
 interface AnalysisDisplayProps {
-  analysis: SongAnalysis;
+  analysis: AnySongAnalysis;
 }
 
 export function AnalysisDisplay({ analysis }: AnalysisDisplayProps) {
@@ -595,13 +598,20 @@ export function AnalysisDisplay({ analysis }: AnalysisDisplayProps) {
     });
   };
 
-  const isV2 = (analysis.schema_version ?? 0) >= 2 && isV2Content(analysis.content);
-
-  if (isV2) {
-    return <V2Display analysis={analysis} openSections={openSections} toggleSection={toggleSection} />;
+  // V3 분기
+  if (isSongAnalysisV3(analysis)) {
+    return <V3Display analysis={analysis as SongAnalysisV3} />;
   }
 
-  return <V1LegacyDisplay analysis={analysis} openSections={openSections} toggleSection={toggleSection} />;
+  // V1/V2 레거시
+  const legacy = analysis as SongAnalysis;
+  const isV2 = (legacy.schema_version ?? 0) >= 2 && isV2Content(legacy.content);
+
+  if (isV2) {
+    return <V2Display analysis={legacy} openSections={openSections} toggleSection={toggleSection} />;
+  }
+
+  return <V1LegacyDisplay analysis={legacy} openSections={openSections} toggleSection={toggleSection} />;
 }
 
 // ── 관리자 모달용 간소화 표시 컴포넌트 ──

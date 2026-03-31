@@ -178,6 +178,7 @@ function InlineAnalysisForm({ onAnalyzed }: { onAnalyzed: (id: string, composer:
           composer: composer.trim(),
           title: title.trim(),
           instrument: getUserInstrument(),
+          analysisVersion: 3,
         }),
       });
       const result: AnalysisStartResponse = await res.json();
@@ -632,11 +633,6 @@ export default function AIAnalysisPage() {
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-xs text-gray-500">{piece.opus}</span>
                           {piece.key && <span className="text-xs text-gray-400">• {piece.key}</span>}
-                          {analysis?.overallDifficulty && (
-                            <span className={`text-xs px-1.5 py-0.5 rounded ${difficultyColors[analysis.overallDifficulty]}`}>
-                              {difficultyLabels[analysis.overallDifficulty]}
-                            </span>
-                          )}
                         </div>
                       </div>
                       {practice && (
@@ -698,9 +694,6 @@ export default function AIAnalysisPage() {
                                     <div className="flex-1 min-w-0">
                                       <p className="text-sm font-medium text-black truncate">{section.sectionName}</p>
                                       <div className="flex items-center gap-2 mt-0.5">
-                                        <span className={`text-[10px] px-1.5 py-0.5 rounded ${difficultyColors[section.technicalDifficulty]}`}>
-                                          {difficultyLabels[section.technicalDifficulty]}
-                                        </span>
                                         <span className="text-[10px] text-gray-400">{section.dynamics}</span>
                                       </div>
                                     </div>

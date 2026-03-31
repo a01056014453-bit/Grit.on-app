@@ -16,6 +16,8 @@ const RequestSchema = z.object({
   composer: z.string().min(1).max(100),
   title: z.string().min(1).max(200),
   instrument: z.string().max(50).optional().default("piano"),
+  /** V3 파이프라인 사용 — 3이면 V3 */
+  analysisVersion: z.literal(3).optional(),
 });
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
@@ -41,7 +43,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         { status: 400 },
       );
     }
-    const { composer, title, instrument } = parsed.data;
+    const { composer, title, instrument, analysisVersion } = parsed.data;
 
     // 캐시 확인 (schema_version >= 2인 결과만)
     const { data: cached } = await db
@@ -60,7 +62,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         } catch { return 1; }
       })();
 
-      if (cachedVersion >= 2) {
+      const requiredVersion = analysisVersion === 3 ? 3 : 2;
+      if (cachedVersion >= requiredVersion) {
         // 히스토리 기록 (테이블 없어도 무시)
         if (userId) {
           try {
@@ -104,6 +107,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
 
     // 새 job 생성
+    const composerNorm = composer.trim().split(/\s+/).pop()?.toLowerCase() ?? "";
+    const cacheKey = `${composer.trim().toLowerCase().replace(/\s+/g, "_")}__${title.trim().toLowerCase().replace(/\s+/g, "_")}`;
+
     const { data: job, error: jobError } = await db
       .from("analysis_jobs")
       .insert({
@@ -112,6 +118,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         title: title.trim(),
         instrument,
         status: "processing",
+        analysis_version: analysisVersion ?? 2,
+        requested_format: analysisVersion === 3 ? "v3" : "legacy",
+        composer_normalized: composerNorm,
+        canonical_title: title.trim(),
+        cache_key: cacheKey,
+        started_at: new Date().toISOString(),
       })
       .select("id")
       .single();
@@ -134,6 +146,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         composer: composer.trim(),
         title: title.trim(),
         instrument,
+        analysisVersion,
       })
     );
 
@@ -154,16 +167,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 }
 
 async function runAnalysisInBackground({
-  jobId, userId, composer, title, instrument,
+  jobId, userId, composer, title, instrument, analysisVersion,
 }: {
   jobId: string;
   userId: string | null;
   composer: string;
   title: string;
   instrument: string;
+  analysisVersion?: 3;
 }): Promise<void> {
   try {
-    console.log(`[Background] 시작: ${jobId} | ${composer} - ${title}`);
+    console.log(`[Background] 시작: ${jobId} | ${composer} - ${title} | v${analysisVersion ?? 2}`);
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://withsempre.com";
     const res = await fetch(`${baseUrl}/api/analyze-song-v2`, {
@@ -172,7 +186,10 @@ async function runAnalysisInBackground({
         "Content-Type": "application/json",
         "x-internal-call": process.env.INTERNAL_CALL_SECRET ?? "",
       },
-      body: JSON.stringify({ composer, title, instrument }),
+      body: JSON.stringify({
+        composer, title, instrument,
+        ...(analysisVersion === 3 ? { analysisVersion: 3 } : {}),
+      }),
     });
 
     const result = await res.json();
@@ -196,12 +213,19 @@ async function runAnalysisInBackground({
     }
 
     // job 완료
+    const resultSchemaVersion = result.data?.schema_version ?? (analysisVersion ?? 2);
     await db
       .from("analysis_jobs")
-      .update({ status: "done", result_id: resultId, updated_at: new Date().toISOString() })
+      .update({
+        status: "done",
+        result_id: resultId,
+        result_schema_version: resultSchemaVersion,
+        finished_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", jobId);
 
-    console.log(`[Background] 완료: ${jobId} → ${resultId}`);
+    console.log(`[Background] 완료: ${jobId} → ${resultId} | schema_version: ${resultSchemaVersion}`);
   } catch (error) {
     console.error(`[Background] 실패: ${jobId}`, error);
     await db
@@ -209,6 +233,7 @@ async function runAnalysisInBackground({
       .update({
         status: "failed",
         error_message: error instanceof Error ? error.message : "알 수 없는 오류",
+        finished_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
       .eq("id", jobId);

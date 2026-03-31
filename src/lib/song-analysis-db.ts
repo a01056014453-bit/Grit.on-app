@@ -1,5 +1,5 @@
 import { supabaseServer } from "@/lib/supabase-server";
-import type { SongAnalysis } from "@/types/song-analysis";
+import type { SongAnalysis, AnySongAnalysis, SongAnalysisV3 } from "@/types/song-analysis";
 import type { Json } from "@/types/database";
 
 const supabase = supabaseServer;
@@ -11,13 +11,29 @@ export function createCacheKey(composer: string, title: string): string {
   return `${normalizedComposer}__${normalizedTitle}`;
 }
 
-/** 공유 캐시에서 분석 데이터 조회 (작곡가 + 제목) — user_id 무관 */
+/** 공유 캐시에서 분석 데이터 조회 (작곡가 + 제목) — user_id 무관
+ *  1차: cache_key 정확 매칭 (is_active = true)
+ *  2차: ilike 매칭 (기존 호환)
+ *  3차: 부분 매칭 (성 + 제목 일부)
+ *  V3 데이터(schema_version === 3)는 SongAnalysisV3로 unwrap하여 반환 */
 export async function getCachedAnalysis(
   composer: string,
   title: string
-): Promise<SongAnalysis | null> {
+): Promise<AnySongAnalysis | null> {
   try {
-    // 정확한 매칭 시도 (case-insensitive)
+    // 1차: cache_key 정확 매칭
+    const cacheKey = createCacheKey(composer, title);
+    const { data: byKey } = await supabase
+      .from("song_analyses")
+      .select("*")
+      .eq("cache_key", cacheKey)
+      .eq("is_active", true)
+      .limit(1)
+      .single();
+
+    if (byKey) return reconstructAnalysis(byKey);
+
+    // 2차: ilike 매칭 (기존 호환)
     const { data, error } = await supabase
       .from("song_analyses")
       .select("*")
@@ -26,34 +42,30 @@ export async function getCachedAnalysis(
       .limit(1)
       .single();
 
-    if (error || !data) {
-      // 부분 매칭 시도 (작곡가 성만으로 검색)
-      const composerParts = composer.trim().split(" ");
-      const lastName = composerParts[composerParts.length - 1];
+    if (!error && data) return reconstructAnalysis(data);
 
-      const { data: partialData, error: partialError } = await supabase
-        .from("song_analyses")
-        .select("*")
-        .ilike("composer", `%${lastName}%`)
-        .ilike("title", `%${title.trim()}%`)
-        .limit(1)
-        .single();
+    // 3차: 부분 매칭 (작곡가 성 + 제목 일부)
+    const composerParts = composer.trim().split(" ");
+    const lastName = composerParts[composerParts.length - 1];
 
-      if (partialError || !partialData) {
-        return null;
-      }
+    const { data: partialData, error: partialError } = await supabase
+      .from("song_analyses")
+      .select("*")
+      .ilike("composer", `%${lastName}%`)
+      .ilike("title", `%${title.trim()}%`)
+      .limit(1)
+      .single();
 
-      return reconstructAnalysis(partialData);
-    }
+    if (partialError || !partialData) return null;
 
-    return reconstructAnalysis(data);
+    return reconstructAnalysis(partialData);
   } catch (err) {
     console.error("[Supabase] getCachedAnalysis error:", err);
     return null;
   }
 }
 
-/** DB row에서 SongAnalysis 객체 복원 */
+/** DB row에서 SongAnalysis 또는 SongAnalysisV3 객체 복원 */
 function reconstructAnalysis(row: {
   id: string;
   composer: string;
@@ -65,10 +77,27 @@ function reconstructAnalysis(row: {
   verification_status: string | null;
   created_at: string | null;
   updated_at: string | null;
-}): SongAnalysis {
+}): AnySongAnalysis {
   const content = row.content as Record<string, unknown>;
 
   if (content && content.meta && content.content) {
+    // V3 감지: schema_version === 3이고 content 안에 work_type이 있으면 V3
+    const schemaVer = content.schema_version;
+    if (schemaVer === 3) {
+      const v3Inner = content.content as Record<string, unknown>;
+      if (v3Inner && "work_type" in v3Inner) {
+        // V3 unwrap — 래퍼 content 안에 저장된 SongAnalysisV3를 꺼냄
+        const v3 = content as unknown as SongAnalysisV3;
+        return {
+          ...v3,
+          id: row.id,
+          created_at: row.created_at || v3.created_at,
+          updated_at: row.updated_at || v3.updated_at,
+        };
+      }
+    }
+
+    // V1/V2 복원
     const base = content as unknown as SongAnalysis;
     const c = base.content as unknown as Record<string, unknown>;
     const schemaVersion = base.schema_version || ((c && ('song_overview' in c || 'composer_life' in c)) ? 2 : 1);
@@ -98,6 +127,12 @@ function reconstructAnalysis(row: {
   };
 }
 
+/** 정규화 작곡가명 (검색/캐시 키용) */
+function normalizeComposer(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  return parts[parts.length - 1].toLowerCase();
+}
+
 /** 공유 캐시에 분석 데이터 저장 (user_id 없음) */
 export async function saveCachedAnalysis(
   analysis: SongAnalysis,
@@ -107,17 +142,68 @@ export async function saveCachedAnalysis(
   try {
     const composer = analysis.meta.composer;
     const title = analysis.meta.title;
+    const schemaVer = analysis.schema_version ?? 1;
 
-    // 이미 존재하는지 확인 (같은 곡)
-    const { data: existing } = await supabase
+    // V3 메타 추출 (래퍼 content 안에 V3가 들어있는 경우)
+    const contentAny = analysis.content as unknown as Record<string, unknown>;
+    const isV3Wrapped = schemaVer === 3 && contentAny && "meta" in contentAny;
+    const v3Work = isV3Wrapped
+      ? (contentAny as { meta?: { work?: Record<string, unknown> } }).meta?.work
+      : null;
+    const v3Content = isV3Wrapped
+      ? (contentAny as { content?: Record<string, unknown> }).content
+      : null;
+
+    // 새 컬럼 값 계산
+    const composerNormalized = v3Work?.composer_normalized as string
+      ?? normalizeComposer(composer);
+    const canonicalTitle = v3Work?.canonical_title as string ?? title;
+    const opusCatalogue = v3Work?.opus_catalogue as string ?? analysis.meta.opus ?? null;
+    const workType = v3Content?.work_type as string ?? null;
+    const cacheKey = createCacheKey(composer, title);
+    const contentFormat = schemaVer === 3 ? "v3_coaching" : "legacy";
+
+    // V3 전용 컬럼
+    const workNumber = v3Work?.work_number as number ?? null;
+    const sourceWorkId = v3Work?.source_work_id as string ?? null;
+
+    // 공통 새 컬럼
+    const newColumns = {
+      schema_version: schemaVer,
+      content_format: contentFormat,
+      composer_normalized: composerNormalized,
+      canonical_title: canonicalTitle,
+      opus_catalogue: opusCatalogue,
+      work_number: workNumber,
+      source_work_id: sourceWorkId,
+      work_type: workType,
+      cache_key: cacheKey,
+      is_active: true,
+    };
+
+    // 이미 존재하는지 확인 — cache_key 우선, 없으면 ilike fallback
+    let existingId: string | null = null;
+    const { data: byCacheKey } = await supabase
       .from("song_analyses")
       .select("id")
-      .ilike("composer", composer.trim())
-      .ilike("title", title.trim())
+      .eq("cache_key", cacheKey)
       .limit(1)
       .single();
 
-    if (existing) {
+    if (byCacheKey) {
+      existingId = byCacheKey.id;
+    } else {
+      const { data: byIlike } = await supabase
+        .from("song_analyses")
+        .select("id")
+        .ilike("composer", composer.trim())
+        .ilike("title", title.trim())
+        .limit(1)
+        .single();
+      if (byIlike) existingId = byIlike.id;
+    }
+
+    if (existingId) {
       const { error } = await supabase
         .from("song_analyses")
         .update({
@@ -127,14 +213,15 @@ export async function saveCachedAnalysis(
           difficulty_level: analysis.meta.difficulty_level,
           verification_status: analysis.verification_status,
           updated_at: new Date().toISOString(),
+          ...newColumns,
         })
-        .eq("id", existing.id);
+        .eq("id", existingId);
 
       if (error) {
         console.error("[Supabase] update error:", error.message);
       } else {
-        analysis.id = existing.id;
-        console.log(`[Supabase] Updated: ${composer} - ${title}`);
+        analysis.id = existingId;
+        console.log(`[Supabase] Updated: ${composer} - ${title} | v${schemaVer} | cache_key: ${cacheKey}`);
       }
     } else {
       const insertData: Record<string, unknown> = {
@@ -147,6 +234,7 @@ export async function saveCachedAnalysis(
         verification_status: analysis.verification_status,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        ...newColumns,
       };
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -162,7 +250,7 @@ export async function saveCachedAnalysis(
         if (inserted?.id) {
           analysis.id = inserted.id;
         }
-        console.log(`[Supabase] Saved: ${composer} - ${title} (id: ${inserted?.id})`);
+        console.log(`[Supabase] Saved: ${composer} - ${title} | v${schemaVer} | cache_key: ${cacheKey} (id: ${inserted?.id})`);
       }
     }
 
@@ -233,7 +321,7 @@ export async function deleteCachedAnalysis(id: string): Promise<boolean> {
 }
 
 /** 전체 분석 목록 조회 (어드민용) */
-export async function getAllCachedAnalyses(): Promise<SongAnalysis[]> {
+export async function getAllCachedAnalyses(): Promise<AnySongAnalysis[]> {
   try {
     const { data, error } = await supabase
       .from("song_analyses")
@@ -264,7 +352,7 @@ export async function getAllCachedAnalyses(): Promise<SongAnalysis[]> {
 // ============================================================
 
 /** 사용자의 분석 히스토리 조회 (개인 보관함) */
-export async function getUserAnalysisHistory(userId: string): Promise<SongAnalysis[]> {
+export async function getUserAnalysisHistory(userId: string): Promise<AnySongAnalysis[]> {
   if (!userId) return [];
 
   try {

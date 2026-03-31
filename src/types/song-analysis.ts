@@ -318,3 +318,54 @@ export function getVerificationLabel(status: VerificationStatus): string {
     default: return "미확인";
   }
 }
+
+// ════════════════════════════════════════════════════════
+// Legacy 별칭 — V3 마이그레이션 지원
+// ════════════════════════════════════════════════════════
+
+/** V1/V2 분석 타입 별칭 — 기존 SongAnalysis와 동일 (명시적 구분용) */
+export type LegacySongAnalysis = SongAnalysis;
+
+/** V1/V2 분석 콘텐츠 별칭 */
+export type LegacySongAnalysisContent = SongAnalysisContent | SongAnalysisContentV2;
+
+// ════════════════════════════════════════════════════════
+// V3 타입 re-export — import 경로 편의
+// ════════════════════════════════════════════════════════
+
+export type {
+  WorkType,
+  CanonicalWorkRef,
+  FactSource,
+  FactConfidence,
+  VerifiedFact,
+  WorkSummary,
+  TechnicalDemandCategory,
+  TechnicalDemand,
+  MusicalChallenge,
+  PracticePhase,
+  PracticeTask,
+  PracticePlan,
+  Pitfall,
+  RecommendedRecording,
+  MovementGuide,
+  CollectionPieceGuide,
+  AnalysisContentV3,
+  SongAnalysisMetaV3,
+  SongAnalysisV3,
+  AnySongAnalysis,
+  AnalyzeSongRequestV3,
+  AnalyzeSongResponseV3,
+  AnalyzeSongResponseAny,
+} from "./song-analysis-v3";
+
+export {
+  isSongAnalysisV3,
+  isLegacySongAnalysis,
+  isMultiMovementWork,
+  isCollectionWork,
+  isVariationSet,
+  hasMovementGuides,
+  hasCollectionGuides,
+  getAnalysisSchemaVersion,
+} from "./song-analysis-v3";

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { getUserAnalysisHistory } from "@/lib/song-analysis-db";
+import { isSongAnalysisV3 } from "@/types/song-analysis";
 
 export async function GET(request: NextRequest) {
   try {
@@ -25,14 +26,23 @@ export async function GET(request: NextRequest) {
 
     const analyses = await getUserAnalysisHistory(user.id);
 
-    // 클라이언트에 필요한 정보만 반환
-    const simplified = analyses.map((a) => ({
-      id: a.id,
-      composer: a.meta.composer,
-      title: a.meta.title,
-      difficulty: a.meta.difficulty_level,
-      updatedAt: a.updated_at,
-    }));
+    // 클라이언트에 필요한 정보만 반환 — V3와 legacy 분기
+    const simplified = analyses.map((a) => {
+      if (isSongAnalysisV3(a)) {
+        return {
+          id: a.id,
+          composer: a.meta.work.composer_display,
+          title: a.meta.work.canonical_title,
+          updatedAt: a.updated_at,
+        };
+      }
+      return {
+        id: a.id,
+        composer: a.meta.composer,
+        title: a.meta.title,
+        updatedAt: a.updated_at,
+      };
+    });
 
     return NextResponse.json({
       success: true,
