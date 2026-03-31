@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { trackEvent } from "@/lib/analytics";
 import { motion, AnimatePresence } from "framer-motion";
 import { RefreshCw, ChevronRight, Check, Loader2, FileText, Shield } from "lucide-react";
 import { isNicknameAvailable } from "@/lib/queries/profiles";
@@ -259,6 +260,7 @@ export default function ProfileSetupPage() {
     }
 
     setShowCelebration(true);
+    trackEvent({ event: "signup_completed", properties: { instrument: instruments[0] ?? "unknown", level: ageGroup } });
 
     // 이미 로그인된 상태면 홈으로, 아니면 로그인 페이지로
     const authStatus = localStorage.getItem("sempre-auth");

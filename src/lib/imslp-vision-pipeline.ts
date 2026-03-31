@@ -48,23 +48,79 @@ interface IMSLPParsedData {
 const IMSLP_API = "https://imslp.org/api.php";
 const UA = "Sempre/1.0 (classical music education; contact@withsempre.com)";
 
+/** 작곡가 약어 → IMSLP 풀네임 매핑 */
+const COMPOSER_MAP: Record<string, string> = {
+  "beethoven": "Beethoven, Ludwig van",
+  "mozart": "Mozart, Wolfgang Amadeus",
+  "bach": "Bach, Johann Sebastian",
+  "chopin": "Chopin, Frédéric",
+  "liszt": "Liszt, Franz",
+  "brahms": "Brahms, Johannes",
+  "schumann": "Schumann, Robert",
+  "schubert": "Schubert, Franz",
+  "debussy": "Debussy, Claude",
+  "ravel": "Ravel, Maurice",
+  "rachmaninoff": "Rachmaninoff, Sergei",
+  "prokofiev": "Prokofiev, Sergey",
+  "tchaikovsky": "Tchaikovsky, Pyotr",
+  "haydn": "Haydn, Joseph",
+  "mendelssohn": "Mendelssohn, Felix",
+  "grieg": "Grieg, Edvard",
+  "dvořák": "Dvořák, Antonín",
+  "dvorak": "Dvořák, Antonín",
+  "sibelius": "Sibelius, Jean",
+  "scriabin": "Scriabin, Aleksandr",
+  "bartók": "Bartók, Béla",
+  "bartok": "Bartók, Béla",
+  "stravinsky": "Stravinsky, Igor",
+  "shostakovich": "Shostakovich, Dmitry",
+};
+
+/** 별칭 제거 — "Appassionata", "Moonlight" 등 */
+function stripNickname(title: string): string {
+  return title
+    .replace(/['"""']/g, "")
+    .replace(/\b(Appassionata|Moonlight|Pathétique|Pathetique|Waldstein|Emperor|Spring|Kreutzer|Tempest|Hammerklavier|Les Adieux)\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Op 번호 추출 — "Op.10 No.4" → "Op.10" */
+function extractOpus(title: string): string | null {
+  const match = title.match(/Op\.?\s*(\d+)/i) ?? title.match(/BWV\s*(\d+)/i) ?? title.match(/K\.?\s*(\d+)/i) ?? title.match(/S\.?\s*(\d+)/i);
+  return match ? match[0] : null;
+}
+
 /**
- * IMSLP 검색 — 여러 검색 전략을 순차 시도
+ * IMSLP 검색 — 다단계 전략
  */
 async function searchIMSLP(composer: string, title: string): Promise<string | null> {
   const lastName = composer.trim().split(" ").pop() ?? composer;
+  const imslpComposer = COMPOSER_MAP[lastName.toLowerCase()] ?? null;
+  const opus = extractOpus(title);
+  const stripped = stripNickname(title);
 
-  // 검색 전략: 구체적 → 일반적 순서
+  // 검색 전략: 구체적 → 일반적
   const queries = [
-    `${title}, ${lastName}`,          // "Ballade No.1, Op.23, Chopin"
-    `${title} ${lastName}`,           // "Ballade No.1 Op.23 Chopin"
-    `${title.split(",")[0]} ${lastName}`, // "Ballade No.1 Chopin" (쉼표 이전만)
-    `${title.replace(/['"()]/g, "")} ${lastName}`, // 특수문자 제거
-  ];
+    // 1. IMSLP 페이지명 직접 매칭 시도
+    imslpComposer ? `${stripped.split(",")[0]} ${imslpComposer.split(",")[0]}` : null,
+    // 2. 원래 제목 + 작곡가 성
+    `${title} ${lastName}`,
+    // 3. 별칭 제거 + 작곡가 성
+    `${stripped} ${lastName}`,
+    // 4. 쉼표 이전만 + 작곡가 성
+    `${title.split(",")[0]} ${lastName}`,
+    // 5. Op 번호만 + 악기 + 작곡가 성
+    opus ? `${opus} ${lastName}` : null,
+    // 6. 숫자가 있으면 "No.X" 패턴으로
+    title.match(/No\.?\s*\d+/) ? `${title.match(/No\.?\s*\d+/)?.[0]} ${opus ?? ""} ${lastName}` : null,
+    // 7. 특수문자 전부 제거
+    `${title.replace(/['"(),.]/g, " ").replace(/\s+/g, " ")} ${lastName}`,
+  ].filter(Boolean) as string[];
 
   for (const q of queries) {
     try {
-      const url = `${IMSLP_API}?action=query&list=search&srsearch=${encodeURIComponent(q)}&srnamespace=0&srlimit=5&format=json`;
+      const url = `${IMSLP_API}?action=query&list=search&srsearch=${encodeURIComponent(q)}&srnamespace=0&srlimit=8&format=json`;
       const res = await fetch(url, {
         headers: { "User-Agent": UA },
         signal: AbortSignal.timeout(5000),
@@ -75,19 +131,23 @@ async function searchIMSLP(composer: string, title: string): Promise<string | nu
       const data = await res.json();
       const results: { title: string }[] = data?.query?.search ?? [];
 
-      // 작곡가 성이 포함되고 편곡/편집이 아닌 결과 찾기
+      // 필터: 작곡가 포함 + 편곡 제외
       const filtered = results.filter((r) => {
         const t = r.title.toLowerCase();
         return t.includes(lastName.toLowerCase()) &&
           !t.includes("arrangement") &&
           !t.includes("number score") &&
-          !t.includes("transcription");
+          !t.includes("transcription") &&
+          !t.includes("simplified");
       });
 
-      if (filtered.length > 0) return filtered[0].title;
-      if (results.length > 0 && results[0].title.toLowerCase().includes(lastName.toLowerCase())) {
-        return results[0].title;
+      // Op 번호가 있으면 Op 매칭 우선
+      if (opus && filtered.length > 0) {
+        const opusMatch = filtered.find((r) => r.title.includes(opus.replace(/\s/g, "")));
+        if (opusMatch) return opusMatch.title;
       }
+
+      if (filtered.length > 0) return filtered[0].title;
     } catch {
       continue;
     }
@@ -204,7 +264,24 @@ function parseMovements(
     }
   }
 
-  // 패턴 3: "4 movements" 텍스트에서 수 추출
+  // 패턴 3: "Mov./Sec's" 테이블에서 파싱 (IMSLP General Information)
+  if (details.length === 0) {
+    // |Movements/SectionsHeader = 3 movements:\n# Allegro\n# Andante\n# Rondo
+    const headerMatch = wt.match(/Movements\/Sections\w*\s*=\s*([\s\S]*?)(?:\n\||\n\}\})/i);
+    if (headerMatch) {
+      const block = headerMatch[1];
+      const lines = block.split("\n").map((l) => l.trim()).filter(Boolean);
+      for (const line of lines) {
+        // "# Allegro con brio" 또는 "I. Allegro" 형식
+        const cleaned = line.replace(/^[#*\s\d.IVX]+/, "").replace(/'{2,3}/g, "").trim();
+        if (cleaned && isTempoMarking(cleaned)) {
+          details.push({ number: details.length + 1, tempo_marking: cleaned, key: null, time_signature: null });
+        }
+      }
+    }
+  }
+
+  // 패턴 4: "4 movements" 텍스트에서 수만 추출
   if (details.length === 0 && movementsField) {
     const numMatch = movementsField.match(/(\d+)\s*movement/i);
     if (numMatch) {
