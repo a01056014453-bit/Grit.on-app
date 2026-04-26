@@ -119,9 +119,17 @@ export default function AnalysisDetailPage() {
           }
         } catch { /* 무시 */ }
 
-        const res = await fetch(`/api/song-analysis/${id}${queryParams}`);
+        const res = await fetch(`/api/song-analysis/${id}${queryParams}`, {
+          credentials: "include",
+        });
         if (!res.ok) {
-          if (!analysis) setError("분석 데이터를 찾을 수 없습니다.");
+          if (!analysis) {
+            setError(
+              res.status === 404
+                ? "분석 데이터를 찾을 수 없습니다."
+                : "분석 데이터를 불러오는 중 오류가 발생했습니다."
+            );
+          }
           return;
         }
         const data: AnySongAnalysis = await res.json();

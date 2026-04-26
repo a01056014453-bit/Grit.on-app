@@ -466,16 +466,20 @@ export default function AIAnalysisPage() {
 
       // 분석 목록
       try {
-        const res = await fetch("/api/song-analysis/list");
-        if (res.ok) {
+        const res = await fetch("/api/analyses", { credentials: "include" });
+        if (res.status === 401) {
+          setUserAnalyses([]);
+        } else if (res.ok) {
           const { data: dbList } = await res.json();
           if (dbList) {
             setUserAnalyses(
-              (dbList as { id: string; composer: string; title: string; created_at: string }[]).map(
-                (item) => ({ id: item.id, composer: item.composer, title: item.title, analyzedAt: item.created_at || "" })
+              (dbList as { id: string; composer: string; title: string; updatedAt: string }[]).map(
+                (item) => ({ id: item.id, composer: item.composer, title: item.title, analyzedAt: item.updatedAt || "" })
               )
             );
           }
+        } else {
+          setUserAnalyses([]);
         }
       } catch { setUserAnalyses([]); }
 

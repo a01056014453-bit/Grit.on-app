@@ -390,3 +390,160 @@ export async function getScoreFactsFromIMSLP(
 
   return { facts, lockedFactsBlock, imslpUrl: parsed.pageUrl };
 }
+
+// ════════════════════════════════════════════════════════
+// V3 전용: 확장 IMSLP 메타데이터 (텍스트 블록으로 반환)
+// ════════════════════════════════════════════════════════
+
+export interface ImslpRichMetadata {
+  pageTitle: string;
+  pageUrl: string;
+  key: string | null;
+  opus: string | null;
+  year: string | null;
+  dedication: string | null;
+  altTitle: string | null;
+  instrumentation: string | null;
+  avgDuration: string | null;
+  style: string | null;
+  movements: Array<{
+    number: number;
+    tempo: string | null;
+    key: string | null;
+    subtitle: string | null;
+    catalogueId: string | null;
+  }>;
+}
+
+/** wikitext에서 {{Key|Eb}} → "E-flat major", {{Key|f#}} → "F-sharp minor" */
+function resolveKeyTemplate(text: string): string {
+  return text.replace(/\{\{Key\|([^}]+)\}\}/gi, (_match, inner) => {
+    const parts = inner.split("|").map((p: string) => p.trim());
+    const note = parts[0];
+    const mode = parts[1] ?? (note === note.toLowerCase() ? "minor" : "major");
+    const noteName = capitalize(note.replace("#", "-sharp").replace("b", "-flat"));
+    return `${noteName} ${mode}`;
+  });
+}
+
+/** IMSLP 페이지에서 확장 메타데이터 추출 */
+async function parseImslpRichMetadata(pageTitle: string): Promise<ImslpRichMetadata | null> {
+  try {
+    const url = `${IMSLP_API}?action=parse&page=${encodeURIComponent(pageTitle)}&prop=wikitext&format=json`;
+    const res = await fetch(url, {
+      headers: { "User-Agent": UA },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return null;
+
+    const data = await res.json();
+    const wt: string = data?.parse?.wikitext?.["*"] ?? "";
+    if (!wt || wt.length < 50) return null;
+
+    const pageUrl = `https://imslp.org/wiki/${encodeURIComponent(pageTitle.replace(/ /g, "_"))}`;
+
+    // 기본 필드 추출
+    const key = extractKey(wt);
+    const opus = extractField(wt, "Opus/Catalogue Number");
+    const year = extractField(wt, "Year/Date of Composition") ?? extractField(wt, "Year of Composition");
+    const dedication = extractField(wt, "Dedication");
+    const altTitle = extractField(wt, "Alternative. Title");
+    const instrumentation = extractField(wt, "Instrumentation");
+    const avgDuration = extractField(wt, "Average Duration");
+    const style = extractField(wt, "Piece Style");
+
+    // 악장/섹션 상세 파싱 (템포, 조성, 마디 수, MWV 등)
+    const movRaw = wt.match(/Movements\/Sections\w*\s*=\s*([\s\S]*?)(?:\n\||\n\}\})/i);
+    const movements: ImslpRichMetadata["movements"] = [];
+
+    if (movRaw) {
+      const block = movRaw[1];
+      const lines = block.split("\n").filter((l) => l.trim().startsWith("#"));
+
+      for (const line of lines) {
+        let cleaned = line.replace(/^#\s*/, "").trim();
+        // Key 템플릿 → 텍스트
+        const keyResolved = resolveKeyTemplate(cleaned);
+        // 조성 추출: "(F-sharp minor, ..." 또는 Key 템플릿에서
+        const keyMatch = keyResolved.match(/\(([A-G][a-z-]*\s+(?:major|minor))/i);
+        const movKey = keyMatch ? keyMatch[1] : null;
+        // MWV/BWV 등 카탈로그 ID
+        const catMatch = cleaned.match(/\{\{(?:MWV|BWV|K|D|S|Op)\|[^}]+\}\}/);
+        const catalogueId = catMatch ? catMatch[0].replace(/\{\{|\}\}/g, "").replace(/\|/g, " ") : null;
+        // 부제 (이탈릭): ''(La Fileuse)''
+        const subtitleMatch = cleaned.match(/''(\([^)]+\))''/);
+        const subtitle = subtitleMatch ? subtitleMatch[1].replace(/[()]/g, "") : null;
+        // 템포: 첫 번째 단어들 (Key/MWV/bars 부분 제거)
+        let tempo = cleaned
+          .replace(/<br\s*\/?>/gi, " ")
+          .replace(/\{\{[^}]+\}\}/g, "")
+          .replace(/\([^)]*\)/g, "")
+          .replace(/''[^']*''/g, "")
+          .replace(/,\s*$/, "")
+          .trim();
+        // 첫 콤마까지만
+        tempo = tempo.split(",")[0].trim();
+        if (!tempo || tempo.length > 60) tempo = null;
+
+        movements.push({
+          number: movements.length + 1,
+          tempo: tempo || null,
+          key: movKey,
+          subtitle,
+          catalogueId,
+        });
+      }
+    }
+
+    return { pageTitle, pageUrl, key, opus, year, dedication, altTitle, instrumentation, avgDuration, style, movements };
+  } catch (e) {
+    console.error("[IMSLP Rich] 파싱 실패:", e);
+    return null;
+  }
+}
+
+/** V3용: IMSLP 메타데이터를 프롬프트 주입용 텍스트 블록으로 변환 */
+export async function getImslpRichBlock(
+  composer: string,
+  title: string,
+): Promise<{ block: string; metadata: ImslpRichMetadata | null }> {
+  const pageTitle = await searchIMSLP(composer, title);
+  if (!pageTitle) return { block: "", metadata: null };
+
+  const meta = await parseImslpRichMetadata(pageTitle);
+  if (!meta) return { block: "", metadata: null };
+
+  const lines: string[] = [
+    `[📋 IMSLP 확인된 메타데이터 — 아래 정보는 사실이므로 반드시 반영할 것]`,
+    `출처: ${meta.pageUrl}`,
+    `작품: ${meta.pageTitle.replace(/\s*\([^)]*\)\s*$/, "")}`,
+  ];
+
+  if (meta.altTitle) lines.push(`영문 제목: ${meta.altTitle}`);
+  if (meta.opus) lines.push(`작품번호: ${meta.opus}`);
+  if (meta.key) lines.push(`조성: ${meta.key}`);
+  if (meta.year) lines.push(`작곡 연도: ${meta.year}`);
+  if (meta.dedication) lines.push(`헌정: ${meta.dedication}`);
+  if (meta.instrumentation) lines.push(`악기: ${meta.instrumentation}`);
+  if (meta.avgDuration) lines.push(`연주 시간: ${meta.avgDuration}`);
+  if (meta.style) lines.push(`스타일: ${meta.style}`);
+
+  if (meta.movements.length > 0) {
+    lines.push(`\n악장/섹션 (${meta.movements.length}개):`);
+    for (const m of meta.movements) {
+      const parts = [`  ${m.number}.`];
+      if (m.tempo) parts.push(m.tempo);
+      if (m.subtitle) parts.push(`"${m.subtitle}"`);
+      if (m.key) parts.push(`[${m.key}]`);
+      if (m.catalogueId) parts.push(`{${m.catalogueId}}`);
+      lines.push(parts.join(" "));
+    }
+    lines.push(`\n🚨 위 악장/섹션 정보는 IMSLP에서 확인된 사실입니다.`);
+    lines.push(`각 악장/소품의 고유한 특징을 개별적으로 분석하십시오.`);
+    lines.push(`조성과 마디 수가 확인된 경우 반드시 활용하십시오.`);
+  }
+
+  console.log(`[IMSLP Rich] 완료: ${meta.movements.length}개 악장, key=${meta.key}, year=${meta.year}`);
+
+  return { block: lines.join("\n"), metadata: meta };
+}

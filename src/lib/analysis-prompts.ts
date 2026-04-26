@@ -289,7 +289,7 @@ JSON만 출력:
   "song_overview": {
     "title_original": "원어 정식 제목",
     "title_korean": "한국어 제목 (없으면 빈 문자열)",
-    "composition_period": "작곡·출판 시기 (확인된 것만)",
+    "composition_period": "작곡·초연 시기 상세. 반드시 포함: (1) 작곡 연도와 출판 연도, (2) 작곡 당시 작곡가의 구체적 상황(거주지, 인간관계, 특정 계기), (3) 헌정 정보. 일반론 금지 — 이 작품에만 해당하는 사실만 서술.",
     "tempo_marking": "모든 악장/소품 나열 (확인된 것만)",
     "genre": "장르적 성격 서술",
     "form": "전체 형식 개요",
@@ -310,8 +310,17 @@ export function createPhase2APrompt(
   instrument: string,
   lockedFactsBlock: string,
   referenceData: string,
-  academicInjection: string = ""
+  academicInjection: string = "",
+  contextData: string = "",
 ): string {
+  const contextSection = contextData
+    ? `\n\n[🔍 역사적·인문학적 맥락 데이터 — 반드시 이 내용을 composition_background와 at_composition에 반영하십시오]
+${contextData}
+
+🚨 위 맥락 데이터에서 구체적인 사실(장소, 인물, 사건, 날짜)을 반드시 인용하십시오.
+"깊은 감정", "종교적 주제" 같은 일반론 금지. 이 작곡가, 이 시기, 이 작품에만 해당하는 구체적 내용만 서술할 것.`
+    : "";
+
   return `
 당신은 음악학 박사이자 ${instrument} 전공 연주자입니다.
 
@@ -325,6 +334,7 @@ ${academicInjection ? `[📚 학술 자료]\n${academicInjection}` : ""}
 
 [🔍 레퍼런스 데이터]
 ${referenceData.slice(0, 15000)}
+${contextSection}
 
 아래 10개 질문에 답하십시오. 확인된 사실만. 각 3-6문장.
 추상적 표현 금지. 구체적 음악 언어: 음정, 리듬 패턴, 화성 진행, 형식 구조.
@@ -414,7 +424,8 @@ export function createPhase2Prompt(
   opus: string,
   verifiedMeta?: { composer: string; title: string; opus: string; key: string },
   referenceData?: string,
-  instrument?: string
+  instrument?: string,
+  contextData?: string,
 ): string {
   // 기존 호출부 호환 — Phase 2-A 프롬프트만 반환
   const inst = instrument ?? "piano";
@@ -424,7 +435,7 @@ export function createPhase2Prompt(
     verifiedMeta?.opus ?? opus,
     verifiedMeta?.key ?? ""
   );
-  return createPhase2APrompt(composer, title, opus, inst, lockedBlock, referenceData ?? "");
+  return createPhase2APrompt(composer, title, opus, inst, lockedBlock, referenceData ?? "", "", contextData ?? "");
 }
 
 // ════════════════════════════════════════════════════════

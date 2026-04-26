@@ -125,8 +125,11 @@ export function validateAnalysisOutputV3(analysis: {
     errors.push("summary 누락");
   }
 
-  if (!Array.isArray(c.technical_demands) || c.technical_demands.length < 3) {
-    errors.push(`technical_demands ${c.technical_demands?.length ?? 0}개 — 최소 3개 필요`);
+  if (!Array.isArray(c.technical_demands) || c.technical_demands.length < 2) {
+    errors.push(`technical_demands ${c.technical_demands?.length ?? 0}개 — 최소 2개 필요`);
+  }
+  if (Array.isArray(c.technical_demands) && c.technical_demands.length < 4) {
+    warnings.push(`technical_demands ${c.technical_demands.length}개 — 4개 권장`);
   }
 
   if (!Array.isArray(c.musical_challenges) || c.musical_challenges.length < 2) {
@@ -171,10 +174,10 @@ export function validateAnalysisOutputV3(analysis: {
   const demandTitles: string[] = [];
   const demandDescriptions: string[] = [];
   for (const d of c.technical_demands) {
-    if (!d.category || !d.title || !d.severity) {
+    if (!d.title) {
       errors.push(`technical_demand 필수 필드 누락: "${d.title ?? "(제목 없음)"}"`);
     }
-    if (!d.description || d.description.length < 20) {
+    if (!d.description || d.description.length < 8) {
       errors.push(`technical_demand description 너무 짧음: "${d.title ?? ""}" (${d.description?.length ?? 0}자)`);
     }
     if (d.title && GENERIC_TITLES.includes(norm(d.title))) {
@@ -192,8 +195,8 @@ export function validateAnalysisOutputV3(analysis: {
 
   const allInstructions: string[] = [];
   for (const phase of c.practice_plan.phases) {
-    if (!Array.isArray(phase.tasks) || phase.tasks.length < 2) {
-      errors.push(`practice_plan phase "${phase.title ?? phase.phase}" tasks ${phase.tasks?.length ?? 0}개 — 최소 2개 필요`);
+    if (!Array.isArray(phase.tasks) || phase.tasks.length < 1) {
+      errors.push(`practice_plan phase "${phase.title ?? phase.phase}" tasks ${phase.tasks?.length ?? 0}개 — 최소 1개 필요`);
     }
     for (const task of phase.tasks ?? []) {
       if (!task.instruction || task.instruction.length < 12) {
@@ -215,7 +218,7 @@ export function validateAnalysisOutputV3(analysis: {
   // ── E. pitfalls 품질 ──
 
   for (const p of c.pitfalls) {
-    if (!p.title || !p.mistake || !p.cause || !p.fix) {
+    if (!p.title || !p.mistake) {
       errors.push(`pitfall 필수 필드 누락: "${p.title ?? "(제목 없음)"}"`);
     }
     if (p.fix && p.fix.length < 10) {

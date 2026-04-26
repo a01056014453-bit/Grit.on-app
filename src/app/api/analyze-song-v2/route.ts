@@ -19,6 +19,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import {
   createReferenceSearchPrompt,
@@ -40,8 +41,14 @@ import {
   createV3GuidesPrompt,
   inferWorkTypeHint,
 } from "@/lib/analysis-prompts-v3";
+import {
+  buildV3SourceBundle,
+  buildCoachingSourceBlock,
+  buildGuidesSourceBlock,
+  type V3SourceBundle,
+} from "@/lib/phase0-v3";
 import { searchAcademicSources } from "@/lib/phase0-academic";
-import { getScoreFactsFromIMSLP } from "@/lib/imslp-vision-pipeline";
+import { getScoreFactsFromIMSLP, getImslpRichBlock } from "@/lib/imslp-vision-pipeline";
 import { getCachedAnalysis, saveCachedAnalysis, addToUserHistory } from "@/lib/song-analysis-db";
 import { validateAnalysisOutput, validateAnalysisOutputV3 } from "@/lib/analysis-validation";
 import { checkRateLimit } from "@/lib/rate-limiters";
@@ -165,7 +172,121 @@ async function callPerplexity(prompt: string, maxTokens = 3000): Promise<string 
 }
 
 // ════════════════════════════════════════════════════════
-// V3 전용: structured output 헬퍼
+// Claude 호출 헬퍼
+// ════════════════════════════════════════════════════════
+
+function getAnthropicClient(): Anthropic {
+  return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+}
+
+const CLAUDE_SYSTEM_PROMPT = `당신은 클래식 음악 연습 코치이자 음악학 박사입니다.
+
+🚨 출력 규칙:
+- 반드시 유효한 JSON만 출력하십시오. JSON 외 텍스트, 마크다운, 설명 절대 금지.
+- 모든 텍스트는 한국어로 작성하십시오. 음악 용어·고유명사만 원어 병기 가능.
+- 확인되지 않은 마디 번호, 화성, 연도를 추측하지 마십시오.
+- "베토벤은 고전과 낭만을 잇는 다리" 같은 백과사전 문장 금지.
+- "팔 무게를 사용하세요", "프레이즈를 살려서" 같은 범용 조언 금지.
+- "손목 이완", "성부 간 밸런스", "다이내믹 조절" 같은 어떤 곡에나 적용되는 일반 조언 금지.
+- 이 곡의 어떤 구간에서 어떤 음형/패턴 때문에 어려운지 특정하여 서술하십시오.
+- 반복 금지. 모든 항목의 내용이 서로 달라야 합니다.`;
+
+/** Claude 호출 → JSON 파싱 */
+async function callClaudeJson(
+  userPrompt: string,
+  maxTokens: number,
+  temperature: number,
+  phase: string,
+): Promise<Record<string, unknown>> {
+  const client = getAnthropicClient();
+  const res = await client.messages.create({
+    model: "claude-sonnet-4-20250514",
+    max_tokens: maxTokens,
+    temperature,
+    system: CLAUDE_SYSTEM_PROMPT,
+    messages: [{ role: "user", content: userPrompt }],
+  });
+
+  const textBlock = res.content.find((b) => b.type === "text");
+  const raw = textBlock?.type === "text" ? textBlock.text : "";
+  if (!raw) {
+    throw new Error(`[${phase}] Claude 응답 비어있음`);
+  }
+
+  try {
+    // JSON 블록 추출 (마크다운 코드블록 또는 순수 JSON)
+    const jsonMatch = raw.match(/```json\s*([\s\S]*?)```/) ?? raw.match(/(\{[\s\S]*\})/);
+    const jsonStr = jsonMatch ? jsonMatch[1].trim() : raw.trim();
+    return JSON.parse(jsonStr) as Record<string, unknown>;
+  } catch {
+    console.error(`[${phase}] Claude JSON 파싱 실패:`, raw.slice(0, 300));
+    throw new Error(`[${phase}] Claude JSON 파싱 실패`);
+  }
+}
+
+/** Perplexity로 분석 쿼리 → 자유 텍스트 결과 */
+async function callPerplexityAnalysis(
+  prompt: string,
+  maxTokens = 4000,
+): Promise<string> {
+  const client = getPerplexityClient();
+  if (!client) return "";
+  try {
+    const res = await client.chat.completions.create({
+      model: "sonar-pro",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: maxTokens,
+    });
+    return res.choices[0]?.message?.content ?? "";
+  } catch (e) {
+    console.error("[Perplexity Analysis] 호출 실패:", e instanceof Error ? e.message : e);
+    return "";
+  }
+}
+
+/** Perplexity 분석 → JSON 파싱. 실패 시 GPT로 JSON 수리 */
+async function callPerplexityJson(
+  prompt: string,
+  maxTokens: number,
+  phase: string,
+): Promise<Record<string, unknown>> {
+  const raw = await callPerplexityAnalysis(
+    `${V3_SYSTEM_PROMPT}\n\n${prompt}`,
+    maxTokens,
+  );
+  if (!raw) throw new Error(`[${phase}] Perplexity 응답 비어있음`);
+
+  // JSON 파싱 시도
+  try {
+    const jsonMatch = raw.match(/```json\s*([\s\S]*?)```/) ?? raw.match(/(\{[\s\S]*\})/);
+    const jsonStr = jsonMatch ? jsonMatch[1].trim() : raw.trim();
+    return JSON.parse(jsonStr) as Record<string, unknown>;
+  } catch {
+    // JSON 파싱 실패 → GPT로 수리만
+    console.warn(`[${phase}] Perplexity JSON 파싱 실패, GPT 수리 시도`);
+    try {
+      const openai = getOpenAI();
+      const fix = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: "Fix the following text into valid JSON. Return ONLY the JSON object, nothing else." },
+          { role: "user", content: raw.slice(0, 15000) },
+        ],
+        max_tokens: maxTokens,
+        temperature: 0,
+        response_format: { type: "json_object" },
+      });
+      const fixed = fix.choices[0]?.message?.content ?? "";
+      return JSON.parse(fixed) as Record<string, unknown>;
+    } catch (e2) {
+      console.error(`[${phase}] GPT JSON 수리도 실패:`, e2);
+      throw new Error(`[${phase}] JSON 파싱 실패`);
+    }
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// V3 전용: structured output 헬퍼 (Legacy GPT — V2용)
 // ════════════════════════════════════════════════════════
 
 const V3_SYSTEM_PROMPT = `당신은 클래식 음악 연습 코치이자 음악학 박사입니다.
@@ -174,11 +295,19 @@ const V3_SYSTEM_PROMPT = `당신은 클래식 음악 연습 코치이자 음악�
 - 반드시 유효한 JSON만 출력하십시오. JSON 외 텍스트, 마크다운, 설명 절대 금지.
 - 모든 텍스트는 한국어로 작성하십시오. 음악 용어·고유명사만 원어 병기 가능.
 - 확인되지 않은 마디 번호, 화성, 연도를 추측하지 마십시오.
-- "베토벤은 고전과 낭만을 잇는 다리" 같은 백과사전 문장 금지.
-- "팔 무게를 사용하세요", "프레이즈를 살려서" 같은 범용 조언 금지.
-- 이 곡에 특화된 구체적 연습 코칭만 작성하십시오.
 - 난이도(difficulty)나 난이도 라벨은 생성하지 마십시오.
-- 반복 금지. 모든 항목의 내용이 서로 달라야 합니다.`;
+
+🚨 품질 규칙 — 위반 시 분석 실패:
+- "손목 경직", "손목 이완", "성부 간 밸런스", "다이내믹 조절", "감정적 깊이" 같은 범용 표현 절대 금지.
+- "팔 무게를 사용하세요", "프레이즈를 살려서", "감정을 담아서" 같은 어떤 곡에도 적용되는 조언 금지.
+- 모든 항목은 이 곡의 특정 소품/악장의 특정 구간에서 나타나는 고유한 문제를 다뤄야 함.
+- 반복 금지. 모든 항목의 내용이 서로 달라야 합니다.
+- 모음곡/소품집이면 반드시 모든 소품을 빠짐없이 다루십시오. 일부만 다루면 실패.
+
+🚨 전문가 분석 결과가 제공되면:
+- 전문가 분석의 구체적 내용(특정 소품, 특정 음형, 특정 패시지)을 반드시 반영하십시오.
+- 전문가 분석을 무시하고 자체적으로 범용 내용을 생성하지 마십시오.
+- 전문가 분석에 없는 빈 자리를 "손목 이완" 같은 범용 조언으로 채우지 마십시오.`;
 
 /** V3 전용 GPT 호출 — response_format: json_object + system prompt */
 async function callGPTJson(
@@ -413,8 +542,9 @@ export async function POST(request: NextRequest) {
     const isAdmin = isInternalCall || (authUserId ? getAdminIds().has(authUserId) : false);
     const proUser = isAdmin || await isProUser(authUserId);
 
-    // ── Rate Limit (어드민 무제한, Pro 하루5회, Free 하루1회) ──
-    if (!isAdmin) {
+    // ── Rate Limit (어드민 무제한, Pro 하루5회, Free 하루1회, 로컬 dev 무제한) ──
+    const isDev = process.env.NODE_ENV === "development";
+    if (!isAdmin && !isDev) {
       const identifier = getClientIdentifier(request);
       const tier = proUser ? "pro" : "free";
       const allowed = checkRateLimit(identifier, tier);
@@ -439,6 +569,7 @@ export async function POST(request: NextRequest) {
     }
     const { composer, title, instrument, forceRefresh, analysisVersion } = parsed.data;
     const useV3 = analysisVersion === 3;
+    console.log(`[Analyze] parsed | composer=${composer} | title=${title} | analysisVersion=${analysisVersion ?? "undefined"} | useV3=${useV3} | internal=${isInternalCall} | admin=${isAdmin}`);
 
     // ── 캐시 확인 ──
     // 어드민: 항상 재분석 / Pro: forceRefresh 허용 / Free: 캐시 강제
@@ -466,42 +597,55 @@ export async function POST(request: NextRequest) {
     const openai = getOpenAI();
 
     // ══════════════════════════════════════════════════════
-    // Phase 0: 3개 병렬
+    // Phase 0: academic + vision 공통 + Perplexity V3/V2 분기
     // ══════════════════════════════════════════════════════
 
-    console.log("[Phase 0] 병렬 시작");
+    console.log("[Phase 0] 시작");
 
-    const [perplexityResult, academicResult, visionResult] = await Promise.allSettled([
-      // Perplexity
-      (async () => {
-        const prompt = createReferenceSearchPrompt(composer, title, instrument);
-        return await callPerplexity(prompt) ?? "";
-      })(),
-      // 학술 논문
+    const [academicResult, visionResult] = await Promise.allSettled([
       searchAcademicSources(composer, title).catch((e) => {
         console.warn("[Academic] 실패:", e);
         return { papers: [], has_academic_source: false, primary_paper: null, academic_prompt_injection: "" };
       }),
-      // IMSLP Vision
       getScoreFactsFromIMSLP(composer, title, process.env.OPENAI_API_KEY!).catch((e) => {
         console.warn("[Vision] 실패:", e);
         return { facts: null, lockedFactsBlock: "", imslpUrl: null };
       }),
     ]);
 
-    const referenceDataFull = perplexityResult.status === "fulfilled" ? perplexityResult.value : "";
-    // Phase 1/2에는 전체, Phase 3/4에는 압축 (입력 토큰 절감)
-    const referenceData = referenceDataFull;
-    const referenceDataCompact = referenceDataFull.slice(0, 8000);
     const academic = academicResult.status === "fulfilled" ? academicResult.value : { academic_prompt_injection: "", papers: [] };
     const vision = visionResult.status === "fulfilled" ? visionResult.value : { facts: null, lockedFactsBlock: "", imslpUrl: null };
-
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const academicInjection = (academic as any).academic_prompt_injection ?? "";
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const paperCount = (academic as any).papers?.length ?? 0;
 
-    console.log(`[Phase 0] 완료 — 논문: ${paperCount}개 | Vision: ${vision.facts ? "성공" : "없음"}`);
+    // V3: 구조화된 소스 번들 (Perplexity 3쿼리 + composer_resources DB)
+    let v3Bundle: V3SourceBundle | null = null;
+    let referenceData = "";
+    let referenceDataCompact = "";
+
+    if (useV3) {
+      v3Bundle = await buildV3SourceBundle({
+        composer, title, instrument,
+        perplexityApiKey: process.env.PERPLEXITY_API_KEY ?? "",
+        openaiApiKey: process.env.OPENAI_API_KEY ?? "",
+        academicInjection,
+        hasPapers: paperCount > 0,
+      });
+      referenceData = v3Bundle.perplexity.raw;
+      referenceDataCompact = referenceData.slice(0, 8000);
+      console.log(`[Phase 0] V3 번들 완료 — curated:${v3Bundle.curated.resourceCount}건 | 논문:${paperCount}개 | Vision:${vision.facts ? "성공" : "없음"}`);
+    } else {
+      // V2: 기존 단일 Perplexity 쿼리
+      const perplexityResult = await (async () => {
+        const prompt = createReferenceSearchPrompt(composer, title, instrument);
+        return await callPerplexity(prompt) ?? "";
+      })().catch(() => "");
+      referenceData = perplexityResult;
+      referenceDataCompact = referenceData.slice(0, 8000);
+      console.log(`[Phase 0] V2 완료 — 논문:${paperCount}개 | Vision:${vision.facts ? "성공" : "없음"}`);
+    }
 
     // ══════════════════════════════════════════════════════
     // V3 파이프라인 분기
@@ -510,8 +654,9 @@ export async function POST(request: NextRequest) {
     if (useV3) {
       const v3Result = await runV3Pipeline({
         composer, title, instrument,
-        referenceData, referenceDataCompact,
-        vision, academicInjection,
+        bundle: v3Bundle!,
+        referenceData,
+        vision,
         openai, isAdmin,
         authUserId,
         startTime,
@@ -559,14 +704,18 @@ export async function POST(request: NextRequest) {
         console.error("[DB] V3 저장 실패:", e)
       );
 
-      if (authUserId && v3Analysis.id && !isAdmin) {
-        await addToUserHistory(authUserId, v3Analysis.id).catch((e) =>
+      // saveCachedAnalysis가 v3ForDb.id를 DB의 실제 UUID로 교체함 → v3Analysis에도 반영
+      v3Analysis.id = v3ForDb.id;
+      console.log(`[V3] saved with DB id: ${v3ForDb.id}`);
+
+      if (authUserId && v3ForDb.id && !isAdmin) {
+        await addToUserHistory(authUserId, v3ForDb.id).catch((e) =>
           console.error("[DB] V3 히스토리 저장 실패:", e)
         );
       }
 
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-      console.log(`[V3 Analysis DONE] ${composer} - ${title} | ${elapsed}s | admin: ${isAdmin}`);
+      console.log(`[V3 Analysis DONE] ${composer} - ${title} | ${elapsed}s | admin: ${isAdmin} | id: ${v3ForDb.id}`);
 
       return NextResponse.json({ success: true, data: v3Analysis, cached: false });
     }
@@ -798,14 +947,13 @@ interface V3PipelineInput {
   composer: string;
   title: string;
   instrument: string;
+  bundle: V3SourceBundle;
   referenceData: string;
-  referenceDataCompact: string;
   vision: {
     facts: { locked: { overall_key: string | null; movements: unknown[] }; confidence: string } | null;
     lockedFactsBlock: string;
     imslpUrl: string | null;
   };
-  academicInjection: string;
   openai: OpenAI;
   isAdmin: boolean;
   authUserId: string | null;
@@ -821,8 +969,8 @@ interface V3PipelineResult {
 async function runV3Pipeline(input: V3PipelineInput): Promise<V3PipelineResult> {
   const {
     composer, title, instrument,
-    referenceData, referenceDataCompact,
-    vision, academicInjection,
+    bundle, referenceData,
+    vision,
     openai,
   } = input;
 
@@ -839,18 +987,32 @@ async function runV3Pipeline(input: V3PipelineInput): Promise<V3PipelineResult> 
     const visionLockedBlock = buildLockedFactsBlock(composer, title, "", "", visionForLocked);
 
     // ══════════════════════════════════════════════════════
-    // Phase A: Meta / Facts
+    // IMSLP 확장 메타데이터 (V3 전용)
     // ══════════════════════════════════════════════════════
 
+    console.log("[V3] IMSLP 리치 메타데이터 조회 시작");
+    const { block: imslpRichBlock } = await getImslpRichBlock(composer, title);
+    if (imslpRichBlock) {
+      console.log(`[V3] IMSLP 리치 메타데이터 확보: ${imslpRichBlock.length}자`);
+    } else {
+      console.log("[V3] IMSLP 리치 메타데이터 없음 → Perplexity 데이터만 사용");
+    }
+
     // ══════════════════════════════════════════════════════
-    // Phase A: Meta / Facts (structured output)
+    // Phase A: Meta / Facts (Claude)
     // ══════════════════════════════════════════════════════
 
-    console.log("[V3 Phase A] Meta/Facts 시작");
+    console.log("[V3 Phase A] Meta/Facts 시작 (Claude)");
+    const phaseARefData = imslpRichBlock
+      ? `${referenceData}\n\n${imslpRichBlock}`
+      : referenceData;
     const phaseAPrompt = createV3MetaPrompt(
-      composer, title, instrument, referenceData, visionLockedBlock
+      composer, title, instrument, phaseARefData, visionLockedBlock
     );
-    const phaseA = await callGPTJson(openai, phaseAPrompt, 2000, 0.1, "V3-A");
+    const phaseA = await callPerplexityJson(phaseAPrompt, 3000, "V3-A");
+
+    // DEBUG: Phase A 원문 확인
+    console.log("[V3 Phase A RAW]", JSON.stringify(phaseA, null, 2).slice(0, 2000));
 
     // work 추출 + 안전한 기본값
     const rawWork = (phaseA.work ?? {}) as Record<string, unknown>;
@@ -885,6 +1047,15 @@ async function runV3Pipeline(input: V3PipelineInput): Promise<V3PipelineResult> 
       throw new Error("[V3-A] 필수 필드 누락: canonical_title 또는 work_type");
     }
 
+    // work 객체에서 자명한 사실을 verified_facts에 자동 보충
+    const existingLabels = new Set(verifiedFacts.map((f) => f.label));
+    if (work.key && !existingLabels.has("조성")) {
+      verifiedFacts.push({ label: "조성", value: work.key, source: "Model-Inferred", confidence: "medium" });
+    }
+    if (work.opus_catalogue && !existingLabels.has("작품번호")) {
+      verifiedFacts.push({ label: "작품번호", value: work.opus_catalogue, source: "Model-Inferred", confidence: "medium" });
+    }
+
     console.log(`[V3 Phase A] 완료 — work_type: ${workType}, facts: ${verifiedFacts.length}개`);
 
     // ══════════════════════════════════════════════════════
@@ -893,7 +1064,48 @@ async function runV3Pipeline(input: V3PipelineInput): Promise<V3PipelineResult> 
 
     const verifiedFactsJson = JSON.stringify(verifiedFacts, null, 2);
 
-    console.log("[V3 Phase B] Coaching 시작");
+    const coachingSourceBlock = buildCoachingSourceBlock(bundle);
+    console.log(`[V3 Phase B] Coaching 시작 (Perplexity→Claude) — curated:${bundle.curated.hasCuratedData} | academic:${bundle.academic.hasPapers} | technical:${bundle.perplexity.technical.length}자`);
+
+    // Step 1: Perplexity가 곡 특화 분석을 직접 수행
+    const perplexityCoachingPrompt = `You are a world-class classical music performance coach and musicologist.
+
+Composer: ${work.composer_display}
+Title: ${work.canonical_title} ${work.opus_catalogue ?? ""}
+Instrument: ${instrument}
+Work type: ${workType}
+
+Analyze this specific work in extreme detail for a ${instrument} student preparing to perform it.
+
+CRITICAL RULES:
+- Every point MUST be specific to THIS piece, THIS passage, THIS musical moment.
+- NEVER write generic advice like "relax your wrist", "balance the voices", "control dynamics".
+- If this is a multi-movement work or collection (like Kreisleriana), analyze EACH movement/piece SEPARATELY with its unique challenges.
+
+Provide:
+
+1. TECHNICAL DEMANDS (at least 5):
+For each, specify: which exact passage/section, what the specific notes/patterns/textures are, why it's hard (biomechanically), and the root cause.
+Example: "In No.2, the rapid thirds in B♭ major require legato but sudden sfz interrupts break the flow — the root cause is that the hand must simultaneously sustain horizontal legato motion while delivering vertical accent force."
+
+2. MUSICAL CHALLENGES (at least 4):
+What interpretive decisions must be made? Reference specific performers and their approaches with concrete details.
+
+3. COMMON PITFALLS (at least 4):
+What specific mistakes do students make in THIS piece? Not generic mistakes — mistakes specific to this piece's unique passages.
+
+4. PRACTICE PLAN (4-6 phases):
+Each task must target a specific section/passage with concrete instructions. No "play through the whole piece" or "basic technique warmup".
+
+5. SUMMARY:
+One-liner identity of this work. Context a student needs before practicing. Structural overview. Composer's artistic intent.
+
+${coachingSourceBlock ? `\nReference materials:\n${coachingSourceBlock}` : ""}
+${imslpRichBlock ? `\nVerified IMSLP metadata (USE THIS — these are confirmed facts):\n${imslpRichBlock}` : ""}
+
+Be extremely specific. Write in Korean. Music terminology can use original language.`;
+
+    // Perplexity가 분석 + JSON 생성을 한 번에 수행
     const phaseBPrompt = createV3CoachingPrompt(
       work.composer_display,
       work.canonical_title,
@@ -901,9 +1113,15 @@ async function runV3Pipeline(input: V3PipelineInput): Promise<V3PipelineResult> 
       instrument,
       workType,
       verifiedFactsJson,
-      referenceData,
+      coachingSourceBlock,
     );
-    const phaseB = await callGPTJson(openai, phaseBPrompt, 6000, 0.3, "V3-B");
+    const phaseBFullPrompt = `${perplexityCoachingPrompt}
+
+위 분석을 바탕으로 아래 JSON 형식으로 출력하십시오:
+
+${phaseBPrompt}`;
+
+    const phaseB = await callPerplexityJson(phaseBFullPrompt, 16000, "V3-B");
 
     // 필수 필드 추출 + 검증
     const rawSummary = phaseB.summary as Record<string, unknown> | undefined;
@@ -922,6 +1140,9 @@ async function runV3Pipeline(input: V3PipelineInput): Promise<V3PipelineResult> 
           category: String(d.category ?? "other") as TechnicalDemand["category"],
           title: String(d.title ?? ""),
           description: String(d.description ?? ""),
+          why_hard: d.why_hard ? String(d.why_hard) : undefined,
+          root_cause: d.root_cause ? String(d.root_cause) : undefined,
+          common_mistake: d.common_mistake ? String(d.common_mistake) : undefined,
           location: d.location ? String(d.location) : undefined,
           severity: (["critical", "major", "moderate"].includes(String(d.severity)) ? String(d.severity) : "moderate") as TechnicalDemand["severity"],
         }))
@@ -975,7 +1196,42 @@ async function runV3Pipeline(input: V3PipelineInput): Promise<V3PipelineResult> 
     // Phase C: Guides + Recordings (structured output)
     // ══════════════════════════════════════════════════════
 
-    console.log("[V3 Phase C] Guides+Recordings 시작");
+    const guidesSourceBlock = buildGuidesSourceBlock(bundle);
+    console.log("[V3 Phase C] Guides+Recordings 시작 (Perplexity→Claude)");
+
+    // Step 1: Perplexity가 가이드+음반 분석 수행
+    const guideType = workType === "multi_movement_sonata" ? "each movement" :
+      (workType === "suite_or_collection" || workType === "variation_set") ? "each piece/variation" :
+      "the work as a whole";
+
+    const perplexityGuidesPrompt = `You are a classical music expert and recording historian.
+
+Composer: ${work.composer_display}
+Title: ${work.canonical_title} ${work.opus_catalogue ?? ""}
+Instrument: ${instrument}
+Work type: ${workType}
+
+Provide detailed analysis of ${guideType}:
+
+1. For ${guideType}, describe:
+- Key, form, character (unique personality of THIS movement/piece)
+- Specific technical challenges unique to THIS movement/piece (not repeated from other movements)
+- Musical challenges and interpretive decisions
+- Common mistakes specific to THIS movement/piece
+- How it connects to the next movement/piece (if applicable)
+
+2. RECOMMENDED RECORDINGS (5-7):
+- Include at least 1 Korean performer
+- Mix historical and modern recordings
+- For each: artist name, year, label, WHY this recording matters for THIS specific work
+- What to listen for in each recording (specific musical moments)
+
+${guidesSourceBlock ? `\nReference materials:\n${guidesSourceBlock}` : ""}
+${imslpRichBlock ? `\nVerified IMSLP metadata (USE THIS):\n${imslpRichBlock}` : ""}
+
+Be specific. Every description must be unique to that movement/piece — no copy-paste between movements. Write in Korean. Music terms can use original language.`;
+
+    // Perplexity가 분석 + JSON 생성을 한 번에 수행
     const phaseCPrompt = createV3GuidesPrompt(
       work.composer_display,
       work.canonical_title,
@@ -983,9 +1239,15 @@ async function runV3Pipeline(input: V3PipelineInput): Promise<V3PipelineResult> 
       instrument,
       workType,
       verifiedFactsJson,
-      referenceDataCompact,
+      guidesSourceBlock,
     );
-    const phaseC = await callGPTJson(openai, phaseCPrompt, 6000, 0.3, "V3-C");
+    const phaseCFullPrompt = `${perplexityGuidesPrompt}
+
+위 분석을 바탕으로 아래 JSON 형식으로 출력하십시오:
+
+${phaseCPrompt}`;
+
+    const phaseC = await callPerplexityJson(phaseCFullPrompt, 16000, "V3-C");
 
     let movementGuides: MovementGuide[] | undefined;
     let collectionGuides: CollectionPieceGuide[] | undefined;

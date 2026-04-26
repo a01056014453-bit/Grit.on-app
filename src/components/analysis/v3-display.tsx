@@ -1,21 +1,16 @@
 "use client";
 
-import { useState } from "react";
 import {
-  ChevronDown,
-  ChevronRight,
   Target,
   Lightbulb,
   AlertTriangle,
   Music,
   Play,
   CheckCircle2,
-  Shield,
   Zap,
   BookOpen,
   ListChecks,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 import type { SongAnalysisV3 } from "@/types/song-analysis";
 
 // ════════════════════════════════════════════════════════
@@ -26,41 +21,20 @@ function SectionCard({
   title,
   icon: Icon,
   children,
-  defaultOpen = false,
 }: {
   title: string;
   icon: React.ElementType;
   children: React.ReactNode;
-  defaultOpen?: boolean;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
   return (
     <div className="bg-card rounded-xl border border-border shadow-sm mb-3 overflow-hidden">
-      <button
-        onClick={() => setOpen((p) => !p)}
-        className="w-full flex items-center gap-3 px-4 py-3 text-left"
-      >
+      <div className="flex items-center gap-3 px-4 py-3">
         <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
           <Icon className="w-4 h-4 text-primary" />
         </div>
         <span className="font-semibold text-foreground text-sm flex-1">{title}</span>
-        <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.15 }}>
-          <ChevronDown className="w-4 h-4 text-muted-foreground" />
-        </motion.div>
-      </button>
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: "easeInOut" }}
-            className="overflow-hidden"
-          >
-            <div className="px-4 pb-4">{children}</div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      </div>
+      <div className="px-4 pb-4">{children}</div>
     </div>
   );
 }
@@ -79,12 +53,6 @@ function Badge({ children, variant = "default" }: { children: React.ReactNode; v
   );
 }
 
-const severityVariant = (s: string) =>
-  s === "critical" ? "critical" : s === "major" ? "warning" : "default";
-
-const confidenceLabel = (c: string) =>
-  c === "high" ? "확인됨" : c === "medium" ? "추정" : "미확인";
-
 // ════════════════════════════════════════════════════════
 // B. 작품 요약
 // ════════════════════════════════════════════════════════
@@ -94,7 +62,7 @@ function SummarySection({ analysis }: { analysis: SongAnalysisV3 }) {
   if (!s) return null;
 
   return (
-    <SectionCard title="작품 요약" icon={BookOpen} defaultOpen>
+    <SectionCard title="작품 요약" icon={BookOpen}>
       {s.one_liner && (
         <p className="text-base font-bold text-foreground mb-3 leading-snug">
           {s.one_liner}
@@ -123,34 +91,6 @@ function SummarySection({ analysis }: { analysis: SongAnalysisV3 }) {
 }
 
 // ════════════════════════════════════════════════════════
-// C. 검증된 사실
-// ════════════════════════════════════════════════════════
-
-function VerifiedFactsSection({ analysis }: { analysis: SongAnalysisV3 }) {
-  const facts = analysis.content.verified_facts;
-  if (!facts || facts.length === 0) return null;
-
-  return (
-    <SectionCard title="검증된 사실" icon={Shield}>
-      <div className="flex flex-wrap gap-2">
-        {facts.map((f, i) => (
-          <div
-            key={i}
-            className="flex items-center gap-1.5 bg-secondary/60 rounded-lg px-3 py-1.5"
-          >
-            <span className="text-xs text-muted-foreground">{f.label}</span>
-            <span className="text-xs font-semibold text-foreground">{f.value}</span>
-            <Badge variant={f.confidence === "high" ? "default" : "muted"}>
-              {confidenceLabel(f.confidence)}
-            </Badge>
-          </div>
-        ))}
-      </div>
-    </SectionCard>
-  );
-}
-
-// ════════════════════════════════════════════════════════
 // D. 핵심 기술 과제
 // ════════════════════════════════════════════════════════
 
@@ -160,17 +100,17 @@ function TechnicalDemandsSection({ analysis }: { analysis: SongAnalysisV3 }) {
 
   return (
     <SectionCard title="핵심 기술 과제" icon={Zap}>
-      <div className="space-y-2">
+      <div className="space-y-3">
         {demands.map((d, i) => (
-          <div key={i} className="bg-secondary/40 rounded-lg p-3">
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="text-sm font-semibold text-foreground">{d.title}</span>
-              <Badge variant={severityVariant(d.severity)}>{d.severity}</Badge>
-              {d.location && (
-                <span className="text-[10px] text-muted-foreground ml-auto">{d.location}</span>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground leading-relaxed">{d.description}</p>
+          <div key={i} className="bg-secondary/40 rounded-lg p-3 space-y-1.5">
+            <p className="text-sm font-semibold text-foreground">{d.title}</p>
+            <p className="text-xs text-foreground/80 leading-relaxed">{d.description}</p>
+            {d.why_hard && (
+              <p className="text-xs text-muted-foreground leading-relaxed">{d.why_hard}</p>
+            )}
+            {d.root_cause && (
+              <p className="text-xs text-amber-700 leading-relaxed">{d.root_cause}</p>
+            )}
           </div>
         ))}
       </div>
@@ -216,73 +156,33 @@ function PracticePlanSection({ analysis }: { analysis: SongAnalysisV3 }) {
   const plan = analysis.content.practice_plan;
   if (!plan || !plan.phases || plan.phases.length === 0) return null;
 
-  const [expandedPhase, setExpandedPhase] = useState<number | null>(0);
-
   return (
-    <SectionCard title="연습 플랜" icon={ListChecks} defaultOpen>
-      {(plan.estimated_duration || plan.recommended_order) && (
-        <div className="flex flex-wrap gap-3 mb-3">
-          {plan.estimated_duration && (
-            <div className="text-xs text-muted-foreground">
-              예상 소요: <span className="font-semibold text-foreground">{plan.estimated_duration}</span>
+    <SectionCard title="연습 플랜" icon={ListChecks}>
+      <div className="space-y-3">
+        {plan.phases.map((phase) => (
+          <div key={phase.phase} className="border border-border rounded-lg overflow-hidden">
+            <div className="flex items-center gap-2 px-3 py-2.5 bg-secondary/30">
+              <span className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center shrink-0">
+                {phase.phase}
+              </span>
+              <span className="text-sm font-medium text-foreground">{phase.title}</span>
             </div>
-          )}
-          {plan.recommended_order && (
-            <div className="text-xs text-muted-foreground">
-              권장 순서: <span className="font-medium text-foreground">{plan.recommended_order}</span>
-            </div>
-          )}
-        </div>
-      )}
-
-      <div className="space-y-2">
-        {plan.phases.map((phase) => {
-          const isOpen = expandedPhase === phase.phase;
-          return (
-            <div key={phase.phase} className="border border-border rounded-lg overflow-hidden">
-              <button
-                onClick={() => setExpandedPhase(isOpen ? null : phase.phase)}
-                className="w-full flex items-center gap-2 px-3 py-2.5 text-left bg-secondary/30"
-              >
-                <span className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center shrink-0">
-                  {phase.phase}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <span className="text-sm font-medium text-foreground">{phase.title}</span>
-                  <span className="text-[10px] text-muted-foreground ml-2">{phase.duration}</span>
+            <div className="px-3 py-2 space-y-1.5">
+              {phase.goal && (
+                <p className="text-xs text-muted-foreground italic mb-2">{phase.goal}</p>
+              )}
+              {(phase.tasks ?? []).map((task, ti) => (
+                <div key={ti} className="flex items-start gap-2 py-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-primary/60 mt-0.5 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-foreground leading-relaxed">{task.instruction}</p>
+                    {task.target && <span className="text-[10px] text-muted-foreground">{task.target}</span>}
+                  </div>
                 </div>
-                {isOpen ? <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" /> : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />}
-              </button>
-              <AnimatePresence initial={false}>
-                {isOpen && (
-                  <motion.div
-                    initial={{ height: 0 }} animate={{ height: "auto" }} exit={{ height: 0 }}
-                    transition={{ duration: 0.15 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="px-3 py-2 space-y-1.5">
-                      {phase.goal && (
-                        <p className="text-xs text-muted-foreground italic mb-2">{phase.goal}</p>
-                      )}
-                      {(phase.tasks ?? []).map((task, ti) => (
-                        <div key={ti} className="flex items-start gap-2 py-1">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-primary/60 mt-0.5 shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs text-foreground leading-relaxed">{task.instruction}</p>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              {task.target && <span className="text-[10px] text-muted-foreground">{task.target}</span>}
-                              {task.minutes && <span className="text-[10px] text-muted-foreground">{task.minutes}분</span>}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              ))}
             </div>
-          );
-        })}
+          </div>
+        ))}
       </div>
     </SectionCard>
   );
@@ -297,19 +197,15 @@ function PitfallsSection({ analysis }: { analysis: SongAnalysisV3 }) {
   if (!pitfalls || pitfalls.length === 0) return null;
 
   return (
-    <SectionCard title="흔한 실수" icon={AlertTriangle}>
-      <div className="space-y-2">
+    <SectionCard title="주의할 점" icon={AlertTriangle}>
+      <div className="space-y-3">
         {pitfalls.map((p, i) => (
-          <div key={i} className="bg-amber-50/60 border border-amber-200/40 rounded-lg p-3">
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="text-sm font-semibold text-foreground">{p.title}</span>
-              {p.location && <span className="text-[10px] text-muted-foreground">{p.location}</span>}
-            </div>
-            <div className="space-y-1 text-xs">
-              <p><span className="font-semibold text-red-600">실수:</span> <span className="text-foreground">{p.mistake}</span></p>
-              <p><span className="font-semibold text-amber-600">원인:</span> <span className="text-foreground">{p.cause}</span></p>
-              <p><span className="font-semibold text-green-700">해결:</span> <span className="text-foreground">{p.fix}</span></p>
-            </div>
+          <div key={i} className="bg-secondary/40 rounded-lg p-3 space-y-1.5">
+            <p className="text-sm font-semibold text-foreground">{p.title}</p>
+            <p className="text-xs text-foreground/80 leading-relaxed">{p.mistake}</p>
+            {p.fix && (
+              <p className="text-xs text-primary/80 leading-relaxed">{p.fix}</p>
+            )}
           </div>
         ))}
       </div>
@@ -461,7 +357,6 @@ export function V3Display({ analysis }: V3DisplayProps) {
   return (
     <div>
       <SummarySection analysis={analysis} />
-      <VerifiedFactsSection analysis={analysis} />
       <TechnicalDemandsSection analysis={analysis} />
       <MusicalChallengesSection analysis={analysis} />
       <PracticePlanSection analysis={analysis} />

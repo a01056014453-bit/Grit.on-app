@@ -12,15 +12,22 @@ export function createCacheKey(composer: string, title: string): string {
 }
 
 /** 공유 캐시에서 분석 데이터 조회 (작곡가 + 제목) — user_id 무관
- *  1차: cache_key 정확 매칭 (is_active = true)
- *  2차: ilike 매칭 (기존 호환)
- *  3차: 부분 매칭 (성 + 제목 일부)
+ *  1차: cache_key 정확 매칭
+ *  2차: composer_normalized + canonical_title 정규화 매칭
+ *  3차: ilike 매칭 (기존 호환)
+ *  4차: 부분 매칭 (성 + 제목 일부)
+ *  모든 단계: is_active=true, schema_version DESC, updated_at DESC
  *  V3 데이터(schema_version === 3)는 SongAnalysisV3로 unwrap하여 반환 */
 export async function getCachedAnalysis(
   composer: string,
   title: string
 ): Promise<AnySongAnalysis | null> {
   try {
+    const bestRow = (rows: unknown[] | null) => {
+      if (!rows || rows.length === 0) return null;
+      return rows[0];
+    };
+
     // 1차: cache_key 정확 매칭
     const cacheKey = createCacheKey(composer, title);
     const { data: byKey } = await supabase
@@ -28,37 +35,64 @@ export async function getCachedAnalysis(
       .select("*")
       .eq("cache_key", cacheKey)
       .eq("is_active", true)
-      .limit(1)
-      .single();
+      .order("schema_version", { ascending: false })
+      .order("updated_at", { ascending: false })
+      .limit(1);
 
-    if (byKey) return reconstructAnalysis(byKey);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const keyRow = bestRow(byKey) as any;
+    if (keyRow) return reconstructAnalysis(keyRow);
 
-    // 2차: ilike 매칭 (기존 호환)
-    const { data, error } = await supabase
+    // 2차: composer_normalized + title 포함 매칭 (정규화)
+    const composerNorm = normalizeComposer(composer);
+    const { data: byNorm } = await supabase
       .from("song_analyses")
       .select("*")
-      .ilike("composer", composer.trim())
-      .ilike("title", title.trim())
-      .limit(1)
-      .single();
+      .eq("composer_normalized", composerNorm)
+      .ilike("canonical_title", `%${title.trim()}%`)
+      .eq("is_active", true)
+      .order("schema_version", { ascending: false })
+      .order("updated_at", { ascending: false })
+      .limit(1);
 
-    if (!error && data) return reconstructAnalysis(data);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const normRow = bestRow(byNorm) as any;
+    if (normRow) return reconstructAnalysis(normRow);
 
-    // 3차: 부분 매칭 (작곡가 성 + 제목 일부)
+    // 3차: ilike 매칭 (기존 호환)
+    const { data } = await supabase
+      .from("song_analyses")
+      .select("*")
+      .ilike("composer", `%${composer.trim()}%`)
+      .ilike("title", `%${title.trim()}%`)
+      .eq("is_active", true)
+      .order("schema_version", { ascending: false })
+      .order("updated_at", { ascending: false })
+      .limit(1);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ilikeRow = bestRow(data) as any;
+    if (ilikeRow) return reconstructAnalysis(ilikeRow);
+
+    // 4차: 부분 매칭 (성 + 제목 일부)
     const composerParts = composer.trim().split(" ");
     const lastName = composerParts[composerParts.length - 1];
 
-    const { data: partialData, error: partialError } = await supabase
+    const { data: partialData } = await supabase
       .from("song_analyses")
       .select("*")
       .ilike("composer", `%${lastName}%`)
       .ilike("title", `%${title.trim()}%`)
-      .limit(1)
-      .single();
+      .eq("is_active", true)
+      .order("schema_version", { ascending: false })
+      .order("updated_at", { ascending: false })
+      .limit(1);
 
-    if (partialError || !partialData) return null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const partialRow = bestRow(partialData) as any;
+    if (partialRow) return reconstructAnalysis(partialRow);
 
-    return reconstructAnalysis(partialData);
+    return null;
   } catch (err) {
     console.error("[Supabase] getCachedAnalysis error:", err);
     return null;
@@ -81,12 +115,27 @@ function reconstructAnalysis(row: {
   const content = row.content as Record<string, unknown>;
 
   if (content && content.meta && content.content) {
-    // V3 감지: schema_version === 3이고 content 안에 work_type이 있으면 V3
+    // V3 감지: schema_version === 3
     const schemaVer = content.schema_version;
     if (schemaVer === 3) {
-      const v3Inner = content.content as Record<string, unknown>;
-      if (v3Inner && "work_type" in v3Inner) {
-        // V3 unwrap — 래퍼 content 안에 저장된 SongAnalysisV3를 꺼냄
+      const inner = content.content as Record<string, unknown>;
+
+      // 이중 래핑: content.content가 SongAnalysisV3 (content.content.content에 work_type)
+      if (inner && inner.content && typeof inner.content === "object") {
+        const deepContent = inner.content as Record<string, unknown>;
+        if ("work_type" in deepContent) {
+          const v3 = inner as unknown as SongAnalysisV3;
+          return {
+            ...v3,
+            id: row.id,
+            created_at: row.created_at || v3.created_at,
+            updated_at: row.updated_at || v3.updated_at,
+          };
+        }
+      }
+
+      // 단일 래핑: content.content에 직접 work_type
+      if (inner && "work_type" in inner) {
         const v3 = content as unknown as SongAnalysisV3;
         return {
           ...v3,

@@ -44,13 +44,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       );
     }
     const { composer, title, instrument, analysisVersion } = parsed.data;
+    console.log(`[Start] parsed | composer=${composer} | title=${title} | analysisVersion=${analysisVersion ?? "undefined"}`);
 
-    // 캐시 확인 (schema_version >= 2인 결과만)
+    // 캐시 확인 — is_active + schema_version 높은 것 우선
     const { data: cached } = await db
       .from("song_analyses")
-      .select("id, content")
+      .select("id, content, schema_version")
       .ilike("composer", composer.trim())
       .ilike("title", title.trim())
+      .eq("is_active", true)
+      .order("schema_version", { ascending: false })
       .limit(1)
       .single();
 
@@ -177,9 +180,8 @@ async function runAnalysisInBackground({
   analysisVersion?: 3;
 }): Promise<void> {
   try {
-    console.log(`[Background] 시작: ${jobId} | ${composer} - ${title} | v${analysisVersion ?? 2}`);
-
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://withsempre.com";
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+    console.log(`[Background] 시작: ${jobId} | ${composer} - ${title} | analysisVersion=${analysisVersion ?? "undefined"} | baseUrl=${baseUrl}`);
     const res = await fetch(`${baseUrl}/api/analyze-song-v2`, {
       method: "POST",
       headers: {

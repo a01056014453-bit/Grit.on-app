@@ -433,7 +433,7 @@ function NewFeedbackRequestContent() {
                 <label className="cursor-pointer block">
                   <Upload className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
                   <p className="font-medium text-foreground">영상을 업로드하세요</p>
-                  <p className="text-sm text-muted-foreground mt-1">30-60초, 최대 50MB</p>
+                  <p className="text-sm text-muted-foreground mt-1">문제 구간만 30초 이내 권장 (최대 50MB)</p>
                   <input
                     type="file"
                     accept="video/*"
@@ -447,7 +447,7 @@ function NewFeedbackRequestContent() {
             <div className="mt-3 p-3 bg-amber-50 rounded-xl border border-amber-200">
               <p className="text-xs text-amber-800 flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                영상에서 문제 구간을 연주하는 모습을 촬영해주세요. 손과 건반이 잘 보여야 합니다.
+                문제 구간만 짧게 촬영해주세요 (30초 이내 권장). 손과 악기가 잘 보여야 정확한 피드백이 가능합니다.
               </p>
             </div>
           </div>

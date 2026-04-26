@@ -115,7 +115,10 @@ ${HALLUCINATION_GUARD}
 작품 유형 힌트: "${workTypeHint}" (참고용 — 레퍼런스로 확인 후 수정 가능)
 
 🚨 규칙:
-- 확인된 사실만 verified_facts에 넣어라. 추측 금지.
+- verified_facts는 최소 3개 이상 작성하라.
+- work 객체에 적은 key(조성)와 opus_catalogue(작품번호)는 반드시 verified_facts에도 포함하라.
+- 작곡 연도, 악장 수, 형식, 조성, 작품번호, 박자 등 기본 사실은 "Model-Inferred"라도 넣어라.
+- 완전한 추측만 금지. 널리 알려진 사실은 source="Model-Inferred", confidence="medium"으로 포함 가능.
 - source는 반드시 "IMSLP" | "MusicXML" | "Manual" | "Model-Inferred" 중 하나.
 - confidence는 "high" | "medium" | "low".
 - work_type은 실제 곡 구조에 맞게 판단하라.
@@ -143,6 +146,37 @@ JSON만 출력:
 }
 
 // ════════════════════════════════════════════════════════
+// Few-shot 블록 — Phase B에 주입
+// ════════════════════════════════════════════════════════
+
+const FEW_SHOT_BLOCK = `
+[✅ 이 수준으로 작성하라 — BAD vs GOOD 예시]
+
+━━━ technical_demand 예시 ━━━
+❌ BAD: { "title": "빠른 패시지의 명확성", "description": "손목을 이완하고 팔 무게를 균등하게 전달하세요." }
+✅ GOOD: { "title": "알레그로 아르페지오 상행 시 양손 타이밍 불일치", "description": "오른손 아르페지오가 올라가는 동안 왼손 베이스가 반박자 늦게 따라오는 구조다.", "why_hard": "두 손이 서로 다른 방향으로 동시에 움직여야 하는데 뇌가 둘 중 하나에만 집중하기 때문이다.", "root_cause": "왼손을 리듬 중심으로 인식하는 것이 진짜 원인이다. 이 곡에서 왼손은 오른손의 메아리로 인식해야 한다." }
+
+━━━ practice task 예시 ━━━
+❌ BAD: { "instruction": "전체 곡을 연주하며 다이내믹을 점검한다" }
+✅ GOOD: { "instruction": "서주 아르페지오 첫 8마디를 오른손만 떼어 최상성부가 혼자 노래하듯 들리는지 확인한다. 나머지 음은 받침이고 최상성부만 선율이다.", "target": "서주 첫 8마디", "minutes": 15 }
+
+━━━ pitfall 예시 ━━━
+❌ BAD: { "title": "리듬의 불안정", "cause": "메트로놈 사용 부족", "fix": "메트로놈을 활용하세요" }
+❌ BAD: { "title": "빠른 부분에서의 손목 경직", "cause": "손목의 이완이 부족하여 팔의 무게가 제대로 전달되지 않는다", "fix": "손목을 의도적으로 이완시키고 연습한다" }
+✅ GOOD: { "title": "빠른 부분 종료 직후 서정적 재진입 시 연결 끊김", "mistake": "빠른 구간이 끝나고 서정적 부분으로 넘어올 때 멈칫하거나 템포가 흔들린다.", "cause": "두 섹션의 성격이 너무 달라서 머릿속에서 다음 장면 준비를 하다가 연결이 끊긴다.", "fix": "전환 2마디 전부터 이미 다음 섹션의 호흡으로 들어가는 연습을 한다." }
+
+━━━ 범용 vs 특화 예시 (가장 중요!) ━━━
+❌ BAD (범용 — 아무 곡에나 붙일 수 있음):
+  "손목 경직" / "성부 간 밸런스 부족" / "다이내믹 변화의 부정확성" / "음색의 다양성 부족"
+  → 이런 내용은 쇼팽이든 베토벤이든 모차르트든 동일하게 적용 가능 → 가치 없음
+
+✅ GOOD (특화 — 이 곡에서만 해당):
+  크라이슬레리아나 1번: "D단조 옥타브 트레몰로가 2페이지 동안 지속되는데, 4번째 줄부터 왼손이 반음계 하행을 동시에 해야 함"
+  크라이슬레리아나 2번: "B♭장조의 빠른 3도 병진행이 legato를 요구하는데, 중간에 갑자기 sfz가 끼어들어 legato 흐름이 깨지기 쉬움"
+  → 이 곡의 이 부분에서만 나타나는 고유한 도전 → 가치 있음
+`;
+
+// ════════════════════════════════════════════════════════
 // Phase B: Coaching Core
 // ════════════════════════════════════════════════════════
 
@@ -153,7 +187,7 @@ export function createV3CoachingPrompt(
   instrument: string,
   workType: string,
   verifiedFactsJson: string,
-  referenceData: string,
+  sourceBlock: string,
 ): string {
   const instrumentAgent = getInstrumentAgent(instrument);
 
@@ -171,94 +205,94 @@ ${instrumentAgent}
 [검증된 사실]
 ${verifiedFactsJson}
 
-[레퍼런스]
-${referenceData.slice(0, 10000)}
-
 ${KOREAN_OUTPUT_RULE}
 ${HALLUCINATION_GUARD}
 🚨 ${getFingeringRule(instrument)}
 
+${FEW_SHOT_BLOCK}
+
 [Phase B: 연습 코칭 핵심]
 
-🚨 절대 금지:
+🚨 절대 금지 — 이 규칙을 어기면 분석 실패로 간주한다:
 - "베토벤은 고전과 낭만을 잇는 다리" 같은 백과사전 문장
-- "팔 무게를 실어주세요", "프레이즈를 살려서" 같은 범용 조언
-- 모든 항목에 동일한 내용 반복
+- "팔 무게를 실어주세요", "프레이즈를 살려서", "감정을 담아서" 같은 범용 조언
+- "메트로놈을 사용하세요", "느리게 연습하세요" 같은 일반론
+- "손목 이완", "성부 간 밸런스", "다이내믹 조절" 같은 어떤 곡에나 적용되는 일반적 기교 문제
+- "음색 변화를 위한 손가락과 팔의 조절" 같은 구체성 없는 원인/해결
+- 모든 항목에 동일하거나 유사한 내용 반복
 - 확인 안 된 마디 번호 생성
-- 다른 곡에도 적용되는 일반론
 
-✅ 이 곡에서만 유효한 구체적 내용만:
-- summary: 이 곡을 연습하는 사람이 알아야 할 핵심 맥락
-- technical_demands: 이 곡 고유의 기술적 난관 (카테고리 + 구체적 위치 + 설명)
-- musical_challenges: 해석적으로 어려운 지점
-- pitfalls: 이 곡에서 흔히 빠지는 실수 (원인 + 해결 포함)
-- practice_plan: 단계별 연습 과제 (각 task는 구체적 동작 수준)
+🚨 핵심 원칙 — 악장별/소품별 특화:
+- 다악장 작품(소나타, 모음곡 등)은 반드시 각 악장/소품의 고유한 특징을 개별적으로 다뤄라.
+- 예: 크라이슬레리아나 Op.16이면 8개 소품 각각의 고유한 기교적 도전을 별도로 서술.
+- technical_demands의 각 항목은 "이 곡의 어느 구간에서, 어떤 음형/패턴 때문에" 어려운지 명시해야 한다.
+- pitfalls도 "이 곡의 어느 부분에서 구체적으로 어떤 실수가 나오는지" 써야 한다.
+- "빠른 패시지에서 손목이 경직" 같은 어떤 곡에나 해당하는 진술 금지. 이 곡의 어떤 패시지인지 특정하라.
+
+✅ 반드시 지킬 것:
+- technical_demands: why_hard + root_cause 필수 — 최소 4개, 각 항목이 곡의 다른 구간/특징을 다뤄야 함
+- musical_challenges: 참고 연주자의 구체적 접근법 포함 — 최소 3개
+- pitfalls: 이 곡 고유의 실수 + 구체적 동작 수준 해결법 — 최소 3개, 범용 조언 금지
+- practice_plan: 각 task는 위 GOOD 예시 수준의 구체성, 악장/소품별로 구분하여 작성
+
+[소스 레퍼런스 — 아래 정보를 활용하여 이 곡에 특화된 코칭을 생성하라]
+${sourceBlock}
 
 [practice_plan 규칙]
-- 3~6개 phase
-- 각 phase에 3~5개 task
-- task의 instruction은 "mm.1-8 왼손만 느리게, 각 음의 무게감 확인" 수준의 구체성
-- 마디 번호는 확인된 경우만. 불확실하면 "1악장 제시부" 같은 구간명 사용.
-- 추상적 과제 금지: "스케일 연습", "테크닉 훈련" 금지
+- 반드시 4주(week) 단위로 구성. phase 4개 = 1주차, 2주차, 3주차, 4주차.
+- 각 주에 3~6개 task.
+- 모음곡/소품집이면 모든 소품을 4주에 걸쳐 배분하라. 일부만 다루면 실패.
+- "전체 곡 연주", "기초 연습", "느리게 연습" 같은 추상적 과제 금지.
+- 각 task는 특정 소품/구간에서 무엇을 어떻게 연습하는지 구체적으로.
 
-[technical_demands category 목록]
-tone_production | articulation | dynamic_control | tempo_rhythm | passage_work | polyphony | pedaling | physical_endurance | memorization | other
-
-[severity]
-critical | major | moderate
+🚨 배열 최소 개수:
+- technical_demands: 4개 이상
+- musical_challenges: 3개 이상
+- pitfalls: 3개 이상
+- practice_plan.phases: 반드시 4개 (4주)
 
 JSON만 출력:
 {
   "summary": {
-    "one_liner": "이 곡의 핵심 성격 한 줄 (예: 격렬한 정열과 비극적 긴장의 소나타)",
-    "context_for_practice": "연습 전 알아야 할 배경 3-5문장",
-    "structural_overview": "전체 구조 흐름 3-5문장",
-    "artistic_intent": "작곡가 의도 / 음악적 핵심 2-3문장"
+    "one_liner": "이 곡만의 정체성 한 줄",
+    "context_for_practice": "3-5문장",
+    "structural_overview": "3-5문장",
+    "artistic_intent": "2-3문장"
   },
   "technical_demands": [
-    {
-      "category": "passage_work",
-      "title": "과제 제목",
-      "description": "구체적 설명 2-3문장",
-      "location": "확인된 위치만 (없으면 생략)",
-      "severity": "critical"
-    }
+    { "title": "난관1", "description": "...", "why_hard": "...", "root_cause": "..." },
+    { "title": "난관2", "description": "...", "why_hard": "...", "root_cause": "..." },
+    { "title": "난관3", "description": "...", "why_hard": "...", "root_cause": "..." },
+    { "title": "난관4", "description": "...", "why_hard": "...", "root_cause": "..." }
   ],
   "musical_challenges": [
-    {
-      "title": "과제 제목",
-      "description": "구체적 설명 2-4문장",
-      "location": "확인된 위치만",
-      "reference_interpretation": "참고 연주자 접근법 (선택)"
-    }
+    { "title": "과제1", "description": "...", "reference_interpretation": "..." },
+    { "title": "과제2", "description": "...", "reference_interpretation": "..." },
+    { "title": "과제3", "description": "..." }
   ],
   "pitfalls": [
-    {
-      "title": "함정 제목",
-      "mistake": "어떤 실수인지 1-2문장",
-      "cause": "왜 발생하는지 1-2문장",
-      "fix": "해결법 1-2문장",
-      "location": "위치 (선택)"
-    }
+    { "title": "함정1", "mistake": "...", "fix": "..." },
+    { "title": "함정2", "mistake": "...", "fix": "..." },
+    { "title": "함정3", "mistake": "...", "fix": "..." }
   ],
   "practice_plan": {
-    "estimated_duration": "4-6주",
-    "recommended_order": "연습 순서 권장 (선택)",
     "phases": [
-      {
-        "phase": 1,
-        "title": "단계 이름",
-        "goal": "이 단계 목표 1-2문장",
-        "duration": "3-5일",
-        "tasks": [
-          {
-            "instruction": "구체적 동작 수준 과제",
-            "target": "mm.1-8 또는 구간명",
-            "minutes": 15,
-            "related_demand": "passage_work"
-          }
-        ]
-      }
+      { "phase": 1, "title": "1주차", "goal": "...", "tasks": [
+        { "instruction": "과제1", "target": "구간" },
+        { "instruction": "과제2", "target": "구간" }
+      ]},
+      { "phase": 2, "title": "2주차", "goal": "...", "tasks": [
+        { "instruction": "과제1", "target": "구간" },
+        { "instruction": "과제2", "target": "구간" }
+      ]},
+      { "phase": 3, "title": "3주차", "goal": "...", "tasks": [
+        { "instruction": "과제1", "target": "구간" },
+        { "instruction": "과제2", "target": "구간" }
+      ]},
+      { "phase": 4, "title": "4주차", "goal": "...", "tasks": [
+        { "instruction": "과제1", "target": "구간" },
+        { "instruction": "과제2", "target": "구간" }
+      ]}
     ]
   }
 }
@@ -276,7 +310,7 @@ export function createV3GuidesPrompt(
   instrument: string,
   workType: string,
   verifiedFactsJson: string,
-  referenceData: string,
+  sourceBlock: string,
 ): string {
   const instrumentAgent = getInstrumentAgent(instrument);
 
@@ -328,8 +362,8 @@ ${instrumentAgent}
 [검증된 사실]
 ${verifiedFactsJson}
 
-[레퍼런스]
-${referenceData.slice(0, 8000)}
+[소스 레퍼런스]
+${sourceBlock}
 
 ${KOREAN_OUTPUT_RULE}
 ${HALLUCINATION_GUARD}
@@ -385,4 +419,41 @@ JSON만 출력:
   ]
 }
   `.trim();
+}
+
+// ════════════════════════════════════════════════════════
+// Phase 0: Context Search (Perplexity용 맥락 쿼리)
+// ════════════════════════════════════════════════════════
+
+export function createContextSearchPrompt(composer: string, title: string): string {
+  return `I need rich historical and musicological context for this classical piano work:
+
+Composer: ${composer}
+Title: ${title}
+
+Search Grove Dictionary, RILM, musicology journals, composer biographies, and Urtext preface texts for:
+
+1. BIOGRAPHICAL CONTEXT AT TIME OF COMPOSITION
+- Where was ${composer} living when this was written? (specific city, place)
+- What was happening in their personal life? (relationships, health, finances, losses)
+- What triggered or inspired this specific work? (a person, place, event, letter, diary entry)
+- Any documented statements by the composer about this work?
+
+2. HISTORICAL & CULTURAL CONTEXT
+- What was happening in music history at this moment?
+- Which contemporaries influenced or were influenced by this work?
+- Did this work directly influence later composers? (be specific: who, which work)
+- How was it received at premiere/publication?
+
+3. MUSICOLOGICAL SIGNIFICANCE
+- What makes this work structurally or harmonically innovative for its time?
+- What do major scholars say? (cite specific scholars if possible)
+- How does this work fit within the composer's larger output?
+
+4. PERFORMANCE HISTORY
+- Notable premieres or dedications
+- Famous performances or recordings that shaped its interpretation
+
+Be specific. Avoid generic statements like "a masterpiece of Romantic piano music."
+If ${composer} kept diaries or wrote letters about this work, quote or paraphrase directly.`;
 }

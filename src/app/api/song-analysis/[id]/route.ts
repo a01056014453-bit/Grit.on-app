@@ -1,84 +1,94 @@
 import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
 import { supabaseServer } from "@/lib/supabase-server";
 import type { SongAnalysis } from "@/types/song-analysis";
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const supabaseAny = supabaseServer as any;
+import type { SongAnalysisV3 } from "@/types/song-analysis";
 
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await params;
-  const url = new URL(_request.url);
-  const composer = url.searchParams.get("composer");
-  const title = url.searchParams.get("title");
+  try {
+    const { id } = await params;
+    const url = new URL(_request.url);
+    const composer = url.searchParams.get("composer");
+    const title = url.searchParams.get("title");
 
-  // 인증 확인
-  const supabaseAuth = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return _request.headers.get("cookie")
-            ? _request.headers.get("cookie")!.split("; ").map((c) => {
-                const [name, ...rest] = c.split("=");
-                return { name, value: rest.join("=") };
-              })
-            : [];
-        },
-        setAll() {},
-      },
-    },
-  );
-  const { data: { user } } = await supabaseAuth.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "로그인이 필요합니다" }, { status: 401 });
-  }
-
-  // song_analyses는 공유 캐시 — 로그인 사용자면 모든 분석 접근 가능
-  // (user_analysis_history는 보관함 목록용이지 접근 제어용이 아님)
-
-  // 1. id로 공유 캐시에서 검색
-  let { data, error } = await supabaseServer
-    .from("song_analyses")
-    .select("*")
-    .eq("id", id)
-    .single();
-
-  // 2. id로 못 찾으면 composer+title로 재검색 (공유 캐시)
-  if ((error || !data) && composer && title) {
-    const { data: fallback } = await supabaseServer
+    // 1. id로 공유 캐시에서 검색 (인증 불필요 — 공유 캐시)
+    let { data, error } = await supabaseServer
       .from("song_analyses")
       .select("*")
-      .ilike("composer", `%${composer}%`)
-      .ilike("title", `%${title}%`)
-      .limit(1)
+      .eq("id", id)
       .single();
-    if (fallback) {
-      data = fallback;
-      error = null;
+
+    // 2. id로 못 찾으면 composer+title로 재검색
+    if ((error || !data) && composer && title) {
+      const { data: fallback } = await supabaseServer
+        .from("song_analyses")
+        .select("*")
+        .ilike("composer", `%${composer}%`)
+        .ilike("title", `%${title}%`)
+        .limit(1)
+        .single();
+      if (fallback) {
+        data = fallback;
+        error = null;
+      }
     }
-  }
 
-  if (error || !data) {
-    return NextResponse.json({ error: "분석 데이터를 찾을 수 없습니다" }, { status: 404 });
-  }
+    if (error || !data) {
+      return NextResponse.json(
+        { success: false, error: "분석 데이터를 찾을 수 없습니다." },
+        { status: 404 }
+      );
+    }
 
-  // content에 전체 SongAnalysis가 저장되어 있으면 복원
-  const content = data.content as Record<string, unknown>;
-  let analysis: SongAnalysis;
+    // content에서 복원
+    const content = data.content as Record<string, unknown>;
 
-  if (content && content.meta && content.content) {
-    analysis = content as unknown as SongAnalysis;
-    analysis.id = data.id;
-    analysis.created_at = data.created_at || analysis.created_at;
-    analysis.updated_at = data.updated_at || analysis.updated_at;
-  } else {
-    analysis = {
+    if (content && content.meta && content.content) {
+      // V3 감지: schema_version === 3
+      const schemaVer = content.schema_version;
+      if (schemaVer === 3) {
+        // V3는 이중 래핑될 수 있음: content.content가 SongAnalysisV3, content.content.content가 AnalysisContentV3
+        const inner = content.content as Record<string, unknown>;
+
+        // 케이스 1: content.content.content에 work_type이 있음 (이중 래핑)
+        if (inner && inner.content && typeof inner.content === "object") {
+          const deepContent = inner.content as Record<string, unknown>;
+          if ("work_type" in deepContent) {
+            // inner가 실제 SongAnalysisV3
+            const v3 = inner as unknown as SongAnalysisV3;
+            return NextResponse.json({
+              ...v3,
+              id: data.id,
+              created_at: data.created_at || v3.created_at,
+              updated_at: data.updated_at || v3.updated_at,
+            });
+          }
+        }
+
+        // 케이스 2: content.content에 직접 work_type이 있음 (단일 래핑)
+        if ("work_type" in inner) {
+          const v3 = content as unknown as SongAnalysisV3;
+          return NextResponse.json({
+            ...v3,
+            id: data.id,
+            created_at: data.created_at || v3.created_at,
+            updated_at: data.updated_at || v3.updated_at,
+          });
+        }
+      }
+
+      // V1/V2 복원
+      const analysis = content as unknown as SongAnalysis;
+      analysis.id = data.id;
+      analysis.created_at = data.created_at || analysis.created_at;
+      analysis.updated_at = data.updated_at || analysis.updated_at;
+      return NextResponse.json(analysis);
+    }
+
+    // content가 래퍼가 아닌 경우 (구형 데이터)
+    return NextResponse.json({
       id: data.id,
       meta: {
         composer: data.composer,
@@ -92,8 +102,12 @@ export async function GET(
       created_at: data.created_at || new Date().toISOString(),
       updated_at: data.updated_at || new Date().toISOString(),
       schema_version: 1,
-    };
+    });
+  } catch (err) {
+    console.error("[song-analysis/:id] GET error:", err);
+    return NextResponse.json(
+      { success: false, error: "분석 데이터를 불러오는 중 오류가 발생했습니다." },
+      { status: 500 }
+    );
   }
-
-  return NextResponse.json(analysis);
 }

@@ -114,10 +114,16 @@ export type TechnicalDemandCategory =
 export interface TechnicalDemand {
   /** 카테고리 */
   category: TechnicalDemandCategory;
-  /** 과제 제목 (예: "좌우 교차 옥타브 패시지") */
+  /** 과제 제목 — 이 곡에서만 유효한 구체적 제목 */
   title: string;
-  /** 구체적 설명 — 어디서 왜 어려운지 (2-3문장) */
+  /** 현상 설명 — 어디서 무슨 문제가 발생하는가 */
   description: string;
+  /** 왜 어려운가 — 이 곡 고유의 신체적/음악적/심리적 원인 */
+  why_hard?: string;
+  /** 진짜 원인 — 대부분 연주자가 놓치는 근본 원인 */
+  root_cause?: string;
+  /** 자주 하는 실수 */
+  common_mistake?: string;
   /** 해당 위치 (예: "1악장 발전부", "mm.51-93") — 확인된 경우만 */
   location?: string;
   /** 난이도 */
