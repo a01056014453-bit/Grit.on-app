@@ -474,16 +474,15 @@ async function parseImslpRichMetadata(pageTitle: string): Promise<ImslpRichMetad
         const subtitleMatch = cleaned.match(/''(\([^)]+\))''/);
         const subtitle = subtitleMatch ? subtitleMatch[1].replace(/[()]/g, "") : null;
         // 템포: 첫 번째 단어들 (Key/MWV/bars 부분 제거)
-        let tempo = cleaned
+        const tempoRaw = cleaned
           .replace(/<br\s*\/?>/gi, " ")
           .replace(/\{\{[^}]+\}\}/g, "")
           .replace(/\([^)]*\)/g, "")
           .replace(/''[^']*''/g, "")
           .replace(/,\s*$/, "")
-          .trim();
-        // 첫 콤마까지만
-        tempo = tempo.split(",")[0].trim();
-        if (!tempo || tempo.length > 60) tempo = null;
+          .trim()
+          .split(",")[0].trim();
+        const tempo = (tempoRaw && tempoRaw.length <= 60) ? tempoRaw : null;
 
         movements.push({
           number: movements.length + 1,
