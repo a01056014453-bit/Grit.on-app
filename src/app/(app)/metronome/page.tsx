@@ -80,7 +80,7 @@ const SIMPLE_SUBDIVISIONS: SubPattern[] = [
   },
   {
     id: "sixteenth",
-    symbol: "♬♬",
+    symbol: "sixteenth",
     label: "16분음표",
     subdivisions: [
       { offset: 0, volume: 1.0, pitch: 1000 },
@@ -455,7 +455,22 @@ export default function MetronomePage() {
                   : "bg-white/10 text-white/70 hover:bg-white/15"
               }`}
             >
-              <div className="text-lg font-bold leading-tight">{p.symbol}</div>
+              <div className="text-lg font-bold leading-tight">
+                {p.symbol === "sixteenth" ? (
+                  <svg viewBox="0 0 48 36" fill="currentColor" className="w-7 h-6 inline-block">
+                    <rect x="5" y="6" width="38" height="2.5" />
+                    <rect x="5" y="11" width="38" height="2.5" />
+                    <rect x="5" y="6" width="2" height="19" />
+                    <rect x="17" y="6" width="2" height="19" />
+                    <rect x="29" y="6" width="2" height="19" />
+                    <rect x="41" y="6" width="2" height="19" />
+                    <ellipse cx="4" cy="27" rx="3" ry="2.2" transform="rotate(-20 4 27)" />
+                    <ellipse cx="16" cy="27" rx="3" ry="2.2" transform="rotate(-20 16 27)" />
+                    <ellipse cx="28" cy="27" rx="3" ry="2.2" transform="rotate(-20 28 27)" />
+                    <ellipse cx="40" cy="27" rx="3" ry="2.2" transform="rotate(-20 40 27)" />
+                  </svg>
+                ) : p.symbol}
+              </div>
               <div className="text-[10px] mt-1 opacity-70">{p.label}</div>
             </button>
           ))}

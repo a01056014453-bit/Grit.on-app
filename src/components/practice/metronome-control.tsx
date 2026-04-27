@@ -70,6 +70,32 @@ const ReverseDottedIcon = ({ className = "" }: { className?: string }) => (
   </svg>
 );
 
+// 16분음표 4개 묶음 아이콘 (1박 = 4개 stem 연결)
+const SixteenthNoteIcon = ({ className = "" }: { className?: string }) => (
+  <svg viewBox="0 0 48 36" fill="currentColor" className={className}>
+    {/* Top beam (전체 연결) */}
+    <rect x="5" y="6" width="38" height="2.5" />
+    {/* Second beam (전체 연결 — 16분음표 표시) */}
+    <rect x="5" y="11" width="38" height="2.5" />
+    {/* Stem 1 */}
+    <rect x="5" y="6" width="2" height="19" />
+    {/* Stem 2 */}
+    <rect x="17" y="6" width="2" height="19" />
+    {/* Stem 3 */}
+    <rect x="29" y="6" width="2" height="19" />
+    {/* Stem 4 */}
+    <rect x="41" y="6" width="2" height="19" />
+    {/* Note head 1 */}
+    <ellipse cx="4" cy="27" rx="3" ry="2.2" transform="rotate(-20 4 27)" />
+    {/* Note head 2 */}
+    <ellipse cx="16" cy="27" rx="3" ry="2.2" transform="rotate(-20 16 27)" />
+    {/* Note head 3 */}
+    <ellipse cx="28" cy="27" rx="3" ry="2.2" transform="rotate(-20 28 27)" />
+    {/* Note head 4 */}
+    <ellipse cx="40" cy="27" rx="3" ry="2.2" transform="rotate(-20 40 27)" />
+  </svg>
+);
+
 // 스윙/셔플 아이콘
 // 8분음표 3개 묶음 (복합박자용)
 const ThreeEighthsIcon = ({ className = "" }: { className?: string }) => (
@@ -155,7 +181,7 @@ const SUBDIVISIONS: SubdivisionPattern[] = [
   { id: "1", icon: "♩", label: "4분음표", pattern: [1] },
   { id: "2", icon: "♫", label: "8분음표", pattern: [0.5, 0.5] },
   { id: "3", icon: "triplet", label: "셋잇단", pattern: [1/3, 1/3, 1/3] },
-  { id: "4", icon: "♬", label: "16분음표", pattern: [0.25, 0.25, 0.25, 0.25] },
+  { id: "4", icon: "sixteenth", label: "16분음표", pattern: [0.25, 0.25, 0.25, 0.25] },
   { id: "5", icon: "dotted", label: "점8분+16분", pattern: [0.75, 0.25] },
   { id: "6", icon: "reverse-dotted", label: "16분+점8분", pattern: [0.25, 0.75] },
 ];
@@ -824,6 +850,8 @@ export function MetronomeControl({
             >
               {subdiv.icon === "triplet" ? (
                 <TripletIcon className="w-7 h-6 text-gray-700" />
+              ) : subdiv.icon === "sixteenth" ? (
+                <SixteenthNoteIcon className="w-7 h-6 text-gray-700" />
               ) : subdiv.icon === "dotted" ? (
                 <DottedEighthIcon className="w-7 h-6 text-gray-700" />
               ) : subdiv.icon === "reverse-dotted" ? (
@@ -863,6 +891,8 @@ export function MetronomeControl({
                       >
                         {item.icon === "triplet" ? (
                           <TripletIcon className="w-6 h-5" />
+                        ) : item.icon === "sixteenth" ? (
+                          <SixteenthNoteIcon className="w-6 h-5" />
                         ) : item.icon === "dotted" ? (
                           <DottedEighthIcon className="w-6 h-5" />
                         ) : item.icon === "reverse-dotted" ? (
