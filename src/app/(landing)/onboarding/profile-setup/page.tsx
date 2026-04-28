@@ -21,34 +21,22 @@ const MUSIC_ADJECTIVES = [
 ];
 
 const INSTRUMENT_NAMES = [
-  "피아노", "바이올린", "첼로", "비올라", "플루트", "클라리넷", "트럼펫",
+  "피아노",
 ];
 
 const AGE_GROUPS = ["중학생", "고등학생", "대학생", "성인"];
 
 const INSTRUMENT_OPTIONS = [
   { name: "피아노", emoji: "🎹" },
-  { name: "바이올린", emoji: "🎻" },
-  { name: "첼로", emoji: "🎻" },
-  { name: "비올라", emoji: "🎻" },
-  { name: "플루트", emoji: "🪈" },
-  { name: "클라리넷", emoji: "🎵" },
-  { name: "기타", emoji: "🎸" },
 ];
 
 const EMOJI_OPTIONS = [
-  "👤", "🎹", "🎻", "🎺", "🎷", "🎵", "🎼", "👩‍🎤", "👨‍🎤", "🧑‍🎓",
+  "👤", "🎹", "🎵", "🎼", "🧑‍🎓",
 ];
 
 // 한글 악기명 → DB enum 매핑
 const INSTRUMENT_TO_ENUM: Record<string, string> = {
   "피아노": "piano",
-  "바이올린": "violin",
-  "첼로": "cello",
-  "비올라": "violin",
-  "플루트": "flute",
-  "클라리넷": "clarinet",
-  "기타": "guitar",
 };
 
 /* ─── Types ─── */

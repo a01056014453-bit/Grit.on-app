@@ -284,23 +284,6 @@ function BirthdayStep({
 /* ─── InstrumentStep ─── */
 const instruments = [
   { name: "피아노", emoji: "🎹" },
-  { name: "바이올린", emoji: "🎻" },
-  { name: "비올라", emoji: "🎻" },
-  { name: "첼로", emoji: "🎻" },
-  { name: "콘트라베이스", emoji: "🎻" },
-  { name: "플루트", emoji: "🪈" },
-  { name: "오보에", emoji: "🎵" },
-  { name: "클라리넷", emoji: "🎵" },
-  { name: "바순", emoji: "🎵" },
-  { name: "호른", emoji: "📯" },
-  { name: "트럼펫", emoji: "🎺" },
-  { name: "트롬본", emoji: "🎺" },
-  { name: "튜바", emoji: "🎺" },
-  { name: "하프", emoji: "🎵" },
-  { name: "타악기", emoji: "🥁" },
-  { name: "성악", emoji: "🎤" },
-  { name: "작곡", emoji: "🎼" },
-  { name: "지휘", emoji: "🎼" },
 ];
 
 const typeOptions = ["전공", "입시", "취미"];
