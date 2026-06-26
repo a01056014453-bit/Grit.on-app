@@ -252,8 +252,11 @@ export default function ProfileSetupPage() {
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        console.error("[profile-setup] 프로필 저장 실패:", data.error);
+        const ct = res.headers.get("content-type") ?? "";
+        const msg = ct.includes("application/json")
+          ? (await res.json()).error
+          : `HTTP ${res.status}`;
+        console.error("[profile-setup] 프로필 저장 실패:", msg);
       }
     } catch (err) {
       console.error("[profile-setup] 프로필 저장 오류:", err);

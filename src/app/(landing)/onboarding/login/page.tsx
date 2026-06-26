@@ -77,6 +77,26 @@ export default function LoginRequiredPage() {
     window.location.href = url;
   };
 
+  const handleDevLogin = async () => {
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: process.env.NEXT_PUBLIC_DEV_TEST_EMAIL || "dev@test.com",
+        password: process.env.NEXT_PUBLIC_DEV_TEST_PASSWORD || "devtest1234",
+      });
+      if (error || !data.user) {
+        alert(`테스트 로그인 실패: ${error?.message}\nSupabase 대시보드에서 dev@test.com 계정을 먼저 생성해주세요.`);
+        return;
+      }
+      localStorage.setItem("sempre-auth", "dev");
+      localStorage.setItem("grit-on-logged-in", "true");
+      localStorage.setItem("grit-on-user-id", data.user.id);
+      router.replace("/");
+    } catch (err) {
+      alert(`테스트 로그인 오류: ${err}`);
+    }
+  };
+
   const handleAppleLogin = () => {
     trackEvent({ event: "signup_started", properties: { method: "apple" } });
     const clientId = "com.5F62DDJA3X.sempre.web";
@@ -155,6 +175,14 @@ export default function LoginRequiredPage() {
                 <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
               </svg>
               Apple로 계속하기
+            </button>
+          )}
+          {process.env.NODE_ENV === "development" && (
+            <button
+              onClick={handleDevLogin}
+              className="w-full flex items-center justify-center gap-3 py-3 rounded-2xl font-semibold text-sm bg-amber-100 border border-amber-300 text-amber-800 hover:bg-amber-200 active:scale-[0.98] transition-all"
+            >
+              🛠 개발용 테스트 로그인
             </button>
           )}
         </motion.div>
