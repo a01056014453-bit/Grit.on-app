@@ -301,13 +301,14 @@ export function PracticeTimer({
           {/* Control Buttons */}
           <div className="flex items-center justify-center gap-4">
             {hasPermission === false ? (
-              <StarBorder color="rgba(139, 92, 246, 0.6)" speed="3s">
-                <button
-                  onClick={onRequestPermission}
-                  className="w-14 h-14 rounded-full bg-gradient-to-br from-violet-500 to-violet-900 flex items-center justify-center"
-                >
+              <StarBorder
+                color="rgba(139, 92, 246, 0.6)"
+                speed="3s"
+                onClick={onRequestPermission}
+              >
+                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-violet-500 to-violet-900 flex items-center justify-center">
                   <Mic className="w-6 h-6 text-white" />
-                </button>
+                </div>
               </StarBorder>
             ) : isRecording ? (
               <>
