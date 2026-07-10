@@ -23,7 +23,7 @@
   letter-spacing: -0.02em;
 }
 
-/* Sempre App Design System - Minimal Black & White */
+/* Sempre App Design System - Violet (#8B5CF6) 기준, docs/design-tokens.md 참고 */
 :root {
   /* Colors - Minimal Clean Palette */
   --background: #ffffff; /* Pure white */
@@ -35,7 +35,7 @@
   --popover: #ffffff;
   --popover-foreground: #000000;
 
-  --primary: #000000; /* Black */
+  --primary: #8B5CF6; /* Violet 500 - brand */
   --primary-foreground: #ffffff;
 
   --secondary: #f5f5f5; /* Light gray */
@@ -52,7 +52,7 @@
 
   --border: #e5e5e5; /* Gray-200 */
   --input: #e5e5e5;
-  --ring: #000000;
+  --ring: #8B5CF6; /* Violet 500 - matches primary */
 
   --radius: 1rem;
 
