@@ -348,11 +348,11 @@ function SwipeableAnalysisItem({ analysis, onDelete, composerImages }: {
             <p className="text-sm font-medium text-black truncate">
               {analysis.composer} - {analysis.title}
             </p>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-fg-tertiary">
               {new Date(analysis.analyzedAt).toLocaleDateString("ko-KR")} 분석
             </p>
           </div>
-          <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
+          <ChevronRight className="w-5 h-5 text-fg-tertiary shrink-0" />
         </Link>
       </div>
     </div>
@@ -572,7 +572,7 @@ export default function AIAnalysisPage() {
 
       {/* 검색 */}
       <div className="relative mb-4">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-tertiary" />
         <input
           type="text"
           placeholder="곡 이름, 작곡가로 검색"
@@ -606,12 +606,12 @@ export default function AIAnalysisPage() {
       {pieces.length > 0 && (
         <div>
           <h2 className="text-sm font-semibold text-black flex items-center gap-2 mb-3">
-            <Music2 className="w-4 h-4 text-gray-500" />
+            <Music2 className="w-4 h-4 text-fg-secondary" />
             마디별 분석 곡
           </h2>
           <div className="space-y-3">
             {filteredPieces.length === 0 ? (
-              <div className="py-8 text-center text-gray-500 text-sm bg-white rounded-xl border border-gray-200">
+              <div className="py-8 text-center text-fg-secondary text-sm bg-white rounded-xl border border-gray-200">
                 검색 결과가 없습니다
               </div>
             ) : (
@@ -631,8 +631,8 @@ export default function AIAnalysisPage() {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-black truncate">{piece.composerShortName} - {piece.title}</p>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs text-gray-500">{piece.opus}</span>
-                          {piece.key && <span className="text-xs text-gray-400">• {piece.key}</span>}
+                          <span className="text-xs text-fg-secondary">{piece.opus}</span>
+                          {piece.key && <span className="text-xs text-fg-tertiary">• {piece.key}</span>}
                           {analysis?.overallDifficulty && (
                             <span className={`text-xs px-1.5 py-0.5 rounded ${difficultyColors[analysis.overallDifficulty]}`}>
                               {difficultyLabels[analysis.overallDifficulty]}
@@ -643,10 +643,10 @@ export default function AIAnalysisPage() {
                       {practice && (
                         <div className="text-right shrink-0 mr-2">
                           <p className="text-xs font-semibold text-violet-600">{practice.completionPercentage}%</p>
-                          <p className="text-xs text-gray-400">완성도</p>
+                          <p className="text-xs text-fg-tertiary">완성도</p>
                         </div>
                       )}
-                      {isExpanded ? <ChevronDown className="w-5 h-5 text-gray-400 shrink-0" /> : <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />}
+                      {isExpanded ? <ChevronDown className="w-5 h-5 text-fg-tertiary shrink-0" /> : <ChevronRight className="w-5 h-5 text-fg-tertiary shrink-0" />}
                     </button>
 
                     {isExpanded && analysis && (() => {
@@ -657,15 +657,15 @@ export default function AIAnalysisPage() {
                           <div className="grid grid-cols-3 gap-2 p-4 border-b border-gray-100">
                             <div className="text-center">
                               <p className="text-lg font-bold text-black">{analysis.totalMeasures}</p>
-                              <p className="text-xs text-gray-500">마디</p>
+                              <p className="text-xs text-fg-secondary">마디</p>
                             </div>
                             <div className="text-center">
                               <p className="text-lg font-bold text-black">{formatDuration(analysis.estimatedDuration ?? 0)}</p>
-                              <p className="text-xs text-gray-500">연주시간</p>
+                              <p className="text-xs text-fg-secondary">연주시간</p>
                             </div>
                             <div className="text-center">
                               <p className="text-lg font-bold text-black">{sections.length}</p>
-                              <p className="text-xs text-gray-500">섹션</p>
+                              <p className="text-xs text-fg-secondary">섹션</p>
                             </div>
                           </div>
                           {practice && (
@@ -675,15 +675,15 @@ export default function AIAnalysisPage() {
                                 <span className="text-xs font-semibold text-black">내 연습 현황</span>
                               </div>
                               <div className="flex items-center gap-4 text-xs">
-                                <div><span className="text-gray-500">총 연습: </span><span className="font-medium">{formatPracticeTime(practice.totalPracticeTime)}</span></div>
-                                <div><span className="text-gray-500">세션: </span><span className="font-medium">{practice.sessionCount}회</span></div>
-                                {practice.averageAccuracy && <div><span className="text-gray-500">정확도: </span><span className="font-medium">{practice.averageAccuracy}%</span></div>}
+                                <div><span className="text-fg-secondary">총 연습: </span><span className="font-medium">{formatPracticeTime(practice.totalPracticeTime)}</span></div>
+                                <div><span className="text-fg-secondary">세션: </span><span className="font-medium">{practice.sessionCount}회</span></div>
+                                {practice.averageAccuracy && <div><span className="text-fg-secondary">정확도: </span><span className="font-medium">{practice.averageAccuracy}%</span></div>}
                               </div>
                             </div>
                           )}
                           <div className="p-4">
                             <div className="flex items-center gap-2 mb-3">
-                              <Target className="w-4 h-4 text-gray-500" />
+                              <Target className="w-4 h-4 text-fg-secondary" />
                               <span className="text-xs font-semibold text-black">마디별 분석</span>
                             </div>
                             <div className="space-y-2">
@@ -694,7 +694,7 @@ export default function AIAnalysisPage() {
                                     className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-100 hover:border-violet-200 transition-colors">
                                     <div className="flex flex-col items-center shrink-0">
                                       <span className="text-xs font-bold text-gray-600">{section.startMeasure}-{section.endMeasure}</span>
-                                      <span className="text-[10px] text-gray-400">마디</span>
+                                      <span className="text-[10px] text-fg-tertiary">마디</span>
                                     </div>
                                     <div className="flex-1 min-w-0">
                                       <p className="text-sm font-medium text-black truncate">{section.sectionName}</p>
@@ -702,11 +702,11 @@ export default function AIAnalysisPage() {
                                         <span className={`text-[10px] px-1.5 py-0.5 rounded ${difficultyColors[section.technicalDifficulty]}`}>
                                           {difficultyLabels[section.technicalDifficulty]}
                                         </span>
-                                        <span className="text-[10px] text-gray-400">{section.dynamics}</span>
+                                        <span className="text-[10px] text-fg-tertiary">{section.dynamics}</span>
                                       </div>
                                     </div>
                                     {sp && <div className={`w-3 h-3 rounded-full shrink-0 ${masteryColors[sp.mastery]}`} />}
-                                    <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
+                                    <ChevronRight className="w-4 h-4 text-fg-tertiary shrink-0" />
                                   </Link>
                                 );
                               })}
@@ -730,7 +730,7 @@ export default function AIAnalysisPage() {
       )}
 
       {filteredUserAnalyses.length === 0 && filteredPieces.length === 0 && (
-        <div className="py-12 text-center text-gray-500 text-sm">
+        <div className="py-12 text-center text-fg-secondary text-sm">
           {searchQuery ? "검색 결과가 없습니다" : "아직 분석한 곡이 없습니다"}
         </div>
       )}

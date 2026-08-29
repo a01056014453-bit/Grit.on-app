@@ -582,11 +582,11 @@ export function MetronomeControl({
             <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
               isPlaying ? "bg-violet-600" : "bg-white/40"
             }`}>
-              <span className={`text-sm ${isPlaying ? "text-white" : "text-gray-500"}`}>♩</span>
+              <span className={`text-sm ${isPlaying ? "text-white" : "text-fg-secondary"}`}>♩</span>
             </div>
             <div className="text-left">
               <span className="font-semibold text-sm text-black">메트로놈</span>
-              <p className={`text-[11px] ${isPlaying ? "text-black" : "text-gray-400"}`}>
+              <p className={`text-[11px] ${isPlaying ? "text-black" : "text-fg-tertiary"}`}>
                 {isPlaying ? `${BEAT_SYMBOL[timeSig.denominator] || "♩"}=${bpm} · ${timeSig.label}` : "OFF"}
               </p>
             </div>
@@ -600,7 +600,7 @@ export function MetronomeControl({
               className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
                 isPlaying
                   ? "bg-violet-600 text-white"
-                  : "bg-white/40 text-gray-500 hover:bg-white/60"
+                  : "bg-white/40 text-fg-secondary hover:bg-white/60"
               } disabled:opacity-50`}
             >
               {isPlaying ? "ON" : "OFF"}
@@ -610,7 +610,7 @@ export function MetronomeControl({
               className="p-0.5 hover:bg-gray-100 rounded-full transition-colors"
               disabled={disabled}
             >
-              <ChevronDown className="w-4 h-4 text-gray-400" />
+              <ChevronDown className="w-4 h-4 text-fg-tertiary" />
             </button>
           </div>
         </div>
@@ -627,7 +627,7 @@ export function MetronomeControl({
         className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/30 transition-colors border-b border-white/30"
       >
         <span className="font-semibold text-black">메트로놈</span>
-        <ChevronUp className="w-5 h-5 text-gray-400" />
+        <ChevronUp className="w-5 h-5 text-fg-tertiary" />
       </button>
 
       {/* Beat Visualization - 터치하여 악센트 설정 */}
@@ -685,7 +685,7 @@ export function MetronomeControl({
         <p className="text-[10px] text-violet-400 text-center mt-1.5">
           {BEAT_SYMBOL[timeSig.denominator] || "♩"} = {bpm} BPM
         </p>
-        <p className="text-[10px] text-gray-400 text-center mt-1">
+        <p className="text-[10px] text-fg-tertiary text-center mt-1">
           터치하여 악센트 설정
         </p>
       </div>
@@ -722,7 +722,7 @@ export function MetronomeControl({
                 falloff="gaussian"
                 className={`text-4xl tabular-nums transition-colors ${isDragging ? 'text-violet-600' : 'text-black'}`}
               />
-              <span className="text-xs text-gray-400 ml-1">BPM</span>
+              <span className="text-xs text-fg-tertiary ml-1">BPM</span>
             </div>
           </div>
 
@@ -746,11 +746,11 @@ export function MetronomeControl({
             containerRef={bpmContainerRef}
             radius={80}
             falloff="linear"
-            className="text-sm text-gray-500 italic"
+            className="text-sm text-fg-secondary italic"
           />
-          <ChevronDown className={`w-3 h-3 text-gray-400 inline-block ml-1 transition-transform ${showTempoPresets ? "rotate-180" : ""}`} />
+          <ChevronDown className={`w-3 h-3 text-fg-tertiary inline-block ml-1 transition-transform ${showTempoPresets ? "rotate-180" : ""}`} />
         </button>
-        <p className="text-center text-[10px] text-gray-400 mb-2">← 스와이프하여 BPM 조절 →</p>
+        <p className="text-center text-[10px] text-fg-tertiary mb-2">← 스와이프하여 BPM 조절 →</p>
 
         {/* Tempo Presets - Toggle */}
         {showTempoPresets && (
@@ -835,7 +835,7 @@ export function MetronomeControl({
               ) : (
                 <span className="text-lg text-gray-700">{subdiv.icon}</span>
               )}
-              <ChevronDown className="w-3 h-3 text-gray-400 mt-0.5" />
+              <ChevronDown className="w-3 h-3 text-fg-tertiary mt-0.5" />
             </button>
 
             {/* Dropdown Menu */}
@@ -846,7 +846,7 @@ export function MetronomeControl({
                   onClick={() => setShowSubdivDropdown(false)}
                 />
                 <div className="absolute bottom-full right-0 mb-2 bg-white rounded-xl shadow-lg border border-gray-200 p-2 z-20 min-w-[200px]">
-                  <p className="text-[10px] text-gray-400 px-2 mb-2">세분 (Subdivision)</p>
+                  <p className="text-[10px] text-fg-tertiary px-2 mb-2">세분 (Subdivision)</p>
                   <div className="grid grid-cols-4 gap-1">
                     {getSubdivisionsForTimeSig(timeSig).map((item) => (
                       <button

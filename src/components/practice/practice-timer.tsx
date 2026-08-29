@@ -113,7 +113,7 @@ export function PracticeTimer({
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="flex items-center justify-center gap-2 text-sm text-gray-500 mb-4"
+                className="flex items-center justify-center gap-2 text-sm text-fg-secondary mb-4"
               >
                 <Calendar className="w-4 h-4" />
                 <span>시작</span>
@@ -140,7 +140,7 @@ export function PracticeTimer({
                   <div className="py-2">
                     <div className="text-3xl mb-3">🎤</div>
                     <p className="text-lg font-semibold text-gray-700">주변 소음 분석 중...</p>
-                    <p className="text-sm text-gray-400 mt-1">조용히 기다려주세요</p>
+                    <p className="text-sm text-fg-tertiary mt-1">조용히 기다려주세요</p>
                   </div>
                 ) : calibrationCountdown > 0 ? (
                   /* 카운트다운 3, 2, 1 */
@@ -183,7 +183,7 @@ export function PracticeTimer({
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ duration: 0.2, ease: "easeOut" }}
                     className={`inline-block ${
-                      isRecording && !isPaused ? "text-violet-900" : "text-gray-900"
+                      isRecording && !isPaused ? "text-violet-900" : "text-fg-primary"
                     }`}
                   >
                     {time.minutes}
@@ -192,7 +192,7 @@ export function PracticeTimer({
                     className={`mx-1 ${
                       isRecording && !isPaused
                         ? "text-violet-400 animate-pulse"
-                        : "text-gray-400"
+                        : "text-fg-tertiary"
                     }`}
                   >
                     :
@@ -203,7 +203,7 @@ export function PracticeTimer({
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ duration: 0.2, ease: "easeOut" }}
                     className={`inline-block ${
-                      isRecording && !isPaused ? "text-violet-900" : "text-gray-900"
+                      isRecording && !isPaused ? "text-violet-900" : "text-fg-primary"
                     }`}
                   >
                     {time.seconds}
@@ -214,7 +214,7 @@ export function PracticeTimer({
           </AnimatePresence>
 
           {/* Status Indicators */}
-          <div className="flex items-center justify-center gap-4 text-sm text-gray-500 mb-6">
+          <div className="flex items-center justify-center gap-4 text-sm text-fg-secondary mb-6">
             <div className="flex items-center gap-1.5">
               <Clock className="w-4 h-4" />
               {isRecording ? (

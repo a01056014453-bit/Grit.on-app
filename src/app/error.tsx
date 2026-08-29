@@ -30,10 +30,10 @@ export default function Error({
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-6">
       <div className="text-center max-w-sm">
         <AlertTriangle className="w-16 h-16 text-amber-400 mx-auto mb-4" />
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+        <h1 className="text-2xl font-bold text-fg-primary mb-2">
           문제가 발생했습니다
         </h1>
-        <p className="text-sm text-gray-500 mb-6">
+        <p className="text-sm text-fg-secondary mb-6">
           일시적인 오류입니다. 잠시 후 다시 시도해주세요.
         </p>
         <div className="flex flex-col gap-3">
@@ -45,7 +45,7 @@ export default function Error({
           </button>
           <Link
             href="/"
-            className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-sm text-fg-tertiary hover:text-gray-600 transition-colors"
           >
             홈으로 돌아가기
           </Link>

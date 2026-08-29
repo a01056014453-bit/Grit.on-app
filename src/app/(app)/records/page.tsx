@@ -75,7 +75,7 @@ function FreeSessionRow({ session }: { session: import("@/lib/drill-records").Re
         <span className="text-[12px] font-medium text-gray-800 block truncate">
           {session.piece}
         </span>
-        <span className="text-[11px] text-gray-400">
+        <span className="text-[11px] text-fg-tertiary">
           {session.time}{session.duration ? ` · ${session.duration}` : ""}
         </span>
       </div>
@@ -122,10 +122,10 @@ function TimelineSessionRow({ session }: { session: import("@/lib/drill-records"
           )}
         </div>
         <div className="flex items-center gap-2 mt-1">
-          {session.detail && <span className="text-[12px] text-gray-400">{session.detail}</span>}
-          {session.detail && session.duration && <span className="text-[12px] text-gray-400">·</span>}
+          {session.detail && <span className="text-[12px] text-fg-tertiary">{session.detail}</span>}
+          {session.detail && session.duration && <span className="text-[12px] text-fg-tertiary">·</span>}
           {session.duration && (
-            <span className="text-[12px] text-gray-400 flex items-center gap-0.5">
+            <span className="text-[12px] text-fg-tertiary flex items-center gap-0.5">
               <Clock className="w-3 h-3" />
               {session.duration}
             </span>
@@ -350,7 +350,7 @@ export default function RecordsPage() {
           {/* Calendar Header */}
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
-              <span className="text-[15px] font-bold text-gray-900">
+              <span className="text-[15px] font-bold text-fg-primary">
                 {calendarYear}년 {calendarMonth + 1}월
               </span>
               {practiceDaysInMonth > 0 && (
@@ -362,10 +362,10 @@ export default function RecordsPage() {
             </div>
             <div className="flex items-center gap-1">
               <button onClick={() => navigateMonth(-1)} className="p-1.5 rounded-full hover:bg-white/30 transition-colors">
-                <ChevronLeft className="w-4 h-4 text-gray-400 hover:text-violet-600" />
+                <ChevronLeft className="w-4 h-4 text-fg-tertiary hover:text-violet-600" />
               </button>
               <button onClick={() => navigateMonth(1)} className="p-1.5 rounded-full hover:bg-white/30 transition-colors">
-                <ChevronRight className="w-4 h-4 text-gray-400 hover:text-violet-600" />
+                <ChevronRight className="w-4 h-4 text-fg-tertiary hover:text-violet-600" />
               </button>
             </div>
           </div>
@@ -376,7 +376,7 @@ export default function RecordsPage() {
               <div
                 key={day}
                 className={`text-center text-[11px] font-medium py-0.5 ${
-                  i === 0 ? "text-red-400" : i === 6 ? "text-blue-400" : "text-gray-400"
+                  i === 0 ? "text-red-400" : i === 6 ? "text-blue-400" : "text-fg-tertiary"
                 }`}
               >
                 {day}
@@ -443,7 +443,7 @@ export default function RecordsPage() {
                           ? "text-red-400"
                           : dayOfWeek === 6
                           ? "text-blue-400"
-                          : "text-gray-500"
+                          : "text-fg-secondary"
                       }`}
                     >
                       {day}
@@ -457,15 +457,15 @@ export default function RecordsPage() {
           <div className="flex items-center justify-end gap-2 mt-3">
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 rounded-full bg-violet-100/60 border border-violet-200" />
-              <span className="text-[10px] text-gray-400">일정</span>
+              <span className="text-[10px] text-fg-tertiary">일정</span>
             </div>
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 rounded-full bg-violet-200/40" />
-              <span className="text-[10px] text-gray-400">연습</span>
+              <span className="text-[10px] text-fg-tertiary">연습</span>
             </div>
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 rounded-full bg-violet-600" />
-              <span className="text-[10px] text-gray-400">오늘</span>
+              <span className="text-[10px] text-fg-tertiary">오늘</span>
             </div>
           </div>
 
@@ -473,11 +473,11 @@ export default function RecordsPage() {
           <div className="pt-3 mt-3" style={{ borderTop: "1px solid rgba(255,255,255,0.3)" }}>
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-[14px] font-bold text-gray-900">
+                <h3 className="text-[14px] font-bold text-fg-primary">
                   {selectedDate.getMonth() + 1}월 {selectedDate.getDate()}일{" "}
                   {weekdayNames[selectedDate.getDay()]}
                 </h3>
-                <p className="text-[11px] text-gray-400/80 mt-0.5">
+                <p className="text-[11px] text-fg-tertiary/80 mt-0.5">
                   {pieces.length > 0 || freeSessions.length > 0
                     ? `${pieces.reduce((s, p) => s + p.tasks.length, 0) + freeSessions.length}개 연습 · ${totalRecordings}개 녹음`
                     : "연습 일정이 없습니다"}
@@ -498,11 +498,11 @@ export default function RecordsPage() {
               {/* Progress Header */}
               <div className="mb-3">
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[13px] font-bold text-gray-900">
+                  <span className="text-[13px] font-bold text-fg-primary">
                     {isSelectedToday ? "오늘의 연습" : "연습 일정"} {totalCompleted}/{totalTasks}
                   </span>
                   {!isSelectedToday && (
-                    <span className="text-[10px] text-gray-400">
+                    <span className="text-[10px] text-fg-tertiary">
                       {isSelectedToday ? "" : selectedDate > today ? "예정" : "완료 기록"}
                     </span>
                   )}
@@ -549,9 +549,9 @@ export default function RecordsPage() {
                             {piece.completed}/{piece.total}
                           </span>
                           {isExpanded ? (
-                            <ChevronUp className="w-4 h-4 text-gray-400" />
+                            <ChevronUp className="w-4 h-4 text-fg-tertiary" />
                           ) : (
-                            <ChevronDown className="w-4 h-4 text-gray-400" />
+                            <ChevronDown className="w-4 h-4 text-fg-tertiary" />
                           )}
                         </div>
                       </button>
@@ -601,14 +601,14 @@ export default function RecordsPage() {
                               </button>
 
                               {/* Task detail */}
-                              <div className={`flex-1 min-w-0 ${task.done ? "line-through text-gray-400/60" : "text-gray-700"}`}>
+                              <div className={`flex-1 min-w-0 ${task.done ? "line-through text-fg-tertiary/60" : "text-gray-700"}`}>
                                 <span className="text-[10px] leading-tight block truncate">
                                   {task.text}
                                   {task.tempo && (
-                                    <span className="text-gray-400/80"> · 템포 {task.tempo}</span>
+                                    <span className="text-fg-tertiary/80"> · 템포 {task.tempo}</span>
                                   )}
                                   {task.reps > 0 && (
-                                    <span className="text-gray-400/80"> · {task.reps}회</span>
+                                    <span className="text-fg-tertiary/80"> · {task.reps}회</span>
                                   )}
                                 </span>
                               </div>
@@ -675,7 +675,7 @@ export default function RecordsPage() {
               boxShadow: "0 8px 32px rgba(124,58,237,0.08)",
             }}
           >
-            <span className="text-[13px] font-bold text-gray-900">
+            <span className="text-[13px] font-bold text-fg-primary">
               자유 연습 {freeSessions.length}개
             </span>
 
@@ -705,7 +705,7 @@ export default function RecordsPage() {
             >
               <Music className="w-5 h-5 text-violet-300" />
             </div>
-            <p className="text-sm text-gray-400 mb-3">이 날은 연습 일정이 없습니다</p>
+            <p className="text-sm text-fg-tertiary mb-3">이 날은 연습 일정이 없습니다</p>
             <button
               onClick={() => setIsScheduleModalOpen(true)}
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-violet-600 text-white text-[13px] font-medium hover:bg-violet-700 transition-colors"

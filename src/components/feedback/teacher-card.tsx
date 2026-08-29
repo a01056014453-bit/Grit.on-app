@@ -106,7 +106,7 @@ export function TeacherCard({ teacher, showCTA = true }: TeacherCardProps) {
       </div>
 
       {/* Stats */}
-      <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-white/40">
+      <div className="flex items-center justify-between text-xs text-fg-secondary pt-2 border-t border-white/40">
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1">
             <CheckCircle className="w-3.5 h-3.5 text-green-500" />

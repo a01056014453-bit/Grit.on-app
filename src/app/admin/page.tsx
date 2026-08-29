@@ -78,7 +78,7 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-bold text-gray-900">대시보드</h1>
+      <h1 className="text-xl font-bold text-fg-primary">대시보드</h1>
 
       {/* 할일 위젯 */}
       {todos.length > 0 ? (
@@ -96,12 +96,12 @@ export default function AdminDashboardPage() {
               >
                 <div className="flex items-center gap-2">
                   {todo.urgent && <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />}
-                  <span className="text-sm font-medium text-gray-900">{todo.label}</span>
+                  <span className="text-sm font-medium text-fg-primary">{todo.label}</span>
                   <span className="text-xs font-bold text-amber-600 bg-amber-200 px-1.5 py-0.5 rounded-full">
                     {todo.count}
                   </span>
                 </div>
-                <ChevronRight className="w-4 h-4 text-gray-400" />
+                <ChevronRight className="w-4 h-4 text-fg-tertiary" />
               </Link>
             ))}
           </div>
@@ -204,7 +204,7 @@ export default function AdminDashboardPage() {
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-full flex items-center justify-center text-gray-400 text-sm">
+            <div className="h-full flex items-center justify-center text-fg-tertiary text-sm">
               데이터를 불러오는 중...
             </div>
           )}
@@ -213,7 +213,7 @@ export default function AdminDashboardPage() {
 
       {/* 최근 가입자 */}
       <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <h2 className="text-sm font-semibold text-gray-900 mb-4">최근 가입자 (10명)</h2>
+        <h2 className="text-sm font-semibold text-fg-primary mb-4">최근 가입자 (10명)</h2>
         {recentSignups.length > 0 ? (
           <div className="space-y-2">
             {recentSignups.map((user) => (
@@ -228,18 +228,18 @@ export default function AdminDashboardPage() {
                     </span>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{user.nickname ?? '(이름없음)'}</p>
-                    <p className="text-xs text-gray-400">{user.instrument ?? '-'}</p>
+                    <p className="text-sm font-medium text-fg-primary">{user.nickname ?? '(이름없음)'}</p>
+                    <p className="text-xs text-fg-tertiary">{user.instrument ?? '-'}</p>
                   </div>
                 </div>
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-fg-tertiary">
                   {user.created_at ? new Date(user.created_at).toLocaleDateString('ko-KR') : '-'}
                 </span>
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-sm text-gray-400 text-center py-4">아직 가입자가 없습니다</p>
+          <p className="text-sm text-fg-tertiary text-center py-4">아직 가입자가 없습니다</p>
         )}
       </div>
     </div>

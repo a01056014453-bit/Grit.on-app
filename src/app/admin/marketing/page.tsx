@@ -68,7 +68,7 @@ export default function MarketingPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-bold text-gray-900">사용자 성장</h1>
+      <h1 className="text-xl font-bold text-fg-primary">사용자 성장</h1>
 
       <div className="grid grid-cols-4 gap-4">
         <StatCard
@@ -109,7 +109,7 @@ export default function MarketingPage() {
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-full flex items-center justify-center text-gray-400 text-sm">
+            <div className="h-full flex items-center justify-center text-fg-tertiary text-sm">
               데이터를 불러오는 중...
             </div>
           )}

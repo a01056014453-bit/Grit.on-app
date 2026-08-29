@@ -119,8 +119,8 @@ export function BottomNavigation() {
                   <Play className="w-5 h-5 text-red-600" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-gray-900">연습 중입니다</h3>
-                  <p className="text-xs text-gray-500">어떻게 할까요?</p>
+                  <h3 className="text-base font-bold text-fg-primary">연습 중입니다</h3>
+                  <p className="text-xs text-fg-secondary">어떻게 할까요?</p>
                 </div>
               </div>
             </div>
@@ -158,7 +158,7 @@ export function BottomNavigation() {
               {/* 취소 */}
               <button
                 onClick={() => setGuardModal(null)}
-                className="w-full flex items-center justify-center gap-2 p-3 rounded-xl text-gray-500 hover:bg-gray-50 transition-colors"
+                className="w-full flex items-center justify-center gap-2 p-3 rounded-xl text-fg-secondary hover:bg-gray-50 transition-colors"
               >
                 <X className="w-4 h-4" />
                 <span className="text-sm font-medium">연습 계속하기</span>

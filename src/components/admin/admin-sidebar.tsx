@@ -39,7 +39,7 @@ export function AdminSidebar() {
           <div className="w-7 h-7 bg-violet-600 rounded-lg flex items-center justify-center">
             <span className="text-white text-xs font-bold">S</span>
           </div>
-          <span className="font-bold text-gray-900">Sempre</span>
+          <span className="font-bold text-fg-primary">Sempre</span>
           <span className="text-xs bg-violet-100 text-violet-700 px-1.5 py-0.5 rounded font-medium">Admin</span>
         </Link>
       </div>
@@ -58,10 +58,10 @@ export function AdminSidebar() {
                 'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
                 isActive
                   ? 'bg-violet-50 text-violet-700'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-fg-primary',
               )}
             >
-              <item.icon className={cn('w-4.5 h-4.5', isActive ? 'text-violet-600' : 'text-gray-400')} />
+              <item.icon className={cn('w-4.5 h-4.5', isActive ? 'text-violet-600' : 'text-fg-tertiary')} />
               {item.label}
             </Link>
           );
@@ -74,8 +74,8 @@ export function AdminSidebar() {
             A
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 truncate">관리자</p>
-            <p className="text-xs text-gray-500 truncate">support@withsempre.com</p>
+            <p className="text-sm font-medium text-fg-primary truncate">관리자</p>
+            <p className="text-xs text-fg-secondary truncate">support@withsempre.com</p>
           </div>
         </div>
       </div>

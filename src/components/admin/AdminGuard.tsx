@@ -80,8 +80,8 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
             <div className="w-16 h-16 bg-violet-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <Shield className="w-8 h-8 text-violet-600" />
             </div>
-            <h1 className="text-xl font-bold text-gray-900">Sempre Admin</h1>
-            <p className="text-sm text-gray-500 mt-1">관리자 로그인</p>
+            <h1 className="text-xl font-bold text-fg-primary">Sempre Admin</h1>
+            <p className="text-sm text-fg-secondary mt-1">관리자 로그인</p>
           </div>
 
           <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
@@ -89,7 +89,7 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">이메일</label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-tertiary" />
                   <input
                     type="email"
                     value={email}
@@ -104,7 +104,7 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">비밀번호</label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-tertiary" />
                   <input
                     type="password"
                     value={password}
@@ -148,8 +148,8 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
         <Shield className="w-16 h-16 text-red-300 mb-4" />
-        <h1 className="text-xl font-bold text-gray-900 mb-2">접근 권한 없음</h1>
-        <p className="text-sm text-gray-500 mb-4">관리자만 접근할 수 있습니다.</p>
+        <h1 className="text-xl font-bold text-fg-primary mb-2">접근 권한 없음</h1>
+        <p className="text-sm text-fg-secondary mb-4">관리자만 접근할 수 있습니다.</p>
         <button
           onClick={() => {
             const supabase = createClient();

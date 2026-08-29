@@ -59,13 +59,13 @@ export function TeacherStatsCards({ stats }: TeacherStatsCardsProps) {
             >
               <card.icon className={`w-4 h-4 ${card.color}`} />
             </div>
-            <span className="text-xs text-gray-500">{card.label}</span>
+            <span className="text-xs text-fg-secondary">{card.label}</span>
           </div>
           <div className="flex items-baseline gap-1">
-            <span className="text-2xl font-bold text-gray-900">
+            <span className="text-2xl font-bold text-fg-primary">
               {card.value}
             </span>
-            <span className="text-sm text-gray-400">{card.unit}</span>
+            <span className="text-sm text-fg-tertiary">{card.unit}</span>
           </div>
         </div>
       ))}

@@ -83,7 +83,7 @@ export default function FeedbackListPage() {
           className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all ${
             tab === "active"
               ? "bg-white/70 text-violet-700 shadow-sm backdrop-blur-sm"
-              : "text-gray-500 hover:text-gray-700"
+              : "text-fg-secondary hover:text-gray-700"
           }`}
         >
           진행중 ({activeCount})
@@ -93,7 +93,7 @@ export default function FeedbackListPage() {
           className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all ${
             tab === "completed"
               ? "bg-white/70 text-violet-700 shadow-sm backdrop-blur-sm"
-              : "text-gray-500 hover:text-gray-700"
+              : "text-fg-secondary hover:text-gray-700"
           }`}
         >
           완료 ({completedCount})

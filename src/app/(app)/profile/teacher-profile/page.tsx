@@ -205,8 +205,8 @@ export default function TeacherProfileEditPage() {
               </div>
 
               {/* Name & Title */}
-              <h2 className="text-xl font-bold text-gray-900">{userName} 선생님</h2>
-              {title && <p className="text-sm text-gray-500 mt-0.5">{title}</p>}
+              <h2 className="text-xl font-bold text-fg-primary">{userName} 선생님</h2>
+              {title && <p className="text-sm text-fg-secondary mt-0.5">{title}</p>}
 
               {/* Specialty Tags */}
               {specialty.length > 0 && (
@@ -223,15 +223,15 @@ export default function TeacherProfileEditPage() {
               <div className="grid grid-cols-3 gap-3 mt-4 py-3 border-y border-gray-100">
                 <div className="text-center">
                   <p className="text-lg font-bold text-green-600">무료</p>
-                  <p className="text-xs text-gray-500">피드백</p>
+                  <p className="text-xs text-fg-secondary">피드백</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-lg font-bold text-gray-900">{teachingExperience}</p>
-                  <p className="text-xs text-gray-500">경력(년)</p>
+                  <p className="text-lg font-bold text-fg-primary">{teachingExperience}</p>
+                  <p className="text-xs text-fg-secondary">경력(년)</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-lg font-bold text-gray-900">{education.length}</p>
-                  <p className="text-xs text-gray-500">학력</p>
+                  <p className="text-lg font-bold text-fg-primary">{education.length}</p>
+                  <p className="text-xs text-fg-secondary">학력</p>
                 </div>
               </div>
 
@@ -240,13 +240,13 @@ export default function TeacherProfileEditPage() {
                 <div className="mt-4 space-y-2">
                   {lessonTarget.length > 0 && (
                     <div className="flex items-center gap-2">
-                      <Music className="w-4 h-4 text-gray-400" />
+                      <Music className="w-4 h-4 text-fg-tertiary" />
                       <span className="text-sm text-gray-600">대상: {lessonTarget.join(", ")}</span>
                     </div>
                   )}
                   {availableDays.length > 0 && (
                     <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-gray-400" />
+                      <Clock className="w-4 h-4 text-fg-tertiary" />
                       <span className="text-sm text-gray-600">가능 요일: {availableDays.join(", ")}</span>
                     </div>
                   )}
@@ -263,7 +263,7 @@ export default function TeacherProfileEditPage() {
               {/* Career */}
               {education.length > 0 && (
                 <div className="mt-5">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-1.5">
+                  <h3 className="text-sm font-semibold text-fg-primary mb-2 flex items-center gap-1.5">
                     <GraduationCap className="w-4 h-4 text-orange-600" />
                     학력
                   </h3>
@@ -272,8 +272,8 @@ export default function TeacherProfileEditPage() {
                       <div key={i} className="flex items-start gap-2 text-sm">
                         <div className="flex-1">
                           <span className="font-medium text-gray-800">{edu.school}</span>
-                          <span className="text-gray-500"> {edu.major} ({edu.degree})</span>
-                          {edu.year && <span className="text-gray-400 text-xs ml-1">{edu.year}</span>}
+                          <span className="text-fg-secondary"> {edu.major} ({edu.degree})</span>
+                          {edu.year && <span className="text-fg-tertiary text-xs ml-1">{edu.year}</span>}
                         </div>
                         {isEducationVerified(edu.school) && (
                           <span className="flex items-center gap-0.5 text-xs text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full shrink-0">
@@ -289,7 +289,7 @@ export default function TeacherProfileEditPage() {
 
               {awards.length > 0 && (
                 <div className="mt-5">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-1.5">
+                  <h3 className="text-sm font-semibold text-fg-primary mb-2 flex items-center gap-1.5">
                     <Award className="w-4 h-4 text-amber-500" />
                     수상 경력
                   </h3>
@@ -297,8 +297,8 @@ export default function TeacherProfileEditPage() {
                     {awards.map((a, i) => (
                       <div key={i} className="text-sm">
                         <span className="font-medium text-gray-800">{a.competition}</span>
-                        <span className="text-gray-500"> - {a.prize}</span>
-                        <span className="text-gray-400 text-xs ml-1">({a.year})</span>
+                        <span className="text-fg-secondary"> - {a.prize}</span>
+                        <span className="text-fg-tertiary text-xs ml-1">({a.year})</span>
                       </div>
                     ))}
                   </div>
@@ -307,7 +307,7 @@ export default function TeacherProfileEditPage() {
 
               {performances.length > 0 && (
                 <div className="mt-5">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-1.5">
+                  <h3 className="text-sm font-semibold text-fg-primary mb-2 flex items-center gap-1.5">
                     <Star className="w-4 h-4 text-blue-500" />
                     연주 활동
                   </h3>
@@ -315,8 +315,8 @@ export default function TeacherProfileEditPage() {
                     {performances.map((p, i) => (
                       <div key={i} className="text-sm">
                         <span className="font-medium text-gray-800">{p.title}</span>
-                        {p.venue && <span className="text-gray-500"> @ {p.venue}</span>}
-                        <span className="text-gray-400 text-xs ml-1">({p.year})</span>
+                        {p.venue && <span className="text-fg-secondary"> @ {p.venue}</span>}
+                        <span className="text-fg-tertiary text-xs ml-1">({p.year})</span>
                       </div>
                     ))}
                   </div>
@@ -340,7 +340,7 @@ export default function TeacherProfileEditPage() {
             <ArrowLeft className="w-4 h-4" />
             뒤로
           </button>
-          <h1 className="text-sm font-semibold text-gray-900">프로필 관리</h1>
+          <h1 className="text-sm font-semibold text-fg-primary">프로필 관리</h1>
           <button
             onClick={() => setIsPreview(true)}
             className="flex items-center gap-1 text-sm text-orange-600 font-medium"
@@ -375,14 +375,14 @@ export default function TeacherProfileEditPage() {
             <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhotoSelect} className="hidden" />
 
             <div className="flex-1 space-y-2">
-              <p className="text-lg font-bold text-gray-900">{userName} 선생님</p>
+              <p className="text-lg font-bold text-fg-primary">{userName} 선생님</p>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="한 줄 소개 (예: 서울대 피아노 전공)"
                 maxLength={40}
-                className="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent placeholder:text-gray-400"
+                className="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent placeholder:text-fg-tertiary"
               />
             </div>
           </div>
@@ -390,7 +390,7 @@ export default function TeacherProfileEditPage() {
 
         {/* Specialty */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">전문 분야</h3>
+          <h3 className="text-sm font-semibold text-fg-primary mb-3">전문 분야</h3>
           <div className="flex flex-wrap gap-2">
             {SPECIALTY_OPTIONS.map((s) => (
               <button
@@ -409,7 +409,7 @@ export default function TeacherProfileEditPage() {
         {/* Education */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-1.5">
+            <h3 className="text-sm font-semibold text-fg-primary flex items-center gap-1.5">
               <GraduationCap className="w-4 h-4 text-orange-600" />
               학력
             </h3>
@@ -422,14 +422,14 @@ export default function TeacherProfileEditPage() {
             </button>
           </div>
           {education.length === 0 && (
-            <p className="text-sm text-gray-400 text-center py-3">학력을 추가해주세요</p>
+            <p className="text-sm text-fg-tertiary text-center py-3">학력을 추가해주세요</p>
           )}
           <div className="space-y-3">
             {education.map((edu, i) => (
               <div key={i} className="p-3 bg-gray-50 rounded-xl space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-medium text-gray-500">학력 {i + 1}</span>
+                    <span className="text-xs font-medium text-fg-secondary">학력 {i + 1}</span>
                     {isEducationVerified(edu.school) && (
                       <span className="flex items-center gap-0.5 text-xs text-orange-600">
                         <CheckCircle className="w-3.5 h-3.5" />
@@ -439,7 +439,7 @@ export default function TeacherProfileEditPage() {
                   </div>
                   <button
                     onClick={() => setEducation(education.filter((_, idx) => idx !== i))}
-                    className="text-gray-400 hover:text-red-500 transition-colors"
+                    className="text-fg-tertiary hover:text-red-500 transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -500,7 +500,7 @@ export default function TeacherProfileEditPage() {
         {/* Awards */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-1.5">
+            <h3 className="text-sm font-semibold text-fg-primary flex items-center gap-1.5">
               <Award className="w-4 h-4 text-amber-500" />
               수상 경력
             </h3>
@@ -513,16 +513,16 @@ export default function TeacherProfileEditPage() {
             </button>
           </div>
           {awards.length === 0 && (
-            <p className="text-sm text-gray-400 text-center py-3">수상 경력을 추가해주세요</p>
+            <p className="text-sm text-fg-tertiary text-center py-3">수상 경력을 추가해주세요</p>
           )}
           <div className="space-y-3">
             {awards.map((award, i) => (
               <div key={i} className="p-3 bg-gray-50 rounded-xl space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-gray-500">수상 {i + 1}</span>
+                  <span className="text-xs font-medium text-fg-secondary">수상 {i + 1}</span>
                   <button
                     onClick={() => setAwards(awards.filter((_, idx) => idx !== i))}
-                    className="text-gray-400 hover:text-red-500 transition-colors"
+                    className="text-fg-tertiary hover:text-red-500 transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -570,7 +570,7 @@ export default function TeacherProfileEditPage() {
         {/* Performances */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-1.5">
+            <h3 className="text-sm font-semibold text-fg-primary flex items-center gap-1.5">
               <Star className="w-4 h-4 text-blue-500" />
               연주 활동
             </h3>
@@ -583,16 +583,16 @@ export default function TeacherProfileEditPage() {
             </button>
           </div>
           {performances.length === 0 && (
-            <p className="text-sm text-gray-400 text-center py-3">연주 활동을 추가해주세요</p>
+            <p className="text-sm text-fg-tertiary text-center py-3">연주 활동을 추가해주세요</p>
           )}
           <div className="space-y-3">
             {performances.map((perf, i) => (
               <div key={i} className="p-3 bg-gray-50 rounded-xl space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-gray-500">연주 {i + 1}</span>
+                  <span className="text-xs font-medium text-fg-secondary">연주 {i + 1}</span>
                   <button
                     onClick={() => setPerformances(performances.filter((_, idx) => idx !== i))}
-                    className="text-gray-400 hover:text-red-500 transition-colors"
+                    className="text-fg-tertiary hover:text-red-500 transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -639,7 +639,7 @@ export default function TeacherProfileEditPage() {
 
         {/* Teaching Experience */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">레슨 경력 (년)</h3>
+          <h3 className="text-sm font-semibold text-fg-primary mb-3">레슨 경력 (년)</h3>
           <input
             type="number"
             min={0}
@@ -652,7 +652,7 @@ export default function TeacherProfileEditPage() {
 
         {/* Lesson Target */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">레슨 대상</h3>
+          <h3 className="text-sm font-semibold text-fg-primary mb-3">레슨 대상</h3>
           <div className="flex flex-wrap gap-2">
             {LESSON_TARGET_OPTIONS.map((t) => (
               <button
@@ -670,7 +670,7 @@ export default function TeacherProfileEditPage() {
 
         {/* Available Days */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">레슨 가능 요일</h3>
+          <h3 className="text-sm font-semibold text-fg-primary mb-3">레슨 가능 요일</h3>
           <div className="flex gap-2">
             {DAY_OPTIONS.map((d) => (
               <button
@@ -689,16 +689,16 @@ export default function TeacherProfileEditPage() {
 
         {/* Bio / Lesson Philosophy */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">레슨 철학</h3>
+          <h3 className="text-sm font-semibold text-fg-primary mb-3">레슨 철학</h3>
           <textarea
             value={bio}
             onChange={(e) => setBio(e.target.value)}
             placeholder="자기소개와 레슨 철학을 작성해주세요.&#10;예: 학생 개개인의 수준과 목표에 맞춘 맞춤형 레슨을 지향합니다..."
             rows={5}
             maxLength={500}
-            className="w-full text-sm px-4 py-3 bg-white/60 backdrop-blur-sm border border-orange-200/50 rounded-2xl focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent resize-none placeholder:text-gray-400"
+            className="w-full text-sm px-4 py-3 bg-white/60 backdrop-blur-sm border border-orange-200/50 rounded-2xl focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent resize-none placeholder:text-fg-tertiary"
           />
-          <p className="text-xs text-gray-400 text-right mt-1">{bio.length}/500</p>
+          <p className="text-xs text-fg-tertiary text-right mt-1">{bio.length}/500</p>
         </div>
       </div>
 

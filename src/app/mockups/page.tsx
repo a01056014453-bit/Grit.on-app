@@ -35,7 +35,7 @@ export default function MockupsIndex() {
             className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow text-center"
           >
             <p className="font-semibold text-sm">{f.label}</p>
-            <p className="text-xs text-gray-400 mt-1">/mockups/{f.id}</p>
+            <p className="text-xs text-fg-tertiary mt-1">/mockups/{f.id}</p>
           </Link>
         ))}
       </div>

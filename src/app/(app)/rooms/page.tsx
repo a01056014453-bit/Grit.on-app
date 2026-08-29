@@ -198,7 +198,7 @@ export default function RoomsPage() {
           <ArrowLeft className="w-5 h-5 text-gray-600" />
         </button>
         <div className="flex-1">
-          <h1 className="text-lg font-bold text-gray-900 flex">
+          <h1 className="text-lg font-bold text-fg-primary flex">
             {titleText.split("").map((char, i) => (
               <motion.span
                 key={i}
@@ -213,7 +213,7 @@ export default function RoomsPage() {
             ))}
           </h1>
           <motion.p
-            className="text-xs text-gray-500"
+            className="text-xs text-fg-secondary"
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 0.4 }}
@@ -254,12 +254,12 @@ export default function RoomsPage() {
             >
               동일곡 상호열람 시스템
             </GradientText>
-            <p className="text-xs text-gray-500 leading-relaxed mt-1.5">
+            <p className="text-xs text-fg-secondary leading-relaxed mt-1.5">
               같은 곡을 업로드한 학생들끼리 서로의 영상을 볼 수 있어요.
               내가 연습하는 곡을 올려 다른 학생들의 연습을 참고하세요.
             </p>
             <div className="flex flex-wrap items-center gap-3 mt-3">
-              <span className="flex items-center gap-1 text-[11px] text-gray-400">
+              <span className="flex items-center gap-1 text-[11px] text-fg-tertiary">
                 <Lock className="w-3 h-3" />
                 익명/블러
               </span>
@@ -267,7 +267,7 @@ export default function RoomsPage() {
                 <Eye className="w-3 h-3" />
                 녹화/캡쳐 차단
               </span>
-              <span className="flex items-center gap-1 text-[11px] text-gray-400">
+              <span className="flex items-center gap-1 text-[11px] text-fg-tertiary">
                 <Shield className="w-3 h-3" />
                 DRM 보호
               </span>
@@ -317,7 +317,7 @@ export default function RoomsPage() {
                       </span>
                     )}
                   </div>
-                  <p className="text-xs font-semibold text-gray-900 line-clamp-1">
+                  <p className="text-xs font-semibold text-fg-primary line-clamp-1">
                     {room.school.name} {room.school.year}
                   </p>
                   <div className="flex items-center gap-1.5 mt-1">
@@ -329,7 +329,7 @@ export default function RoomsPage() {
                     >
                       {SCHOOL_TYPE_LABELS[room.school.type]}
                     </span>
-                    <span className="text-[10px] text-gray-400">
+                    <span className="text-[10px] text-fg-tertiary">
                       {room.memberCount}명
                     </span>
                   </div>
@@ -360,7 +360,7 @@ export default function RoomsPage() {
             onChange={(e) => setSearchQuery(e.target.value)}
             onFocus={() => setIsSearchFocused(true)}
             onBlur={() => setIsSearchFocused(false)}
-            className="w-full pl-11 pr-4 py-3 rounded-2xl border border-white/30 bg-white/40 backdrop-blur-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-300/40 placeholder:text-gray-400 shadow-sm"
+            className="w-full pl-11 pr-4 py-3 rounded-2xl border border-white/30 bg-white/40 backdrop-blur-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-300/40 placeholder:text-fg-tertiary shadow-sm"
           />
         </motion.div>
       </motion.div>
@@ -379,7 +379,7 @@ export default function RoomsPage() {
             className={`px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
               selectedCategory === category
                 ? "bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-sm shadow-violet-500/20"
-                : "bg-white/40 backdrop-blur-sm text-gray-500 hover:bg-white/60 border border-white/30"
+                : "bg-white/40 backdrop-blur-sm text-fg-secondary hover:bg-white/60 border border-white/30"
             }`}
           >
             {category}
@@ -400,7 +400,7 @@ export default function RoomsPage() {
         {filteredRooms.length === 0 ? (
           <div className="bg-white/30 backdrop-blur-sm rounded-2xl p-8 text-center border border-white/30">
             <GraduationCap className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-            <p className="text-gray-500 text-sm">검색 결과가 없습니다</p>
+            <p className="text-fg-secondary text-sm">검색 결과가 없습니다</p>
           </div>
         ) : (
           <motion.div
@@ -424,7 +424,7 @@ export default function RoomsPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-semibold text-gray-900 text-sm">
+                      <h3 className="font-semibold text-fg-primary text-sm">
                         {room.school.name} {room.school.year}
                       </h3>
                       {room.isJoined && (
@@ -449,12 +449,12 @@ export default function RoomsPage() {
                       </span>
                       {room.school.type === "designated" &&
                         room.school.designatedPieces && (
-                          <span className="text-[10px] text-gray-400">
+                          <span className="text-[10px] text-fg-tertiary">
                             {room.school.designatedPieces.length}곡 지정
                           </span>
                         )}
                     </div>
-                    <div className="flex items-center gap-3 text-[11px] text-gray-400">
+                    <div className="flex items-center gap-3 text-[11px] text-fg-tertiary">
                       <span className="flex items-center gap-1">
                         <Users className="w-3 h-3" />
                         {room.memberCount}명
@@ -472,7 +472,7 @@ export default function RoomsPage() {
                       </span>
                     </div>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
+                  <ChevronRight className="w-4 h-4 text-fg-tertiary shrink-0" />
                 </SpotlightCard>
               </motion.div>
             ))}
@@ -487,10 +487,10 @@ export default function RoomsPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.55, duration: 0.4 }}
       >
-        <p className="text-sm text-gray-900 font-semibold mb-1">
+        <p className="text-sm text-fg-primary font-semibold mb-1">
           원하는 룸이 없나요?
         </p>
-        <p className="text-xs text-gray-500 mb-4">
+        <p className="text-xs text-fg-secondary mb-4">
           원하는 학교가 목록에 없나요?
         </p>
         <a

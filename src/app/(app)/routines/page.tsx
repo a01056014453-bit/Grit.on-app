@@ -214,7 +214,7 @@ export default function RoutinesPage() {
         </button>
         <div className="flex-1">
           <h1 className="text-xl font-bold text-black">연습 루틴</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <p className="text-sm text-fg-secondary mt-0.5">
             반복할 연습 세트를 만들고 관리하세요
           </p>
         </div>
@@ -227,10 +227,10 @@ export default function RoutinesPage() {
             <div className="w-14 h-14 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-3">
               <Repeat className="w-7 h-7 text-violet-600" />
             </div>
-            <p className="text-sm font-medium text-gray-900 mb-1">
+            <p className="text-sm font-medium text-fg-primary mb-1">
               아직 루틴이 없어요
             </p>
-            <p className="text-xs text-gray-500 mb-4">
+            <p className="text-xs text-fg-secondary mb-4">
               자주 하는 연습을 루틴으로 저장해보세요
             </p>
             <button
@@ -266,7 +266,7 @@ export default function RoutinesPage() {
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-gray-500 mt-0.5">
+                      <p className="text-xs text-fg-secondary mt-0.5">
                         {routine.drills.length}개 항목
                         {routine.days.length > 0
                           ? ` · ${routine.days.map((d) => dayNames[d]).join(", ")}`
@@ -295,7 +295,7 @@ export default function RoutinesPage() {
                         onClick={() => handleDeleteRoutine(routine.id)}
                         className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-red-50 group"
                       >
-                        <Trash2 className="w-3.5 h-3.5 text-gray-400 group-hover:text-red-500" />
+                        <Trash2 className="w-3.5 h-3.5 text-fg-tertiary group-hover:text-red-500" />
                       </button>
                     </div>
                   </div>
@@ -307,23 +307,23 @@ export default function RoutinesPage() {
                         key={drill.id}
                         className="px-4 py-2 flex items-center gap-2"
                       >
-                        <span className="text-xs text-gray-400 w-4 shrink-0">
+                        <span className="text-xs text-fg-tertiary w-4 shrink-0">
                           {idx + 1}
                         </span>
                         <div className="flex-1 min-w-0">
                           <span className="text-sm text-gray-700">
                             <span className="font-medium">{drill.song}</span>
-                            <span className="text-gray-400 mx-1">·</span>
+                            <span className="text-fg-tertiary mx-1">·</span>
                             {drill.measures}
                             {drill.title !== "연습" && (
                               <>
-                                <span className="text-gray-400 mx-1">·</span>
+                                <span className="text-fg-tertiary mx-1">·</span>
                                 {drill.title}
                               </>
                             )}
                           </span>
                         </div>
-                        <span className="text-xs text-gray-400 shrink-0">
+                        <span className="text-xs text-fg-tertiary shrink-0">
                           {drill.mode === "duration"
                             ? `${drill.duration}분`
                             : `${drill.recurrence}회`}
@@ -365,7 +365,7 @@ export default function RoutinesPage() {
             <div className="space-y-4">
               {/* Routine Name */}
               <div>
-                <label className="text-xs font-medium text-gray-500 mb-1 block">
+                <label className="text-xs font-medium text-fg-secondary mb-1 block">
                   루틴 이름
                 </label>
                 <input
@@ -381,7 +381,7 @@ export default function RoutinesPage() {
 
               {/* Days Selection */}
               <div>
-                <label className="text-xs font-medium text-gray-500 mb-2 block">
+                <label className="text-xs font-medium text-fg-secondary mb-2 block">
                   반복 요일 (선택 안하면 매일)
                 </label>
                 <div className="flex gap-1.5">
@@ -403,7 +403,7 @@ export default function RoutinesPage() {
 
               {/* Drills in Routine */}
               <div>
-                <label className="text-xs font-medium text-gray-500 mb-2 block">
+                <label className="text-xs font-medium text-fg-secondary mb-2 block">
                   연습 항목 ({newRoutine.drills.length}개)
                 </label>
 
@@ -414,14 +414,14 @@ export default function RoutinesPage() {
                         key={drill.id}
                         className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2"
                       >
-                        <span className="text-xs text-gray-400 w-4">
+                        <span className="text-xs text-fg-tertiary w-4">
                           {idx + 1}
                         </span>
                         <div className="flex-1 text-sm">
                           <span className="font-medium text-black">
                             {drill.song}
                           </span>
-                          <span className="text-gray-400 mx-1">·</span>
+                          <span className="text-fg-tertiary mx-1">·</span>
                           <span className="text-gray-600">
                             {drill.measures}
                           </span>
@@ -437,7 +437,7 @@ export default function RoutinesPage() {
                           }}
                           className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-red-100"
                         >
-                          <X className="w-3 h-3 text-gray-400 hover:text-red-500" />
+                          <X className="w-3 h-3 text-fg-tertiary hover:text-red-500" />
                         </button>
                       </div>
                     ))}
@@ -475,7 +475,7 @@ export default function RoutinesPage() {
                             selectedSong: "",
                           })
                         }
-                        className="w-full py-2 border border-dashed border-gray-300 rounded-lg text-xs text-gray-500 hover:border-black hover:text-black flex items-center justify-center gap-1"
+                        className="w-full py-2 border border-dashed border-gray-300 rounded-lg text-xs text-fg-secondary hover:border-black hover:text-black flex items-center justify-center gap-1"
                       >
                         <Plus className="w-3 h-3" />
                         다른 곡
@@ -496,7 +496,7 @@ export default function RoutinesPage() {
                               songTitle: "",
                             })
                           }
-                          className="text-xs text-gray-500"
+                          className="text-xs text-fg-secondary"
                         >
                           취소
                         </button>

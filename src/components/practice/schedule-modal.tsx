@@ -123,7 +123,7 @@ export function ScheduleModal({
         <div className="space-y-3">
           {/* 곡 선택 */}
           <div>
-            <label className="text-xs font-medium text-gray-500 mb-2 block">곡 선택</label>
+            <label className="text-xs font-medium text-fg-secondary mb-2 block">곡 선택</label>
 
             {/* 기존 곡 목록 */}
             {existingSongs.length > 0 && !form.isNewSong && (
@@ -148,7 +148,7 @@ export function ScheduleModal({
             {!form.isNewSong ? (
               <button
                 onClick={() => setForm({ ...form, isNewSong: true, selectedSong: "" })}
-                className="w-full py-2.5 border-2 border-dashed border-gray-300 rounded-lg text-sm text-gray-500 hover:border-black hover:text-black transition-colors flex items-center justify-center gap-2"
+                className="w-full py-2.5 border-2 border-dashed border-gray-300 rounded-lg text-sm text-fg-secondary hover:border-black hover:text-black transition-colors flex items-center justify-center gap-2"
               >
                 <Plus className="w-4 h-4" />
                 새 곡 추가
@@ -159,7 +159,7 @@ export function ScheduleModal({
                   <span className="text-xs font-medium text-gray-600">새 곡 정보</span>
                   <button
                     onClick={() => setForm({ ...form, isNewSong: false, composer: "", songTitle: "" })}
-                    className="text-xs text-gray-500 hover:text-black"
+                    className="text-xs text-fg-secondary hover:text-black"
                   >
                     취소
                   </button>
@@ -182,7 +182,7 @@ export function ScheduleModal({
 
           {/* 마디 구간 */}
           <div>
-            <label className="text-xs font-medium text-gray-500 mb-1 block">마디 구간</label>
+            <label className="text-xs font-medium text-fg-secondary mb-1 block">마디 구간</label>
             <input
               type="text"
               value={form.measures}
@@ -194,7 +194,7 @@ export function ScheduleModal({
 
           {/* 연습 내용 */}
           <div>
-            <label className="text-xs font-medium text-gray-500 mb-1 block">연습 내용 (선택)</label>
+            <label className="text-xs font-medium text-fg-secondary mb-1 block">연습 내용 (선택)</label>
             <input
               type="text"
               value={form.title}
@@ -206,7 +206,7 @@ export function ScheduleModal({
 
           {/* Mode Toggle */}
           <div>
-            <label className="text-xs font-medium text-gray-500 mb-2 block">연습 목표</label>
+            <label className="text-xs font-medium text-fg-secondary mb-2 block">연습 목표</label>
             <div className="flex gap-2 mb-3">
               <button
                 onClick={() => setForm({ ...form, mode: "duration" })}
@@ -239,7 +239,7 @@ export function ScheduleModal({
                   -
                 </button>
                 <span className="text-2xl font-bold text-black w-16 text-center">{form.duration}</span>
-                <span className="text-gray-500">분</span>
+                <span className="text-fg-secondary">분</span>
                 <button
                   onClick={() => setForm({ ...form, duration: Math.min(60, form.duration + 1) })}
                   className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center text-lg font-medium"
@@ -256,7 +256,7 @@ export function ScheduleModal({
                   -
                 </button>
                 <span className="text-2xl font-bold text-black w-16 text-center">{form.recurrence}</span>
-                <span className="text-gray-500">회</span>
+                <span className="text-fg-secondary">회</span>
                 <button
                   onClick={() => setForm({ ...form, recurrence: Math.min(20, form.recurrence + 1) })}
                   className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center text-lg font-medium"

@@ -15,8 +15,8 @@ export function ChartCard({ title, description, children, className, action }: C
     <div className={cn('bg-white rounded-xl border border-gray-200 p-5', className)}>
       <div className="flex items-start justify-between mb-4">
         <div>
-          <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
-          {description && <p className="text-xs text-gray-500 mt-0.5">{description}</p>}
+          <h3 className="text-sm font-semibold text-fg-primary">{title}</h3>
+          {description && <p className="text-xs text-fg-secondary mt-0.5">{description}</p>}
         </div>
         {action}
       </div>

@@ -178,12 +178,12 @@ function MyStatusCard({ user, totalUsers }: MyStatusCardProps) {
         {/* Name + instrument */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
-            <p className="font-bold text-sm text-gray-900 truncate">{user.nickname}</p>
+            <p className="font-bold text-sm text-fg-primary truncate">{user.nickname}</p>
             <span className="text-[9px] px-1.5 py-px rounded-full bg-violet-100 text-violet-600 font-semibold shrink-0">나</span>
           </div>
           <div className="flex items-center gap-1 mt-0.5">
             <span className="text-sm">{INSTRUMENT_EMOJIS[user.instrument]}</span>
-            <span className="text-[11px] text-gray-400">{INSTRUMENT_LABELS[user.instrument]}</span>
+            <span className="text-[11px] text-fg-tertiary">{INSTRUMENT_LABELS[user.instrument]}</span>
           </div>
         </div>
 
@@ -223,7 +223,7 @@ function LiveRankItem({ user, elapsedSeconds }: LiveRankItemProps) {
   return (
     <div className="bg-white/50 backdrop-blur-xl rounded-[24px] border border-white/60 shadow-sm p-4 flex items-center gap-3">
       {/* Left: rank + emoji */}
-      <span className="w-6 text-sm font-bold text-gray-400 text-center">
+      <span className="w-6 text-sm font-bold text-fg-tertiary text-center">
         {user.rank}
       </span>
       <span className="text-lg">{INSTRUMENT_EMOJIS[user.instrument]}</span>
@@ -231,7 +231,7 @@ function LiveRankItem({ user, elapsedSeconds }: LiveRankItemProps) {
       {/* Center: name + practicing status */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="font-medium text-gray-900 text-sm truncate">
+          <span className="font-medium text-fg-primary text-sm truncate">
             {user.nickname}
           </span>
           {user.isPracticing && (
@@ -239,7 +239,7 @@ function LiveRankItem({ user, elapsedSeconds }: LiveRankItemProps) {
           )}
         </div>
         {user.isPracticing && user.currentSong && (
-          <p className="text-xs text-gray-500 truncate mt-0.5">
+          <p className="text-xs text-fg-secondary truncate mt-0.5">
             {user.currentSong}
           </p>
         )}
@@ -354,8 +354,8 @@ export default function RankingPage() {
           <ArrowLeft className="w-5 h-5 text-gray-600" />
         </Link>
         <div className="flex-1 text-left">
-          <h1 className="text-lg font-bold text-gray-900">오늘의 랭킹</h1>
-          <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+          <h1 className="text-lg font-bold text-fg-primary">오늘의 랭킹</h1>
+          <p className="text-xs text-fg-secondary flex items-center gap-1 mt-0.5">
             <Flame className="w-3 h-3 text-orange-500" />
             {practicingCount}명 실시간 연습 중
           </p>
@@ -391,13 +391,13 @@ export default function RankingPage() {
       {isLoading ? (
         <div className="text-center py-12">
           <div className="w-10 h-10 border-3 border-violet-300 border-t-violet-600 rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-sm text-gray-500">랭킹을 불러오는 중...</p>
+          <p className="text-sm text-fg-secondary">랭킹을 불러오는 중...</p>
         </div>
       ) : rankers.length === 0 ? (
         <div className="text-center py-12 bg-white/40 backdrop-blur-xl rounded-2xl border border-white/50 mb-6">
           <Trophy className="w-12 h-12 text-violet-300 mx-auto mb-3" />
           <p className="font-semibold text-gray-700">아직 오늘의 랭킹 데이터가 없어요</p>
-          <p className="text-sm text-gray-500 mt-1">연습을 시작하면 랭킹에 표시됩니다</p>
+          <p className="text-sm text-fg-secondary mt-1">연습을 시작하면 랭킹에 표시됩니다</p>
         </div>
       ) : (
         <>

@@ -37,7 +37,7 @@ function MockBottomNav({ active }: { active: string }) {
               <div
                 key={item.id}
                 className={`flex flex-col items-center justify-center w-16 h-full ${
-                  isActive ? "text-black" : "text-gray-400"
+                  isActive ? "text-black" : "text-fg-tertiary"
                 }`}
               >
                 <item.icon className="w-6 h-6" strokeWidth={isActive ? 2 : 1.5} />
@@ -59,8 +59,8 @@ function MockHeader({ title, subtitle }: { title: string; subtitle?: string }) {
         <ArrowLeft className="w-5 h-5 text-gray-600" />
       </div>
       <div className="flex-1">
-        <h1 className="text-lg font-bold text-gray-900">{title}</h1>
-        {subtitle && <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>}
+        <h1 className="text-lg font-bold text-fg-primary">{title}</h1>
+        {subtitle && <p className="text-xs text-fg-secondary mt-0.5">{subtitle}</p>}
       </div>
     </div>
   );
@@ -77,10 +77,10 @@ function HomeMockup() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8 pt-2">
         <div>
-          <h1 className="text-[22px] font-bold text-gray-900 leading-tight">
+          <h1 className="text-[22px] font-bold text-fg-primary leading-tight">
             안녕하세요 <span className="bg-gradient-to-r from-violet-700 to-violet-400 bg-clip-text text-transparent">지수</span>님 ☀️
           </h1>
-          <p className="text-sm text-gray-500 mt-0.5">오늘도 훌륭한 연주를 기대해요</p>
+          <p className="text-sm text-fg-secondary mt-0.5">오늘도 훌륭한 연주를 기대해요</p>
         </div>
         <div className="relative w-10 h-10 rounded-full bg-white/30 backdrop-blur-sm flex items-center justify-center shadow-sm border border-white/40">
           <Bell className="w-5 h-5 text-gray-700" />
@@ -93,15 +93,15 @@ function HomeMockup() {
         <div className="bg-white/40 backdrop-blur-xl rounded-3xl p-5 border border-white/50 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <p className="text-sm font-bold text-gray-900">오늘의 목표</p>
-              <p className="text-xs text-gray-500">목표 2시간</p>
+              <p className="text-sm font-bold text-fg-primary">오늘의 목표</p>
+              <p className="text-xs text-fg-secondary">목표 2시간</p>
             </div>
             <span className="text-2xl font-black bg-gradient-to-r from-violet-700 to-violet-400 bg-clip-text text-transparent">76%</span>
           </div>
           <div className="h-3 bg-white/50 rounded-full overflow-hidden">
             <div className="h-full bg-gradient-to-r from-violet-400 to-purple-600 rounded-full" style={{ width: "76%" }} />
           </div>
-          <p className="text-xs text-gray-400 mt-2">1시간 31분 / 2시간</p>
+          <p className="text-xs text-fg-tertiary mt-2">1시간 31분 / 2시간</p>
         </div>
       </div>
 
@@ -114,10 +114,10 @@ function HomeMockup() {
         ].map((s) => (
           <div key={s.label} className="py-4 text-center">
             <div className="flex items-baseline justify-center gap-0.5">
-              <span className="text-xl font-extrabold text-gray-900">{s.value}</span>
-              <span className="text-xs text-gray-400">{s.unit}</span>
+              <span className="text-xl font-extrabold text-fg-primary">{s.value}</span>
+              <span className="text-xs text-fg-tertiary">{s.unit}</span>
             </div>
-            <p className="text-[11px] text-gray-500 mt-0.5">{s.label}</p>
+            <p className="text-[11px] text-fg-secondary mt-0.5">{s.label}</p>
           </div>
         ))}
       </div>
@@ -132,23 +132,23 @@ function HomeMockup() {
       <div className="grid grid-cols-5 gap-3 mb-8">
         <div className="col-span-2 bg-white/40 backdrop-blur-xl rounded-2xl p-4 border border-white/50 shadow-sm min-h-[110px]">
           <Search className="w-5 h-5 text-violet-500 mb-2" />
-          <p className="text-[13px] font-bold text-gray-900">음악용어 검색</p>
-          <p className="text-[10px] text-gray-500 mt-0.5">악보 기호와 용어</p>
+          <p className="text-[13px] font-bold text-fg-primary">음악용어 검색</p>
+          <p className="text-[10px] text-fg-secondary mt-0.5">악보 기호와 용어</p>
         </div>
         <div className="col-span-3 bg-white/40 backdrop-blur-xl rounded-2xl p-4 border border-white/50 shadow-sm min-h-[110px]">
           <Users className="w-5 h-5 text-violet-500 mb-2" />
-          <p className="text-[13px] font-bold text-gray-900">원포인트 레슨</p>
-          <p className="text-[10px] text-gray-500 mt-0.5">전문가의 시선으로 막힌 구간의 해법을 제시합니다</p>
+          <p className="text-[13px] font-bold text-fg-primary">원포인트 레슨</p>
+          <p className="text-[10px] text-fg-secondary mt-0.5">전문가의 시선으로 막힌 구간의 해법을 제시합니다</p>
         </div>
         <div className="col-span-3 bg-white/40 backdrop-blur-xl rounded-2xl p-4 border border-white/50 shadow-sm min-h-[110px]">
           <BookOpen className="w-5 h-5 text-violet-500 mb-2" />
-          <p className="text-[13px] font-bold text-gray-900">연습 기록</p>
-          <p className="text-[10px] text-gray-500 mt-0.5">나의 연습 기록을 한눈에</p>
+          <p className="text-[13px] font-bold text-fg-primary">연습 기록</p>
+          <p className="text-[10px] text-fg-secondary mt-0.5">나의 연습 기록을 한눈에</p>
         </div>
         <div className="col-span-2 bg-white/40 backdrop-blur-xl rounded-2xl p-4 border border-white/50 shadow-sm min-h-[110px]">
           <GraduationCap className="w-5 h-5 text-violet-500 mb-2" />
-          <p className="text-[13px] font-bold text-gray-900">입시룸</p>
-          <p className="text-[10px] text-gray-500 mt-0.5">다른 학생들의 연습</p>
+          <p className="text-[13px] font-bold text-fg-primary">입시룸</p>
+          <p className="text-[10px] text-fg-secondary mt-0.5">다른 학생들의 연습</p>
         </div>
       </div>
       <MockBottomNav active="home" />
@@ -176,8 +176,8 @@ function PracticeMockup() {
             </defs>
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <p className="text-4xl font-black text-gray-900 font-mono">32:15</p>
-            <p className="text-xs text-gray-500 mt-1">순 연습시간</p>
+            <p className="text-4xl font-black text-fg-primary font-mono">32:15</p>
+            <p className="text-xs text-fg-secondary mt-1">순 연습시간</p>
           </div>
         </div>
       </div>
@@ -187,7 +187,7 @@ function PracticeMockup() {
         <div className="flex items-center gap-2 mb-3">
           <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
           <span className="text-xs font-medium text-gray-600">녹음 중</span>
-          <span className="text-xs text-gray-400 ml-auto">전체 45:22</span>
+          <span className="text-xs text-fg-tertiary ml-auto">전체 45:22</span>
         </div>
         <div className="flex items-end justify-center gap-[2px] h-12">
           {[35, 65, 45, 80, 60, 90, 40, 75, 55, 85, 30, 70, 50, 95, 45, 80, 60, 38, 72, 88, 42, 68, 55, 78, 35, 62, 48, 85, 70, 55, 40, 75, 60, 82, 45, 68, 52, 78, 90, 35].map((h, i) => (
@@ -211,19 +211,19 @@ function PracticeMockup() {
 
       {/* Today Drills */}
       <div className="bg-white/40 backdrop-blur-xl rounded-2xl p-4 border border-white/50 shadow-sm">
-        <p className="text-sm font-bold text-gray-900 mb-3">오늘의 연습 목록</p>
+        <p className="text-sm font-bold text-fg-primary mb-3">오늘의 연습 목록</p>
         {[
           { title: "하농 39번", measure: "전체", done: true, time: "15분" },
           { title: "쇼팽 발라드 1번", measure: "마디 32-48", done: false, active: true, time: "25분" },
           { title: "베토벤 소나타 14번", measure: "1악장", done: false, time: "20분" },
         ].map((d) => (
           <div key={d.title} className={`flex items-center gap-3 p-3 rounded-xl mb-2 ${d.active ? "bg-violet-50 border border-violet-200" : d.done ? "bg-green-50/50" : "bg-white/30"}`}>
-            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${d.done ? "bg-green-500 text-white" : d.active ? "bg-violet-500 text-white" : "bg-gray-200 text-gray-500"}`}>
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${d.done ? "bg-green-500 text-white" : d.active ? "bg-violet-500 text-white" : "bg-gray-200 text-fg-secondary"}`}>
               {d.done ? <Check className="w-3.5 h-3.5" /> : "♪"}
             </div>
             <div className="flex-1">
-              <p className={`text-xs font-medium ${d.done ? "text-gray-400 line-through" : "text-gray-800"}`}>{d.title}</p>
-              <p className="text-[10px] text-gray-400">{d.measure} · {d.time}</p>
+              <p className={`text-xs font-medium ${d.done ? "text-fg-tertiary line-through" : "text-gray-800"}`}>{d.title}</p>
+              <p className="text-[10px] text-fg-tertiary">{d.measure} · {d.time}</p>
             </div>
             {d.active && <span className="text-[10px] text-violet-600 font-semibold">진행중</span>}
           </div>
@@ -249,15 +249,15 @@ function StatsMockup() {
         <button className="flex-1 py-2.5 rounded-xl font-medium text-sm bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-sm shadow-violet-500/20">
           주간 통계
         </button>
-        <button className="flex-1 py-2.5 rounded-xl font-medium text-sm bg-white/40 backdrop-blur-sm text-gray-500 border border-white/30">
+        <button className="flex-1 py-2.5 rounded-xl font-medium text-sm bg-white/40 backdrop-blur-sm text-fg-secondary border border-white/30">
           월간 통계
         </button>
       </div>
 
       {/* Weekly Chart */}
       <div className="bg-white/40 backdrop-blur-xl rounded-3xl p-5 border border-white/50 shadow-sm mb-4">
-        <h3 className="font-bold text-gray-900 mb-1">이번 주 연습량</h3>
-        <p className="text-xs text-gray-500 mb-4">일별 연습 시간을 확인해보세요</p>
+        <h3 className="font-bold text-fg-primary mb-1">이번 주 연습량</h3>
+        <p className="text-xs text-fg-secondary mb-4">일별 연습 시간을 확인해보세요</p>
         <div className="flex items-end justify-between gap-2 h-32 mb-3">
           {days.map((day, i) => {
             const height = (minutes[i] / maxMin) * 100;
@@ -265,14 +265,14 @@ function StatsMockup() {
             const isToday = i === 5;
             return (
               <div key={day} className="flex-1 flex flex-col items-center gap-1">
-                {minutes[i] > 0 && <span className="text-[10px] text-gray-500 font-medium">{minutes[i]}분</span>}
+                {minutes[i] > 0 && <span className="text-[10px] text-fg-secondary font-medium">{minutes[i]}분</span>}
                 <div className="w-full flex flex-col items-center justify-end h-20">
                   <div
                     className={`w-full max-w-7 rounded-t-lg ${isBest ? "bg-gradient-to-t from-violet-600 to-purple-400" : "bg-violet-300/80"}`}
                     style={{ height: `${Math.max(height, 8)}%` }}
                   />
                 </div>
-                <span className={`text-xs font-medium ${isToday ? "text-violet-600" : "text-gray-400"}`}>{day}</span>
+                <span className={`text-xs font-medium ${isToday ? "text-violet-600" : "text-fg-tertiary"}`}>{day}</span>
               </div>
             );
           })}
@@ -295,7 +295,7 @@ function StatsMockup() {
       {/* Weekly Goal */}
       <div className="bg-white/40 backdrop-blur-xl rounded-3xl p-5 border border-white/50 shadow-sm mb-4">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-bold text-gray-900 flex items-center gap-2">
+          <h3 className="font-bold text-fg-primary flex items-center gap-2">
             <Target className="w-5 h-5 text-violet-500" />
             주간 목표 달성
           </h3>
@@ -305,8 +305,8 @@ function StatsMockup() {
           <div className="h-full bg-gradient-to-r from-violet-400 to-purple-600 rounded-full" style={{ width: "60%" }} />
         </div>
         <div className="flex justify-between text-sm">
-          <span className="text-gray-500">6시간 57분</span>
-          <span className="text-gray-400">목표: 7시간</span>
+          <span className="text-fg-secondary">6시간 57분</span>
+          <span className="text-fg-tertiary">목표: 7시간</span>
         </div>
       </div>
 
@@ -318,10 +318,10 @@ function StatsMockup() {
           </div>
           <div className="flex-1">
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-extrabold text-gray-900">32</span>
-              <span className="text-gray-500">일 연속 연습 중</span>
+              <span className="text-3xl font-extrabold text-fg-primary">32</span>
+              <span className="text-fg-secondary">일 연속 연습 중</span>
             </div>
-            <p className="text-sm text-gray-400 mt-1">대단해요! 한 달 넘게 이어오고 있어요!</p>
+            <p className="text-sm text-fg-tertiary mt-1">대단해요! 한 달 넘게 이어오고 있어요!</p>
           </div>
         </div>
       </div>
@@ -333,18 +333,18 @@ function StatsMockup() {
             <div className="w-7 h-7 rounded-lg bg-blue-100/70 flex items-center justify-center">
               <Clock className="w-3.5 h-3.5 text-blue-500" />
             </div>
-            <span className="text-xs text-gray-400">총 연습 시간</span>
+            <span className="text-xs text-fg-tertiary">총 연습 시간</span>
           </div>
-          <div className="text-xl font-bold text-gray-900">6시간 57분</div>
+          <div className="text-xl font-bold text-fg-primary">6시간 57분</div>
         </div>
         <div className="bg-white/60 backdrop-blur-lg rounded-2xl p-4 border border-white/50 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-7 h-7 rounded-lg bg-green-100/70 flex items-center justify-center">
               <Calendar className="w-3.5 h-3.5 text-green-500" />
             </div>
-            <span className="text-xs text-gray-400">연습한 날</span>
+            <span className="text-xs text-fg-tertiary">연습한 날</span>
           </div>
-          <div className="text-xl font-bold text-gray-900">6일 <span className="text-sm font-normal text-gray-400">/ 7일</span></div>
+          <div className="text-xl font-bold text-fg-primary">6일 <span className="text-sm font-normal text-fg-tertiary">/ 7일</span></div>
         </div>
       </div>
       <MockBottomNav active="home" />
@@ -362,7 +362,7 @@ function AIAnalysisMockup() {
         </div>
         <div className="flex-1">
           <h1 className="text-lg font-bold text-black">내 분석 보관함</h1>
-          <p className="text-xs text-gray-500">AI 분석 완료된 곡 5개</p>
+          <p className="text-xs text-fg-secondary">AI 분석 완료된 곡 5개</p>
         </div>
         <div className="w-10 h-10 rounded-full bg-violet-100 flex items-center justify-center">
           <Folder className="w-5 h-5 text-violet-600" />
@@ -371,14 +371,14 @@ function AIAnalysisMockup() {
 
       {/* Search */}
       <div className="relative mb-4">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-        <div className="w-full pl-9 pr-4 py-3 rounded-xl border border-gray-200 bg-white text-sm text-gray-400">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-tertiary" />
+        <div className="w-full pl-9 pr-4 py-3 rounded-xl border border-gray-200 bg-white text-sm text-fg-tertiary">
           곡 이름, 작곡가로 검색
         </div>
       </div>
 
       {/* New Analysis */}
-      <div className="w-full py-4 mb-6 border-2 border-dashed border-gray-300 rounded-xl text-center text-gray-500">
+      <div className="w-full py-4 mb-6 border-2 border-dashed border-gray-300 rounded-xl text-center text-fg-secondary">
         <Plus className="w-5 h-5 inline mr-2" />
         새로운 곡 분석 요청
       </div>
@@ -400,16 +400,16 @@ function AIAnalysisMockup() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-black truncate">{a.composer} - {a.title}</p>
-              <p className="text-xs text-gray-400">{a.date} 분석</p>
+              <p className="text-xs text-fg-tertiary">{a.date} 분석</p>
             </div>
-            <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
+            <ChevronRight className="w-5 h-5 text-fg-tertiary shrink-0" />
           </div>
         ))}
       </div>
 
       {/* Section Analysis */}
       <h2 className="text-sm font-semibold text-black flex items-center gap-2 mb-3">
-        <Music2 className="w-4 h-4 text-gray-500" />
+        <Music2 className="w-4 h-4 text-fg-secondary" />
         마디별 분석 곡
       </h2>
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-3">
@@ -420,36 +420,36 @@ function AIAnalysisMockup() {
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-black truncate">쇼팽 - 발라드 1번</p>
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs text-gray-500">Op.23</span>
-              <span className="text-xs text-gray-400">• G단조</span>
+              <span className="text-xs text-fg-secondary">Op.23</span>
+              <span className="text-xs text-fg-tertiary">• G단조</span>
               <span className="text-xs px-1.5 py-0.5 rounded bg-orange-100 text-orange-700">어려움</span>
             </div>
           </div>
           <div className="text-right shrink-0 mr-2">
             <p className="text-xs font-semibold text-violet-600">72%</p>
-            <p className="text-xs text-gray-400">완성도</p>
+            <p className="text-xs text-fg-tertiary">완성도</p>
           </div>
-          <ChevronDown className="w-5 h-5 text-gray-400 shrink-0" />
+          <ChevronDown className="w-5 h-5 text-fg-tertiary shrink-0" />
         </div>
         {/* Expanded */}
         <div className="border-t border-gray-100 bg-gray-50">
           <div className="grid grid-cols-3 gap-2 p-4 border-b border-gray-100">
             <div className="text-center">
               <p className="text-lg font-bold text-black">264</p>
-              <p className="text-xs text-gray-500">마디</p>
+              <p className="text-xs text-fg-secondary">마디</p>
             </div>
             <div className="text-center">
               <p className="text-lg font-bold text-black">9분</p>
-              <p className="text-xs text-gray-500">연주시간</p>
+              <p className="text-xs text-fg-secondary">연주시간</p>
             </div>
             <div className="text-center">
               <p className="text-lg font-bold text-black">8</p>
-              <p className="text-xs text-gray-500">섹션</p>
+              <p className="text-xs text-fg-secondary">섹션</p>
             </div>
           </div>
           <div className="p-4">
             <div className="flex items-center gap-2 mb-3">
-              <Target className="w-4 h-4 text-gray-500" />
+              <Target className="w-4 h-4 text-fg-secondary" />
               <span className="text-xs font-semibold text-black">마디별 분석</span>
             </div>
             {[
@@ -460,14 +460,14 @@ function AIAnalysisMockup() {
               <div key={s.range} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-100 mb-2">
                 <div className="flex flex-col items-center shrink-0">
                   <span className="text-xs font-bold text-gray-600">{s.range}</span>
-                  <span className="text-[10px] text-gray-400">마디</span>
+                  <span className="text-[10px] text-fg-tertiary">마디</span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-black truncate">{s.name}</p>
                   <span className={`text-[10px] px-1.5 py-0.5 rounded ${s.diffColor}`}>{s.diff}</span>
                 </div>
                 <div className={`w-3 h-3 rounded-full shrink-0 ${s.mastery}`} />
-                <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
+                <ChevronRight className="w-4 h-4 text-fg-tertiary shrink-0" />
               </div>
             ))}
           </div>
@@ -488,8 +488,8 @@ function RankingMockup() {
           <ArrowLeft className="w-5 h-5 text-gray-600" />
         </div>
         <div className="flex-1 text-left">
-          <h1 className="text-lg font-bold text-gray-900">오늘의 랭킹</h1>
-          <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+          <h1 className="text-lg font-bold text-fg-primary">오늘의 랭킹</h1>
+          <p className="text-xs text-fg-secondary flex items-center gap-1 mt-0.5">
             <Flame className="w-3 h-3 text-orange-500" />
             5명 실시간 연습 중
           </p>
@@ -547,12 +547,12 @@ function RankingMockup() {
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5">
-              <p className="font-bold text-sm text-gray-900 truncate">지수</p>
+              <p className="font-bold text-sm text-fg-primary truncate">지수</p>
               <span className="text-[9px] px-1.5 py-px rounded-full bg-violet-100 text-violet-600 font-semibold">나</span>
             </div>
             <div className="flex items-center gap-1 mt-0.5">
               <span className="text-sm">🎹</span>
-              <span className="text-[11px] text-gray-400">피아노</span>
+              <span className="text-[11px] text-fg-tertiary">피아노</span>
             </div>
           </div>
           <span className="font-mono text-base font-bold bg-gradient-to-r from-violet-700 to-violet-400 bg-clip-text text-transparent">01:31:22</span>
@@ -575,14 +575,14 @@ function RankingMockup() {
           { rank: 7, name: "소율", instrument: "🎹", time: "00:58:33", practicing: false },
         ].map((u) => (
           <div key={u.rank} className="bg-white/50 backdrop-blur-xl rounded-[24px] border border-white/60 shadow-sm p-4 flex items-center gap-3">
-            <span className="w-6 text-sm font-bold text-gray-400 text-center">{u.rank}</span>
+            <span className="w-6 text-sm font-bold text-fg-tertiary text-center">{u.rank}</span>
             <span className="text-lg">{u.instrument}</span>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="font-medium text-gray-900 text-sm truncate">{u.name}</span>
+                <span className="font-medium text-fg-primary text-sm truncate">{u.name}</span>
                 {u.practicing && <span className="w-2 h-2 rounded-full bg-violet-500 animate-pulse shrink-0" />}
               </div>
-              {u.practicing && u.song && <p className="text-xs text-gray-500 truncate mt-0.5">{u.song}</p>}
+              {u.practicing && u.song && <p className="text-xs text-fg-secondary truncate mt-0.5">{u.song}</p>}
             </div>
             <span className={`font-mono text-sm font-semibold ${u.practicing ? "text-violet-600" : "text-gray-600"}`}>{u.time}</span>
           </div>
@@ -726,8 +726,8 @@ function MusicTermsMockup() {
 
       {/* Search */}
       <div className="relative mb-4">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-        <div className="w-full pl-9 pr-4 py-3 rounded-xl bg-white/60 backdrop-blur-sm border border-white/50 text-sm text-gray-400">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-tertiary" />
+        <div className="w-full pl-9 pr-4 py-3 rounded-xl bg-white/60 backdrop-blur-sm border border-white/50 text-sm text-fg-tertiary">
           용어 검색...
         </div>
       </div>
@@ -750,7 +750,7 @@ function MusicTermsMockup() {
           { label: "🇩🇪 독일어", active: false },
           { label: "🇫🇷 프랑스어", active: false },
         ].map((l) => (
-          <div key={l.label} className={`text-[10px] px-2.5 py-1.5 rounded-full ${l.active ? "bg-violet-100 text-violet-700 font-semibold" : "bg-white/30 text-gray-500"}`}>
+          <div key={l.label} className={`text-[10px] px-2.5 py-1.5 rounded-full ${l.active ? "bg-violet-100 text-violet-700 font-semibold" : "bg-white/30 text-fg-secondary"}`}>
             {l.label}
           </div>
         ))}
@@ -774,13 +774,13 @@ function MusicTermsMockup() {
               <div>
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-bold text-gray-800">{t.term}</p>
-                  <span className="text-[10px] text-gray-400">{t.lang}</span>
+                  <span className="text-[10px] text-fg-tertiary">{t.lang}</span>
                 </div>
                 <p className="text-xs text-violet-600 mt-0.5">{t.korean}</p>
               </div>
               <span className="text-[9px] bg-violet-50 text-violet-600 px-2 py-0.5 rounded-full">{t.category}</span>
             </div>
-            <p className="text-[11px] text-gray-500 mt-1">{t.meaning}</p>
+            <p className="text-[11px] text-fg-secondary mt-1">{t.meaning}</p>
           </div>
         ))}
       </div>
@@ -798,7 +798,7 @@ function FeedbackMockup() {
       {/* Tabs */}
       <div className="flex gap-2 mb-5">
         <button className="flex-1 py-2.5 rounded-xl font-medium text-sm bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-sm">진행 중 2</button>
-        <button className="flex-1 py-2.5 rounded-xl font-medium text-sm bg-white/40 text-gray-500 border border-white/30">완료됨 5</button>
+        <button className="flex-1 py-2.5 rounded-xl font-medium text-sm bg-white/40 text-fg-secondary border border-white/30">완료됨 5</button>
       </div>
 
       <div className="space-y-3">
@@ -809,8 +809,8 @@ function FeedbackMockup() {
           <div key={f.piece} className="bg-white/50 backdrop-blur-xl rounded-2xl border border-white/50 shadow-sm p-4">
             <div className="flex justify-between items-start mb-3">
               <div>
-                <p className="text-sm font-bold text-gray-900">{f.teacher}</p>
-                <p className="text-xs text-gray-500">{f.piece} · {f.date}</p>
+                <p className="text-sm font-bold text-fg-primary">{f.teacher}</p>
+                <p className="text-xs text-fg-secondary">{f.piece} · {f.date}</p>
               </div>
               <span className={`text-[10px] px-2.5 py-1 rounded-full font-semibold ${f.statusColor}`}>{f.status}</span>
             </div>
@@ -822,14 +822,14 @@ function FeedbackMockup() {
                 <div key={item.measure} className="flex items-center gap-3 p-2.5 bg-white/60 rounded-xl">
                   <div className="flex-1">
                     <p className="text-xs font-medium text-gray-800">{item.measure}</p>
-                    <p className="text-[10px] text-gray-500">{item.issue}</p>
+                    <p className="text-[10px] text-fg-secondary">{item.issue}</p>
                   </div>
                   <span className={`text-[9px] px-2 py-0.5 rounded-full font-medium ${item.color}`}>{item.priority}</span>
                 </div>
               ))}
             </div>
             <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/50">
-              <span className="text-[10px] text-gray-400">피드백 항목 {f.items}개</span>
+              <span className="text-[10px] text-fg-tertiary">피드백 항목 {f.items}개</span>
               <span className="text-[10px] text-violet-600 font-semibold">남은 시간 {f.remaining}</span>
             </div>
           </div>
@@ -855,7 +855,7 @@ function HelpMockup() {
         ].map((s) => (
           <div key={s.label} className="bg-white/40 backdrop-blur-xl rounded-2xl p-3 text-center border border-white/50">
             <p className="text-sm font-bold text-violet-600">{s.value}</p>
-            <p className="text-[10px] text-gray-500 mt-0.5">{s.label}</p>
+            <p className="text-[10px] text-fg-secondary mt-0.5">{s.label}</p>
           </div>
         ))}
       </div>
@@ -877,8 +877,8 @@ function HelpMockup() {
           <div key={r.piece + r.measure} className="bg-white/50 backdrop-blur-xl rounded-2xl border border-white/50 shadow-sm p-4">
             <div className="flex justify-between items-start mb-2">
               <div>
-                <p className="text-sm font-bold text-gray-900">{r.piece}</p>
-                <p className="text-xs text-gray-500">{r.measure} · {r.type}</p>
+                <p className="text-sm font-bold text-fg-primary">{r.piece}</p>
+                <p className="text-xs text-fg-secondary">{r.measure} · {r.type}</p>
               </div>
               <span className={`text-[10px] px-2.5 py-1 rounded-full font-semibold ${
                 r.status === "답변 도착" ? "bg-green-100 text-green-700" :
@@ -887,7 +887,7 @@ function HelpMockup() {
               }`}>{r.status}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-[10px] text-gray-400">답변 {r.answers}개</span>
+              <span className="text-[10px] text-fg-tertiary">답변 {r.answers}개</span>
               <span className="text-[10px] text-violet-600 font-medium">{r.deadline}</span>
             </div>
           </div>
@@ -921,8 +921,8 @@ function RoomsMockup() {
 
       {/* Search */}
       <div className="relative mb-4">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-        <div className="w-full pl-9 pr-4 py-3 rounded-xl bg-white/40 backdrop-blur-sm border border-white/50 text-sm text-gray-400">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-tertiary" />
+        <div className="w-full pl-9 pr-4 py-3 rounded-xl bg-white/40 backdrop-blur-sm border border-white/50 text-sm text-fg-tertiary">
           연습실 검색...
         </div>
       </div>
@@ -942,21 +942,21 @@ function RoomsMockup() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <p className="text-sm font-bold text-gray-900 truncate">{r.name}</p>
+                  <p className="text-sm font-bold text-fg-primary truncate">{r.name}</p>
                   {r.type === "verified" && <Shield className="w-3.5 h-3.5 text-blue-500 shrink-0" />}
                 </div>
                 <div className="flex items-center gap-2 mt-1">
                   <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${r.schoolColor}`}>{r.school}</span>
                 </div>
               </div>
-              <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
+              <ChevronRight className="w-5 h-5 text-fg-tertiary shrink-0" />
             </div>
             <div className="flex items-center gap-4 mt-3 pt-3 border-t border-white/50">
-              <div className="flex items-center gap-1.5 text-xs text-gray-500">
+              <div className="flex items-center gap-1.5 text-xs text-fg-secondary">
                 <Users className="w-3.5 h-3.5" />
                 <span>{r.members}명</span>
               </div>
-              <div className="flex items-center gap-1.5 text-xs text-gray-500">
+              <div className="flex items-center gap-1.5 text-xs text-fg-secondary">
                 <Video className="w-3.5 h-3.5" />
                 <span>영상 {r.videos}개</span>
               </div>
@@ -977,8 +977,8 @@ function TeachersMockup() {
 
       {/* Search */}
       <div className="relative mb-4">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-        <div className="w-full pl-9 pr-4 py-3 rounded-xl bg-white/40 border border-white/50 text-sm text-gray-400">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-tertiary" />
+        <div className="w-full pl-9 pr-4 py-3 rounded-xl bg-white/40 border border-white/50 text-sm text-fg-tertiary">
           선생님 이름, 전문 분야 검색
         </div>
       </div>
@@ -1002,12 +1002,12 @@ function TeachersMockup() {
             <div className="flex items-center gap-3 mb-3">
               <div className="w-14 h-14 bg-violet-50 rounded-full flex items-center justify-center text-2xl">{t.emoji}</div>
               <div className="flex-1">
-                <p className="text-sm font-bold text-gray-900">{t.name} 선생님</p>
-                <p className="text-[11px] text-gray-500">{t.school}</p>
+                <p className="text-sm font-bold text-fg-primary">{t.name} 선생님</p>
+                <p className="text-[11px] text-fg-secondary">{t.school}</p>
               </div>
               <div className="text-right">
                 <p className="text-sm font-bold text-amber-500 flex items-center gap-0.5"><Star className="w-3.5 h-3.5 fill-amber-400" />{t.rating}</p>
-                <p className="text-[10px] text-gray-400">리뷰 {t.reviews}</p>
+                <p className="text-[10px] text-fg-tertiary">리뷰 {t.reviews}</p>
               </div>
             </div>
             <div className="flex gap-1 mb-3 flex-wrap">
@@ -1015,7 +1015,7 @@ function TeachersMockup() {
                 <span key={tag} className="text-[10px] bg-violet-50 text-violet-600 px-2 py-0.5 rounded-full">{tag}</span>
               ))}
             </div>
-            <div className="flex items-center justify-between text-xs text-gray-500">
+            <div className="flex items-center justify-between text-xs text-fg-secondary">
               <span>무료 피드백</span>
               <span>평균 응답 {t.response}</span>
             </div>
@@ -1034,7 +1034,7 @@ function RecordingsMockup() {
       <MockHeader title="연습 녹음" subtitle="총 32개 녹음 · 5시간 42분" />
 
       <div className="space-y-2">
-        <p className="text-xs font-semibold text-gray-500 mb-2">오늘</p>
+        <p className="text-xs font-semibold text-fg-secondary mb-2">오늘</p>
         {[
           { piece: "쇼팽 발라드 1번 Op.23", time: "14:30", duration: "4:32" },
           { piece: "베토벤 소나타 14번 1악장", time: "13:15", duration: "6:18" },
@@ -1044,13 +1044,13 @@ function RecordingsMockup() {
               <Play className="w-4 h-4 text-violet-600 fill-violet-600" />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-medium text-gray-900">{r.piece}</p>
-              <p className="text-xs text-gray-400">{r.time} · {r.duration}</p>
+              <p className="text-sm font-medium text-fg-primary">{r.piece}</p>
+              <p className="text-xs text-fg-tertiary">{r.time} · {r.duration}</p>
             </div>
           </div>
         ))}
 
-        <p className="text-xs font-semibold text-gray-500 mb-2 mt-4">어제</p>
+        <p className="text-xs font-semibold text-fg-secondary mb-2 mt-4">어제</p>
         {[
           { piece: "쇼팽 발라드 1번 Op.23", time: "16:40", duration: "4:15" },
           { piece: "드뷔시 달빛", time: "14:20", duration: "5:02" },
@@ -1060,13 +1060,13 @@ function RecordingsMockup() {
               <Play className="w-4 h-4 text-violet-600 fill-violet-600" />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-medium text-gray-900">{r.piece}</p>
-              <p className="text-xs text-gray-400">{r.time} · {r.duration}</p>
+              <p className="text-sm font-medium text-fg-primary">{r.piece}</p>
+              <p className="text-xs text-fg-tertiary">{r.time} · {r.duration}</p>
             </div>
           </div>
         ))}
 
-        <p className="text-xs font-semibold text-gray-500 mb-2 mt-4">3월 7일</p>
+        <p className="text-xs font-semibold text-fg-secondary mb-2 mt-4">3월 7일</p>
         {[
           { piece: "쇼팽 발라드 1번 Op.23", time: "17:10", duration: "3:58" },
           { piece: "하농 39번", time: "15:30", duration: "8:22" },
@@ -1076,8 +1076,8 @@ function RecordingsMockup() {
               <Play className="w-4 h-4 text-violet-600 fill-violet-600" />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-medium text-gray-900">{r.piece}</p>
-              <p className="text-xs text-gray-400">{r.time} · {r.duration}</p>
+              <p className="text-sm font-medium text-fg-primary">{r.piece}</p>
+              <p className="text-xs text-fg-tertiary">{r.time} · {r.duration}</p>
             </div>
           </div>
         ))}
@@ -1100,7 +1100,7 @@ function RecordsMockup() {
       {/* Calendar */}
       <div className="bg-white/40 backdrop-blur-xl rounded-3xl p-5 border border-white/50 shadow-sm mb-4">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-bold text-gray-900 text-lg">2026년 3월</h3>
+          <h3 className="font-bold text-fg-primary text-lg">2026년 3월</h3>
           <span className="text-xs font-medium text-violet-600 bg-violet-100/60 px-2.5 py-1 rounded-full">
             {practicedDays.length}일 연습
           </span>
@@ -1108,7 +1108,7 @@ function RecordsMockup() {
 
         <div className="grid grid-cols-7 gap-1 mb-2">
           {["일", "월", "화", "수", "목", "금", "토"].map((day, i) => (
-            <div key={day} className={`text-center text-xs font-medium py-1 ${i === 0 ? "text-red-400" : i === 6 ? "text-blue-400" : "text-gray-500"}`}>
+            <div key={day} className={`text-center text-xs font-medium py-1 ${i === 0 ? "text-red-400" : i === 6 ? "text-blue-400" : "text-fg-secondary"}`}>
               {day}
             </div>
           ))}
@@ -1141,7 +1141,7 @@ function RecordsMockup() {
         </div>
 
         {/* Legend */}
-        <div className="flex items-center justify-end gap-2 mt-3 text-[11px] text-gray-400">
+        <div className="flex items-center justify-end gap-2 mt-3 text-[11px] text-fg-tertiary">
           <span>적음</span>
           <div className="flex gap-1">
             <div className="w-4 h-4 rounded bg-white/30" />
@@ -1155,7 +1155,7 @@ function RecordsMockup() {
 
       {/* Today Detail */}
       <div className="bg-white/40 backdrop-blur-xl rounded-3xl p-5 border border-white/50 shadow-sm">
-        <p className="font-bold text-gray-900 mb-3">3월 10일 (오늘)</p>
+        <p className="font-bold text-fg-primary mb-3">3월 10일 (오늘)</p>
         <div className="space-y-3">
           {[
             { time: "14:30-15:12", piece: "쇼팽 발라드 1번", duration: "42분", type: "자유 연습" },
@@ -1165,8 +1165,8 @@ function RecordsMockup() {
             <div key={s.time} className="flex items-center gap-3 p-3 bg-white/50 rounded-xl">
               <div className="w-1.5 h-10 rounded-full bg-violet-400" />
               <div className="flex-1">
-                <p className="text-sm font-medium text-gray-900">{s.piece}</p>
-                <p className="text-[10px] text-gray-400">{s.time} · {s.duration}</p>
+                <p className="text-sm font-medium text-fg-primary">{s.piece}</p>
+                <p className="text-[10px] text-fg-tertiary">{s.time} · {s.duration}</p>
               </div>
               <span className="text-[10px] text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">{s.type}</span>
             </div>
@@ -1205,15 +1205,15 @@ function GoalsMockup() {
           { value: "32일", label: "연속" },
         ].map((s) => (
           <div key={s.label} className="bg-white/40 backdrop-blur-xl rounded-2xl p-3 text-center border border-white/50">
-            <p className="text-sm font-bold text-gray-900">{s.value}</p>
-            <p className="text-[10px] text-gray-500 mt-0.5">{s.label}</p>
+            <p className="text-sm font-bold text-fg-primary">{s.value}</p>
+            <p className="text-[10px] text-fg-secondary mt-0.5">{s.label}</p>
           </div>
         ))}
       </div>
 
       {/* Practice Calendar Mini */}
       <div className="bg-white/40 backdrop-blur-xl rounded-3xl p-5 border border-white/50 shadow-sm mb-4">
-        <p className="font-bold text-gray-900 mb-3">3월 연습 현황</p>
+        <p className="font-bold text-fg-primary mb-3">3월 연습 현황</p>
         <div className="grid grid-cols-7 gap-1">
           {Array.from({ length: 10 }).map((_, i) => (
             <div key={i} className={`aspect-square rounded-lg flex items-center justify-center text-[10px] font-medium ${
@@ -1223,7 +1223,7 @@ function GoalsMockup() {
             </div>
           ))}
           {Array.from({ length: 21 }).map((_, i) => (
-            <div key={`f-${i}`} className="aspect-square rounded-lg flex items-center justify-center text-[10px] font-medium bg-white/30 text-gray-400">
+            <div key={`f-${i}`} className="aspect-square rounded-lg flex items-center justify-center text-[10px] font-medium bg-white/30 text-fg-tertiary">
               {i + 11}
             </div>
           ))}
@@ -1232,7 +1232,7 @@ function GoalsMockup() {
 
       {/* Recent Sessions */}
       <div className="bg-white/40 backdrop-blur-xl rounded-3xl p-5 border border-white/50 shadow-sm">
-        <p className="font-bold text-gray-900 mb-3">오늘의 연습</p>
+        <p className="font-bold text-fg-primary mb-3">오늘의 연습</p>
         <div className="space-y-2">
           {[
             { piece: "쇼팽 발라드 1번", time: "42분", hasAudio: true },
@@ -1241,8 +1241,8 @@ function GoalsMockup() {
           ].map((s) => (
             <div key={s.piece} className="flex items-center gap-3 p-3 bg-white/50 rounded-xl">
               <div className="flex-1">
-                <p className="text-sm font-medium text-gray-900">{s.piece}</p>
-                <p className="text-xs text-gray-400">{s.time}</p>
+                <p className="text-sm font-medium text-fg-primary">{s.piece}</p>
+                <p className="text-xs text-fg-tertiary">{s.time}</p>
               </div>
               {s.hasAudio && (
                 <div className="w-8 h-8 bg-violet-100 rounded-lg flex items-center justify-center">
@@ -1268,8 +1268,8 @@ function RoutinesMockup() {
       <div className="bg-white/40 backdrop-blur-xl rounded-3xl p-5 border border-white/50 shadow-sm mb-4">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <p className="text-sm font-bold text-gray-900">오늘의 루틴</p>
-            <p className="text-xs text-gray-400">예상 소요시간 1시간 30분</p>
+            <p className="text-sm font-bold text-fg-primary">오늘의 루틴</p>
+            <p className="text-xs text-fg-tertiary">예상 소요시간 1시간 30분</p>
           </div>
           <span className="text-xs font-bold text-violet-600 bg-violet-100 px-2.5 py-1 rounded-full">3/5 완료</span>
         </div>
@@ -1286,13 +1286,13 @@ function RoutinesMockup() {
               r.active ? "border-violet-300 bg-violet-50/50" : r.done ? "border-green-200/50 bg-green-50/30" : "border-white/50 bg-white/30"
             }`}>
               <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
-                r.done ? "bg-green-500 text-white" : r.active ? "bg-violet-500 text-white" : "bg-gray-200 text-gray-500"
+                r.done ? "bg-green-500 text-white" : r.active ? "bg-violet-500 text-white" : "bg-gray-200 text-fg-secondary"
               }`}>
                 {r.done ? <Check className="w-3.5 h-3.5" /> : r.order}
               </div>
               <div className="flex-1">
-                <p className={`text-xs font-semibold ${r.done ? "text-gray-400 line-through" : "text-gray-800"}`}>{r.title}</p>
-                <p className="text-[10px] text-gray-400">{r.time} · {r.mode}</p>
+                <p className={`text-xs font-semibold ${r.done ? "text-fg-tertiary line-through" : "text-gray-800"}`}>{r.title}</p>
+                <p className="text-[10px] text-fg-tertiary">{r.time} · {r.mode}</p>
               </div>
               {r.active && <span className="text-[10px] text-violet-600 font-semibold">진행중</span>}
             </div>
@@ -1301,7 +1301,7 @@ function RoutinesMockup() {
       </div>
 
       {/* My Routines */}
-      <p className="text-sm font-bold text-gray-900 mb-3">내 루틴 목록</p>
+      <p className="text-sm font-bold text-fg-primary mb-3">내 루틴 목록</p>
       <div className="space-y-2">
         {[
           { name: "평일 기본 루틴", drills: 5, days: "월~금", totalTime: "1시간 30분" },
@@ -1313,10 +1313,10 @@ function RoutinesMockup() {
               <BookOpen className="w-5 h-5 text-violet-600" />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-medium text-gray-900">{r.name}</p>
-              <p className="text-[10px] text-gray-400">{r.drills}개 항목 · {r.days} · {r.totalTime}</p>
+              <p className="text-sm font-medium text-fg-primary">{r.name}</p>
+              <p className="text-[10px] text-fg-tertiary">{r.drills}개 항목 · {r.days} · {r.totalTime}</p>
             </div>
-            <ChevronRight className="w-5 h-5 text-gray-400" />
+            <ChevronRight className="w-5 h-5 text-fg-tertiary" />
           </div>
         ))}
       </div>
@@ -1335,8 +1335,8 @@ function ProfileMockup() {
         <div className="w-20 h-20 rounded-full bg-gradient-to-br from-violet-400 to-purple-600 flex items-center justify-center text-4xl mx-auto mb-3 shadow-lg shadow-violet-500/20">
           🎵
         </div>
-        <h1 className="text-xl font-black text-gray-900">지수님</h1>
-        <p className="text-sm text-gray-500">피아노 · 음대 입시</p>
+        <h1 className="text-xl font-black text-fg-primary">지수님</h1>
+        <p className="text-sm text-fg-secondary">피아노 · 음대 입시</p>
         <div className="flex items-center justify-center gap-1 mt-2">
           <span className="text-xs px-3 py-1 rounded-full bg-gradient-to-r from-violet-500 to-purple-600 text-white font-semibold">열정적인 연습생</span>
         </div>
@@ -1351,17 +1351,17 @@ function ProfileMockup() {
         ].map((s) => (
           <div key={s.label} className="py-4 text-center">
             <div className="flex items-baseline justify-center gap-0.5">
-              <span className="text-xl font-extrabold text-gray-900">{s.value}</span>
-              <span className="text-xs text-gray-400">{s.unit}</span>
+              <span className="text-xl font-extrabold text-fg-primary">{s.value}</span>
+              <span className="text-xs text-fg-tertiary">{s.unit}</span>
             </div>
-            <p className="text-[11px] text-gray-500 mt-0.5">{s.label}</p>
+            <p className="text-[11px] text-fg-secondary mt-0.5">{s.label}</p>
           </div>
         ))}
       </div>
 
       {/* Badges */}
       <div className="bg-white/40 backdrop-blur-xl rounded-3xl p-5 border border-white/50 shadow-sm mb-4">
-        <p className="text-sm font-bold text-gray-900 mb-3">획득한 뱃지</p>
+        <p className="text-sm font-bold text-fg-primary mb-3">획득한 뱃지</p>
         <div className="flex gap-2 flex-wrap">
           {[
             { icon: "🔥", label: "30일 연속" },
@@ -1379,7 +1379,7 @@ function ProfileMockup() {
 
       {/* Practicing Songs */}
       <div className="bg-white/40 backdrop-blur-xl rounded-3xl p-5 border border-white/50 shadow-sm mb-4">
-        <p className="text-sm font-bold text-gray-900 mb-3">연습 중인 곡</p>
+        <p className="text-sm font-bold text-fg-primary mb-3">연습 중인 곡</p>
         <div className="space-y-2">
           {[
             "쇼팽 발라드 1번 Op.23",
@@ -1404,9 +1404,9 @@ function ProfileMockup() {
           { icon: LogOut, label: "로그아웃", red: true },
         ].map((item) => (
           <div key={item.label} className={`flex items-center gap-3 px-5 py-3.5 border-b border-white/30 last:border-b-0 ${item.red ? "" : ""}`}>
-            <item.icon className={`w-5 h-5 ${item.red ? "text-red-500" : "text-gray-500"}`} />
+            <item.icon className={`w-5 h-5 ${item.red ? "text-red-500" : "text-fg-secondary"}`} />
             <span className={`text-sm font-medium flex-1 ${item.red ? "text-red-500" : "text-gray-700"}`}>{item.label}</span>
-            <ChevronRight className="w-4 h-4 text-gray-400" />
+            <ChevronRight className="w-4 h-4 text-fg-tertiary" />
           </div>
         ))}
       </div>
@@ -1432,9 +1432,9 @@ function SongsMockup() {
             <div className="flex justify-between items-start mb-2">
               <div>
                 <p className="text-[11px] text-violet-500 font-medium">{s.composer}</p>
-                <p className="text-sm font-bold text-gray-900">{s.piece}</p>
+                <p className="text-sm font-bold text-fg-primary">{s.piece}</p>
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="text-[10px] text-gray-400">{s.key}</span>
+                  <span className="text-[10px] text-fg-tertiary">{s.key}</span>
                   <span className={`text-[10px] px-1.5 py-0.5 rounded ${s.diffColor}`}>{s.diff}</span>
                 </div>
               </div>
@@ -1443,7 +1443,7 @@ function SongsMockup() {
             <div className="h-2 bg-white/50 rounded-full overflow-hidden mb-2">
               <div className="h-full bg-gradient-to-r from-violet-400 to-purple-600 rounded-full" style={{ width: `${s.progress}%` }} />
             </div>
-            <div className="flex justify-between text-[10px] text-gray-400">
+            <div className="flex justify-between text-[10px] text-fg-tertiary">
               <span>{s.sessions}회 연습</span>
               <span>최근 {s.lastDate}</span>
             </div>
@@ -1453,7 +1453,7 @@ function SongsMockup() {
 
       {/* Add Song */}
       <div className="mt-4">
-        <div className="w-full py-4 border-2 border-dashed border-gray-300/50 rounded-xl text-center text-gray-500 text-sm">
+        <div className="w-full py-4 border-2 border-dashed border-gray-300/50 rounded-xl text-center text-fg-secondary text-sm">
           <Plus className="w-5 h-5 inline mr-2" />
           새 곡 추가하기
         </div>
@@ -1472,12 +1472,12 @@ function NotificationsMockup() {
           <div className="w-10 h-10 rounded-full bg-white/30 backdrop-blur-sm border border-white/40 flex items-center justify-center">
             <ArrowLeft className="w-5 h-5 text-gray-600" />
           </div>
-          <h1 className="text-lg font-bold text-gray-900">알림</h1>
+          <h1 className="text-lg font-bold text-fg-primary">알림</h1>
         </div>
         <span className="text-xs text-violet-600 font-semibold">모두 읽음</span>
       </div>
 
-      <p className="text-xs font-semibold text-gray-500 mb-3">오늘</p>
+      <p className="text-xs font-semibold text-fg-secondary mb-3">오늘</p>
       <div className="space-y-2 mb-5">
         {[
           { icon: "🎯", title: "오늘 목표까지 30분 남았어요!", time: "10분 전", unread: true },
@@ -1487,15 +1487,15 @@ function NotificationsMockup() {
           <div key={i} className="flex items-start gap-3 p-3.5 rounded-2xl bg-violet-50/50 border border-violet-100/50">
             <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-lg shadow-sm">{n.icon}</div>
             <div className="flex-1">
-              <p className="text-sm font-bold text-gray-900">{n.title}</p>
-              <p className="text-[10px] text-gray-400 mt-0.5">{n.time}</p>
+              <p className="text-sm font-bold text-fg-primary">{n.title}</p>
+              <p className="text-[10px] text-fg-tertiary mt-0.5">{n.time}</p>
             </div>
             <div className="w-2 h-2 bg-violet-500 rounded-full mt-1.5" />
           </div>
         ))}
       </div>
 
-      <p className="text-xs font-semibold text-gray-500 mb-3">어제</p>
+      <p className="text-xs font-semibold text-fg-secondary mb-3">어제</p>
       <div className="space-y-2 mb-5">
         {[
           { icon: "💬", title: "김서연 선생님이 피드백을 남겼어요", time: "어제 15:30" },
@@ -1505,13 +1505,13 @@ function NotificationsMockup() {
             <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-lg shadow-sm">{n.icon}</div>
             <div className="flex-1">
               <p className="text-sm font-medium text-gray-600">{n.title}</p>
-              <p className="text-[10px] text-gray-400 mt-0.5">{n.time}</p>
+              <p className="text-[10px] text-fg-tertiary mt-0.5">{n.time}</p>
             </div>
           </div>
         ))}
       </div>
 
-      <p className="text-xs font-semibold text-gray-500 mb-3">이번 주</p>
+      <p className="text-xs font-semibold text-fg-secondary mb-3">이번 주</p>
       <div className="space-y-2">
         {[
           { icon: "✅", title: "도움 요청에 답변이 도착했어요", time: "3월 7일" },
@@ -1522,7 +1522,7 @@ function NotificationsMockup() {
             <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-lg shadow-sm">{n.icon}</div>
             <div className="flex-1">
               <p className="text-sm font-medium text-gray-600">{n.title}</p>
-              <p className="text-[10px] text-gray-400 mt-0.5">{n.time}</p>
+              <p className="text-[10px] text-fg-tertiary mt-0.5">{n.time}</p>
             </div>
           </div>
         ))}
@@ -1544,8 +1544,8 @@ function PracticeMainMockup() {
             <ArrowLeft className="w-5 h-5 text-gray-600" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-gray-900">연습 중</h1>
-            <p className="text-xs text-gray-500">쇼팽 발라드 1번 Op.23</p>
+            <h1 className="text-lg font-bold text-fg-primary">연습 중</h1>
+            <p className="text-xs text-fg-secondary">쇼팽 발라드 1번 Op.23</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -1568,9 +1568,9 @@ function PracticeMainMockup() {
             </defs>
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <p className="text-[10px] text-gray-400 mb-1">순 연습시간</p>
-            <p className="text-4xl font-black text-gray-900 font-mono">32:15</p>
-            <p className="text-[10px] text-gray-400 mt-1">전체 45:22</p>
+            <p className="text-[10px] text-fg-tertiary mb-1">순 연습시간</p>
+            <p className="text-4xl font-black text-fg-primary font-mono">32:15</p>
+            <p className="text-[10px] text-fg-tertiary mt-1">전체 45:22</p>
           </div>
         </div>
       </div>
@@ -1594,10 +1594,10 @@ function PracticeMainMockup() {
           ))}
         </div>
         <div className="flex justify-between items-center mt-2">
-          <span className="text-[10px] text-gray-400">실시간 오디오 파형</span>
+          <span className="text-[10px] text-fg-tertiary">실시간 오디오 파형</span>
           <div className="flex items-center gap-1">
-            <Volume2 className="w-3 h-3 text-gray-400" />
-            <span className="text-[10px] text-gray-400">-24dB</span>
+            <Volume2 className="w-3 h-3 text-fg-tertiary" />
+            <span className="text-[10px] text-fg-tertiary">-24dB</span>
           </div>
         </div>
       </div>
@@ -1618,7 +1618,7 @@ function PracticeMainMockup() {
       {/* Current Drill */}
       <div className="bg-white/40 backdrop-blur-xl rounded-2xl p-4 border border-white/50 shadow-sm">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-bold text-gray-900">현재 연습</span>
+          <span className="text-xs font-bold text-fg-primary">현재 연습</span>
           <span className="text-[10px] text-violet-600 bg-violet-100 px-2 py-0.5 rounded-full font-medium">마디 32-48</span>
         </div>
         <p className="text-sm text-gray-700">왼손 독립성 연습 · 시간 모드 25분</p>
@@ -1653,8 +1653,8 @@ function AIReportMockup() {
             <Music className="w-6 h-6 text-violet-600" />
           </div>
           <div>
-            <p className="text-sm font-bold text-gray-900">쇼팽 (Frédéric Chopin)</p>
-            <p className="text-xs text-gray-500">발라드 1번 Op.23 · G단조</p>
+            <p className="text-sm font-bold text-fg-primary">쇼팽 (Frédéric Chopin)</p>
+            <p className="text-xs text-fg-secondary">발라드 1번 Op.23 · G단조</p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -1668,7 +1668,7 @@ function AIReportMockup() {
       <div className="bg-white/50 backdrop-blur-xl rounded-2xl border border-white/50 p-4 mb-4 shadow-sm">
         <div className="flex items-center gap-2 mb-3">
           <BarChart3 className="w-4 h-4 text-violet-500" />
-          <span className="text-sm font-bold text-gray-900">구조 분석</span>
+          <span className="text-sm font-bold text-fg-primary">구조 분석</span>
         </div>
         <div className="space-y-2">
           {[
@@ -1682,7 +1682,7 @@ function AIReportMockup() {
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-mono font-bold text-violet-600">m.{s.range}</span>
-                  <span className="text-xs font-medium text-gray-900">{s.name}</span>
+                  <span className="text-xs font-medium text-fg-primary">{s.name}</span>
                 </div>
                 <span className={`text-[9px] px-1.5 py-0.5 rounded ${
                   s.diff === "매우 어려움" ? "bg-red-100 text-red-700" :
@@ -1690,7 +1690,7 @@ function AIReportMockup() {
                   "bg-yellow-100 text-yellow-700"
                 }`}>{s.diff}</span>
               </div>
-              <div className="flex gap-2 text-[10px] text-gray-500">
+              <div className="flex gap-2 text-[10px] text-fg-secondary">
                 <span>{s.key}</span>
                 <span>·</span>
                 <span className="italic">{s.tempo}</span>
@@ -1706,7 +1706,7 @@ function AIReportMockup() {
       <div className="bg-white/50 backdrop-blur-xl rounded-2xl border border-white/50 p-4 mb-4 shadow-sm">
         <div className="flex items-center gap-2 mb-3">
           <Target className="w-4 h-4 text-violet-500" />
-          <span className="text-sm font-bold text-gray-900">연습 가이드</span>
+          <span className="text-sm font-bold text-fg-primary">연습 가이드</span>
         </div>
         <div className="space-y-3">
           <div className="bg-violet-50 rounded-xl p-3 border-l-4 border-violet-500">
@@ -1748,7 +1748,7 @@ function LessonMockup() {
           <ArrowLeft className="w-5 h-5 text-gray-600" />
         </div>
         <div className="flex-1">
-          <h1 className="text-lg font-bold text-gray-900">해결 요청</h1>
+          <h1 className="text-lg font-bold text-fg-primary">해결 요청</h1>
         </div>
         <span className="text-xs px-3 py-1.5 rounded-full bg-green-100 text-green-700 font-semibold">답변 2개</span>
       </div>
@@ -1757,7 +1757,7 @@ function LessonMockup() {
       <div className="bg-white/50 backdrop-blur-xl rounded-2xl border border-white/50 p-4 mb-4 shadow-sm">
         <div className="flex items-center gap-2 mb-3">
           <Music className="w-4 h-4 text-violet-500" />
-          <span className="text-sm font-bold text-gray-900">쇼팽 발라드 1번 Op.23</span>
+          <span className="text-sm font-bold text-fg-primary">쇼팽 발라드 1번 Op.23</span>
         </div>
         <p className="text-xs text-gray-600 mb-3">마디 32-40 구간에서 왼손 옥타브 도약이 정확하게 안 됩니다. 운지법과 손목 사용법을 알고 싶습니다.</p>
         <div className="flex gap-2 mb-3">
@@ -1783,7 +1783,7 @@ function LessonMockup() {
       </div>
 
       {/* Expert Proposals */}
-      <p className="text-sm font-bold text-gray-900 flex items-center gap-2 mb-3">
+      <p className="text-sm font-bold text-fg-primary flex items-center gap-2 mb-3">
         <Users className="w-4 h-4 text-violet-500" />
         전문가 제안 2
       </p>
@@ -1821,10 +1821,10 @@ function LessonMockup() {
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-gray-900">{p.name}</span>
+                  <span className="text-sm font-bold text-fg-primary">{p.name}</span>
                   <span className="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-medium">{p.badge}</span>
                 </div>
-                <div className="flex items-center gap-2 text-[10px] text-gray-500">
+                <div className="flex items-center gap-2 text-[10px] text-fg-secondary">
                   <span className="flex items-center gap-0.5"><Star className="w-3 h-3 fill-amber-400 text-amber-400" />{p.score}</span>
                   <span>·</span>
                   <span>해결 {p.completed}건</span>
@@ -1834,7 +1834,7 @@ function LessonMockup() {
             <p className="text-xs text-gray-700 mb-3">{p.comment}</p>
             <div className="flex gap-2">
               <div className="flex items-center gap-1.5 bg-gray-100 rounded-lg px-3 py-2">
-                <Video className="w-3.5 h-3.5 text-gray-500" />
+                <Video className="w-3.5 h-3.5 text-fg-secondary" />
                 <span className="text-[10px] text-gray-600">데모 영상 {p.videoTime}</span>
               </div>
             </div>
@@ -1862,7 +1862,7 @@ function RoomDetailMockup() {
           <ArrowLeft className="w-5 h-5 text-gray-600" />
         </div>
         <div className="flex-1">
-          <h1 className="text-lg font-bold text-gray-900">서울대 피아노 전공</h1>
+          <h1 className="text-lg font-bold text-fg-primary">서울대 피아노 전공</h1>
           <div className="flex items-center gap-2 mt-0.5">
             <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">지정곡</span>
             <Shield className="w-3 h-3 text-blue-500" />
@@ -1877,18 +1877,18 @@ function RoomDetailMockup() {
       <div className="grid grid-cols-3 gap-2 mb-5">
         <div className="bg-white/60 backdrop-blur-lg rounded-2xl p-3 text-center border border-white/50">
           <Users className="w-4 h-4 text-violet-500 mx-auto mb-1" />
-          <p className="text-lg font-bold text-gray-900">28</p>
-          <p className="text-[10px] text-gray-500">참여자</p>
+          <p className="text-lg font-bold text-fg-primary">28</p>
+          <p className="text-[10px] text-fg-secondary">참여자</p>
         </div>
         <div className="bg-white/60 backdrop-blur-lg rounded-2xl p-3 text-center border border-white/50">
           <Video className="w-4 h-4 text-violet-500 mx-auto mb-1" />
-          <p className="text-lg font-bold text-gray-900">156</p>
-          <p className="text-[10px] text-gray-500">영상</p>
+          <p className="text-lg font-bold text-fg-primary">156</p>
+          <p className="text-[10px] text-fg-secondary">영상</p>
         </div>
         <div className="bg-white/60 backdrop-blur-lg rounded-2xl p-3 text-center border border-white/50">
           <Calendar className="w-4 h-4 text-red-500 mx-auto mb-1" />
           <p className="text-lg font-bold text-red-600">D-12</p>
-          <p className="text-[10px] text-gray-500">마감</p>
+          <p className="text-[10px] text-fg-secondary">마감</p>
         </div>
       </div>
 
@@ -1905,13 +1905,13 @@ function RoomDetailMockup() {
 
       {/* Videos by Piece */}
       <div className="flex items-center justify-between mb-3">
-        <p className="text-sm font-bold text-gray-900 flex items-center gap-2">
+        <p className="text-sm font-bold text-fg-primary flex items-center gap-2">
           연습 영상
           <span className="text-[10px] bg-violet-100 text-violet-600 px-2 py-0.5 rounded-full">156</span>
         </p>
         <div className="flex gap-1">
           <span className="text-[10px] px-2.5 py-1 rounded-full bg-violet-600 text-white">최신순</span>
-          <span className="text-[10px] px-2.5 py-1 rounded-full bg-white/40 text-gray-500">도움순</span>
+          <span className="text-[10px] px-2.5 py-1 rounded-full bg-white/40 text-fg-secondary">도움순</span>
         </div>
       </div>
 
@@ -1924,19 +1924,19 @@ function RoomDetailMockup() {
           <div key={g.piece} className="bg-white/50 backdrop-blur-xl rounded-2xl border border-white/50 shadow-sm overflow-hidden">
             <div className="p-4 flex items-center gap-3">
               <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${g.open ? "bg-green-100" : "bg-gray-100"}`}>
-                {g.open ? <Eye className="w-4 h-4 text-green-600" /> : <Lock className="w-4 h-4 text-gray-400" />}
+                {g.open ? <Eye className="w-4 h-4 text-green-600" /> : <Lock className="w-4 h-4 text-fg-tertiary" />}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{g.piece}</p>
-                <div className="flex items-center gap-3 text-[10px] text-gray-500 mt-0.5">
+                <p className="text-sm font-medium text-fg-primary truncate">{g.piece}</p>
+                <div className="flex items-center gap-3 text-[10px] text-fg-secondary mt-0.5">
                   <span className="flex items-center gap-1"><Users className="w-3 h-3" />{g.uploaders}명</span>
                   <span className="flex items-center gap-1"><Video className="w-3 h-3" />{g.videos}개</span>
                 </div>
               </div>
               {g.open ? (
-                <ChevronDown className="w-5 h-5 text-gray-400" />
+                <ChevronDown className="w-5 h-5 text-fg-tertiary" />
               ) : (
-                <span className="text-[9px] bg-gray-100 text-gray-500 px-2 py-1 rounded-full">업로드 시 열람</span>
+                <span className="text-[9px] bg-gray-100 text-fg-secondary px-2 py-1 rounded-full">업로드 시 열람</span>
               )}
             </div>
             {/* Expanded Videos */}
@@ -1954,12 +1954,12 @@ function RoomDetailMockup() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-medium text-gray-900">{v.user}</span>
+                        <span className="text-xs font-medium text-fg-primary">{v.user}</span>
                         {v.blur && <span className="text-[8px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded">블러</span>}
                       </div>
-                      <p className="text-[10px] text-gray-400">{v.section}</p>
+                      <p className="text-[10px] text-fg-tertiary">{v.section}</p>
                     </div>
-                    <div className="flex items-center gap-1 text-[10px] text-gray-400">
+                    <div className="flex items-center gap-1 text-[10px] text-fg-tertiary">
                       <span>👍</span>
                       <span>{v.helpful}</span>
                     </div>
@@ -1995,7 +1995,7 @@ function PracticePlanMockup() {
         ].map((d) => (
           <div key={d.date} className={`flex flex-col items-center py-2 px-3 rounded-xl min-w-[48px] ${
             d.active ? "bg-gradient-to-b from-violet-500 to-purple-600 text-white shadow-md shadow-violet-500/20" :
-            d.practiced ? "bg-violet-100 text-violet-700" : "bg-white/40 text-gray-500"
+            d.practiced ? "bg-violet-100 text-violet-700" : "bg-white/40 text-fg-secondary"
           }`}>
             <span className="text-[10px] font-medium">{d.day}</span>
             <span className="text-lg font-bold">{d.date}</span>
@@ -2017,7 +2017,7 @@ function PracticePlanMockup() {
       </div>
 
       {/* Drill Schedule */}
-      <p className="text-sm font-bold text-gray-900 mb-3">오늘의 스케줄</p>
+      <p className="text-sm font-bold text-fg-primary mb-3">오늘의 스케줄</p>
       <div className="space-y-2 mb-6">
         {[
           { time: "12:00", title: "하농 39번", detail: "전체 · 시간 모드 15분", done: true },
@@ -2029,15 +2029,15 @@ function PracticePlanMockup() {
           <div key={d.time + d.title} className={`flex items-center gap-3 p-3 rounded-xl border ${
             d.active ? "border-violet-300 bg-violet-50/50" : d.done ? "border-green-200/50 bg-green-50/30" : "border-white/50 bg-white/30"
           }`}>
-            <span className="text-[10px] font-mono text-gray-400 w-10 shrink-0">{d.time}</span>
+            <span className="text-[10px] font-mono text-fg-tertiary w-10 shrink-0">{d.time}</span>
             <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
-              d.done ? "bg-green-500 text-white" : d.active ? "bg-violet-500 text-white" : "bg-gray-200 text-gray-500"
+              d.done ? "bg-green-500 text-white" : d.active ? "bg-violet-500 text-white" : "bg-gray-200 text-fg-secondary"
             }`}>
               {d.done ? <Check className="w-3.5 h-3.5" /> : "♪"}
             </div>
             <div className="flex-1">
-              <p className={`text-xs font-semibold ${d.done ? "text-gray-400 line-through" : "text-gray-800"}`}>{d.title}</p>
-              <p className="text-[10px] text-gray-400">{d.detail}</p>
+              <p className={`text-xs font-semibold ${d.done ? "text-fg-tertiary line-through" : "text-gray-800"}`}>{d.title}</p>
+              <p className="text-[10px] text-fg-tertiary">{d.detail}</p>
             </div>
             {d.active && <span className="text-[10px] text-violet-600 font-semibold">진행중</span>}
           </div>
@@ -2118,7 +2118,7 @@ function PracticeCompleteMockup() {
                   style={{ width: "76%" }}
                 />
               </div>
-              <p className="text-[10px] text-gray-500 mt-1.5 text-center">
+              <p className="text-[10px] text-fg-secondary mt-1.5 text-center">
                 오늘의 목표 76% 달성 (91/120분)
               </p>
             </div>
@@ -2130,7 +2130,7 @@ function PracticeCompleteMockup() {
                   <Activity className="w-3.5 h-3.5 text-violet-500" />
                   <span className="text-xs font-medium text-gray-700">AI 분석 결과</span>
                 </div>
-                <span className="text-lg font-bold text-gray-900">{instrumentPercent}%</span>
+                <span className="text-lg font-bold text-fg-primary">{instrumentPercent}%</span>
               </div>
               <div className="h-2 bg-gray-200 rounded-full overflow-hidden mb-3">
                 <div
@@ -2175,7 +2175,7 @@ function PracticeCompleteMockup() {
                 <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
                   <div className="h-full bg-black rounded-full" style={{ width: "65%" }} />
                 </div>
-                <span className="text-[10px] text-gray-400 shrink-0">29:30/45:22</span>
+                <span className="text-[10px] text-fg-tertiary shrink-0">29:30/45:22</span>
               </div>
             </div>
 
@@ -2249,7 +2249,7 @@ export default function MockupPage({ params }: { params: Promise<{ feature: stri
   if (!Renderer) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <p className="text-sm text-gray-500">존재하지 않는 목업입니다: {feature}</p>
+        <p className="text-sm text-fg-secondary">존재하지 않는 목업입니다: {feature}</p>
       </div>
     );
   }

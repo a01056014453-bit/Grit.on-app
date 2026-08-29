@@ -40,7 +40,7 @@ export default function SupportPage() {
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-3xl mx-auto px-6 py-12">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">고객지원</h1>
+        <h1 className="text-3xl font-bold text-fg-primary mb-6">고객지원</h1>
         <p className="text-[15px] leading-relaxed text-gray-700 mb-10">
           Sempre 이용 중 궁금한 점이 있으시면 아래 FAQ를 확인해주세요. 해결되지
           않는 문제는 이메일로 문의해주시면 빠르게 답변드리겠습니다.
@@ -49,7 +49,7 @@ export default function SupportPage() {
         <div className="space-y-10 text-gray-700 text-[15px] leading-relaxed">
           {/* FAQ */}
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            <h2 className="text-xl font-semibold text-fg-primary mb-4">
               자주 묻는 질문
             </h2>
             <div className="space-y-3">
@@ -58,9 +58,9 @@ export default function SupportPage() {
                   key={i}
                   className="group border border-gray-200 rounded-xl overflow-hidden"
                 >
-                  <summary className="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-gray-50 transition-colors font-medium text-gray-900">
+                  <summary className="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-gray-50 transition-colors font-medium text-fg-primary">
                     <span>{faq.q}</span>
-                    <span className="ml-2 text-gray-400 group-open:rotate-180 transition-transform">
+                    <span className="ml-2 text-fg-tertiary group-open:rotate-180 transition-transform">
                       ▾
                     </span>
                   </summary>
@@ -74,12 +74,12 @@ export default function SupportPage() {
 
           {/* 문의하기 */}
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            <h2 className="text-xl font-semibold text-fg-primary mb-4">
               문의하기
             </h2>
             <div className="bg-gray-50 rounded-xl p-6 space-y-4">
               <div>
-                <span className="font-medium text-gray-900">고객지원</span>
+                <span className="font-medium text-fg-primary">고객지원</span>
                 <br />
                 <a
                   href="mailto:support@withsempre.com"
@@ -89,7 +89,7 @@ export default function SupportPage() {
                 </a>
               </div>
               <div>
-                <span className="font-medium text-gray-900">제휴/비즈니스</span>
+                <span className="font-medium text-fg-primary">제휴/비즈니스</span>
                 <br />
                 <a
                   href="mailto:contact@withsempre.com"
@@ -98,7 +98,7 @@ export default function SupportPage() {
                   contact@withsempre.com
                 </a>
               </div>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-fg-secondary">
                 영업일 기준 1~2일 내 답변드립니다.
               </p>
             </div>
@@ -106,7 +106,7 @@ export default function SupportPage() {
 
           {/* 신고 및 분쟁 */}
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            <h2 className="text-xl font-semibold text-fg-primary mb-4">
               신고 및 분쟁 해결
             </h2>
             <ul className="space-y-2">
@@ -135,7 +135,7 @@ export default function SupportPage() {
 
           {/* 관련 링크 */}
           <section className="border-t border-gray-200 pt-8">
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">
+            <h2 className="text-xl font-semibold text-fg-primary mb-3">
               관련 링크
             </h2>
             <div className="flex gap-4 text-sm">

@@ -117,7 +117,7 @@ export default function RoomUploadPage() {
   if (!school) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-blob-violet">
-        <div className="animate-pulse text-gray-400">로딩 중...</div>
+        <div className="animate-pulse text-fg-tertiary">로딩 중...</div>
       </div>
     );
   }
@@ -135,8 +135,8 @@ export default function RoomUploadPage() {
           <ArrowLeft className="w-5 h-5 text-gray-600" />
         </button>
         <div>
-          <h1 className="text-lg font-bold text-gray-900">영상 업로드</h1>
-          <p className="text-xs text-gray-500">{school.name} {school.year}</p>
+          <h1 className="text-lg font-bold text-fg-primary">영상 업로드</h1>
+          <p className="text-xs text-fg-secondary">{school.name} {school.year}</p>
         </div>
       </div>
 
@@ -149,7 +149,7 @@ export default function RoomUploadPage() {
           >
             <Video className="w-14 h-14 text-gray-300 mx-auto mb-3" />
             <p className="text-sm font-medium text-gray-600">탭하여 영상 선택</p>
-            <p className="text-xs text-gray-400 mt-1">MP4, MOV (최대 500MB)</p>
+            <p className="text-xs text-fg-tertiary mt-1">MP4, MOV (최대 500MB)</p>
           </button>
         ) : (
           <div className="relative bg-white/60 backdrop-blur-sm rounded-2xl border border-white/60 overflow-hidden">
@@ -169,7 +169,7 @@ export default function RoomUploadPage() {
                 onClick={removeVideo}
                 className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center shrink-0 hover:bg-red-100 transition-colors"
               >
-                <X className="w-3.5 h-3.5 text-gray-500" />
+                <X className="w-3.5 h-3.5 text-fg-secondary" />
               </button>
             </div>
           </div>
@@ -184,7 +184,7 @@ export default function RoomUploadPage() {
 
         {/* Song Name */}
         <div className="bg-white/60 backdrop-blur-sm rounded-2xl border border-white/60 p-4">
-          <label className="flex items-center gap-2 text-sm font-semibold text-gray-900 mb-3">
+          <label className="flex items-center gap-2 text-sm font-semibold text-fg-primary mb-3">
             <Music className="w-4 h-4 text-violet-600" />
             곡명
           </label>
@@ -193,13 +193,13 @@ export default function RoomUploadPage() {
             placeholder="예: F. Chopin - Ballade No.1 Op.23"
             value={pieceName}
             onChange={(e) => setPieceName(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl bg-white/80 border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent placeholder:text-gray-400"
+            className="w-full px-4 py-3 rounded-xl bg-white/80 border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent placeholder:text-fg-tertiary"
           />
         </div>
 
         {/* Measure Range */}
         <div className="bg-white/60 backdrop-blur-sm rounded-2xl border border-white/60 p-4">
-          <label className="text-sm font-semibold text-gray-900 mb-3 block">
+          <label className="text-sm font-semibold text-fg-primary mb-3 block">
             연습 마디 (선택)
           </label>
           <div className="flex items-center gap-3">
@@ -208,17 +208,17 @@ export default function RoomUploadPage() {
               placeholder="시작"
               value={measureStart}
               onChange={(e) => setMeasureStart(e.target.value)}
-              className="flex-1 px-4 py-3 rounded-xl bg-white/80 border border-gray-200 text-sm text-center focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent placeholder:text-gray-400"
+              className="flex-1 px-4 py-3 rounded-xl bg-white/80 border border-gray-200 text-sm text-center focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent placeholder:text-fg-tertiary"
             />
-            <span className="text-gray-400 font-medium">~</span>
+            <span className="text-fg-tertiary font-medium">~</span>
             <input
               type="number"
               placeholder="끝"
               value={measureEnd}
               onChange={(e) => setMeasureEnd(e.target.value)}
-              className="flex-1 px-4 py-3 rounded-xl bg-white/80 border border-gray-200 text-sm text-center focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent placeholder:text-gray-400"
+              className="flex-1 px-4 py-3 rounded-xl bg-white/80 border border-gray-200 text-sm text-center focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent placeholder:text-fg-tertiary"
             />
-            <span className="text-sm text-gray-500">마디</span>
+            <span className="text-sm text-fg-secondary">마디</span>
           </div>
         </div>
 
@@ -231,7 +231,7 @@ export default function RoomUploadPage() {
               onChange={(e) => setFaceBlur(e.target.checked)}
               className="rounded accent-violet-600 w-4 h-4"
             />
-            <span className="text-sm text-gray-900">얼굴 자동 블러 처리</span>
+            <span className="text-sm text-fg-primary">얼굴 자동 블러 처리</span>
           </label>
           <label className="flex items-center gap-3 cursor-pointer">
             <input
@@ -240,7 +240,7 @@ export default function RoomUploadPage() {
               onChange={(e) => setAnonymous(e.target.checked)}
               className="rounded accent-violet-600 w-4 h-4"
             />
-            <span className="text-sm text-gray-900">익명으로 업로드</span>
+            <span className="text-sm text-fg-primary">익명으로 업로드</span>
           </label>
         </div>
 
@@ -259,7 +259,7 @@ export default function RoomUploadPage() {
           className={`w-full py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-colors ${
             canUpload && !isUploading
               ? "bg-violet-600 text-white shadow-lg shadow-violet-600/25"
-              : "bg-gray-200 text-gray-400 cursor-not-allowed"
+              : "bg-gray-200 text-fg-tertiary cursor-not-allowed"
           }`}
         >
           <Upload className="w-4 h-4" />

@@ -314,7 +314,7 @@ export default function RecordingPlayerPage() {
   if (!session || !audioUrl) {
     return (
       <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-blob-violet px-6">
-        <p className="text-gray-500 text-sm mb-4">녹음 데이터를 찾을 수 없습니다</p>
+        <p className="text-fg-secondary text-sm mb-4">녹음 데이터를 찾을 수 없습니다</p>
         <button
           onClick={() => safeBack(router)}
           className="px-4 py-2 bg-violet-600 text-white rounded-xl text-sm font-medium"
@@ -342,8 +342,8 @@ export default function RecordingPlayerPage() {
             <ArrowLeft className="w-4 h-4 text-gray-600" />
           </button>
           <div className="flex-1 min-w-0">
-            <h1 className="text-sm font-bold text-gray-900 truncate">{session.pieceName}</h1>
-            <p className="text-[11px] text-gray-400 mt-0.5">
+            <h1 className="text-sm font-bold text-fg-primary truncate">{session.pieceName}</h1>
+            <p className="text-[11px] text-fg-tertiary mt-0.5">
               {formatDateTime(session.startTime)}
               {session.todoNote ? ` · ${session.todoNote}` : ""}
               {practiceDurationMin > 0 ? ` · ${practiceDurationMin}분 연습` : ""}
@@ -375,8 +375,8 @@ export default function RecordingPlayerPage() {
 
           {/* Time display */}
           <div className="flex items-center justify-between mt-2 px-1">
-            <span className="text-xs text-gray-500 font-mono">{formatTime(currentTime)}</span>
-            <span className="text-xs text-gray-400 font-mono">{formatTime(duration)}</span>
+            <span className="text-xs text-fg-secondary font-mono">{formatTime(currentTime)}</span>
+            <span className="text-xs text-fg-tertiary font-mono">{formatTime(duration)}</span>
           </div>
         </div>
 
@@ -408,7 +408,7 @@ export default function RecordingPlayerPage() {
             className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${
               isLooping
                 ? "bg-violet-600 text-white"
-                : "bg-white/40 text-gray-500 border border-white/50"
+                : "bg-white/40 text-fg-secondary border border-white/50"
             } disabled:opacity-30`}
           >
             <Repeat className="w-3 h-3" />
@@ -416,7 +416,7 @@ export default function RecordingPlayerPage() {
           {(regionA !== null || regionB !== null) && (
             <button
               onClick={clearRegion}
-              className="px-2 py-1 rounded-lg text-[11px] text-gray-400 hover:text-gray-600"
+              className="px-2 py-1 rounded-lg text-[11px] text-fg-tertiary hover:text-gray-600"
             >
               초기화
             </button>
@@ -435,7 +435,7 @@ export default function RecordingPlayerPage() {
               className={`px-2 py-0.5 rounded-full text-[11px] font-medium transition-colors ${
                 playbackRate === speed
                   ? "bg-violet-600 text-white"
-                  : "bg-white/40 text-gray-500 border border-white/40"
+                  : "bg-white/40 text-fg-secondary border border-white/40"
               }`}
             >
               {speed}x

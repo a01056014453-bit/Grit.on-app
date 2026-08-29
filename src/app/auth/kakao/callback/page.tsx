@@ -89,21 +89,21 @@ function KakaoCallbackContent() {
         {status === "loading" && (
           <>
             <Loader2 className="w-10 h-10 text-yellow-500 animate-spin mx-auto mb-4" />
-            <p className="text-sm text-gray-500">카카오 인증 처리 중...</p>
+            <p className="text-sm text-fg-secondary">카카오 인증 처리 중...</p>
           </>
         )}
         {status === "success" && (
           <>
             <CheckCircle className="w-10 h-10 text-green-500 mx-auto mb-4" />
-            <p className="text-sm font-semibold text-gray-900">인증 완료</p>
-            <p className="text-xs text-gray-400 mt-1">잠시 후 창이 닫힙니다.</p>
+            <p className="text-sm font-semibold text-fg-primary">인증 완료</p>
+            <p className="text-xs text-fg-tertiary mt-1">잠시 후 창이 닫힙니다.</p>
           </>
         )}
         {status === "error" && (
           <>
             <XCircle className="w-10 h-10 text-red-500 mx-auto mb-4" />
-            <p className="text-sm font-semibold text-gray-900 mb-1">인증 실패</p>
-            <p className="text-xs text-gray-500 mb-4">{errorMsg}</p>
+            <p className="text-sm font-semibold text-fg-primary mb-1">인증 실패</p>
+            <p className="text-xs text-fg-secondary mb-4">{errorMsg}</p>
             <button
               onClick={() => window.close()}
               className="px-4 py-2 bg-gray-100 rounded-lg text-sm text-gray-700"

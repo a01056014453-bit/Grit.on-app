@@ -158,11 +158,11 @@ function SwipeableDrillItem({
 
         {/* 내용 */}
         <div className={`flex-1 min-w-0 ${isCompleted ? "opacity-50" : ""}`}>
-          <p className={`text-[12px] leading-tight truncate ${isCompleted ? "line-through text-gray-400" : "text-gray-700"}`}>
+          <p className={`text-[12px] leading-tight truncate ${isCompleted ? "line-through text-fg-tertiary" : "text-gray-700"}`}>
             {drill.measures} · {drill.title}
           </p>
           {(drill.tempo > 0 || drill.recurrence > 0) && (
-            <p className="text-[11px] text-gray-400 mt-0.5">
+            <p className="text-[11px] text-fg-tertiary mt-0.5">
               {drill.tempo > 0 && `템포 ${drill.tempo}`}
               {drill.tempo > 0 && drill.recurrence > 0 && " · "}
               {drill.recurrence > 0 && `${drill.recurrence}회`}
@@ -388,7 +388,7 @@ export function TodayDrillList({ onDrillSelect, selectedDrillId, showPlayButton 
           <span className="font-bold text-sm text-violet-700 bg-violet-100 px-3.5 py-1 rounded-full">
             {completedOnly ? "완료한 연습" : isToday ? "오늘의 To do list" : "연습 드릴"}
           </span>
-          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+          <span className="text-xs text-fg-secondary bg-gray-100 px-2 py-0.5 rounded-full">
             {completedCount}/{totalCount}
           </span>
         </div>
@@ -423,7 +423,7 @@ export function TodayDrillList({ onDrillSelect, selectedDrillId, showPlayButton 
             boxShadow: "0 8px 32px rgba(124,58,237,0.08)",
           }}
         >
-          <p className="text-[12px] text-gray-400">오늘 등록된 연습이 없습니다</p>
+          <p className="text-[12px] text-fg-tertiary">오늘 등록된 연습이 없습니다</p>
           <p className="text-[11px] text-gray-300 mt-1">+ 버튼으로 연습을 추가해보세요</p>
         </div>
       ) : (

@@ -218,8 +218,8 @@ export default function TeacherRegisterPage() {
           <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle className="w-10 h-10 text-green-600" />
           </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">인증 완료</h2>
-          <p className="text-gray-500 mb-6">
+          <h2 className="text-xl font-bold text-fg-primary mb-2">인증 완료</h2>
+          <p className="text-fg-secondary mb-6">
             선생님 인증이 완료되었습니다.<br />
             프로필에서 선생님 모드를 활성화하세요.
           </p>
@@ -231,7 +231,7 @@ export default function TeacherRegisterPage() {
           </button>
           <button
             onClick={loadExistingTeacherInfo}
-            className="text-sm text-gray-500 underline"
+            className="text-sm text-fg-secondary underline"
           >
             선생님 정보 수정하기
           </button>
@@ -249,7 +249,7 @@ export default function TeacherRegisterPage() {
           <button onClick={() => setEditMode(false)}>
             <ArrowLeft className="w-6 h-6 text-gray-700" />
           </button>
-          <h1 className="text-lg font-bold text-gray-900">선생님 정보 수정</h1>
+          <h1 className="text-lg font-bold text-fg-primary">선생님 정보 수정</h1>
         </div>
 
         {saveSuccess ? (
@@ -257,8 +257,8 @@ export default function TeacherRegisterPage() {
             <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle className="w-10 h-10 text-green-600" />
             </div>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">저장 완료</h2>
-            <p className="text-gray-500">정보가 업데이트되었습니다.</p>
+            <h2 className="text-xl font-bold text-fg-primary mb-2">저장 완료</h2>
+            <p className="text-fg-secondary">정보가 업데이트되었습니다.</p>
           </div>
         ) : (
           <>
@@ -275,13 +275,13 @@ export default function TeacherRegisterPage() {
                 className={`w-full px-3.5 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent ${errors.realName ? "border-red-300" : "border-gray-200"}`}
               />
               {errors.realName && <p className="text-xs text-red-500 mt-1">{errors.realName}</p>}
-              <p className="text-[11px] text-gray-400 mt-1">학생들에게 표시되는 이름입니다.</p>
+              <p className="text-[11px] text-fg-tertiary mt-1">학생들에게 표시되는 이름입니다.</p>
             </div>
 
             {/* 연락처 */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                연락처 <span className="text-gray-400 font-normal">(선택)</span>
+                연락처 <span className="text-fg-tertiary font-normal">(선택)</span>
               </label>
               <input
                 type="tel"
@@ -297,7 +297,7 @@ export default function TeacherRegisterPage() {
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 전공 분야 <span className="text-red-500">*</span>
-                <span className="text-gray-400 font-normal ml-1">(복수 선택 가능)</span>
+                <span className="text-fg-tertiary font-normal ml-1">(복수 선택 가능)</span>
               </label>
               <div className="flex flex-wrap gap-2">
                 {SPECIALTY_OPTIONS.map((s) => (
@@ -368,12 +368,12 @@ export default function TeacherRegisterPage() {
           <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Shield className="w-10 h-10 text-amber-600" />
           </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">심사 중</h2>
-          <p className="text-gray-500 mb-2">
+          <h2 className="text-xl font-bold text-fg-primary mb-2">심사 중</h2>
+          <p className="text-fg-secondary mb-2">
             제출하신 서류를 검토 중입니다.<br />
             보통 1~2일 내에 완료됩니다.
           </p>
-          <p className="text-xs text-gray-400 mb-6">
+          <p className="text-xs text-fg-tertiary mb-6">
             신청일: {new Date(verification.appliedAt!).toLocaleDateString("ko-KR")}
           </p>
           <button
@@ -384,7 +384,7 @@ export default function TeacherRegisterPage() {
           </button>
           <button
             onClick={() => router.push("/profile")}
-            className="text-sm text-gray-500 underline"
+            className="text-sm text-fg-secondary underline"
           >
             프로필로 돌아가기
           </button>
@@ -506,7 +506,7 @@ export default function TeacherRegisterPage() {
         <button onClick={() => safeBack(router)}>
           <ArrowLeft className="w-6 h-6 text-gray-700" />
         </button>
-        <h1 className="text-lg font-bold text-gray-900">선생님 등록</h1>
+        <h1 className="text-lg font-bold text-fg-primary">선생님 등록</h1>
       </div>
 
       {/* Progress */}
@@ -517,7 +517,7 @@ export default function TeacherRegisterPage() {
               className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
                 step >= s
                   ? "bg-orange-600 text-white"
-                  : "bg-gray-200 text-gray-400"
+                  : "bg-gray-200 text-fg-tertiary"
               }`}
             >
               {step > s ? <CheckCircle className="w-4 h-4" /> : s}
@@ -540,10 +540,10 @@ export default function TeacherRegisterPage() {
             <div className="w-16 h-16 bg-orange-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <Shield className="w-8 h-8 text-orange-600" />
             </div>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">
+            <h2 className="text-xl font-bold text-fg-primary mb-2">
               선생님으로 활동하기
             </h2>
-            <p className="text-gray-500 text-sm">
+            <p className="text-fg-secondary text-sm">
               학생들에게 원포인트 레슨을 제공하고<br />
               피드백으로 도움을 줄 수 있습니다.
             </p>
@@ -563,8 +563,8 @@ export default function TeacherRegisterPage() {
                   <span className="text-sm font-bold text-orange-600">{i + 1}</span>
                 </div>
                 <div>
-                  <p className="font-semibold text-gray-900 text-sm">{item.title}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{item.desc}</p>
+                  <p className="font-semibold text-fg-primary text-sm">{item.title}</p>
+                  <p className="text-xs text-fg-secondary mt-0.5">{item.desc}</p>
                 </div>
               </div>
             ))}
@@ -578,7 +578,7 @@ export default function TeacherRegisterPage() {
           </button>
           <a
             href="mailto:support@withsempre.com"
-            className="block mt-3 text-center text-xs text-gray-400 hover:text-orange-500 transition-colors"
+            className="block mt-3 text-center text-xs text-fg-tertiary hover:text-orange-500 transition-colors"
           >
             인증 관련 문의: support@withsempre.com
           </a>
@@ -590,9 +590,9 @@ export default function TeacherRegisterPage() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <User className="w-5 h-5 text-orange-600" />
-            <h2 className="text-lg font-bold text-gray-900">본인인증 및 개인정보</h2>
+            <h2 className="text-lg font-bold text-fg-primary">본인인증 및 개인정보</h2>
           </div>
-          <p className="text-sm text-gray-500 mb-6">
+          <p className="text-sm text-fg-secondary mb-6">
             카카오 인증으로 본인 확인 후 정보를 입력해주세요.
           </p>
 
@@ -652,7 +652,7 @@ export default function TeacherRegisterPage() {
             {errors.realName && (
               <p className="text-xs text-red-500 mt-1">{errors.realName}</p>
             )}
-            <p className="text-[11px] text-gray-400 mt-1">
+            <p className="text-[11px] text-fg-tertiary mt-1">
               학생들에게 표시되는 이름입니다.
             </p>
           </div>
@@ -660,7 +660,7 @@ export default function TeacherRegisterPage() {
           {/* 연락처 */}
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              연락처 <span className="text-gray-400 font-normal">(선택)</span>
+              연락처 <span className="text-fg-tertiary font-normal">(선택)</span>
             </label>
             <input
               type="tel"
@@ -683,7 +683,7 @@ export default function TeacherRegisterPage() {
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
               전공 분야 <span className="text-red-500">*</span>
-              <span className="text-gray-400 font-normal ml-1">(복수 선택 가능)</span>
+              <span className="text-fg-tertiary font-normal ml-1">(복수 선택 가능)</span>
             </label>
             <div className="flex flex-wrap gap-2">
               {SPECIALTY_OPTIONS.map((s) => (
@@ -725,8 +725,8 @@ export default function TeacherRegisterPage() {
       {/* Step 3: 서류 업로드 */}
       {step === 3 && (
         <div>
-          <h2 className="text-lg font-bold text-gray-900 mb-1">서류 업로드</h2>
-          <p className="text-sm text-gray-500 mb-6">
+          <h2 className="text-lg font-bold text-fg-primary mb-1">서류 업로드</h2>
+          <p className="text-sm text-fg-secondary mb-6">
             음악 관련 학력 또는 자격을 증명할 수 있는 서류를 업로드해 주세요.
           </p>
 
@@ -759,9 +759,9 @@ export default function TeacherRegisterPage() {
             onClick={() => fileInputRef.current?.click()}
             className="w-full border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-orange-400 hover:bg-orange-50/50 transition-colors mb-4"
           >
-            <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+            <Upload className="w-8 h-8 text-fg-tertiary mx-auto mb-2" />
             <p className="text-sm font-medium text-gray-600">클릭하여 파일 업로드</p>
-            <p className="text-xs text-gray-400 mt-1">PDF, JPG, PNG (최대 10MB)</p>
+            <p className="text-xs text-fg-tertiary mt-1">PDF, JPG, PNG (최대 10MB)</p>
           </button>
           <input
             ref={fileInputRef}
@@ -786,10 +786,10 @@ export default function TeacherRegisterPage() {
                     <FileText className="w-5 h-5 text-orange-600" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">
+                    <p className="text-sm font-medium text-fg-primary truncate">
                       {doc.fileName}
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-fg-secondary">
                       {DOCUMENT_TYPE_LABELS[doc.type]}
                     </p>
                   </div>
@@ -797,7 +797,7 @@ export default function TeacherRegisterPage() {
                     onClick={() => removeDocument(doc.id)}
                     className="p-1.5 hover:bg-gray-100 rounded-lg"
                   >
-                    <X className="w-4 h-4 text-gray-400" />
+                    <X className="w-4 h-4 text-fg-tertiary" />
                   </button>
                 </div>
               ))}
@@ -828,14 +828,14 @@ export default function TeacherRegisterPage() {
           <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle className="w-10 h-10 text-green-600" />
           </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">신청 완료!</h2>
-          <p className="text-gray-500 text-sm mb-8">
+          <h2 className="text-xl font-bold text-fg-primary mb-2">신청 완료!</h2>
+          <p className="text-fg-secondary text-sm mb-8">
             서류 검토 후 결과를 알려드리겠습니다.<br />
             보통 1~2일 내에 완료됩니다.
           </p>
           <button
             onClick={() => router.push("/profile")}
-            className="text-sm text-gray-500 underline"
+            className="text-sm text-fg-secondary underline"
           >
             프로필로 돌아가기
           </button>

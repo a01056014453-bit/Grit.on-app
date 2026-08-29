@@ -65,14 +65,14 @@ export function PieceSelector({
             <p className="text-sm font-bold text-black">
               {selectedSong.title}
             </p>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-fg-secondary">
               {measureRange
                 ? `${measureRange.start}-${measureRange.end}번 마디 집중`
                 : "전체 연습"}
             </p>
           </div>
           {!isRecording && (
-            <ChevronRight className="w-4 h-4 text-gray-400" />
+            <ChevronRight className="w-4 h-4 text-fg-tertiary" />
           )}
         </div>
       </div>
@@ -85,14 +85,14 @@ export function PieceSelector({
             className="w-full px-4 py-3 flex items-center justify-between text-left"
           >
             <div className="flex items-center gap-2">
-              <Target className="w-4 h-4 text-gray-500" />
+              <Target className="w-4 h-4 text-fg-secondary" />
               <span className="text-sm text-gray-700">집중 타겟 마디</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-sm text-violet-600 font-medium">
                 {measureRange ? `${measureRange.start}-${measureRange.end}마디` : "전체"}
               </span>
-              <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isMeasureOpen ? "rotate-180" : ""}`} />
+              <ChevronDown className={`w-4 h-4 text-fg-tertiary transition-transform ${isMeasureOpen ? "rotate-180" : ""}`} />
             </div>
           </button>
 
@@ -107,7 +107,7 @@ export function PieceSelector({
                   className="flex-1 px-3 py-2 bg-gray-50 rounded-lg text-sm text-center border-0 focus:outline-none focus:ring-2 focus:ring-violet-500"
                   min={1}
                 />
-                <span className="text-gray-400">~</span>
+                <span className="text-fg-tertiary">~</span>
                 <input
                   type="number"
                   value={endMeasure}
@@ -116,12 +116,12 @@ export function PieceSelector({
                   className="flex-1 px-3 py-2 bg-gray-50 rounded-lg text-sm text-center border-0 focus:outline-none focus:ring-2 focus:ring-violet-500"
                   min={1}
                 />
-                <span className="text-gray-500 text-sm">마디</span>
+                <span className="text-fg-secondary text-sm">마디</span>
               </div>
               <div className="flex gap-2">
                 <button
                   onClick={handleClearMeasure}
-                  className="flex-1 py-2 text-sm text-gray-500 bg-gray-100 rounded-lg hover:bg-gray-200"
+                  className="flex-1 py-2 text-sm text-fg-secondary bg-gray-100 rounded-lg hover:bg-gray-200"
                 >
                   전체 연습
                 </button>

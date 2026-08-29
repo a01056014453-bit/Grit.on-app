@@ -255,7 +255,7 @@ export default function RoomDetailPage() {
           <ArrowLeft className="w-5 h-5 text-gray-600" />
         </button>
         <div className="flex-1">
-          <h1 className="text-lg font-bold text-gray-900 flex flex-wrap">
+          <h1 className="text-lg font-bold text-fg-primary flex flex-wrap">
             {titleText.split("").map((char, i) => (
               <motion.span
                 key={i}
@@ -289,7 +289,7 @@ export default function RoomDetailPage() {
               {SCHOOL_TYPE_LABELS[school.type]}
             </span>
             {school.type === "designated" && school.designatedPieces && (
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-fg-secondary">
                 {school.designatedPieces.length}곡 지정
               </span>
             )}
@@ -299,7 +299,7 @@ export default function RoomDetailPage() {
           onClick={() => setShowRulesModal(true)}
           className="w-10 h-10 rounded-full bg-white/30 backdrop-blur-sm border border-white/40 flex items-center justify-center hover:bg-white/50 transition-colors"
         >
-          <Shield className="w-5 h-5 text-gray-500" />
+          <Shield className="w-5 h-5 text-fg-secondary" />
         </button>
       </div>
 
@@ -312,27 +312,27 @@ export default function RoomDetailPage() {
       >
         <div className="bg-white/60 backdrop-blur-lg rounded-2xl p-3.5 border border-white/50 text-center shadow-sm">
           <Users className="w-5 h-5 text-violet-500 mx-auto mb-1.5" />
-          <div className="text-lg font-bold text-gray-900">
+          <div className="text-lg font-bold text-fg-primary">
             {room.memberCount}
           </div>
-          <div className="text-[10px] text-gray-400">참여자</div>
+          <div className="text-[10px] text-fg-tertiary">참여자</div>
         </div>
         <div className="bg-white/60 backdrop-blur-lg rounded-2xl p-3.5 border border-white/50 text-center shadow-sm">
           <Video className="w-5 h-5 text-purple-500 mx-auto mb-1.5" />
-          <div className="text-lg font-bold text-gray-900">
+          <div className="text-lg font-bold text-fg-primary">
             {videos.length}
           </div>
-          <div className="text-[10px] text-gray-400">영상</div>
+          <div className="text-[10px] text-fg-tertiary">영상</div>
         </div>
         <div className="bg-white/60 backdrop-blur-lg rounded-2xl p-3.5 border border-white/50 text-center shadow-sm">
           <Music className="w-5 h-5 text-amber-500 mx-auto mb-1.5" />
           <div className={cn(
             "text-lg font-bold",
-            daysUntilDeadline <= 3 ? "text-red-500" : "text-gray-900"
+            daysUntilDeadline <= 3 ? "text-red-500" : "text-fg-primary"
           )}>
             D{daysUntilDeadline >= 0 ? `-${daysUntilDeadline}` : `+${Math.abs(daysUntilDeadline)}`}
           </div>
-          <div className="text-[10px] text-gray-400">마감</div>
+          <div className="text-[10px] text-fg-tertiary">마감</div>
         </div>
       </motion.div>
 
@@ -349,10 +349,10 @@ export default function RoomDetailPage() {
                 <Lock className="w-5 h-5 text-white" />
               </div>
               <div className="flex-1">
-                <p className="font-semibold text-gray-900 text-sm mb-1">
+                <p className="font-semibold text-fg-primary text-sm mb-1">
                   곡을 업로드해야 열람할 수 있어요
                 </p>
-                <p className="text-xs text-gray-500 mb-3 leading-relaxed">
+                <p className="text-xs text-fg-secondary mb-3 leading-relaxed">
                   같은 곡을 업로드한 학생들끼리 서로의 영상을 볼 수 있어요.
                 </p>
                 <Link href={`/rooms/${schoolId}/upload`}>
@@ -400,7 +400,7 @@ export default function RoomDetailPage() {
               className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
                 sortBy === "recent"
                   ? "bg-violet-100/70 text-violet-600"
-                  : "text-gray-400 hover:text-gray-600"
+                  : "text-fg-tertiary hover:text-gray-600"
               }`}
             >
               최신순
@@ -410,7 +410,7 @@ export default function RoomDetailPage() {
               className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
                 sortBy === "helpful"
                   ? "bg-violet-100/70 text-violet-600"
-                  : "text-gray-400 hover:text-gray-600"
+                  : "text-fg-tertiary hover:text-gray-600"
               }`}
             >
               도움순
@@ -466,20 +466,20 @@ export default function RoomDetailPage() {
                     {group.canView ? (
                       <Unlock className="w-4 h-4 text-green-600" />
                     ) : (
-                      <Lock className="w-4 h-4 text-gray-400" />
+                      <Lock className="w-4 h-4 text-fg-tertiary" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">
+                    <p className="text-sm font-semibold text-fg-primary truncate">
                       {group.piece.fullName ??
                         `${group.piece.composer} - ${group.piece.title}`}
                     </p>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[11px] text-gray-400 flex items-center gap-1">
+                      <span className="text-[11px] text-fg-tertiary flex items-center gap-1">
                         <Users className="w-3 h-3" />
                         {group.uploaderCount}명
                       </span>
-                      <span className="text-[11px] text-gray-400 flex items-center gap-1">
+                      <span className="text-[11px] text-fg-tertiary flex items-center gap-1">
                         <Video className="w-3 h-3" />
                         {group.videos.length}개
                       </span>
@@ -495,7 +495,7 @@ export default function RoomDetailPage() {
                       animate={{ rotate: isExpanded ? 180 : 0 }}
                       transition={{ duration: 0.2 }}
                     >
-                      <ChevronDown className="w-5 h-5 text-gray-400" />
+                      <ChevronDown className="w-5 h-5 text-fg-tertiary" />
                     </motion.div>
                   ) : (
                     <span className="text-[10px] px-2 py-1 rounded-full bg-amber-100/80 text-amber-700 font-medium whitespace-nowrap">
@@ -539,7 +539,7 @@ export default function RoomDetailPage() {
                               {/* Info */}
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-0.5">
-                                  <span className="text-sm font-semibold text-gray-900">
+                                  <span className="text-sm font-semibold text-fg-primary">
                                     {video.userName}
                                   </span>
                                   {video.faceBlurred && (
@@ -551,7 +551,7 @@ export default function RoomDetailPage() {
                                 <p className="text-xs text-violet-600 font-medium mb-1">
                                   {video.section}
                                 </p>
-                                <div className="flex items-center gap-3 text-[11px] text-gray-400">
+                                <div className="flex items-center gap-3 text-[11px] text-fg-tertiary">
                                   <span className="flex items-center gap-1">
                                     <ThumbsUp className="w-3 h-3" />
                                     {video.helpfulCount}
@@ -572,7 +572,7 @@ export default function RoomDetailPage() {
                   <div className="border-t border-white/20 p-4 bg-white/10">
                     <div className="flex items-center gap-3">
                       <div className="flex-1">
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-fg-secondary">
                           이 곡을 업로드하면 {group.uploaderCount}명의 영상을 볼
                           수 있어요
                         </p>
@@ -594,10 +594,10 @@ export default function RoomDetailPage() {
           {pieceGroups.length === 0 && (
             <div className="bg-white/30 backdrop-blur-sm rounded-2xl p-8 text-center border border-white/30">
               <Video className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-              <p className="text-gray-500 text-sm">
+              <p className="text-fg-secondary text-sm">
                 아직 업로드된 영상이 없어요
               </p>
-              <p className="text-gray-400 text-xs mt-1">
+              <p className="text-fg-tertiary text-xs mt-1">
                 첫 번째로 영상을 올려보세요!
               </p>
             </div>
@@ -749,7 +749,7 @@ export default function RoomDetailPage() {
                 <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center mx-auto mb-3 shadow-lg shadow-violet-500/30">
                   <Shield className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="text-lg font-bold text-gray-900">룸 규칙</h3>
+                <h3 className="text-lg font-bold text-fg-primary">룸 규칙</h3>
               </div>
 
               <div className="space-y-3 mb-6">

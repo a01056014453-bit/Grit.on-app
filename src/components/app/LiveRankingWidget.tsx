@@ -63,7 +63,7 @@ function RankerCard({ user, elapsedSeconds }: RankerCardProps) {
       {/* User Info */}
       <div className="flex items-center gap-1.5 mb-2">
         <span className="text-lg">{INSTRUMENT_EMOJIS[user.instrument]}</span>
-        <span className="text-sm font-medium text-gray-900 truncate">
+        <span className="text-sm font-medium text-fg-primary truncate">
           {user.nickname}
         </span>
       </div>
@@ -136,14 +136,14 @@ export function LiveRankingWidget() {
             <Trophy className="w-4 h-4 text-white" />
           </div>
           <div>
-            <h3 className="font-bold text-gray-900 text-sm">오늘의 랭킹</h3>
-            <p className="text-[10px] text-gray-500">
+            <h3 className="font-bold text-fg-primary text-sm">오늘의 랭킹</h3>
+            <p className="text-[10px] text-fg-secondary">
               <Flame className="w-3 h-3 inline text-orange-500" />
               {" "}{practicingCount}명 연습 중
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-1 text-xs text-gray-500">
+        <div className="flex items-center gap-1 text-xs text-fg-secondary">
           전체보기
           <ChevronRight className="w-4 h-4" />
         </div>
@@ -175,14 +175,14 @@ export function LiveRankingWidget() {
               {(myRanking ?? { rank: 0, netPracticeTime: 0 } as RankingUser).rank}
             </span>
             <div>
-              <p className="text-sm font-medium text-gray-900">내 순위</p>
-              <p className="text-xs text-gray-500">
+              <p className="text-sm font-medium text-fg-primary">내 순위</p>
+              <p className="text-xs text-fg-secondary">
                 {formatTime((myRanking ?? { rank: 0, netPracticeTime: 0 } as RankingUser).netPracticeTime)}
               </p>
             </div>
           </div>
           <div className="text-right">
-            <p className="text-xs text-gray-500">1위까지</p>
+            <p className="text-xs text-fg-secondary">1위까지</p>
             <p className="text-sm font-bold text-primary">
               {formatTime(
                 rankers[0]

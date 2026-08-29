@@ -414,15 +414,15 @@ export default function MusicDBPage() {
     {
       key: 'composer',
       header: '작곡가',
-      render: (row) => <span className="font-medium text-gray-900">{row._composer}</span>,
+      render: (row) => <span className="font-medium text-fg-primary">{row._composer}</span>,
     },
     {
       key: 'title',
       header: '곡명',
       render: (row) => (
         <div>
-          <p className="font-medium text-gray-900">{row._title}</p>
-          {row.meta.opus && <p className="text-xs text-gray-400">{row.meta.opus}</p>}
+          <p className="font-medium text-fg-primary">{row._title}</p>
+          {row.meta.opus && <p className="text-xs text-fg-tertiary">{row.meta.opus}</p>}
         </div>
       ),
     },
@@ -457,7 +457,7 @@ export default function MusicDBPage() {
       key: 'date',
       header: '분석일',
       render: (row) => (
-        <span className="text-gray-500 text-xs">
+        <span className="text-fg-secondary text-xs">
           {row.updated_at ? new Date(row.updated_at).toLocaleDateString('ko-KR') : '-'}
         </span>
       ),
@@ -471,7 +471,7 @@ export default function MusicDBPage() {
           {row.pdf_storage_path && (
             <button
               onClick={(e) => { e.stopPropagation(); handleViewPdf(row.pdf_storage_path!); }}
-              className="p-1.5 rounded-md hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-colors"
+              className="p-1.5 rounded-md hover:bg-blue-50 text-fg-tertiary hover:text-blue-600 transition-colors"
               title="PDF 보기"
             >
               <Eye className="w-4 h-4" />
@@ -480,7 +480,7 @@ export default function MusicDBPage() {
           {/* 악보 업로드 버튼 */}
           <label
             onClick={(e) => e.stopPropagation()}
-            className={`p-1.5 rounded-md hover:bg-orange-50 text-gray-400 hover:text-orange-600 transition-colors cursor-pointer ${uploadingSheetFor === row.id ? 'opacity-50 pointer-events-none' : ''}`}
+            className={`p-1.5 rounded-md hover:bg-orange-50 text-fg-tertiary hover:text-orange-600 transition-colors cursor-pointer ${uploadingSheetFor === row.id ? 'opacity-50 pointer-events-none' : ''}`}
             title={row.pdf_storage_path ? '악보 교체' : '악보 업로드'}
           >
             {uploadingSheetFor === row.id ? (
@@ -503,7 +503,7 @@ export default function MusicDBPage() {
             <button
               onClick={(e) => { e.stopPropagation(); handleReanalyzeWithSource(row); }}
               disabled={reanalyzingId === row.id}
-              className="p-1.5 rounded-md hover:bg-green-50 text-gray-400 hover:text-green-600 transition-colors disabled:opacity-50"
+              className="p-1.5 rounded-md hover:bg-green-50 text-fg-tertiary hover:text-green-600 transition-colors disabled:opacity-50"
               title="악보 기반 재분석"
             >
               {reanalyzingId === row.id ? (
@@ -516,7 +516,7 @@ export default function MusicDBPage() {
           <button
             onClick={(e) => { e.stopPropagation(); handleReanalyze(row); }}
             disabled={reanalyzingId === row.id}
-            className="p-1.5 rounded-md hover:bg-violet-50 text-gray-400 hover:text-violet-600 transition-colors disabled:opacity-50"
+            className="p-1.5 rounded-md hover:bg-violet-50 text-fg-tertiary hover:text-violet-600 transition-colors disabled:opacity-50"
             title="텍스트 재분석"
           >
             {reanalyzingId === row.id ? (
@@ -527,7 +527,7 @@ export default function MusicDBPage() {
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); setDeleteTarget(row); }}
-            className="p-1.5 rounded-md hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"
+            className="p-1.5 rounded-md hover:bg-red-50 text-fg-tertiary hover:text-red-600 transition-colors"
             title="삭제"
           >
             <Trash2 className="w-4 h-4" />
@@ -539,13 +539,13 @@ export default function MusicDBPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-bold text-gray-900">곡 DB / AI 분석 관리</h1>
+      <h1 className="text-xl font-bold text-fg-primary">곡 DB / AI 분석 관리</h1>
 
       {/* 사전 분석 현황 */}
       {preAnalyze && (
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+            <h2 className="text-sm font-semibold text-fg-primary flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-violet-500" />
               인기곡 사전 분석
             </h2>
@@ -572,8 +572,8 @@ export default function MusicDBPage() {
                 onClick={() => { setPieceFilter(pieceFilter === key ? "all" : key); setShowPieceList(true); }}
                 className={`text-center p-2 rounded-lg transition-colors ${pieceFilter === key ? "bg-violet-100 border border-violet-300" : "bg-gray-50 hover:bg-gray-100"}`}
               >
-                <p className="text-[10px] text-gray-500">{label}</p>
-                <p className="text-sm font-bold text-gray-900">{done}<span className="text-[10px] text-gray-400">/{total}</span></p>
+                <p className="text-[10px] text-fg-secondary">{label}</p>
+                <p className="text-sm font-bold text-fg-primary">{done}<span className="text-[10px] text-fg-tertiary">/{total}</span></p>
               </button>
             ))}
           </div>
@@ -585,14 +585,14 @@ export default function MusicDBPage() {
                 onClick={() => { setPieceFilter(pieceFilter === `cat_${cat}` ? "all" : `cat_${cat}`); setShowPieceList(true); }}
                 className={`text-center p-2 rounded-lg transition-colors ${pieceFilter === `cat_${cat}` ? "bg-violet-100 border border-violet-300" : "bg-gray-50 hover:bg-gray-100"}`}
               >
-                <p className="text-[10px] text-gray-500">{cat}</p>
-                <p className="text-sm font-bold text-gray-900">{done}<span className="text-[10px] text-gray-400">/{total}</span></p>
+                <p className="text-[10px] text-fg-secondary">{cat}</p>
+                <p className="text-sm font-bold text-fg-primary">{done}<span className="text-[10px] text-fg-tertiary">/{total}</span></p>
               </button>
             ))}
           </div>
 
           {preAnalyze.remaining > 0 && (
-            <p className="text-xs text-gray-400 mt-3">매일 3곡씩 자동 분석 · 약 {Math.ceil(preAnalyze.remaining / 3)}일 후 완료</p>
+            <p className="text-xs text-fg-tertiary mt-3">매일 3곡씩 자동 분석 · 약 {Math.ceil(preAnalyze.remaining / 3)}일 후 완료</p>
           )}
 
           {/* 곡 목록 */}
@@ -600,7 +600,7 @@ export default function MusicDBPage() {
             <div className="mt-4 border-t pt-4 max-h-96 overflow-y-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-xs text-gray-500 border-b">
+                  <tr className="text-xs text-fg-secondary border-b">
                     <th className="text-left py-2 font-medium">상태</th>
                     <th className="text-left py-2 font-medium">작곡가</th>
                     <th className="text-left py-2 font-medium">곡명</th>
@@ -625,17 +625,17 @@ export default function MusicDBPage() {
                         }
                       </td>
                       <td className="py-2 text-gray-700">{p.composer}</td>
-                      <td className="py-2 text-gray-900 font-medium truncate max-w-[250px]">{p.title}</td>
-                      <td className="py-2 text-gray-500 text-xs">{preAnalyze.byInstrument[p.instrument]?.label ?? p.instrument}</td>
+                      <td className="py-2 text-fg-primary font-medium truncate max-w-[250px]">{p.title}</td>
+                      <td className="py-2 text-fg-secondary text-xs">{preAnalyze.byInstrument[p.instrument]?.label ?? p.instrument}</td>
                       <td className="py-2">
                         <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
                           p.category === "입시" ? "bg-red-50 text-red-600" :
                           p.category === "콩쿠르" ? "bg-blue-50 text-blue-600" :
                           p.category === "레슨" ? "bg-green-50 text-green-600" :
-                          "bg-gray-50 text-gray-500"
+                          "bg-gray-50 text-fg-secondary"
                         }`}>{p.category}</span>
                       </td>
-                      <td className="py-2 text-gray-400 text-xs">
+                      <td className="py-2 text-fg-tertiary text-xs">
                         {p.analyzedAt ? new Date(p.analyzedAt).toLocaleDateString("ko-KR") : "-"}
                       </td>
                     </tr>
@@ -689,7 +689,7 @@ export default function MusicDBPage() {
       <ChartCard title="새 곡 분석하기" description="작곡가와 곡 제목을 입력하고, 악보 파일(PDF/MusicXML)을 첨부하면 정밀 분석합니다">
         <div className="flex items-end gap-3">
           <div className="flex-1">
-            <label className="block text-xs font-medium text-gray-500 mb-1">작곡가</label>
+            <label className="block text-xs font-medium text-fg-secondary mb-1">작곡가</label>
             <input
               type="text"
               value={newComposer}
@@ -700,7 +700,7 @@ export default function MusicDBPage() {
             />
           </div>
           <div className="flex-1">
-            <label className="block text-xs font-medium text-gray-500 mb-1">곡 제목</label>
+            <label className="block text-xs font-medium text-fg-secondary mb-1">곡 제목</label>
             <input
               type="text"
               value={newTitle}
@@ -712,7 +712,7 @@ export default function MusicDBPage() {
             />
           </div>
           <div className="flex-shrink-0">
-            <label className="block text-xs font-medium text-gray-500 mb-1">악보 첨부</label>
+            <label className="block text-xs font-medium text-fg-secondary mb-1">악보 첨부</label>
             {uploadedFile ? (
               <div className="flex items-center gap-2 px-3 py-2 bg-violet-50 border border-violet-200 rounded-lg">
                 <FileText className="w-4 h-4 text-violet-600 flex-shrink-0" />
@@ -727,8 +727,8 @@ export default function MusicDBPage() {
               </div>
             ) : (
               <label className={`flex items-center gap-2 px-3 py-2 border border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-violet-400 hover:bg-violet-50 transition-colors ${analyzing ? 'opacity-50 pointer-events-none' : ''}`}>
-                <Upload className="w-4 h-4 text-gray-400" />
-                <span className="text-sm text-gray-500">PDF / XML</span>
+                <Upload className="w-4 h-4 text-fg-tertiary" />
+                <span className="text-sm text-fg-secondary">PDF / XML</span>
                 <input
                   type="file"
                   accept=".pdf,.xml,.musicxml,.mxl"
@@ -767,7 +767,7 @@ export default function MusicDBPage() {
       {/* 작곡가 필터 */}
       <div className="bg-white rounded-xl border border-gray-200 p-4">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-gray-900">Composers ({composerList.length})</h2>
+          <h2 className="text-sm font-semibold text-fg-primary">Composers ({composerList.length})</h2>
           {composerFilter !== 'all' && (
             <button onClick={() => setComposerFilter('all')} className="text-xs text-violet-600 hover:underline">
               Show All
@@ -785,7 +785,7 @@ export default function MusicDBPage() {
                   : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
               }`}
             >
-              {name} <span className={composerFilter === name ? 'text-violet-200' : 'text-gray-400'}>({count})</span>
+              {name} <span className={composerFilter === name ? 'text-violet-200' : 'text-fg-tertiary'}>({count})</span>
             </button>
           ))}
         </div>
@@ -806,7 +806,7 @@ export default function MusicDBPage() {
         ) : undefined}
       >
         {loading ? (
-          <div className="flex items-center justify-center py-12 text-gray-400">
+          <div className="flex items-center justify-center py-12 text-fg-tertiary">
             <Loader2 className="w-5 h-5 animate-spin mr-2" />
             로딩 중...
           </div>
@@ -827,9 +827,9 @@ export default function MusicDBPage() {
             {/* 헤더 */}
             <div className="flex items-center justify-between p-6 border-b border-gray-100">
               <div>
-                <h3 className="text-lg font-bold text-gray-900">{detailTarget._composer} - {detailTarget._title}</h3>
+                <h3 className="text-lg font-bold text-fg-primary">{detailTarget._composer} - {detailTarget._title}</h3>
                 <div className="flex items-center gap-2 mt-1">
-                  {detailTarget.meta.opus && <span className="text-sm text-gray-500">{detailTarget.meta.opus} · {detailTarget.meta.key}</span>}
+                  {detailTarget.meta.opus && <span className="text-sm text-fg-secondary">{detailTarget.meta.opus} · {detailTarget.meta.key}</span>}
                   {detailTarget.pdf_storage_path && (
                     <button
                       onClick={() => handleViewPdf(detailTarget.pdf_storage_path!)}
@@ -884,7 +884,7 @@ export default function MusicDBPage() {
                   수정
                 </button>
                 <button onClick={() => setDetailTarget(null)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                  <X className="w-5 h-5 text-gray-400" />
+                  <X className="w-5 h-5 text-fg-tertiary" />
                 </button>
               </div>
             </div>
@@ -928,11 +928,11 @@ export default function MusicDBPage() {
             {/* 헤더 */}
             <div className="flex items-center justify-between p-6 border-b border-gray-100 flex-shrink-0">
               <div>
-                <h3 className="text-lg font-bold text-gray-900">분석 데이터 수정</h3>
-                <p className="text-sm text-gray-500 mt-0.5">{editTarget._composer} - {editTarget._title}</p>
+                <h3 className="text-lg font-bold text-fg-primary">분석 데이터 수정</h3>
+                <p className="text-sm text-fg-secondary mt-0.5">{editTarget._composer} - {editTarget._title}</p>
               </div>
               <button onClick={() => !saving && setEditTarget(null)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                <X className="w-5 h-5 text-gray-400" />
+                <X className="w-5 h-5 text-fg-tertiary" />
               </button>
             </div>
             {/* 본문 */}
@@ -972,11 +972,11 @@ export default function MusicDBPage() {
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-xl">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">분석 삭제</h3>
+            <h3 className="text-lg font-semibold text-fg-primary mb-2">분석 삭제</h3>
             <p className="text-sm text-gray-600 mb-1">
               다음 분석 데이터를 삭제하시겠습니까?
             </p>
-            <p className="text-sm font-medium text-gray-900 mb-4">
+            <p className="text-sm font-medium text-fg-primary mb-4">
               {deleteTarget._composer} - {deleteTarget._title}
             </p>
             <p className="text-xs text-red-500 mb-4">

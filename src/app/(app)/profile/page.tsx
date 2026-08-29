@@ -688,7 +688,7 @@ export default function ProfilePage() {
               </div>
             ) : (
               <div className="w-16 h-16 bg-white/60 rounded-full flex items-center justify-center">
-                <User className="w-8 h-8 text-gray-400" />
+                <User className="w-8 h-8 text-fg-tertiary" />
               </div>
             )}
             <div className="absolute inset-0 rounded-full bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
@@ -709,7 +709,7 @@ export default function ProfilePage() {
             <div className="flex items-center gap-2 flex-wrap">
               <BlurText
                 text={profile.nickname}
-                className="text-xl font-bold text-gray-900"
+                className="text-xl font-bold text-fg-primary"
                 animateBy="letters"
                 delay={50}
                 direction="top"
@@ -745,7 +745,7 @@ export default function ProfilePage() {
             onClick={openEditProfile}
             className="w-10 h-10 rounded-full bg-white/30 backdrop-blur-sm border border-white/40 flex items-center justify-center hover:bg-white/50 active:bg-white/60 transition-colors shrink-0 cursor-pointer"
           >
-            <Pencil className="w-4 h-4 text-gray-500" />
+            <Pencil className="w-4 h-4 text-fg-secondary" />
           </button>
         </div>
       </motion.div>
@@ -781,12 +781,12 @@ export default function ProfilePage() {
             {teacherMode ? (
               <ToggleRight className="w-5 h-5 text-violet-600" />
             ) : (
-              <ToggleLeft className="w-5 h-5 text-gray-400" />
+              <ToggleLeft className="w-5 h-5 text-fg-tertiary" />
             )}
             <div className="text-left">
               <span className="text-sm text-gray-700">선생님 모드</span>
               {verificationStatus !== "approved" && (
-                <p className="text-[11px] text-gray-400 mt-0.5">인증 완료 후 활성화할 수 있어요</p>
+                <p className="text-[11px] text-fg-tertiary mt-0.5">인증 완료 후 활성화할 수 있어요</p>
               )}
             </div>
           </div>
@@ -798,7 +798,7 @@ export default function ProfilePage() {
         {/* 인증 상태 */}
         <div className="flex items-center justify-between px-4 py-3.5 border-b border-white/30">
           <div className="flex items-center gap-3">
-            <Shield className={`w-5 h-5 ${verificationStatus === "approved" ? "text-green-500" : verificationStatus === "pending" ? "text-amber-500" : verificationStatus === "rejected" ? "text-red-500" : "text-gray-400"}`} />
+            <Shield className={`w-5 h-5 ${verificationStatus === "approved" ? "text-green-500" : verificationStatus === "pending" ? "text-amber-500" : verificationStatus === "rejected" ? "text-red-500" : "text-fg-tertiary"}`} />
             <div>
               <span className="text-sm text-gray-700">인증 상태</span>
               <span className={`ml-2 px-2 py-0.5 text-xs font-medium rounded-full ${
@@ -808,7 +808,7 @@ export default function ProfilePage() {
                   ? "bg-amber-100/60 text-amber-700"
                   : verificationStatus === "rejected"
                   ? "bg-red-100/60 text-red-700"
-                  : "bg-gray-100/60 text-gray-500"
+                  : "bg-gray-100/60 text-fg-secondary"
               }`}>
                 {verificationStatus === "approved" ? "인증됨" : verificationStatus === "pending" ? "심사중" : verificationStatus === "rejected" ? "반려됨" : "미인증"}
               </span>
@@ -835,7 +835,7 @@ export default function ProfilePage() {
               <Pencil className="w-5 h-5 text-violet-500" />
               <span className="text-sm text-gray-700">프로필 관리</span>
             </div>
-            <ChevronRight className="w-4 h-4 text-gray-400" />
+            <ChevronRight className="w-4 h-4 text-fg-tertiary" />
           </Link>
         )}
       </motion.div>
@@ -860,12 +860,12 @@ export default function ProfilePage() {
             className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-white/30 transition-colors border-b border-white/30 last:border-b-0"
           >
             <div className="flex items-center gap-3">
-              <item.icon className="w-5 h-5 text-gray-400" />
+              <item.icon className="w-5 h-5 text-fg-tertiary" />
               <span className="text-sm text-gray-700">{item.label}</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500">{item.value}</span>
-              <ChevronRight className="w-4 h-4 text-gray-400" />
+              <span className="text-sm text-fg-secondary">{item.value}</span>
+              <ChevronRight className="w-4 h-4 text-fg-tertiary" />
             </div>
           </motion.button>
         ))}
@@ -899,15 +899,15 @@ export default function ProfilePage() {
               transition={{ duration: 0.35, delay: 0.3 + i * 0.08, ease: "easeOut" }}
             >
               <stat.icon className={`w-5 h-5 ${stat.color} mx-auto mb-1`} />
-              <p className="text-lg font-bold text-gray-900">{isLoading ? "-" : stat.value}</p>
-              <p className="text-xs text-gray-500">{stat.label}</p>
+              <p className="text-lg font-bold text-fg-primary">{isLoading ? "-" : stat.value}</p>
+              <p className="text-xs text-fg-secondary">{stat.label}</p>
             </motion.div>
           ))}
         </div>
 
         {/* Badges */}
         <div className="p-4">
-          <p className="text-xs font-medium text-gray-500 mb-3">활동 배지</p>
+          <p className="text-xs font-medium text-fg-secondary mb-3">활동 배지</p>
           <motion.div
             className="grid grid-cols-3 gap-3"
             variants={listContainer}
@@ -936,7 +936,7 @@ export default function ProfilePage() {
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-1.5 ${colorClasses[badge.color]}`}>
                     <badge.icon className="w-5 h-5" />
                   </div>
-                  <span className={`text-xs font-medium text-center ${badge.earned ? "text-gray-700" : "text-gray-400"}`}>
+                  <span className={`text-xs font-medium text-center ${badge.earned ? "text-gray-700" : "text-fg-tertiary"}`}>
                     {badge.label}
                   </span>
                 </motion.div>
@@ -956,7 +956,7 @@ export default function ProfilePage() {
         {authUser ? (
           <>
             {/* 로그인 상태 표시 */}
-            <div className="flex items-center justify-center gap-2 py-2.5 text-sm text-gray-500 bg-white/30 backdrop-blur-sm rounded-2xl border border-white/30">
+            <div className="flex items-center justify-center gap-2 py-2.5 text-sm text-fg-secondary bg-white/30 backdrop-blur-sm rounded-2xl border border-white/30">
               <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
                 <Check className="w-3 h-3 text-green-600" />
               </div>
@@ -964,7 +964,7 @@ export default function ProfilePage() {
                 {authUser.provider === "google" ? "Google" : authUser.provider === "apple" ? "Apple" : ""} 계정 연결됨
               </span>
               {authUser.email && (
-                <span className="text-gray-400 text-xs truncate max-w-[160px]">
+                <span className="text-fg-tertiary text-xs truncate max-w-[160px]">
                   ({authUser.email})
                 </span>
               )}
@@ -980,13 +980,13 @@ export default function ProfilePage() {
             {/* 회원탈퇴 버튼 */}
             <button
               onClick={() => setIsDeleteModalOpen(true)}
-              className="w-full flex items-center justify-center gap-2 py-2.5 text-gray-400 text-xs hover:text-red-400 transition-colors"
+              className="w-full flex items-center justify-center gap-2 py-2.5 text-fg-tertiary text-xs hover:text-red-400 transition-colors"
             >
               <Trash2 className="w-3.5 h-3.5" />
               회원탈퇴
             </button>
             {/* 약관 · 지원 링크 */}
-            <div className="flex items-center justify-center gap-3 pt-1 text-xs text-gray-400">
+            <div className="flex items-center justify-center gap-3 pt-1 text-xs text-fg-tertiary">
               <Link href="/terms" className="flex items-center gap-1 hover:text-gray-600 transition-colors">
                 <FileText className="w-3 h-3" />
                 이용약관
@@ -1004,7 +1004,7 @@ export default function ProfilePage() {
             </div>
             <a
               href="mailto:support@withsempre.com"
-              className="block text-center text-xs text-gray-400 hover:text-violet-500 transition-colors mt-2"
+              className="block text-center text-xs text-fg-tertiary hover:text-violet-500 transition-colors mt-2"
             >
               문의 support@withsempre.com
             </a>
@@ -1025,7 +1025,7 @@ export default function ProfilePage() {
               Google로 로그인
             </button>
             {/* 게스트 상태 안내 */}
-            <p className="text-center text-xs text-gray-400">
+            <p className="text-center text-xs text-fg-tertiary">
               로그인하면 데이터가 안전하게 동기화됩니다
             </p>
           </>
@@ -1066,7 +1066,7 @@ export default function ProfilePage() {
             >
               <div className="flex items-center gap-3">
                 <Target
-                  className={`w-5 h-5 ${dailyGoal === goal ? "text-primary" : "text-gray-400"}`}
+                  className={`w-5 h-5 ${dailyGoal === goal ? "text-primary" : "text-fg-tertiary"}`}
                 />
                 <span className={`font-medium ${dailyGoal === goal ? "text-primary" : "text-gray-700"}`}>
                   {goal}분
@@ -1101,12 +1101,12 @@ export default function ProfilePage() {
             }`}
           >
             <div className="flex items-center gap-3">
-              <Bell className={`w-5 h-5 ${notifications ? "text-primary" : "text-gray-400"}`} />
+              <Bell className={`w-5 h-5 ${notifications ? "text-primary" : "text-fg-tertiary"}`} />
               <div>
                 <span className={`font-medium ${notifications ? "text-primary" : "text-gray-700"}`}>
                   알림 켜기
                 </span>
-                <p className="text-xs text-gray-500 mt-0.5">연습 리마인더와 분석 결과를 받아요</p>
+                <p className="text-xs text-fg-secondary mt-0.5">연습 리마인더와 분석 결과를 받아요</p>
               </div>
             </div>
             {notifications && (
@@ -1128,12 +1128,12 @@ export default function ProfilePage() {
             }`}
           >
             <div className="flex items-center gap-3">
-              <Bell className={`w-5 h-5 ${!notifications ? "text-primary" : "text-gray-400"}`} />
+              <Bell className={`w-5 h-5 ${!notifications ? "text-primary" : "text-fg-tertiary"}`} />
               <div>
                 <span className={`font-medium ${!notifications ? "text-primary" : "text-gray-700"}`}>
                   알림 끄기
                 </span>
-                <p className="text-xs text-gray-500 mt-0.5">알림을 받지 않아요</p>
+                <p className="text-xs text-fg-secondary mt-0.5">알림을 받지 않아요</p>
               </div>
             </div>
             {!notifications && (
@@ -1167,7 +1167,7 @@ export default function ProfilePage() {
             >
               <div className="flex items-center gap-3">
                 <Globe
-                  className={`w-5 h-5 ${language === lang.code ? "text-primary" : "text-gray-400"}`}
+                  className={`w-5 h-5 ${language === lang.code ? "text-primary" : "text-fg-tertiary"}`}
                 />
                 <span
                   className={`font-medium ${language === lang.code ? "text-primary" : "text-gray-700"}`}
@@ -1240,7 +1240,7 @@ export default function ProfilePage() {
                 />
               ) : (
                 <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center">
-                  <User className="w-10 h-10 text-gray-400" />
+                  <User className="w-10 h-10 text-fg-tertiary" />
                 </div>
               )}
               <div className="absolute inset-0 rounded-full bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1271,11 +1271,11 @@ export default function ProfilePage() {
             />
             <div className="flex items-center justify-between mt-1">
               <p className="text-xs">
-                {nicknameStatus === "checking" && <span className="text-gray-400">확인 중...</span>}
+                {nicknameStatus === "checking" && <span className="text-fg-tertiary">확인 중...</span>}
                 {nicknameStatus === "available" && <span className="text-green-500">사용 가능한 닉네임입니다</span>}
                 {nicknameStatus === "taken" && <span className="text-red-500">이미 사용 중인 닉네임입니다</span>}
               </p>
-              <p className="text-xs text-gray-400">{editNickname.length}/20</p>
+              <p className="text-xs text-fg-tertiary">{editNickname.length}/20</p>
             </div>
           </div>
 
@@ -1366,7 +1366,7 @@ export default function ProfilePage() {
             <p className="text-sm text-gray-700 font-medium mb-1">
               정말 탈퇴하시겠습니까?
             </p>
-            <p className="text-xs text-gray-500 leading-relaxed">
+            <p className="text-xs text-fg-secondary leading-relaxed">
               탈퇴 시 모든 연습 기록, 분석 데이터, 녹음 파일이
               <br />
               <span className="text-red-500 font-medium">영구적으로 삭제</span>되며 복구할 수 없습니다.

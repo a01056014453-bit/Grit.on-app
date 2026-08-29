@@ -30,7 +30,7 @@ export default function LandingPage() {
               stagger={0.08}
             />
           </h1>
-          <p className="text-sm text-gray-400 italic tracking-wide mb-2">
+          <p className="text-sm text-fg-tertiary italic tracking-wide mb-2">
             Practice always, grow forever.
           </p>
           <p className="text-base text-gray-600 mb-12 leading-relaxed">
@@ -45,7 +45,7 @@ export default function LandingPage() {
                 {/* Mockup Content - Sheet Music with Highlight */}
                 <div className="h-full bg-gradient-to-b from-gray-50 to-white p-4 flex flex-col">
                   {/* Status Bar */}
-                  <div className="flex justify-between items-center text-xs text-gray-400 mb-4">
+                  <div className="flex justify-between items-center text-xs text-fg-tertiary mb-4">
                     <span>9:41</span>
                     <div className="flex gap-1">
                       <div className="w-4 h-2 bg-gray-300 rounded-sm"></div>
@@ -55,7 +55,7 @@ export default function LandingPage() {
                   {/* App Header */}
                   <div className="text-center mb-6">
                     <p className="text-sm font-semibold text-black">쇼팽 발라드 1번</p>
-                    <p className="text-xs text-gray-400">mm. 32-48</p>
+                    <p className="text-xs text-fg-tertiary">mm. 32-48</p>
                   </div>
 
                   {/* Sheet Music Lines (simplified) */}
@@ -87,7 +87,7 @@ export default function LandingPage() {
                           <span className="text-red-500">⏱</span>
                           <span className="text-red-600 font-medium">리듬이 흔들리는 구간</span>
                         </div>
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-fg-secondary mt-1">
                           이 구간 집중 연습 · Tempo 76
                         </p>
                       </div>
@@ -116,11 +116,11 @@ export default function LandingPage() {
         <div className="max-w-2xl mx-auto text-center">
           <p className="text-2xl md:text-3xl font-medium leading-relaxed text-black mb-8">
             연습은 많이 했는데,<br />
-            <span className="text-gray-400">어디를 연습해야 하는지 모르겠나요?</span>
+            <span className="text-fg-tertiary">어디를 연습해야 하는지 모르겠나요?</span>
           </p>
           <p className="text-2xl md:text-3xl font-medium leading-relaxed text-black mb-12">
             레슨 후,<br />
-            <span className="text-gray-400">무엇을 연습하라고 했는지 기억나지 않나요?</span>
+            <span className="text-fg-tertiary">무엇을 연습하라고 했는지 기억나지 않나요?</span>
           </p>
           <p className="text-xl text-black font-semibold">
             Sempre가 연습을 명확하게 만들어줍니다.
@@ -137,7 +137,7 @@ export default function LandingPage() {
               <p className="text-2xl md:text-3xl font-medium leading-relaxed text-black">
                 실시간으로 연습을 녹음하고
               </p>
-              <p className="text-xl md:text-2xl text-gray-500 mt-4 leading-relaxed">
+              <p className="text-xl md:text-2xl text-fg-secondary mt-4 leading-relaxed">
                 AI가<br />
                 가장 자주 틀리는 구간,<br />
                 리듬이 흔들리는 구간,<br />
@@ -150,7 +150,7 @@ export default function LandingPage() {
               <div className="relative bg-black rounded-[3rem] p-3 shadow-2xl">
                 <div className="bg-white rounded-[2.5rem] overflow-hidden aspect-[9/19]">
                   <div className="h-full bg-gradient-to-b from-gray-50 to-white p-4 flex flex-col">
-                    <div className="flex justify-between items-center text-xs text-gray-400 mb-4">
+                    <div className="flex justify-between items-center text-xs text-fg-tertiary mb-4">
                       <span>9:41</span>
                     </div>
                     <div className="text-center mb-4">
@@ -159,15 +159,15 @@ export default function LandingPage() {
                     <div className="flex-1 space-y-3">
                       <div className="bg-red-50 border border-red-200 rounded-xl p-3">
                         <p className="text-xs font-medium text-red-600">자주 틀리는 구간</p>
-                        <p className="text-xs text-gray-500 mt-1">mm. 32-36 · 3회 반복 오류</p>
+                        <p className="text-xs text-fg-secondary mt-1">mm. 32-36 · 3회 반복 오류</p>
                       </div>
                       <div className="bg-orange-50 border border-orange-200 rounded-xl p-3">
                         <p className="text-xs font-medium text-orange-600">리듬 불안정</p>
-                        <p className="text-xs text-gray-500 mt-1">mm. 45-48 · 템포 흔들림</p>
+                        <p className="text-xs text-fg-secondary mt-1">mm. 45-48 · 템포 흔들림</p>
                       </div>
                       <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3">
                         <p className="text-xs font-medium text-yellow-600">양손 타이밍</p>
-                        <p className="text-xs text-gray-500 mt-1">mm. 52-54 · 0.1초 차이</p>
+                        <p className="text-xs text-fg-secondary mt-1">mm. 52-54 · 0.1초 차이</p>
                       </div>
                     </div>
                   </div>
@@ -188,18 +188,18 @@ export default function LandingPage() {
               <div className="relative bg-black rounded-[3rem] p-3 shadow-2xl">
                 <div className="bg-white rounded-[2.5rem] overflow-hidden aspect-[9/19]">
                   <div className="h-full bg-gradient-to-b from-gray-50 to-white p-4 flex flex-col items-center justify-center">
-                    <p className="text-xs text-gray-400 mb-2">오늘 순 연습시간</p>
+                    <p className="text-xs text-fg-tertiary mb-2">오늘 순 연습시간</p>
                     <p className="text-5xl font-bold text-black mb-1">1:32</p>
-                    <p className="text-sm text-gray-500">1시간 32분</p>
+                    <p className="text-sm text-fg-secondary">1시간 32분</p>
                     <div className="mt-6 w-full">
-                      <div className="flex justify-between text-xs text-gray-400 mb-2">
+                      <div className="flex justify-between text-xs text-fg-tertiary mb-2">
                         <span>전체 시간</span>
                         <span>2시간 15분</span>
                       </div>
                       <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
                         <div className="h-full w-2/3 bg-black rounded-full"></div>
                       </div>
-                      <p className="text-xs text-gray-400 mt-2 text-center">실제 연주 비율 68%</p>
+                      <p className="text-xs text-fg-tertiary mt-2 text-center">실제 연주 비율 68%</p>
                     </div>
                   </div>
                 </div>
@@ -212,7 +212,7 @@ export default function LandingPage() {
               <p className="text-2xl md:text-3xl font-medium leading-relaxed text-black">
                 피아노 소리가 감지될 때만
               </p>
-              <p className="text-xl md:text-2xl text-gray-500 mt-4 leading-relaxed">
+              <p className="text-xl md:text-2xl text-fg-secondary mt-4 leading-relaxed">
                 순 연습시간으로 기록됩니다.<br /><br />
                 실제 연습한 시간만 정확하게.
               </p>
@@ -230,7 +230,7 @@ export default function LandingPage() {
               <p className="text-2xl md:text-3xl font-medium leading-relaxed text-black">
                 오늘 집중해야 할 구간을 알려주고
               </p>
-              <p className="text-xl md:text-2xl text-gray-500 mt-4 leading-relaxed">
+              <p className="text-xl md:text-2xl text-fg-secondary mt-4 leading-relaxed">
                 바로 집중 연습을 시작할 수 있습니다.
               </p>
             </div>
@@ -249,7 +249,7 @@ export default function LandingPage() {
                           <div className="w-2 h-2 bg-red-500 rounded-full"></div>
                           <p className="text-xs font-medium">mm. 32-40</p>
                         </div>
-                        <p className="text-xs text-gray-500 mb-3">리듬 안정화 필요</p>
+                        <p className="text-xs text-fg-secondary mb-3">리듬 안정화 필요</p>
                         <button className="w-full bg-black text-white text-xs py-3 rounded-xl font-medium">
                           이 구간 집중 연습 · Tempo 72
                         </button>
@@ -259,7 +259,7 @@ export default function LandingPage() {
                           <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
                           <p className="text-xs font-medium">mm. 45-52</p>
                         </div>
-                        <p className="text-xs text-gray-500 mb-3">손가락 독립성</p>
+                        <p className="text-xs text-fg-secondary mb-3">손가락 독립성</p>
                         <button className="w-full bg-gray-100 text-black text-xs py-3 rounded-xl font-medium">
                           이 구간 집중 연습 · Tempo 60
                         </button>
@@ -285,7 +285,7 @@ export default function LandingPage() {
                   <div className="h-full bg-gradient-to-b from-gray-50 to-white p-4 flex flex-col">
                     <div className="text-center mb-4 mt-8">
                       <p className="text-sm font-semibold">레슨 기반 연습 계획</p>
-                      <p className="text-xs text-gray-400 mt-1">김선생님 · 1월 15일 레슨</p>
+                      <p className="text-xs text-fg-tertiary mt-1">김선생님 · 1월 15일 레슨</p>
                     </div>
                     <div className="flex-1 space-y-3">
                       <div className="bg-white border border-gray-200 rounded-xl p-3 shadow-sm">
@@ -294,17 +294,17 @@ export default function LandingPage() {
                           <span className="text-xs text-red-500 bg-red-50 px-2 py-0.5 rounded">중요</span>
                         </div>
                         <p className="text-xs text-gray-600">리듬 안정화</p>
-                        <p className="text-xs text-gray-400 mt-1">Tempo 60 → 72</p>
+                        <p className="text-xs text-fg-tertiary mt-1">Tempo 60 → 72</p>
                       </div>
                       <div className="bg-white border border-gray-200 rounded-xl p-3 shadow-sm">
                         <p className="text-xs font-medium mb-2">마디 52-58</p>
                         <p className="text-xs text-gray-600">왼손 독립성</p>
-                        <p className="text-xs text-gray-400 mt-1">분리 연습</p>
+                        <p className="text-xs text-fg-tertiary mt-1">분리 연습</p>
                       </div>
                       <div className="bg-white border border-gray-200 rounded-xl p-3 shadow-sm">
                         <p className="text-xs font-medium mb-2">전체</p>
                         <p className="text-xs text-gray-600">페달링 정리</p>
-                        <p className="text-xs text-gray-400 mt-1">깨끗하게</p>
+                        <p className="text-xs text-fg-tertiary mt-1">깨끗하게</p>
                       </div>
                     </div>
                   </div>
@@ -318,7 +318,7 @@ export default function LandingPage() {
               <p className="text-2xl md:text-3xl font-medium leading-relaxed text-black">
                 레슨 내용을 기반으로
               </p>
-              <p className="text-xl md:text-2xl text-gray-500 mt-4 leading-relaxed">
+              <p className="text-xl md:text-2xl text-fg-secondary mt-4 leading-relaxed">
                 무엇을 연습해야 하는지 명확하게.
               </p>
             </div>
@@ -335,7 +335,7 @@ export default function LandingPage() {
               <p className="text-2xl md:text-3xl font-medium leading-relaxed text-black">
                 막히는 구간이 있다면
               </p>
-              <p className="text-xl md:text-2xl text-gray-500 mt-4 leading-relaxed">
+              <p className="text-xl md:text-2xl text-fg-secondary mt-4 leading-relaxed">
                 원하는 선생님에게 직접 질문할 수 있습니다.
               </p>
             </div>
@@ -357,14 +357,14 @@ export default function LandingPage() {
                           </div>
                           <div>
                             <p className="text-sm font-semibold">김서연 선생님</p>
-                            <p className="text-xs text-gray-500">서울대 피아노 전공</p>
+                            <p className="text-xs text-fg-secondary">서울대 피아노 전공</p>
                           </div>
                         </div>
                         <div className="flex gap-2 mb-3">
                           <span className="text-xs bg-gray-100 px-2 py-1 rounded">쇼팽</span>
                           <span className="text-xs bg-gray-100 px-2 py-1 rounded">드뷔시</span>
                         </div>
-                        <div className="flex items-center justify-between text-xs text-gray-400 mb-3">
+                        <div className="flex items-center justify-between text-xs text-fg-tertiary mb-3">
                           <span>⭐ 4.9 (127)</span>
                           <span>평균 2시간 응답</span>
                         </div>
@@ -388,7 +388,7 @@ export default function LandingPage() {
           <p className="text-2xl md:text-3xl font-medium leading-relaxed text-black">
             메트로놈과 음악 용어를
           </p>
-          <p className="text-xl md:text-2xl text-gray-500 mt-4 leading-relaxed">
+          <p className="text-xl md:text-2xl text-fg-secondary mt-4 leading-relaxed">
             한 곳에서 바로 확인하세요.
           </p>
 
@@ -399,9 +399,9 @@ export default function LandingPage() {
               <div className="relative bg-black rounded-[2rem] p-2 shadow-xl">
                 <div className="bg-white rounded-[1.5rem] overflow-hidden aspect-[9/19]">
                   <div className="h-full bg-gradient-to-b from-gray-50 to-white p-3 flex flex-col items-center justify-center">
-                    <p className="text-xs text-gray-400 mb-2">메트로놈</p>
+                    <p className="text-xs text-fg-tertiary mb-2">메트로놈</p>
                     <p className="text-4xl font-bold mb-1">120</p>
-                    <p className="text-xs text-gray-500">BPM</p>
+                    <p className="text-xs text-fg-secondary">BPM</p>
                     <div className="mt-4 w-8 h-8 bg-black rounded-full flex items-center justify-center">
                       <span className="text-white text-xs">▶</span>
                     </div>
@@ -416,19 +416,19 @@ export default function LandingPage() {
               <div className="relative bg-black rounded-[2rem] p-2 shadow-xl">
                 <div className="bg-white rounded-[1.5rem] overflow-hidden aspect-[9/19]">
                   <div className="h-full bg-gradient-to-b from-gray-50 to-white p-3 flex flex-col">
-                    <p className="text-xs text-gray-400 mb-3 text-center">음악 용어</p>
+                    <p className="text-xs text-fg-tertiary mb-3 text-center">음악 용어</p>
                     <div className="space-y-2">
                       <div className="bg-gray-50 rounded-lg p-2">
                         <p className="text-xs font-medium">Allegro</p>
-                        <p className="text-xs text-gray-500">빠르게</p>
+                        <p className="text-xs text-fg-secondary">빠르게</p>
                       </div>
                       <div className="bg-gray-50 rounded-lg p-2">
                         <p className="text-xs font-medium">Legato</p>
-                        <p className="text-xs text-gray-500">이어서</p>
+                        <p className="text-xs text-fg-secondary">이어서</p>
                       </div>
                       <div className="bg-gray-50 rounded-lg p-2">
                         <p className="text-xs font-medium">Crescendo</p>
-                        <p className="text-xs text-gray-500">점점 세게</p>
+                        <p className="text-xs text-fg-secondary">점점 세게</p>
                       </div>
                     </div>
                   </div>
@@ -443,7 +443,7 @@ export default function LandingPage() {
       {/* SECTION 9 — Final CTA */}
       <section className="py-32 px-6 bg-black text-white">
         <div className="max-w-2xl mx-auto text-center">
-          <p className="text-xl text-gray-400 mb-4">
+          <p className="text-xl text-fg-tertiary mb-4">
             연습을 더 명확하게
           </p>
           <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-12">
@@ -461,7 +461,7 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="py-8 px-6 bg-black text-white border-t border-gray-800">
-        <div className="max-w-5xl mx-auto text-center text-sm text-gray-500">
+        <div className="max-w-5xl mx-auto text-center text-sm text-fg-secondary">
           <p>&copy; 2025 Sempre. All rights reserved.</p>
         </div>
       </footer>

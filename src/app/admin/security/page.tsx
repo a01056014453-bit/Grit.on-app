@@ -35,7 +35,7 @@ export default function SecurityPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-bold text-gray-900">보안</h1>
+      <h1 className="text-xl font-bold text-fg-primary">보안</h1>
 
       <div className="grid grid-cols-4 gap-4">
         <StatCard
@@ -65,7 +65,7 @@ export default function SecurityPage() {
       </div>
 
       <div className="rounded-xl border bg-white p-6 space-y-4">
-        <h2 className="text-lg font-semibold text-gray-900">보안 현황</h2>
+        <h2 className="text-lg font-semibold text-fg-primary">보안 현황</h2>
         <div className="space-y-3">
           <div className="flex items-center gap-3 p-3 rounded-lg bg-green-50">
             <div className="w-2 h-2 rounded-full bg-green-500" />
@@ -99,8 +99,8 @@ export default function SecurityPage() {
       </div>
 
       <div className="rounded-xl border bg-white p-6 space-y-3">
-        <h2 className="text-lg font-semibold text-gray-900">외부 보안 도구</h2>
-        <p className="text-sm text-gray-500">
+        <h2 className="text-lg font-semibold text-fg-primary">외부 보안 도구</h2>
+        <p className="text-sm text-fg-secondary">
           상세 보안 로그와 백업은 아래 외부 대시보드에서 관리됩니다.
         </p>
         <div className="flex gap-3">

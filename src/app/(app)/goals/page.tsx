@@ -416,7 +416,7 @@ export default function GoalsPage() {
             <div
               key={name}
               className={`text-center text-[10px] font-medium ${
-                idx === 0 ? "text-red-500" : idx === 6 ? "text-blue-500" : "text-gray-500"
+                idx === 0 ? "text-red-500" : idx === 6 ? "text-blue-500" : "text-fg-secondary"
               }`}
             >
               {name}
@@ -493,7 +493,7 @@ export default function GoalsPage() {
           {/* Header */}
           <div className="mb-4">
             <p className="font-bold text-black text-lg">{formatDateDisplay(selectedDate)}</p>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-fg-secondary">
               {selectedDateDrills.length > 0 && `${selectedDateDrills.length}개 연습`}
               {selectedDateDrills.length > 0 && selectedDateSessions.length > 0 && " · "}
               {selectedDateSessions.length > 0 && `${selectedDateSessions.length}개 녹음`}
@@ -522,7 +522,7 @@ export default function GoalsPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm text-gray-800 font-medium">{drill.measures}</p>
-                          <p className="text-xs text-gray-500 truncate">
+                          <p className="text-xs text-fg-secondary truncate">
                             {drill.title}
                             {drill.tempo && ` · 템포 ${drill.tempo}`}
                             {drill.recurrence ? ` · ${drill.recurrence}회` : drill.duration ? ` · ${drill.duration}분` : ""}
@@ -539,7 +539,7 @@ export default function GoalsPage() {
           {/* Sessions List */}
           {selectedDateSessions.length > 0 && (
             <div className="mb-4">
-              <p className="text-xs font-medium text-gray-500 mb-2">연습 세션</p>
+              <p className="text-xs font-medium text-fg-secondary mb-2">연습 세션</p>
               <div className="space-y-2">
                 {selectedDateSessions.map((session) => {
                   const hasAudio = !!session.audioBlob;
@@ -559,17 +559,17 @@ export default function GoalsPage() {
                           {hasAudio ? (
                             <Volume2 className="w-5 h-5 text-white" />
                           ) : (
-                            <Music className="w-5 h-5 text-gray-500" />
+                            <Music className="w-5 h-5 text-fg-secondary" />
                           )}
                         </div>
                         <div className="flex-1">
                           <p className="font-semibold text-black text-sm">{session.pieceName}</p>
                           <div className="flex items-center gap-2 mt-1">
-                            <span className="text-xs text-gray-500 flex items-center gap-1">
+                            <span className="text-xs text-fg-secondary flex items-center gap-1">
                               <Clock className="w-3 h-3" />
                               {formatTime(session.practiceTime)}
                             </span>
-                            <span className="text-xs text-gray-400">
+                            <span className="text-xs text-fg-tertiary">
                               {new Date(session.startTime).toLocaleTimeString("ko-KR", {
                                 hour: "2-digit",
                                 minute: "2-digit",
@@ -589,7 +589,7 @@ export default function GoalsPage() {
           {groupedSelectedDrills.length === 0 && selectedDateSessions.length === 0 && (
             <div className="text-center py-8 bg-gray-50 rounded-xl border border-gray-100">
               <Music className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-              <p className="text-sm text-gray-500">이 날 연습 기록이 없습니다</p>
+              <p className="text-sm text-fg-secondary">이 날 연습 기록이 없습니다</p>
             </div>
           )}
 
@@ -597,7 +597,7 @@ export default function GoalsPage() {
           {selectedDateSessions.length > 0 && (
             <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-500">총 연습 시간</span>
+                <span className="text-sm text-fg-secondary">총 연습 시간</span>
                 <span className="font-bold text-black">
                   {formatTime(selectedDateSessions.reduce((sum, s) => sum + s.practiceTime, 0))}
                 </span>
@@ -624,7 +624,7 @@ export default function GoalsPage() {
             <div className="flex items-center justify-between mb-6">
               <div className="flex-1">
                 <p className="font-semibold text-black">{playingSession.pieceName}</p>
-                <p className="text-xs text-gray-500 mt-0.5">
+                <p className="text-xs text-fg-secondary mt-0.5">
                   {new Date(playingSession.startTime).toLocaleDateString("ko-KR", {
                     year: "numeric",
                     month: "long",
@@ -651,8 +651,8 @@ export default function GoalsPage() {
                 className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black"
               />
               <div className="flex justify-between mt-1">
-                <span className="text-xs text-gray-500">{formatSeconds(currentTime)}</span>
-                <span className="text-xs text-gray-500">{formatSeconds(duration)}</span>
+                <span className="text-xs text-fg-secondary">{formatSeconds(currentTime)}</span>
+                <span className="text-xs text-fg-secondary">{formatSeconds(duration)}</span>
               </div>
             </div>
 
@@ -675,11 +675,11 @@ export default function GoalsPage() {
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
                   <p className="text-lg font-bold text-black">{formatTime(playingSession.practiceTime)}</p>
-                  <p className="text-[10px] text-gray-500">연습 시간</p>
+                  <p className="text-[10px] text-fg-secondary">연습 시간</p>
                 </div>
                 <div>
                   <p className="text-lg font-bold text-black">{formatTime(playingSession.totalTime)}</p>
-                  <p className="text-[10px] text-gray-500">총 시간</p>
+                  <p className="text-[10px] text-fg-secondary">총 시간</p>
                 </div>
                 <div>
                   <p className="text-lg font-bold text-green-600">
@@ -687,7 +687,7 @@ export default function GoalsPage() {
                       ? `${Math.round((playingSession.practiceTime / playingSession.totalTime) * 100)}%`
                       : "0%"}
                   </p>
-                  <p className="text-[10px] text-gray-500">효율</p>
+                  <p className="text-[10px] text-fg-secondary">효율</p>
                 </div>
               </div>
             </div>

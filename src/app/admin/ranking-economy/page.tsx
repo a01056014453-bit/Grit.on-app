@@ -20,7 +20,7 @@ export default function RankingEconomyPage() {
       key: 'rank',
       header: '순위',
       render: (row) => (
-        <span className={cn('font-number font-bold', row.rank <= 3 ? 'text-violet-600' : 'text-gray-900')}>
+        <span className={cn('font-number font-bold', row.rank <= 3 ? 'text-violet-600' : 'text-fg-primary')}>
           #{row.rank}
         </span>
       ),
@@ -32,7 +32,7 @@ export default function RankingEconomyPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-bold text-gray-900">랭킹</h1>
+      <h1 className="text-xl font-bold text-fg-primary">랭킹</h1>
 
       <div className="grid grid-cols-3 gap-4">
         <StatCard title="오늘 참여자" value={rankings.length} icon={Trophy} />
@@ -43,7 +43,7 @@ export default function RankingEconomyPage() {
       <DataTable columns={rankingColumns} data={rankings} />
 
       {rankings.length === 0 && (
-        <div className="text-center py-12 text-gray-400 text-sm">
+        <div className="text-center py-12 text-fg-tertiary text-sm">
           오늘의 랭킹 데이터가 없습니다.
         </div>
       )}

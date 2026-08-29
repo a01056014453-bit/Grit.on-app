@@ -119,7 +119,7 @@ export default function LoginRequiredPage() {
             <div className="w-20 h-20 rounded-full bg-violet-100 border-2 border-violet-200 flex items-center justify-center text-4xl mx-auto mb-4">
               {profile.profileEmoji}
             </div>
-            <h1 className="text-2xl font-black text-gray-900">
+            <h1 className="text-2xl font-black text-fg-primary">
               안녕하세요, {profile.nickname}님!
             </h1>
           </motion.div>
@@ -133,10 +133,10 @@ export default function LoginRequiredPage() {
             <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center mx-auto mb-6 shadow-lg">
               <span className="text-[15px] font-black text-white tracking-tight" style={{ fontFamily: "var(--font-montserrat), Montserrat, sans-serif" }}>sempre</span>
             </div>
-            <h1 className="text-3xl font-black text-gray-900 mb-3">
+            <h1 className="text-3xl font-black text-fg-primary mb-3">
               Sempre
             </h1>
-            <p className="text-base text-gray-500 leading-relaxed">
+            <p className="text-base text-fg-secondary leading-relaxed">
               클래식 연주자를 위한<br />AI 연습 코치
             </p>
           </motion.div>
@@ -191,7 +191,7 @@ export default function LoginRequiredPage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1 }}
-          className="mt-6 text-center text-xs text-gray-400"
+          className="mt-6 text-center text-xs text-fg-tertiary"
         >
           계속하면{" "}
           <Link href="/terms" className="underline hover:text-gray-300 transition-colors">

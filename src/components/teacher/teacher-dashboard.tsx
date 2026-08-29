@@ -100,7 +100,7 @@ export function TeacherDashboard({ teacherProfileId, onToggleMode }: TeacherDash
     return (
       <div className="flex items-center justify-center min-h-screen bg-blob-orange">
         <div className="bg-blob-orange-extra" />
-        <div className="animate-pulse text-gray-400">로딩 중...</div>
+        <div className="animate-pulse text-fg-tertiary">로딩 중...</div>
       </div>
     );
   }
@@ -114,9 +114,9 @@ export function TeacherDashboard({ teacherProfileId, onToggleMode }: TeacherDash
         <div>
           <div className="flex items-center gap-2 mb-1">
             <LayoutDashboard className="w-5 h-5 text-orange-600" />
-            <h1 className="text-lg font-bold text-gray-900">선생님 대시보드</h1>
+            <h1 className="text-lg font-bold text-fg-primary">선생님 대시보드</h1>
           </div>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-fg-secondary">
             안녕하세요, <span className="font-semibold text-gray-700">{userName}</span> 선생님
           </p>
         </div>
@@ -143,7 +143,7 @@ export function TeacherDashboard({ teacherProfileId, onToggleMode }: TeacherDash
       {/* Pending Requests */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-bold text-gray-900 flex items-center gap-2">
+          <h2 className="font-bold text-fg-primary flex items-center gap-2">
             <Inbox className="w-4 h-4 text-orange-600" />
             피드백 요청
             {stats.pendingRequests > 0 && (
@@ -164,7 +164,7 @@ export function TeacherDashboard({ teacherProfileId, onToggleMode }: TeacherDash
         {recentRequests.length === 0 ? (
           <div className="bg-white/60 backdrop-blur-xl rounded-2xl p-8 border border-white/60 text-center">
             <Inbox className="w-10 h-10 text-gray-200 mx-auto mb-2" />
-            <p className="text-sm text-gray-400">새로운 요청이 없습니다</p>
+            <p className="text-sm text-fg-tertiary">새로운 요청이 없습니다</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -178,7 +178,7 @@ export function TeacherDashboard({ teacherProfileId, onToggleMode }: TeacherDash
       {/* My Students Preview */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-bold text-gray-900 flex items-center gap-2">
+          <h2 className="font-bold text-fg-primary flex items-center gap-2">
             <Users className="w-4 h-4 text-orange-600" />
             내 학생
           </h2>
@@ -194,7 +194,7 @@ export function TeacherDashboard({ teacherProfileId, onToggleMode }: TeacherDash
         {students.length === 0 ? (
           <div className="bg-white/60 backdrop-blur-xl rounded-2xl p-8 border border-white/60 text-center">
             <Users className="w-10 h-10 text-gray-200 mx-auto mb-2" />
-            <p className="text-sm text-gray-400">등록된 학생이 없습니다</p>
+            <p className="text-sm text-fg-tertiary">등록된 학생이 없습니다</p>
           </div>
         ) : (
           <div className="bg-white/60 backdrop-blur-xl rounded-2xl border border-white/60 divide-y divide-white/40 overflow-hidden">
@@ -211,10 +211,10 @@ export function TeacherDashboard({ teacherProfileId, onToggleMode }: TeacherDash
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-gray-900">
+                    <span className="text-sm font-semibold text-fg-primary">
                       {student.nickname}
                     </span>
-                    <span className="text-[10px] px-1.5 py-0.5 bg-white/60 text-gray-500 rounded-full">
+                    <span className="text-[10px] px-1.5 py-0.5 bg-white/60 text-fg-secondary rounded-full">
                       {student.grade}
                     </span>
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
@@ -225,7 +225,7 @@ export function TeacherDashboard({ teacherProfileId, onToggleMode }: TeacherDash
                       {student.type}
                     </span>
                   </div>
-                  <p className="text-xs text-gray-400 mt-0.5 truncate">
+                  <p className="text-xs text-fg-tertiary mt-0.5 truncate">
                     {student.currentPieces.join(", ")}
                   </p>
                 </div>

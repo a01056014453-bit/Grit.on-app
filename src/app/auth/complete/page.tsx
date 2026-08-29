@@ -63,7 +63,7 @@ export default function AuthCompletePage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-violet-50 to-white">
       <div className="text-center">
         <div className="w-12 h-12 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin mx-auto mb-4" />
-        <p className="text-sm text-gray-500">로그인 중...</p>
+        <p className="text-sm text-fg-secondary">로그인 중...</p>
       </div>
     </div>
   );

@@ -156,11 +156,11 @@ function AppleCallbackHandler() {
           <div className="w-14 h-14 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <span className="text-2xl">!</span>
           </div>
-          <p className="text-lg font-bold text-gray-900 mb-2">
+          <p className="text-lg font-bold text-fg-primary mb-2">
             이미 가입된 이메일이에요
           </p>
-          <p className="text-sm text-gray-500 mb-6 leading-relaxed">
-            이 이메일은 <span className="font-semibold text-gray-900">{label}</span>로 가입되어 있어요.
+          <p className="text-sm text-fg-secondary mb-6 leading-relaxed">
+            이 이메일은 <span className="font-semibold text-fg-primary">{label}</span>로 가입되어 있어요.
             <br />
             {label}로 로그인해주세요.
           </p>
@@ -200,7 +200,7 @@ function AppleCallbackHandler() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-violet-50 to-white">
       <div className="text-center">
         <div className="w-12 h-12 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin mx-auto mb-4" />
-        <p className="text-sm text-gray-500">{status}</p>
+        <p className="text-sm text-fg-secondary">{status}</p>
       </div>
     </div>
   );
@@ -213,7 +213,7 @@ export default function AppleCallbackPage() {
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-violet-50 to-white">
           <div className="text-center">
             <div className="w-12 h-12 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-sm text-gray-500">Apple 로그인 중...</p>
+            <p className="text-sm text-fg-secondary">Apple 로그인 중...</p>
           </div>
         </div>
       }
