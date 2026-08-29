@@ -2,7 +2,7 @@
 
 > Figma 파일: [Sempre Design System](https://www.figma.com/design/1S1bLNifrZti4TiQSOP0al) (병현 팀)
 > 소스 오브 트루스: 컬러 팔레트는 **바이올렛 `#8B5CF6` 기준**(2026-07-09 확정), CSS 변수 이름은 `src/app/globals.css`의 `:root`/`@theme` 기준.
-> Figma 쪽 구조: `Primitives`(raw 값, 피커 숨김) → `Color`(시맨틱, 알리아스) / `Layout`(radius·spacing) + Text Styles 11종 + Effect Styles 3종.
+> Figma 쪽 구조: `Primitives`(raw 값, 피커 숨김) → `Color`(시맨틱, 알리아스) / `Layout`(radius·spacing) + Text Styles 19종 + Effect Styles 3종. (2026-08-30 보강 내역은 문서 하단 참조)
 
 ## 시맨틱 컬러 (Color 컬렉션, Light 모드)
 
@@ -115,6 +115,51 @@
 미작성(우선순위 낮음): feedback/[id] 상세·view, help/new·[id]·submit, profile/teacher-profile·teacher-register, admin/*, (landing)/landing·privacy·terms·support, invite/[token], 모달/바텀시트 상태들.
 
 화면 제작 패턴: 390×844 프레임(`#faf8ff` + 블롭 2개) → `content`(VERTICAL, pad 24/16, h 780, clip) → 하단 `BottomNavigation` 인스턴스(컴포넌트 셋 `65:334`, 학생 Active=None `65:175`, AI `65:88`, Profile `65:146`, 선생님 Students `65:256`). 폰트 Noto Sans KR, 아이콘은 lucide SVG path를 `createNodeFromSvg`로 삽입.
+
+
+## 2026-08-30 디자인 시스템 보강 (Figma 적용 완료)
+
+### 신규 시맨틱 토큰 (Color 컬렉션, 전부 Primitives 알리아스 · WEB `var(--*)` 코드신택스)
+
+| Figma 변수 | 알리아스 | 값 | 용도 |
+|---|---|---|---|
+| `surface/app-bg` | `violet/25` | `#FAF8FF` | 앱 배경(`.bg-blob-violet`) |
+| `surface/card` · `surface/glass-bg` · `surface/glass-border` | `neutral/0` | `#FFFFFF` | 글래스 카드는 fill@40~60%, 테두리@50~60% opacity로 사용 |
+| `surface/dark` · `surface/dark-raised` | `gray/950` · `gray/850` | `#1A1A1A` · `#2A2A2A` | 메트로놈 다크 패널 |
+| `tint/violet-subtle` · `tint/violet` · `tint/violet-strong` | `violet/50·100·200` | | 선택 상태·pill 배경 |
+| `text/primary` · `text/secondary` · `text/tertiary` · `text/brand` · `text/on-brand` | `gray/900·500·400`, `violet/600`, `neutral/0` | | 본문 텍스트 4색 |
+| `border/subtle` · `border/default` | `gray/100·200` | | 구분선·카드 테두리 |
+| `blob/violet` | `violet/300` | | 배경 블롭 |
+| `theme/teacher/bg·accent·tint·text·blob` | `cream/50`, `orange/600·100·800·300` | | 선생님 모드(`.bg-blob-orange`) |
+| `status/{success,warning,error,info}-tint` · `-text`, `status/warning-bg` | green/100·700, amber/50·100·700, red/50·700, blue/100·700 | | 상태 뱃지 배경/글자 |
+
+### 신규 프리미티브
+`violet/25`, `cream/50`, `orange/50·100·300·400·600·700·800`, `amber/50~800`, `slate/100·400·500·600·900`, `green/100·800`, `emerald/50·200·600·700`, `blue/100·600`, `purple/100·500·600·700`, `pink/100·700`, `gray/800·850·950` — Primitives 87개 / Color 62개 / Layout 11개.
+
+### 신규 텍스트 스타일
+`Heading/H4`(Bold 16/24), `Strong/Large·Small·Tiny`(Bold 14/12/10), `Label/Tiny`(Medium 10), `Number/Hero·Medium·Small`(Montserrat SemiBold 72/32/14) — 총 19종.
+
+### 컴포넌트 (🧩 페이지, 변수·스타일 100% 바인딩, description에 코드 경로)
+
+| 컴포넌트 | 변형 | 코드 근거 |
+|---|---|---|
+| Button | Variant 6 × Size 4 = 24 | `ui/button.tsx` |
+| IconButton | Style(Glass/Solid) × Size(32/36/40) | 원형 뒤로가기 버튼 패턴 |
+| Chip | State × Style = 4 | 필터 pill 패턴 |
+| GlassCard | Radius(2xl/3xl) × Padding(16/20) | `bg-white/40 backdrop-blur-xl` 94회 |
+| StatGroup | Style(Glass/Solid), Card/Stat ×3 | `stats-card.tsx` + divide-x 래퍼 |
+| Toggle · Checkbox | On/Off · Checked/Unchecked × Square/Round | profile, profile-setup |
+| ProgressBar | Tone 3 × Size 2 | records/goals/plans |
+| Avatar | Type(Emoji/Initial) × Size(40/56/64/80) | teachers, profile |
+| BlobBackground | Theme(Violet/Orange) 390×844 | `.bg-blob-*` |
+| Badge · Card · Input · BottomSheet · Toast · BottomNavigation | 기존 | — |
+
+### 화면 바인딩 커버리지 (📱 Screen 38개)
+페인트 2,684 중 2,679 변수 바인딩(99.8%, 미바인딩 5개는 Google 로그인 브랜드색) · 텍스트 1,099 중 1,057 스타일 적용(96%, 나머지는 이모지·히어로 숫자) · radius 390 · gap 320 바인딩.
+값 스냅: `#9ca3af`→`gray/400 #99A1AF`, `#22c55e`→`green/500 #10B981`, 블롭 `#c4a7ff/#b794ff`→`violet/300·400` (시각 차이 미미, 회귀 스크린샷 확인).
+
+### 코드 반영 필요 (별도 PR)
+`globals.css`에 위 시맨틱 변수(`--surface-*`, `--tint-*`, `--text-*`, `--border-*`, `--theme-teacher-*`, `--status-*-tint/text`)를 추가하고 `.bg-blob-*`·글래스 카드 클래스가 이를 참조하도록 교체.
 
 ## 미결/후속 작업
 
