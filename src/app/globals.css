@@ -67,6 +67,53 @@
   --focus-high: #f97316;
   --focus-mid: #eab308;
   --focus-low: #3b82f6;
+
+  /* ─── Figma 시맨틱 토큰 (2026-08-30, docs/design-tokens.md 참조) ─── */
+  /* Surface */
+  --surface-app-bg: #faf8ff; /* violet/25 */
+  --surface-card: #ffffff;
+  --surface-glass-bg: #ffffff; /* 사용 시 /40~/60 opacity */
+  --surface-glass-border: #ffffff; /* 사용 시 /50~/60 opacity */
+  --surface-dark: #1a1a1a;
+  --surface-dark-raised: #2a2a2a;
+  /* Tint (선택 상태·pill 배경) */
+  --tint-violet-subtle: #f5f3ff; /* violet/50 */
+  --tint-violet: #ede9fe; /* violet/100 */
+  --tint-violet-strong: #ddd6fe; /* violet/200 */
+  /* Text */
+  --text-primary: #111827; /* gray/900 */
+  --text-secondary: #6b7280; /* gray/500 */
+  --text-tertiary: #99a1af; /* gray/400 */
+  --text-brand: #7c3aed; /* violet/600 */
+  --text-on-brand: #ffffff;
+  /* Border */
+  --border-subtle: #f3f4f6; /* gray/100 */
+  --border-default: #e5e7eb; /* gray/200 */
+  /* Blob */
+  --blob-violet: #c4b5fd; /* violet/300 */
+  --blob-violet-alt: #a78bfa; /* violet/400 */
+  /* Teacher theme (선생님 모드) */
+  --theme-teacher-bg: #fffaf5; /* cream/50 */
+  --theme-teacher-accent: #ea580c; /* orange/600 */
+  --theme-teacher-tint: #ffedd5; /* orange/100 */
+  --theme-teacher-text: #9a3412; /* orange/800 */
+  --theme-teacher-blob: #fdba74; /* orange/300 */
+  --theme-teacher-blob-alt: #fb923c; /* orange/400 */
+  /* Status tint/text (뱃지·알림 배경/글자) */
+  --status-success-tint: #dcfce7;
+  --status-success-text: #15803d;
+  --status-warning-bg: #fffbeb;
+  --status-warning-tint: #fef3c7;
+  --status-warning-text: #b45309;
+  --status-error-tint: #fef2f2;
+  --status-error-text: #b91c1c;
+  --status-info-tint: #dbeafe;
+  --status-info-text: #1d4ed8;
+  /* Navigation */
+  --nav-bg: #ffffff;
+  --nav-border: #f3f4f6; /* gray/100 */
+  --nav-active: #000000;
+  --nav-inactive: #99a1af; /* gray/400 */
 }
 
 @theme inline {
@@ -89,14 +136,52 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  
+
+  /* Figma 시맨틱 브릿지 → 유틸리티 클래스 (bg-surface-*, text-fg-*, border-line-*, bg-tint-*, ...) */
+  --color-surface-app-bg: var(--surface-app-bg);
+  --color-surface-card: var(--surface-card);
+  --color-surface-glass-bg: var(--surface-glass-bg);
+  --color-surface-glass-border: var(--surface-glass-border);
+  --color-surface-dark: var(--surface-dark);
+  --color-surface-dark-raised: var(--surface-dark-raised);
+  --color-tint-violet-subtle: var(--tint-violet-subtle);
+  --color-tint-violet: var(--tint-violet);
+  --color-tint-violet-strong: var(--tint-violet-strong);
+  --color-fg-primary: var(--text-primary);
+  --color-fg-secondary: var(--text-secondary);
+  --color-fg-tertiary: var(--text-tertiary);
+  --color-fg-brand: var(--text-brand);
+  --color-fg-on-brand: var(--text-on-brand);
+  --color-line-subtle: var(--border-subtle);
+  --color-line-default: var(--border-default);
+  --color-blob-violet: var(--blob-violet);
+  --color-teacher-bg: var(--theme-teacher-bg);
+  --color-teacher-accent: var(--theme-teacher-accent);
+  --color-teacher-tint: var(--theme-teacher-tint);
+  --color-teacher-text: var(--theme-teacher-text);
+  --color-teacher-blob: var(--theme-teacher-blob);
+  --color-status-success-tint: var(--status-success-tint);
+  --color-status-success-text: var(--status-success-text);
+  --color-status-warning-bg: var(--status-warning-bg);
+  --color-status-warning-tint: var(--status-warning-tint);
+  --color-status-warning-text: var(--status-warning-text);
+  --color-status-error-tint: var(--status-error-tint);
+  --color-status-error-text: var(--status-error-text);
+  --color-status-info-tint: var(--status-info-tint);
+  --color-status-info-text: var(--status-info-text);
+  --color-nav-bg: var(--nav-bg);
+  --color-nav-border: var(--nav-border);
+  --color-nav-active: var(--nav-active);
+  --color-nav-inactive: var(--nav-inactive);
+
   --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
   --font-serif: 'OngleipWFontList', serif;
   
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
-  
+  --radius-xl: 1.5rem; /* Figma radius/xl = 24 */
+
   --shadow-soft: 0 2px 8px -2px rgba(0, 0, 0, 0.08);
   --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
   --shadow-elevated: 0 4px 12px -2px rgba(0, 0, 0, 0.12);
@@ -298,7 +383,7 @@ p, span, li, blockquote {
 /* Organic blob gradient background */
 .bg-blob-violet {
   position: relative;
-  background: #faf8ff;
+  background: var(--surface-app-bg);
   isolation: isolate; /* 자식에 z-index 강제 부여 없이 blob을 뒤로 */
 }
 
@@ -317,7 +402,7 @@ p, span, li, blockquote {
   height: 70vw;
   top: -10vw;
   left: -20vw;
-  background: radial-gradient(circle, rgba(196, 167, 255, 0.50) 0%, rgba(221, 200, 255, 0.25) 50%, transparent 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--blob-violet) 50%, transparent) 0%, color-mix(in srgb, var(--blob-violet) 25%, transparent) 50%, transparent 70%);
 }
 
 /* 오른쪽 중간 blob */
@@ -326,7 +411,7 @@ p, span, li, blockquote {
   height: 60vw;
   top: 30vh;
   right: -15vw;
-  background: radial-gradient(circle, rgba(183, 148, 255, 0.35) 0%, rgba(210, 185, 255, 0.18) 50%, transparent 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--blob-violet-alt) 35%, transparent) 0%, color-mix(in srgb, var(--blob-violet-alt) 18%, transparent) 50%, transparent 70%);
 }
 
 /* 세 번째 blob */
@@ -337,7 +422,7 @@ p, span, li, blockquote {
   bottom: 10vh;
   left: -5vw;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(206, 180, 255, 0.30) 0%, rgba(228, 210, 255, 0.15) 50%, transparent 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--blob-violet) 30%, transparent) 0%, color-mix(in srgb, var(--blob-violet) 15%, transparent) 50%, transparent 70%);
   pointer-events: none;
   z-index: -1;
 }
@@ -363,7 +448,7 @@ p, span, li, blockquote {
 /* Orange blob gradient background (선생님 모드) */
 .bg-blob-orange {
   position: relative;
-  background: #fffaf5;
+  background: var(--theme-teacher-bg);
   isolation: isolate;
 }
 
@@ -381,7 +466,7 @@ p, span, li, blockquote {
   height: 70vw;
   top: -10vw;
   left: -20vw;
-  background: radial-gradient(circle, rgba(255, 186, 120, 0.45) 0%, rgba(255, 210, 160, 0.22) 50%, transparent 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--theme-teacher-blob) 45%, transparent) 0%, color-mix(in srgb, var(--theme-teacher-blob) 22%, transparent) 50%, transparent 70%);
 }
 
 .bg-blob-orange::after {
@@ -389,7 +474,7 @@ p, span, li, blockquote {
   height: 60vw;
   top: 30vh;
   right: -15vw;
-  background: radial-gradient(circle, rgba(255, 165, 90, 0.30) 0%, rgba(255, 200, 150, 0.15) 50%, transparent 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--theme-teacher-blob-alt) 30%, transparent) 0%, color-mix(in srgb, var(--theme-teacher-blob-alt) 15%, transparent) 50%, transparent 70%);
 }
 
 .bg-blob-orange-extra {
@@ -399,10 +484,9 @@ p, span, li, blockquote {
   bottom: 10vh;
   left: -5vw;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 195, 140, 0.25) 0%, rgba(255, 215, 175, 0.12) 50%, transparent 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--theme-teacher-blob) 25%, transparent) 0%, color-mix(in srgb, var(--theme-teacher-blob) 12%, transparent) 50%, transparent 70%);
   pointer-events: none;
   z-index: -1;
-  z-index: 0 !important;
 }
 
 /* ─── Onboarding Visual Animations ─── */
