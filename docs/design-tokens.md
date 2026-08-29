@@ -104,8 +104,17 @@
 
 ## Figma 화면 현황 (📱 Screen 페이지, 2026-08-30 기준)
 
-완료: Onboarding 01 Welcome · 02 Login · 03 Profile-Setup 1/5~5/5 · Home/Dashboard · Practice Idle/Recording/Complete · Feedback List/Inbox/New/Submit · Ranking/Main · Stats/Weekly (17개)
-미작성: ai-analysis(목록/상세/섹션), songs/[id], rooms(목록/상세/업로드), teachers(목록/상세), teacher/students(목록/상세), profile, credits, plans, notifications, records, goals, routines, metronome, music-terms, help
+주요 앱 라우트 38개 화면 완료 (행별 배치, x 간격 450):
+- y=0 Onboarding 01 Welcome · 02 Login · 03 Profile-Setup 1/5~5/5
+- y=1013 Home/Dashboard · y=2065 Practice Idle/Recording/Complete · y=3051 Ranking/Main · Stats/Weekly · y=4016 Feedback List/Inbox/New/Submit
+- y=5000 AI Analysis List/Detail/Section Detail · Song/AI Analysis
+- y=6000 Rooms List/Detail/Upload · Teachers List/Detail · Teacher Students/Student Detail(오렌지, 선생님 네비)
+- y=7000 Profile/Main · Credits · Plans/Weekly · Notifications
+- y=8000 Records/Calendar · Goals/History · Routines/List · Metronome · Music Terms/Search · Help/Board
+
+미작성(우선순위 낮음): feedback/[id] 상세·view, help/new·[id]·submit, profile/teacher-profile·teacher-register, admin/*, (landing)/landing·privacy·terms·support, invite/[token], 모달/바텀시트 상태들.
+
+화면 제작 패턴: 390×844 프레임(`#faf8ff` + 블롭 2개) → `content`(VERTICAL, pad 24/16, h 780, clip) → 하단 `BottomNavigation` 인스턴스(컴포넌트 셋 `65:334`, 학생 Active=None `65:175`, AI `65:88`, Profile `65:146`, 선생님 Students `65:256`). 폰트 Noto Sans KR, 아이콘은 lucide SVG path를 `createNodeFromSvg`로 삽입.
 
 ## 미결/후속 작업
 
