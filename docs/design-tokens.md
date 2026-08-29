@@ -50,6 +50,27 @@
 | red | 500/600 | `#EF4444`(타깃) / `#DC2626`(현 CSS) |
 | blue | 500 | `#3B82F6` |
 
+### 네비게이션 시맨틱 (2026-07-12 추가)
+
+| CSS(예정) | Figma 변수 | 알리아스 | 값 |
+|---|---|---|---|
+| `--nav-bg` | `nav/bg` | `neutral/0` | `#FFFFFF` |
+| `--nav-border` | `nav/border` | `gray/100` | `#F3F4F6` |
+| `--nav-active` | `nav/active` | `neutral/1000` | `#000000` |
+| `--nav-inactive` | `nav/inactive` | `gray/400` | `#99A1AF` |
+
+### 추가 프리미티브 (2026-07-12 — 화면/Badge 실사용 Tailwind 값)
+
+| 패밀리 | 스텝 | 값 |
+|---|---|---|
+| gray (Tailwind gray, neutral과 별도) | 50/100/200/300/400/500/600/700/900 | `#F9FAFB` `#F3F4F6` `#E5E7EB` `#D1D5DB` `#99A1AF` `#6B7280` `#4B5563` `#374151` `#111827` |
+| green | +50/200/400/700 | `#F0FDF4` `#BBF7D0` `#4ADE80` `#15803D` |
+| yellow | +50/700 | `#FEFCE8` `#A16207` |
+| red | +50/200/400/700 | `#FEF2F2` `#FECACA` `#F87171` `#B91C1C` |
+| blue | +50/200/700 | `#EFF6FF` `#BFDBFE` `#1D4ED8` |
+
+이로써 Badge 24변형·Input 4상태·BottomNavigation 11변형의 모든 색이 변수 바인딩됨(하드코딩 0).
+
 ## 레이아웃 (Layout 컬렉션)
 
 | CSS | Figma | 값(px) |
@@ -57,6 +78,7 @@
 | `--radius-sm` | `radius/sm` | 12 |
 | `--radius-md` | `radius/md` | 14 |
 | `--radius-lg` (`--radius`) | `radius/lg` | 16 |
+| `--radius-xl` | `radius/xl` | 24 |
 | — | `radius/full` | 9999 |
 | — | `spacing/xs~2xl` | 4 / 8 / 12 / 16 / 24 / 32 |
 
@@ -79,6 +101,11 @@
 | `--shadow-soft` | `Shadow/Soft` | 0 2 8 -2 rgba(0,0,0,.08) |
 | `--shadow-card` | `Shadow/Card` | 0 1 3 0 rgba(0,0,0,.1) + 0 1 2 -1 rgba(0,0,0,.1) |
 | `--shadow-elevated` | `Shadow/Elevated` | 0 4 12 -2 rgba(0,0,0,.12) |
+
+## Figma 화면 현황 (📱 Screen 페이지, 2026-08-30 기준)
+
+완료: Onboarding 01 Welcome · 02 Login · 03 Profile-Setup 1/5~5/5 · Home/Dashboard · Practice Idle/Recording/Complete · Feedback List/Inbox/New/Submit · Ranking/Main · Stats/Weekly (17개)
+미작성: ai-analysis(목록/상세/섹션), songs/[id], rooms(목록/상세/업로드), teachers(목록/상세), teacher/students(목록/상세), profile, credits, plans, notifications, records, goals, routines, metronome, music-terms, help
 
 ## 미결/후속 작업
 
