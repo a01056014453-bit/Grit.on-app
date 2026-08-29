@@ -30,6 +30,7 @@ import { getUserId } from "@/lib/user-id";
 import { addUserAnalysis, removeUserAnalysis } from "@/lib/user-analyses";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 import { ComposerAutocomplete, TitleAutocomplete, loadComposerImages } from "@/components/ui/composer-autocomplete";
+import { IconButton } from "@/components/ui/icon-button";
 
 // ── 타입 ──
 
@@ -546,15 +547,15 @@ export default function AIAnalysisPage() {
 
       {/* 헤더 */}
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => safeBack(router)} className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-          <ArrowLeft className="w-5 h-5 text-gray-600" />
-        </button>
+        <IconButton variant="solid" aria-label="뒤로가기" onClick={() => safeBack(router)}>
+          <ArrowLeft />
+        </IconButton>
         <div className="flex-1">
-          <h1 className="text-lg font-bold text-black">AI 곡 분석</h1>
-          <p className="text-xs text-gray-500">AI 분석 완료된 곡 {totalCount}개</p>
+          <h1 className="text-lg font-bold text-fg-primary">AI 곡 분석</h1>
+          <p className="text-xs text-fg-secondary">AI 분석 완료된 곡 {totalCount}개</p>
         </div>
-        <div className="w-10 h-10 rounded-full bg-violet-100 flex items-center justify-center">
-          <Folder className="w-5 h-5 text-violet-600" />
+        <div className="w-10 h-10 rounded-full bg-tint-violet flex items-center justify-center">
+          <Folder className="w-5 h-5 text-fg-brand" />
         </div>
       </div>
 

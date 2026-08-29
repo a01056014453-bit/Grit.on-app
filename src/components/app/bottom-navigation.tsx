@@ -168,7 +168,7 @@ export function BottomNavigation() {
         </div>
       )}
 
-      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-100 safe-bottom">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-nav-bg border-t border-nav-border safe-bottom">
         {/* 에러 메시지 */}
         {guardError && (
           <div className="bg-red-100 text-red-700 text-center py-1.5 text-[11px] font-medium">
@@ -204,7 +204,7 @@ export function BottomNavigation() {
                   onClick={(e) => handleNavClick(e, item.href, item.exact)}
                   className={cn(
                     "flex flex-col items-center justify-center w-16 h-full transition-colors relative",
-                    active ? "text-black" : "text-gray-400",
+                    active ? "text-nav-active" : "text-nav-inactive",
                   )}
                 >
                   {showIndicator && (

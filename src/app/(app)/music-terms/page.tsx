@@ -4,6 +4,9 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { safeBack } from "@/lib/navigation";
 import { ArrowLeft, Search, BookOpen, Music, Volume2, Gauge, Hand, Mic, Users, Zap, PenTool } from "lucide-react";
+import { IconButton } from "@/components/ui/icon-button";
+import { Chip } from "@/components/ui/chip";
+import { GlassCard } from "@/components/ui/glass-card";
 
 interface MusicTerm {
   term: string;
@@ -1272,12 +1275,9 @@ export default function MusicTermsPage() {
       <div className="bg-blob-extra" />
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
-        <button
-          onClick={() => safeBack(router)}
-          className="w-10 h-10 rounded-full bg-white/40 backdrop-blur-sm flex items-center justify-center hover:bg-white/60 transition-colors border border-white/50"
-        >
-          <ArrowLeft className="w-5 h-5 text-muted-foreground" />
-        </button>
+        <IconButton aria-label="뒤로가기" onClick={() => safeBack(router)}>
+          <ArrowLeft className="text-muted-foreground" />
+        </IconButton>
         <div className="flex-1">
           <h1 className="text-lg font-bold text-foreground">음악용어 검색</h1>
           <p className="text-xs text-muted-foreground">악보 기호와 용어 뜻 알아보기</p>
@@ -1319,18 +1319,14 @@ export default function MusicTermsPage() {
       {/* Category Filter */}
       <div className="flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-hide">
         {categories.map((cat) => (
-          <button
+          <Chip
             key={cat.key}
+            active={selectedCategory === cat.key}
             onClick={() => setSelectedCategory(cat.key)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
-              selectedCategory === cat.key
-                ? "bg-violet-600 text-white shadow-sm"
-                : "bg-white/40 text-gray-600 hover:bg-white/60"
-            }`}
           >
-            <cat.icon className="w-3.5 h-3.5" />
+            <cat.icon />
             {cat.label}
-          </button>
+          </Chip>
         ))}
       </div>
 
@@ -1342,26 +1338,23 @@ export default function MusicTermsPage() {
       {/* Terms List */}
       <div className="space-y-2">
         {filteredTerms.length === 0 ? (
-          <div className="text-center py-12 bg-white/50 backdrop-blur-xl rounded-2xl border border-white/60 shadow-sm">
+          <GlassCard padding={0} className="text-center py-12">
             <BookOpen className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
             <p className="text-muted-foreground">검색 결과가 없습니다</p>
-          </div>
+          </GlassCard>
         ) : (
           filteredTerms.map((term, index) => (
-            <div
-              key={index}
-              className="bg-white/50 backdrop-blur-xl rounded-2xl px-3.5 py-2.5 border border-white/60 shadow-sm"
-            >
+            <GlassCard key={index} padding={0} className="px-3.5 py-2.5">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-bold text-foreground">
-                  {term.term} <span className="font-medium text-violet-600">{term.korean}</span>
+                  {term.term} <span className="font-medium text-fg-brand">{term.korean}</span>
                 </p>
                 <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0 ml-2 ${getCategoryColor(term.category)}`}>
                   {getCategoryLabel(term.category)}
                 </span>
               </div>
-              <p className="text-xs text-gray-500 mt-0.5">{term.meaning}</p>
-            </div>
+              <p className="text-xs text-fg-secondary mt-0.5">{term.meaning}</p>
+            </GlassCard>
           ))
         )}
       </div>

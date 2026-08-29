@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { safeBack } from "@/lib/navigation";
 import { MessageSquare, Clock, CheckCircle, Plus, ChevronRight, ChevronLeft } from "lucide-react";
 import { RequestStatusChip } from "@/components/feedback/request-status-chip";
+import { IconButton } from "@/components/ui/icon-button";
+import { GlassCard } from "@/components/ui/glass-card";
 import { getFeedbackRequests } from "@/lib/queries";
 import { getCachedPageData, setCachedPageData } from "@/lib/page-cache";
 import { getRemainingTime } from "@/lib/time-utils";
@@ -53,12 +55,9 @@ export default function FeedbackListPage() {
     <div className="px-4 py-6 max-w-lg mx-auto pb-24 min-h-screen bg-blob-violet">
       <div className="bg-blob-extra" />
       <div className="mb-6 flex items-center gap-3">
-        <button
-          onClick={() => safeBack(router)}
-          className="w-9 h-9 rounded-full bg-white/30 backdrop-blur-sm flex items-center justify-center border border-white/40 hover:bg-white/50 transition-colors shrink-0"
-        >
-          <ChevronLeft className="w-5 h-5 text-gray-700" />
-        </button>
+        <IconButton size={36} aria-label="뒤로가기" onClick={() => safeBack(router)}>
+          <ChevronLeft />
+        </IconButton>
         <div>
           <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
             <MessageSquare className="w-6 h-6 text-primary" />
@@ -108,7 +107,7 @@ export default function FeedbackListPage() {
             <p className="text-sm text-muted-foreground">불러오는 중...</p>
           </div>
         ) : filteredRequests.length === 0 ? (
-          <div className="text-center py-12 bg-white/40 backdrop-blur-xl rounded-2xl border border-white/50">
+          <GlassCard padding={0} className="text-center py-12">
             <MessageSquare className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
             <p className="text-muted-foreground">
               {tab === "active" ? "진행중인 요청이 없습니다" : "완료된 요청이 없습니다"}
@@ -121,7 +120,7 @@ export default function FeedbackListPage() {
                 선생님 찾아보기
               </Link>
             )}
-          </div>
+          </GlassCard>
         ) : (
           filteredRequests.map((request) => {
             const remainingTime =
@@ -139,7 +138,7 @@ export default function FeedbackListPage() {
                     ? `/feedback/${request.id}/view`
                     : `/feedback/${request.id}`
                 }
-                className="block bg-white/40 backdrop-blur-xl rounded-2xl p-4 border border-white/50 hover:bg-white/60 hover:shadow-sm transition-all"
+                className="block bg-surface-glass-bg/40 backdrop-blur-xl rounded-2xl p-4 border border-surface-glass-border/50 hover:bg-surface-glass-bg/60 hover:shadow-sm transition-all"
               >
                 <div className="flex items-start justify-between mb-2">
                   <RequestStatusChip status={request.status} />
