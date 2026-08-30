@@ -102,6 +102,9 @@ src/
 
 전체 컬러 팔레트·타이포·이펙트 토큰(Figma ↔ CSS 매핑 소스 오브 트루스): @docs/design-tokens.md
 
+- 텍스트/배경/테두리 색은 토큰 클래스 사용: `text-fg-primary|secondary|tertiary|brand`, `bg-surface-*`, `bg-tint-violet*`, `border-line-subtle|default`. 신규 코드에서 `text-gray-*`·`bg-white/40 backdrop-blur-*` 같은 raw 값 금지
+- 반복 UI는 `src/components/ui/`의 공용 컴포넌트 사용: 원형 아이콘 버튼 `IconButton`, 필터 칩 `Chip`, 글래스 카드 `GlassCard`, 통계 분할 `StatGroup` (Figma 🧩 세트와 1:1)
+
 ---
 
 ## 코드 컨벤션

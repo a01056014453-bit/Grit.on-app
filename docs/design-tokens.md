@@ -50,9 +50,9 @@
 | red | 500/600 | `#EF4444`(타깃) / `#DC2626`(현 CSS) |
 | blue | 500 | `#3B82F6` |
 
-### 네비게이션 시맨틱 (2026-07-12 추가)
+### 네비게이션 시맨틱 (2026-07-12 추가, 2026-08-30 CSS 반영)
 
-| CSS(예정) | Figma 변수 | 알리아스 | 값 |
+| CSS | Figma 변수 | 알리아스 | 값 |
 |---|---|---|---|
 | `--nav-bg` | `nav/bg` | `neutral/0` | `#FFFFFF` |
 | `--nav-border` | `nav/border` | `gray/100` | `#F3F4F6` |
@@ -158,8 +158,22 @@
 페인트 2,684 중 2,679 변수 바인딩(99.8%, 미바인딩 5개는 Google 로그인 브랜드색) · 텍스트 1,099 중 1,057 스타일 적용(96%, 나머지는 이모지·히어로 숫자) · radius 390 · gap 320 바인딩.
 값 스냅: `#9ca3af`→`gray/400 #99A1AF`, `#22c55e`→`green/500 #10B981`, 블롭 `#c4a7ff/#b794ff`→`violet/300·400` (시각 차이 미미, 회귀 스크린샷 확인).
 
-### 코드 반영 필요 (별도 PR)
-`globals.css`에 위 시맨틱 변수(`--surface-*`, `--tint-*`, `--text-*`, `--border-*`, `--theme-teacher-*`, `--status-*-tint/text`)를 추가하고 `.bg-blob-*`·글래스 카드 클래스가 이를 참조하도록 교체.
+### 코드 반영 (2026-08-30 완료)
+
+`globals.css` `:root`에 위 시맨틱 변수를 **Figma 변수와 동명**으로 추가(`--surface-*`, `--tint-*`, `--text-*`, `--border-*`, `--blob-*`, `--theme-teacher-*`, `--status-*-tint/text`, `--nav-*`), `@theme inline`에 브릿지를 두어 유틸리티 클래스로 사용한다. `.bg-blob-*`는 토큰 + `color-mix()`로 치환됨.
+
+| 용도 | CSS 변수 | Tailwind 클래스 |
+|---|---|---|
+| 텍스트 | `--text-primary/secondary/tertiary/brand/on-brand` | `text-fg-primary` `text-fg-secondary` `text-fg-tertiary` `text-fg-brand` `text-fg-on-brand` |
+| 서피스 | `--surface-app-bg/card/glass-bg/glass-border/dark/dark-raised` | `bg-surface-app-bg` `bg-surface-card` `bg-surface-glass-bg/40` `border-surface-glass-border/50` … |
+| 틴트 | `--tint-violet-subtle/violet/violet-strong` | `bg-tint-violet-subtle` `bg-tint-violet` `bg-tint-violet-strong` |
+| 테두리 | `--border-subtle/default` | `border-line-subtle` `border-line-default` (`border-border-*` 중복 회피) |
+| 선생님 테마 | `--theme-teacher-*` | `bg-teacher-bg` `text-teacher-accent` `bg-teacher-tint` … |
+| 상태 | `--status-{success,warning,error,info}-tint/text` | `bg-status-success-tint` `text-status-success-text` … |
+| 네비 | `--nav-bg/border/active/inactive` | `bg-nav-bg` `border-nav-border` `text-nav-active` `text-nav-inactive` |
+
+공용 컴포넌트(`src/components/ui/`): `IconButton`(icon-button.tsx) · `Chip`(chip.tsx) · `GlassCard`(glass-card.tsx) · `StatGroup`(stat-group.tsx) — Figma 🧩 세트와 1:1, 색은 전부 토큰 클래스.
+적용 현황: `text-gray-900/500/400` → `text-fg-*` 전 앱 치환(1,115곳). BottomNavigation·feedback·ai-analysis·music-terms에 컴포넌트 적용. 나머지 페이지의 글래스카드/칩/뒤로가기 컴포넌트 교체와 `bg-violet-600` 강조색 치환은 후속.
 
 ## 미결/후속 작업
 
