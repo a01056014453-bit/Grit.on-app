@@ -175,6 +175,15 @@
 공용 컴포넌트(`src/components/ui/`): `IconButton`(icon-button.tsx) · `Chip`(chip.tsx) · `GlassCard`(glass-card.tsx) · `StatGroup`(stat-group.tsx) — Figma 🧩 세트와 1:1, 색은 전부 토큰 클래스.
 적용 현황: `text-gray-900/500/400` → `text-fg-*` 전 앱 치환(1,115곳). BottomNavigation·feedback·ai-analysis·music-terms에 컴포넌트 적용. 나머지 페이지의 글래스카드/칩/뒤로가기 컴포넌트 교체와 `bg-violet-600` 강조색 치환은 후속.
 
+
+## 2026-08-31 기본 디자인 시스템 완성 (아이콘·복합 컴포넌트·문서)
+
+- **아이콘 43종** (`🧩 Icons`): lucide-react 동명 `Icon/<name>` 컴포넌트(24px, stroke `foreground` 바인딩). 인스턴스 스왑 + selection colors로 색 변경. 나머지 ~70종은 필요 시 같은 패턴으로 추가.
+- **복합 컴포넌트 12세트**: PageHeader(4) · ListRow(9) · EmptyState(2) · Dialog(2) · BottomActionBar(2) · FAB(2) · Tabs(5) · SearchInput(4) · CalendarGrid(2)+`.Building Blocks/Calendar Cell`(10) · StepIndicator(10) · Slider(2)/Select(2)/Textarea(2)/Skeleton(3)(Form Extras). 전부 변수·스타일 바인딩 + description에 코드 근거.
+- **문서**: `📕 Cover`, `📖 Getting Started`(토큰 규칙·컴포넌트↔코드 매핑·화면 규격·작업 원칙), Foundations에 Spacing/Radius 스와치·아이콘 그리드 추가. 페이지 순서: Cover → Getting Started → Foundations → Icons → 컴포넌트(알파벳) → Screen → User Journey.
+- 합계: 변수 160개 · 텍스트 스타일 19종 · 이펙트 3종 · 컴포넌트 27세트(120+변형) · 아이콘 43종 · 화면 38개.
+- 후속: 나머지 아이콘 ~70종, 기존 화면에 신규 컴포넌트(PageHeader/ListRow 등) 소급 적용, Code Connect, Team Library publish(유료 플랜 필요).
+
 ## 미결/후속 작업
 
 1. **상태색 CSS 전환**: `--success/--warning/--error/--destructive`를 Figma 타깃 값(#10B981/#F97316/#EF4444)으로 바꾸는 별도 PR — 뱃지·알림 등 전 앱 시각 영향이라 스크린샷 회귀 확인 필요.
