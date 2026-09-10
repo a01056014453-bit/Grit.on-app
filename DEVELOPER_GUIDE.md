@@ -17,22 +17,10 @@ npm install
 
 ## 2. 환경변수 설정
 
-`.env.local` 파일을 프로젝트 루트에 생성하세요.
-**팀 리드에게 Slack DM으로 파일을 요청하세요.**
+`.env.local` 파일을 프로젝트 루트에 생성하세요. Vercel 권한이 있다면 `npx vercel link` → `npx vercel env pull .env.local`로 받을 수 있고, 없다면 팀 리드에게 요청하세요.
 
-필요한 환경변수 목록:
-```
-NEXT_PUBLIC_SUPABASE_URL=        # Supabase 프로젝트 URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY=   # Supabase 공개 키
-SUPABASE_SERVICE_ROLE_KEY=       # Supabase 서비스 키 (서버 전용)
-OPENAI_API_KEY=                  # GPT-4o API 키
-PERPLEXITY_API_KEY=              # Perplexity 검색 API
-ANTHROPIC_API_KEY=               # Claude API 키
-ADMIN_USER_IDS=                  # 어드민 유저 UUID (쉼표 구분)
-CRON_SECRET=                     # Cron 인증 토큰
-RESEND_API_KEY=                  # 이메일 발송
-SLACK_WEBHOOK_URL=               # Slack 알림
-```
+필요한 환경변수 목록과 필수/선택 구분은 [`.env.example`](.env.example)이 정본입니다.
+새 PC 셋업 전체 절차(도구·git 전역 설정·Claude 설정 이전)는 [docs/new-pc-setup.md](docs/new-pc-setup.md)를 참고하세요.
 
 ## 3. 로컬 개발 서버 실행
 

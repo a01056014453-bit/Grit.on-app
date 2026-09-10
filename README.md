@@ -28,8 +28,10 @@
 npm install
 cp .env.example .env.local   # 필요한 키 채우기 (.env.example의 주석 참조)
 npm run dev                  # 개발 서버
-npm run dev:clean            # 캐시/서비스워커 초기화 후 개발 서버
+npm run dev:clean            # 캐시/서비스워커 초기화 후 개발 서버 (Git Bash에서 실행)
 ```
+
+새 PC에서 처음 셋업한다면 → [docs/new-pc-setup.md](docs/new-pc-setup.md) (도구 설치·`.env.local` 받기·Claude 설정 이전)
 
 ## 테스트 · 빌드
 
