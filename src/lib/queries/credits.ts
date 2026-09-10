@@ -146,7 +146,22 @@ export async function chargeCredits(params: {
   amount: number;
   description?: string;
 }): Promise<{ success: boolean; newBalance?: number }> {
-  const { balance } = await getCreditBalance(params.userId);
+  // 현재 잔액 + 누적 구매 횟수 조회
+  let balance = 0;
+  let totalPurchases = 0;
+  try {
+    const res = await fetch(
+      `/api/db/query?table=profiles&filter=id.eq.${params.userId}&limit=1`,
+    );
+    if (res.ok) {
+      const { data } = await res.json();
+      balance = data?.[0]?.credit_balance ?? 0;
+      totalPurchases = data?.[0]?.total_credit_purchases ?? 0;
+    }
+  } catch {
+    // 조회 실패 시 0 기준으로 진행하지 않고 중단 (잔액 덮어쓰기 방지)
+    return { success: false };
+  }
   const newBalance = balance + params.amount;
 
   const updateResult = await dbMutate({
@@ -154,7 +169,7 @@ export async function chargeCredits(params: {
     operation: "update",
     data: {
       credit_balance: newBalance,
-      total_credit_purchases: params.amount, // TODO: INCREMENT
+      total_credit_purchases: totalPurchases + 1,
     },
     filters: { id: params.userId },
   });

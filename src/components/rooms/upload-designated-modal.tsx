@@ -26,7 +26,6 @@ export function UploadDesignatedModal({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedPiece, setSelectedPiece] = useState<DesignatedPiece | null>(null);
-  const [faceBlur, setFaceBlur] = useState(true);
   const [anonymous, setAnonymous] = useState(true);
 
   const pieces = school.designatedPieces ?? [];
@@ -78,7 +77,6 @@ export function UploadDesignatedModal({
     setSearchQuery("");
     setSelectedCategory(null);
     setSelectedPiece(null);
-    setFaceBlur(true);
     setAnonymous(true);
     onClose();
   };
@@ -241,15 +239,13 @@ export function UploadDesignatedModal({
 
           {/* 옵션 */}
           <div className="space-y-2 mb-4">
-            <label className="flex items-center gap-3 p-3 bg-secondary/50 rounded-xl cursor-pointer">
-              <input
-                type="checkbox"
-                checked={faceBlur}
-                onChange={(e) => setFaceBlur(e.target.checked)}
-                className="rounded"
-              />
+            {/* 얼굴 자동 블러는 아직 미구현 — 기능 완성(v2) 전까지 선택 불가로 표시 */}
+            <div className="flex items-center gap-3 p-3 bg-secondary/50 rounded-xl opacity-60">
               <span className="text-sm text-foreground">얼굴 자동 블러 처리</span>
-            </label>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground font-medium">
+                준비 중
+              </span>
+            </div>
             <label className="flex items-center gap-3 p-3 bg-secondary/50 rounded-xl cursor-pointer">
               <input
                 type="checkbox"
