@@ -36,20 +36,13 @@ export const metadata: Metadata = {
     siteName: "Sempre",
     title: "Sempre - 클래식 연습 코치",
     description: "AI 기반 클래식 음악 연습 지원 앱. 체계적인 연습 계획과 실시간 분석으로 실력을 향상시키세요.",
-    images: [
-      {
-        url: "https://withsempre.com/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: "Sempre - 클래식 연습 코치",
-      },
-    ],
+    // og 이미지는 src/app/opengraph-image.tsx 파일 컨벤션으로 자동 생성됨
   },
   twitter: {
     card: "summary_large_image",
     title: "Sempre - 클래식 연습 코치",
     description: "AI 기반 클래식 음악 연습 지원 앱. 체계적인 연습 계획과 실시간 분석으로 실력을 향상시키세요.",
-    images: ["https://withsempre.com/og-image.png"],
+    // twitter 이미지는 opengraph-image를 자동 사용
   },
   verification: {
     google: "63odlgaGdt4Q_LHdQkbnyxYneAaZ9YaSf3_3qpvHVro",
@@ -78,33 +71,9 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body className={`${montserrat.variable} antialiased`}>
-        {/* 목업 데이터 정리 - 인라인 스크립트로 SW 캐시 무관하게 즉시 실행 */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                var v = localStorage.getItem('sempre-data-version');
-                if (v === '7') return;
-                localStorage.removeItem('grit-on-notifications');
-                localStorage.removeItem('sempre-notifications');
-                localStorage.removeItem('grit-on-onboarding-complete');
-                localStorage.removeItem('sempre-onboarding-complete');
-                indexedDB.deleteDatabase('sempre_db');
-                if ('serviceWorker' in navigator) {
-                  navigator.serviceWorker.getRegistrations().then(function(r) {
-                    r.forEach(function(sw) { sw.unregister(); });
-                  });
-                }
-                if ('caches' in window) {
-                  caches.keys().then(function(k) {
-                    k.forEach(function(c) { caches.delete(c); });
-                  });
-                }
-                localStorage.setItem('sempre-data-version', '7');
-              })();
-            `,
-          }}
-        />
+        {/* 과거 목업 데이터 1회성 마이그레이션 스크립트는 출시 전 제거됨.
+            (신규 방문자의 첫 로드에서 SW unregister + 캐시 전체 삭제가 일어나
+            PWA 설치성·오프라인 캐시를 해치던 문제) */}
         {isDev && (
           <script
             dangerouslySetInnerHTML={{

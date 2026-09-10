@@ -1,6 +1,7 @@
 "use client";
 
 import { use } from "react";
+import { notFound } from "next/navigation";
 import {
   Home, Play, Pause, User, Zap, Trophy, ArrowLeft, Bell,
   Search, Users, GraduationCap, Check, BookOpen,
@@ -2244,6 +2245,12 @@ const mockupMap: Record<string, () => React.ReactNode> = {
 
 export default function MockupPage({ params }: { params: Promise<{ feature: string }> }) {
   const { feature } = use(params);
+
+  // App Store 스크린샷 제작용 내부 페이지 — 프로덕션에서는 노출하지 않음
+  if (process.env.NODE_ENV === "production") {
+    notFound();
+  }
+
   const Renderer = mockupMap[feature];
 
   if (!Renderer) {
