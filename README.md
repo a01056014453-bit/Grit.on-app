@@ -1,100 +1,53 @@
-# SEMPRE App
+# SEMPRE (셈프레) — GRIT.ON App
 
-AI 기반 클래식 음악 연습 지원 PWA 앱
+클래식 음악 전공생을 위한 AI 순연습시간 측정 & 연습 관리 · 레슨 연결 PWA
 
-## 개요
+- **프로덕션**: https://withsempre.com (Vercel, `main` push 시 자동 배포)
+- **상세 문서**: 프로젝트 규칙·구조·DB 스키마는 [CLAUDE.md](./CLAUDE.md)와 [docs/](./docs/) 참조
 
-SEMPRE는 클래식 음악가를 위한 연습 지원 앱입니다. 실시간 연습 녹음, AI 분석, 순연습시간 측정, 맞춤 연습 계획 생성 등의 기능을 제공합니다.
+## 주요 기능
+
+- **순연습시간 자동 측정** — Web Audio API + YAMNet VAD로 실제 악기 소리가 나는 시간만 누적
+- **원포인트 레슨** — 학생 연습 영상 업로드 → 선생님 비동기 피드백 (크레딧 기반)
+- **입시룸** — 학교별 연습실, 같은 곡 연습 학생끼리 영상 비교
+- **AI 곡 분석** — 악보 분석, 마디별 취약 구간, 연습 추천 (Claude + OpenAI)
+- **랭킹 / 선생님 모드 / 웹 푸시 알림**
 
 ## 기술 스택
 
-- **Framework**: Next.js 15 (App Router)
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS 4
-- **UI Components**: Radix UI
-- **Backend**: Supabase (예정)
-- **PWA**: Serwist (Service Worker)
+- **Framework**: Next.js 15 (App Router) + React 19 + TypeScript 5
+- **Styling**: Tailwind CSS 4 · Framer Motion · Radix UI
+- **Backend**: Supabase (PostgreSQL + Auth + Storage)
+- **AI**: Anthropic Claude SDK + OpenAI SDK · TensorFlow.js(YAMNet)
+- **PWA**: Serwist (Service Worker + 웹 푸시 VAPID)
+- **모니터링**: Sentry · **배포**: Vercel
 
 ## 시작하기
 
 ```bash
-# 의존성 설치
 npm install
-
-# 개발 서버 실행
-npm run dev
-
-# 프로덕션 빌드
-npm run build
-npm start
+cp .env.example .env.local   # 필요한 키 채우기 (.env.example의 주석 참조)
+npm run dev                  # 개발 서버
+npm run dev:clean            # 캐시/서비스워커 초기화 후 개발 서버
 ```
 
-## 프로젝트 구조
+## 테스트 · 빌드
 
-```
-src/
-├── app/
-│   ├── layout.tsx          # 루트 레이아웃
-│   ├── globals.css         # 전역 스타일
-│   └── (app)/              # 앱 라우트 그룹
-│       ├── layout.tsx      # 앱 레이아웃 (하단 네비)
-│       ├── page.tsx        # 홈 (대시보드)
-│       ├── practice/       # 연습 세션
-│       ├── recordings/     # 녹음 기록
-│       │   └── [id]/       # 녹음 상세
-│       ├── analysis/       # AI 분석 결과
-│       ├── plans/          # 연습 계획
-│       └── profile/        # 프로필/설정
-├── components/
-│   ├── app/                # 앱 전용 컴포넌트
-│   └── ui/                 # 공통 UI 컴포넌트
-├── lib/
-│   └── utils.ts            # 유틸리티 함수
-└── sw.ts                   # Service Worker
+```bash
+npm test              # 유닛 테스트 (vitest)
+npm run test:api      # API 테스트
+npm run test:e2e      # E2E (puppeteer, TEST_BASE_URL 필요)
+npm run test:ci       # CI 조합 (unit + api)
+npm run lint          # ESLint
+npm run build         # 프로덕션 빌드
 ```
 
-## 화면 구성
+CI: `.github/workflows/test.yml`이 `main`/`develop` push와 `main` 대상 PR에서 lint + test + build를 실행한다.
 
-| 화면 | 경로 | 설명 |
-|------|------|------|
-| 홈 | `/` | 대시보드, 통계, 오늘의 목표 |
-| 연습 | `/practice` | 연습 타이머, 녹음 |
-| 녹음 | `/recordings` | 녹음 목록 |
-| 녹음 상세 | `/recordings/[id]` | 개별 녹음 상세, 재생 |
-| 분석 | `/analysis` | AI 분석 결과 |
-| 계획 | `/plans` | 주간 계획, 오늘의 할 일 |
-| 프로필 | `/profile` | 설정, 계정 관리 |
+## 배포
 
-## 디자인 시스템
-
-### 컬러
-
-```css
---primary: #8B5CF6;    /* 바이올렛 - 메인 브랜드 컬러 */
---accent: #3B82F6;     /* 블루 - 보조 컬러 */
---background: #F9FAFB; /* 배경 */
---foreground: #111827; /* 텍스트 */
-```
-
-### 컴포넌트
-
-**앱 컴포넌트 (`components/app/`)**
-- `AppShell` - 앱 전체 레이아웃 쉘
-- `BottomNavigation` - 하단 탭 바
-- `StatsCard` - 통계 카드
-- `ProgressRing` - 원형 프로그레스
-- `QuoteCard` - 명언 카드
-- `DailyGoal` - 오늘의 목표
-
-**UI 컴포넌트 (`components/ui/`)**
-- `Button` - 버튼
-- `Modal` - 모달 다이얼로그
-
-## PWA 지원
-
-- iOS/Android 홈 화면 추가 지원
-- 오프라인 캐싱
-- 푸시 알림 (예정)
+별도 배포 스크립트 없음. **`main`에 push하면 Vercel이 프로덕션에 자동 배포**된다.
+`main` 직접 push 금지 — 브랜치에서 PR을 거쳐 머지할 것 (자세한 규칙: CLAUDE.md).
 
 ## 라이선스
 

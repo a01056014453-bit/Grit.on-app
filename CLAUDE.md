@@ -54,7 +54,7 @@ src/
 │   ├── api/                      # API Routes (30+ 엔드포인트)
 │   ├── auth/                     # OAuth 콜백 페이지
 │   └── invite/[token]/           # 학생 초대 수락
-├── components/                   # teacher/, practice/, feedback/, ui/, AuthGuard.tsx
+├── components/                   # teacher/, practice/, feedback/, ui/, AuthGuard.tsx1 
 ├── lib/                          # queries/, services/, supabase*.ts, db-mutate.ts, teacher-store.ts, push-*.ts
 ├── hooks/                        # useTeacherMode, useAudioRecorder(핵심: VAD+순연습시간), usePracticeSessions
 ├── types/                        # database.ts(Supabase 자동생성, 직접 수정 금지), feedback.ts 등
@@ -78,10 +78,11 @@ src/
 | 플랜 | 가격 | 내용 |
 |------|------|------|
 | Free | 무료 | 기본 타이머, 순연습시간 측정, 기본 통계 |
-| Pro | ₩15,900/월 | 무제한 AI 분석, 상세 리포트, 클라우드 백업, 광고 제거 |
+| Pro | ₩23,900/월 | 매월 10크레딧 자동 지급, 무제한 AI 분석, 상세 리포트, 클라우드 백업 |
 
-- **원포인트 레슨 크레딧 수익배분**: 플랫폼 70% / 선생님 30%
+- **원포인트 레슨 크레딧 수익배분**: 플랫폼 70% / 선생님 30% (v2 예정 — v1은 플랫폼 100%, `docs/prd/feedback-credit-system.md` 참조)
 - **파트너**: Wonart, Leanup, Piu
+- ⚠️ **현재 무료 출시 상태**: PG(토스페이먼츠) 미연동. `/api/credits/charge`는 501 반환, 충전/Pro 버튼은 "준비 중" 안내만 표시
 
 ---
 
