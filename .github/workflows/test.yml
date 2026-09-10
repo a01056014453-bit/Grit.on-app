@@ -7,9 +7,13 @@ on:
     branches: [main]
 
 jobs:
-  unit-test:
-    name: Unit Tests
+  test:
+    name: Lint / Test / Build
     runs-on: ubuntu-latest
+    env:
+      # 빌드 검증용 placeholder — 실제 값은 Vercel 환경변수에서 주입됨
+      NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -17,4 +21,8 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - run: npm test
+      - run: npm run lint
+      # test:ci = unit + api (api 테스트는 TEST_BASE_URL 없으면 자동 스킵)
+      - run: npm run test:ci
+      # 타입 오류·빌드 실패를 프로덕션 배포 전에 잡기 위한 게이트
+      - run: npm run build
