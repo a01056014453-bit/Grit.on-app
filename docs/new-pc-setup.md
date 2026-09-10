@@ -48,6 +48,10 @@ git config --global user.email "<이메일>"
 git config --global core.autocrlf input
 ```
 
+Git for Windows 설치 기본값은 시스템 레벨 `core.autocrlf=true`다. global에 `input`을 넣지 않으면 체크아웃 파일이 CRLF로 바뀌어 불필요한 diff가 생길 수 있다.
+
+같은 이유로 새 PC에서 `npm install` 직후 `package-lock.json`이 수정됨으로 뜨는 경우가 있다. npm 버전 차이로 `"peer": true` 같은 메타데이터만 바뀐 것이면 커밋하지 말고 되돌린다(`git diff package-lock.json`으로 버전 변경이 없는지 확인).
+
 그리고 전역 gitignore `%USERPROFILE%\.config\git\ignore`에 아래 한 줄을 넣는다. 프로젝트 `.gitignore`가 아니라 **전역**에서 제외하고 있으므로, 이게 없으면 로컬 Claude 권한 설정이 커밋 대상으로 잡힌다.
 
 ```
@@ -62,6 +66,7 @@ git config --global core.autocrlf input
 | `C:\Grit.on-app\.claude\settings.local.json` | 이 프로젝트의 권한 allow/deny (`.env*` 읽기 차단 규칙 포함) |
 | `%USERPROFILE%\.claude\projects\c--Grit-on-app\memory\` | 이 프로젝트에 대한 Claude 메모리 |
 
+- ⚠️ **Windows 사용자명이 바뀌면**(예: `lee` → `lbh05`) `settings.local.json`의 `Read(//c/Users/<이름>/...)` 같은 절대경로 권한 규칙도 새 이름으로 고쳐야 한다. 메모리 폴더 이름(`c--Grit-on-app`)은 리포 경로 기준이라 그대로다.
 - `.claude/agents/`와 `.mcp.json`은 리포에 커밋돼 있어 따로 옮길 필요 없다.
 - 플러그인은 `settings.json`의 `enabledPlugins`/`extraKnownMarketplaces`를 보고 첫 실행 시 다시 설치된다 (`plugins/` 캐시는 옮기지 않는다).
 - `cleanupPeriodDays`가 기본값(30일)이면 오래된 세션 기록이 자동 삭제된다. 긴 작업의 진행 상황은 세션이 아니라 리포 문서에 남길 것.

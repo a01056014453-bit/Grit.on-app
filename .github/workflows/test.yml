@@ -14,6 +14,10 @@ jobs:
       # 빌드 검증용 placeholder — 실제 값은 Vercel 환경변수에서 주입됨
       NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+      # 모듈 로드 시점에 클라이언트를 만드는 서버 코드가 있어 빌드(page data 수집)에 필요
+      # (lib/supabase-server.ts, api/slack/events). 없으면 "supabaseKey is required"로 빌드 실패
+      SUPABASE_SERVICE_ROLE_KEY: placeholder-service-role-key
+      ANTHROPIC_API_KEY: placeholder-anthropic-key
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

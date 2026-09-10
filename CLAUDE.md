@@ -153,6 +153,8 @@ npm run test:ci       # CI 실행 조합 (unit + api)
 
 **배포**: 별도 배포 스크립트 없음. `main`에 push하면 Vercel이 자동으로 프로덕션에 배포한다. GitHub Actions(`test.yml`)가 `main`/`develop` push와 `main` 대상 PR에서 `npm ci` → `lint` → `test:ci` → `build`를 실행해 게이트 역할을 한다. 그 외 브랜치 push에서는 CI가 돌지 않으므로 push 전 로컬에서 같은 3종을 돌릴 것.
 
+**빌드 함정**: `lib/supabase-server.ts`처럼 **모듈 최상위에서 SDK 클라이언트를 생성**하는 서버 코드는 `next build`의 page data 수집 단계에서 import되므로, 키가 없으면 빌드가 실패한다. 로컬은 `.env.local` 덕분에 가려지니 CI 조건 재현은 `.env.local` 없이 `test.yml`의 placeholder env로 빌드할 것. 모듈 레벨 클라이언트를 새로 만들면 `test.yml` env에 placeholder를 추가하거나, 함수 안에서 지연 생성할 것.
+
 **로컬 환경**: Windows 기준. `npm run dev:clean`은 POSIX `rm -rf`를 써서 PowerShell에서 실패 → Git Bash에서 실행. Node는 `.nvmrc`의 20. 새 PC 셋업(도구·`.env.local`·Claude 설정 이전)은 `docs/new-pc-setup.md`.
 
 ---
