@@ -41,6 +41,18 @@ practice_todos        user_id(FK), song_title, technique, is_completed
 push_subscriptions    user_id(UNIQUE), endpoint, keys(JSON)
 ```
 
+## 운영 테이블 (마이그레이션·코드 기준, `database.ts` 미반영)
+
+```
+analysis_jobs          곡 분석 v2 백그라운드 job 상태 (processing | done | failed, result_id)
+user_analysis_history  유저별 분석 이력 (song_analyses 참조)
+user_events            trackEvent() 이벤트 로그
+composers / composer_resources / designated_pieces
+teacher_reviews        선생님 리뷰
+credit_transactions / reward_definitions / reward_grants
+help_requests / help_proposals   도움 요청·전문가 제안
+```
+
 ## Enums
 
 ```
