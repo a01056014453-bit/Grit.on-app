@@ -83,12 +83,12 @@ export function StudentList({ students, onInvite }: StudentListProps) {
       {filtered.length === 0 ? (
         <div className="text-center py-12 bg-white/60 backdrop-blur-sm rounded-2xl border border-white/60">
           <Users className="w-12 h-12 text-gray-200 mx-auto mb-3" />
-          <p className="text-sm font-medium text-gray-500 mb-1">
+          <p className="text-sm font-medium text-fg-secondary mb-1">
             {search ? "검색 결과가 없습니다" : "아직 등록된 학생이 없습니다"}
           </p>
           {!search && (
             <>
-              <p className="text-xs text-gray-400 mb-4">
+              <p className="text-xs text-fg-tertiary mb-4">
                 학생을 초대해 학습 현황을 관리해보세요
               </p>
               <button

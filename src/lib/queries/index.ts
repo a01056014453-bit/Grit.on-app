@@ -2,7 +2,6 @@ export * from "./profiles";
 export * from "./songs";
 export * from "./drill-cards";
 export * from "./plans";
-export * from "./recordings";
 export * from "./teachers";
 export * from "./feedback";
 export * from "./rooms";

@@ -92,12 +92,12 @@ export function RankingFilterBar({
           />
           <div className="relative w-full max-w-lg bg-white rounded-t-2xl p-5 pb-24 animate-slide-up max-h-[70vh] overflow-y-auto">
             <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-4" />
-            <h3 className="text-base font-bold text-gray-900 mb-4">학교 선택</h3>
+            <h3 className="text-base font-bold text-fg-primary mb-4">학교 선택</h3>
 
             {schools.length === 0 ? (
               <div className="text-center py-8">
                 <GraduationCap className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-                <p className="text-sm text-gray-500">등록된 학교가 없습니다</p>
+                <p className="text-sm text-fg-secondary">등록된 학교가 없습니다</p>
               </div>
             ) : (
               <div className="space-y-2">
@@ -113,8 +113,8 @@ export function RankingFilterBar({
                   >
                     <GraduationCap className="w-5 h-5 text-violet-500 shrink-0" />
                     <div>
-                      <p className="text-sm font-semibold text-gray-900">{school.name}</p>
-                      <p className="text-xs text-gray-500">{school.shortName}</p>
+                      <p className="text-sm font-semibold text-fg-primary">{school.name}</p>
+                      <p className="text-xs text-fg-secondary">{school.shortName}</p>
                     </div>
                   </button>
                 ))}
@@ -133,7 +133,7 @@ export function RankingFilterBar({
           />
           <div className="relative w-full max-w-lg bg-white rounded-t-2xl p-5 pb-24 animate-slide-up max-h-[70vh] overflow-y-auto">
             <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-4" />
-            <h3 className="text-base font-bold text-gray-900 mb-4">악기 선택</h3>
+            <h3 className="text-base font-bold text-fg-primary mb-4">악기 선택</h3>
 
             <div className="space-y-2">
               {ALL_INSTRUMENTS.map((inst) => (
@@ -147,7 +147,7 @@ export function RankingFilterBar({
                   }`}
                 >
                   <span className="text-xl">{INSTRUMENT_EMOJIS[inst]}</span>
-                  <span className="text-sm font-semibold text-gray-900">
+                  <span className="text-sm font-semibold text-fg-primary">
                     {INSTRUMENT_LABELS[inst]}
                   </span>
                 </button>

@@ -153,7 +153,7 @@ export function PracticeTodoList({
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className="font-semibold text-black">오늘의 연습</span>
-          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+          <span className="text-xs text-fg-secondary bg-gray-100 px-2 py-0.5 rounded-full">
             {completedCount.completed}/{completedCount.total}
           </span>
         </div>
@@ -197,21 +197,21 @@ export function PracticeTodoList({
                     <Music className="w-5 h-5 text-white" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{song.title}</p>
+                    <p className="text-sm font-medium text-fg-primary truncate">{song.title}</p>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-gray-400" />
+                  <ChevronRight className="w-4 h-4 text-fg-tertiary" />
                 </button>
               ))}
               <button
                 onClick={handleNewSongMode}
-                className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-sm text-gray-500 hover:border-violet-400 hover:text-violet-600 transition-colors flex items-center justify-center gap-2"
+                className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-sm text-fg-secondary hover:border-violet-400 hover:text-violet-600 transition-colors flex items-center justify-center gap-2"
               >
                 <Plus className="w-4 h-4" />
                 새 곡 추가
               </button>
               <button
                 onClick={() => setIsAddingNew(false)}
-                className="w-full py-2 text-sm text-gray-500 hover:text-gray-700"
+                className="w-full py-2 text-sm text-fg-secondary hover:text-gray-700"
               >
                 취소
               </button>
@@ -240,10 +240,10 @@ export function PracticeTodoList({
                     <Music className="w-5 h-5 text-white" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-gray-900 truncate">{selectedSong?.title}</p>
-                    <p className="text-xs text-gray-500">탭해서 변경</p>
+                    <p className="text-sm font-bold text-fg-primary truncate">{selectedSong?.title}</p>
+                    <p className="text-xs text-fg-secondary">탭해서 변경</p>
                   </div>
-                  <Edit3 className="w-4 h-4 text-gray-400" />
+                  <Edit3 className="w-4 h-4 text-fg-tertiary" />
                 </button>
               )}
 
@@ -257,7 +257,7 @@ export function PracticeTodoList({
                   min={1}
                   className="flex-1 px-3 py-3 bg-white rounded-xl text-sm text-center border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-500"
                 />
-                <span className="text-gray-400">~</span>
+                <span className="text-fg-tertiary">~</span>
                 <input
                   type="number"
                   value={newMeasureEnd}
@@ -343,7 +343,7 @@ export function PracticeTodoList({
                         )}
                       </button>
                       <div className={`flex-1 min-w-0 ${isCompleted ? "opacity-50" : ""}`}>
-                        <span className={`text-sm ${isCompleted ? "line-through text-gray-400" : "text-gray-700"}`}>
+                        <span className={`text-sm ${isCompleted ? "line-through text-fg-tertiary" : "text-gray-700"}`}>
                           {measureText}
                           {todo.note && ` · ${todo.note}`}
                         </span>
@@ -353,7 +353,7 @@ export function PracticeTodoList({
                           onClick={(e) => handleDelete(todo.id, e)}
                           className="p-1 opacity-0 group-hover:opacity-100 hover:bg-gray-200 rounded transition-all"
                         >
-                          <X className="w-3.5 h-3.5 text-gray-400" />
+                          <X className="w-3.5 h-3.5 text-fg-tertiary" />
                         </button>
                       )}
                     </div>
@@ -365,7 +365,7 @@ export function PracticeTodoList({
         </div>
       ) : !isAddingNew ? (
         <div className="py-8 text-center">
-          <p className="text-sm text-gray-400 mb-3">
+          <p className="text-sm text-fg-tertiary mb-3">
             오늘 연습할 목표를 추가해보세요
           </p>
           <button

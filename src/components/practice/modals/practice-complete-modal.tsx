@@ -138,7 +138,7 @@ export function PracticeCompleteModal({
         <h3 className="text-xl font-bold text-black mb-1">
           {practiceResult?.title || "연습 완료!"}
         </h3>
-        <p className="text-gray-500 mb-6">
+        <p className="text-fg-secondary mb-6">
           {practiceResult?.subtitle || "오늘도 수고하셨어요"}
         </p>
 
@@ -146,15 +146,15 @@ export function PracticeCompleteModal({
         {completedSession?.startTime && completedSession?.endTime && (
           <div className="flex items-center justify-center gap-4 mb-4 text-sm">
             <div className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-lg">
-              <Clock className="w-4 h-4 text-gray-400" />
-              <span className="text-gray-500">시작</span>
+              <Clock className="w-4 h-4 text-fg-tertiary" />
+              <span className="text-fg-secondary">시작</span>
               <span className="font-semibold text-black">
                 {formatDateTime(completedSession.startTime)}
               </span>
             </div>
             <span className="text-gray-300">→</span>
             <div className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-lg">
-              <span className="text-gray-500">종료</span>
+              <span className="text-fg-secondary">종료</span>
               <span className="font-semibold text-black">
                 {formatDateTime(completedSession.endTime)}
               </span>
@@ -175,19 +175,19 @@ export function PracticeCompleteModal({
               <div className="text-2xl font-bold text-black">
                 {completedSession ? formatTime(completedSession.totalTime) : "00:00"}
               </div>
-              <div className="text-xs text-gray-500">총 시간</div>
+              <div className="text-xs text-fg-secondary">총 시간</div>
             </div>
             <div>
               <div className="text-2xl font-bold text-black">
                 {completedSession ? formatTime(completedSession.practiceTime) : "00:00"}
               </div>
-              <div className="text-xs text-gray-500">순연습</div>
+              <div className="text-xs text-fg-secondary">순연습</div>
             </div>
             <div>
               <div className={`text-2xl font-bold ${getConcentrationColor(concentration)} flex items-center justify-center gap-1`}>
                 {concentration}%
               </div>
-              <div className="text-xs text-gray-500">집중도</div>
+              <div className="text-xs text-fg-secondary">집중도</div>
             </div>
           </div>
         </div>

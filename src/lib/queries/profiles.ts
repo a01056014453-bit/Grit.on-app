@@ -10,7 +10,7 @@ export async function getProfile(userId: string): Promise<Profile | null> {
     .from("profiles")
     .select("*")
     .eq("id", userId)
-    .single();
+    .maybeSingle();
 
   if (error) {
     console.error("[getProfile]", error.message);
@@ -51,7 +51,7 @@ export async function getExistingProvider(
     query = query.neq("id", excludeUserId);
   }
 
-  const { data, error } = await query.limit(1).single();
+  const { data, error } = await query.limit(1).maybeSingle();
   if (error || !data) return null;
   return data.auth_provider;
 }

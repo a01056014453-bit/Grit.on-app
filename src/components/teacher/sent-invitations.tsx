@@ -13,7 +13,7 @@ interface SentInvitationsProps {
 const STATUS_CONFIG: Record<InvitationStatus, { label: string; color: string; icon: typeof Clock }> = {
   pending: { label: "대기 중", color: "bg-amber-100 text-amber-700", icon: Clock },
   accepted: { label: "수락됨", color: "bg-green-100 text-green-700", icon: CheckCircle },
-  expired: { label: "만료됨", color: "bg-gray-100 text-gray-500", icon: AlertCircle },
+  expired: { label: "만료됨", color: "bg-gray-100 text-fg-secondary", icon: AlertCircle },
   canceled: { label: "취소됨", color: "bg-red-100 text-red-600", icon: XCircle },
 };
 
@@ -75,10 +75,10 @@ export function SentInvitations({ invitations, onCancel, baseUrl }: SentInvitati
 
   return (
     <div className="mt-6">
-      <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
+      <h3 className="text-sm font-bold text-fg-primary mb-3 flex items-center gap-2">
         <Link className="w-4 h-4 text-orange-600" />
         보낸 초대
-        <span className="text-xs text-gray-400 font-normal">
+        <span className="text-xs text-fg-tertiary font-normal">
           {invitations.length}건
         </span>
       </h3>
@@ -99,7 +99,7 @@ export function SentInvitations({ invitations, onCancel, baseUrl }: SentInvitati
               <div className="flex items-start justify-between mb-2">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
-                    <span className="text-sm font-semibold text-gray-900 truncate">
+                    <span className="text-sm font-semibold text-fg-primary truncate">
                       {inv.studentName || "이름 미입력"}
                     </span>
                     <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${config.color}`}>
@@ -118,7 +118,7 @@ export function SentInvitations({ invitations, onCancel, baseUrl }: SentInvitati
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-[10px] text-gray-400">
+                <span className="text-[10px] text-fg-tertiary">
                   {formatDate(inv.createdAt)} 생성
                   {isPending && daysLeft > 0 && ` · ${daysLeft}일 후 만료`}
                   {isPending && daysLeft <= 0 && " · 곧 만료"}
@@ -156,7 +156,7 @@ export function SentInvitations({ invitations, onCancel, baseUrl }: SentInvitati
                     <button
                       onClick={() => handleCancel(inv.id)}
                       disabled={isLoading}
-                      className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-gray-500 bg-gray-50 rounded-lg hover:bg-gray-100 disabled:opacity-50"
+                      className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-fg-secondary bg-gray-50 rounded-lg hover:bg-gray-100 disabled:opacity-50"
                       aria-label="취소"
                     >
                       {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <XCircle className="w-3 h-3" />}

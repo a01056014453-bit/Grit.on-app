@@ -190,7 +190,7 @@ export default function StatsPage() {
     return (
       <div className="min-h-screen bg-blob-violet flex items-center justify-center max-w-lg mx-auto">
         <div className="bg-blob-extra" />
-        <div className="flex items-center gap-2 text-gray-400">
+        <div className="flex items-center gap-2 text-fg-tertiary">
           <div className="w-4 h-4 border-2 border-violet-300 border-t-transparent rounded-full animate-spin" />
           <span className="text-sm">불러오는 중...</span>
         </div>
@@ -213,7 +213,7 @@ export default function StatsPage() {
           <ArrowLeft className="w-5 h-5 text-gray-600" />
         </button>
         <div className="flex-1">
-          <h1 className="text-lg font-bold text-gray-900 flex">
+          <h1 className="text-lg font-bold text-fg-primary flex">
             {titleText.split("").map((char, i) => (
               <motion.span
                 key={i}
@@ -228,7 +228,7 @@ export default function StatsPage() {
             ))}
           </h1>
           <motion.p
-            className="text-xs text-gray-500"
+            className="text-xs text-fg-secondary"
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 0.4 }}
@@ -250,7 +250,7 @@ export default function StatsPage() {
           className={`flex-1 py-2.5 rounded-xl font-medium text-sm transition-all ${
             activeTab === "weekly"
               ? "bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-sm shadow-violet-500/20"
-              : "bg-white/40 backdrop-blur-sm text-gray-500 hover:bg-white/60 border border-white/30"
+              : "bg-white/40 backdrop-blur-sm text-fg-secondary hover:bg-white/60 border border-white/30"
           }`}
         >
           주간 통계
@@ -260,7 +260,7 @@ export default function StatsPage() {
           className={`flex-1 py-2.5 rounded-xl font-medium text-sm transition-all ${
             activeTab === "monthly"
               ? "bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-sm shadow-violet-500/20"
-              : "bg-white/40 backdrop-blur-sm text-gray-500 hover:bg-white/60 border border-white/30"
+              : "bg-white/40 backdrop-blur-sm text-fg-secondary hover:bg-white/60 border border-white/30"
           }`}
         >
           월간 통계
@@ -277,8 +277,8 @@ export default function StatsPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15, duration: 0.5 }}
             >
-              <h3 className="font-bold text-gray-900 mb-1">이번 주 연습량</h3>
-              <p className="text-xs text-gray-500 mb-4">일별 연습 시간을 확인해보세요</p>
+              <h3 className="font-bold text-fg-primary mb-1">이번 주 연습량</h3>
+              <p className="text-xs text-fg-secondary mb-4">일별 연습 시간을 확인해보세요</p>
 
               <div className="flex items-end justify-between gap-2 h-32 mb-3">
                 {weeklyData.days.map((day, i) => {
@@ -292,7 +292,7 @@ export default function StatsPage() {
                   return (
                     <div key={day} className="flex-1 flex flex-col items-center gap-1">
                       {minutes > 0 && (
-                        <span className="text-[10px] text-gray-500 font-medium">{minutes}분</span>
+                        <span className="text-[10px] text-fg-secondary font-medium">{minutes}분</span>
                       )}
                       <div className="w-full flex flex-col items-center justify-end h-20">
                         <motion.div
@@ -309,7 +309,7 @@ export default function StatsPage() {
                         />
                       </div>
                       <span className={`text-xs font-medium ${
-                        isToday ? "text-violet-600" : "text-gray-400"
+                        isToday ? "text-violet-600" : "text-fg-tertiary"
                       }`}>
                         {day}
                       </span>
@@ -347,7 +347,7 @@ export default function StatsPage() {
               transition={{ delay: 0.35, duration: 0.4 }}
             >
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                <h3 className="font-bold text-fg-primary flex items-center gap-2">
                   <Target className="w-5 h-5 text-violet-500" />
                   주간 목표 달성
                 </h3>
@@ -364,8 +364,8 @@ export default function StatsPage() {
               </div>
 
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">{formatTimeDisplay(weeklyData.totalMinutes)}</span>
-                <span className="text-gray-400">목표: {formatTimeDisplay(weeklyGoal)}</span>
+                <span className="text-fg-secondary">{formatTimeDisplay(weeklyData.totalMinutes)}</span>
+                <span className="text-fg-tertiary">목표: {formatTimeDisplay(weeklyGoal)}</span>
               </div>
             </motion.div>
 
@@ -382,10 +382,10 @@ export default function StatsPage() {
                 </div>
                 <div className="flex-1">
                   <div className="flex items-baseline gap-2">
-                    <span className="font-number text-3xl font-extrabold text-gray-900">{weeklyData.streak}</span>
-                    <span className="text-gray-500">일 연속 연습 중</span>
+                    <span className="font-number text-3xl font-extrabold text-fg-primary">{weeklyData.streak}</span>
+                    <span className="text-fg-secondary">일 연속 연습 중</span>
                   </div>
-                  <p className="text-sm text-gray-400 mt-1">
+                  <p className="text-sm text-fg-tertiary mt-1">
                     {weeklyData.streak > 0
                       ? weeklyData.streak >= 7
                         ? "대단해요! 일주일 내내 연습했어요!"
@@ -408,9 +408,9 @@ export default function StatsPage() {
                   <div className="w-7 h-7 rounded-lg bg-blue-100/70 flex items-center justify-center">
                     <Clock className="w-3.5 h-3.5 text-blue-500" />
                   </div>
-                  <span className="text-xs text-gray-400">총 연습 시간</span>
+                  <span className="text-xs text-fg-tertiary">총 연습 시간</span>
                 </div>
-                <div className="text-xl font-bold text-gray-900">
+                <div className="text-xl font-bold text-fg-primary">
                   {formatTimeDisplay(weeklyData.totalMinutes)}
                 </div>
               </div>
@@ -419,10 +419,10 @@ export default function StatsPage() {
                   <div className="w-7 h-7 rounded-lg bg-green-100/70 flex items-center justify-center">
                     <Calendar className="w-3.5 h-3.5 text-green-500" />
                   </div>
-                  <span className="text-xs text-gray-400">연습한 날</span>
+                  <span className="text-xs text-fg-tertiary">연습한 날</span>
                 </div>
-                <div className="text-xl font-bold text-gray-900">
-                  {weeklyData.practiceDays}일 <span className="text-sm font-normal text-gray-400">/ 7일</span>
+                <div className="text-xl font-bold text-fg-primary">
+                  {weeklyData.practiceDays}일 <span className="text-sm font-normal text-fg-tertiary">/ 7일</span>
                 </div>
               </div>
             </motion.div>
@@ -437,7 +437,7 @@ export default function StatsPage() {
               transition={{ delay: 0.15, duration: 0.5 }}
             >
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-gray-900 text-lg">
+                <h3 className="font-bold text-fg-primary text-lg">
                   {monthlyData.year}년 {monthlyData.month}월
                 </h3>
                 {monthlyData.practiceDays > 0 && (
@@ -453,7 +453,7 @@ export default function StatsPage() {
                   <div
                     key={day}
                     className={`text-center text-xs font-medium py-1 ${
-                      i === 0 ? "text-red-400" : i === 6 ? "text-blue-400" : "text-gray-500"
+                      i === 0 ? "text-red-400" : i === 6 ? "text-blue-400" : "text-fg-secondary"
                     }`}
                   >
                     {day}
@@ -500,7 +500,7 @@ export default function StatsPage() {
               </div>
 
               {/* Legend */}
-              <div className="flex items-center justify-end gap-2 mt-3 text-[11px] text-gray-400">
+              <div className="flex items-center justify-end gap-2 mt-3 text-[11px] text-fg-tertiary">
                 <span>적음</span>
                 <div className="flex gap-1">
                   <div className="w-4 h-4 rounded bg-white/30" />
@@ -519,25 +519,25 @@ export default function StatsPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.25, duration: 0.4 }}
             >
-              <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <h3 className="font-bold text-fg-primary mb-4 flex items-center gap-2">
                 <BarChart3 className="w-5 h-5 text-violet-500" />
                 월간 리포트
               </h3>
 
               <div className="grid grid-cols-3 gap-2.5 mb-4">
                 <div className="text-center p-3 bg-white/60 backdrop-blur-lg rounded-2xl border border-white/50">
-                  <div className="font-number text-sm font-bold text-gray-900">
+                  <div className="font-number text-sm font-bold text-fg-primary">
                     {formatTimeDisplay(monthlyData.totalMinutes)}
                   </div>
-                  <div className="text-[10px] text-gray-400 mt-1">총 연습 시간</div>
+                  <div className="text-[10px] text-fg-tertiary mt-1">총 연습 시간</div>
                 </div>
                 <div className="text-center p-3 bg-white/60 backdrop-blur-lg rounded-2xl border border-white/50">
-                  <div className="font-number text-sm font-bold text-gray-900">{monthlyData.totalSessions}</div>
-                  <div className="text-[10px] text-gray-400 mt-1">연습 세션</div>
+                  <div className="font-number text-sm font-bold text-fg-primary">{monthlyData.totalSessions}</div>
+                  <div className="text-[10px] text-fg-tertiary mt-1">연습 세션</div>
                 </div>
                 <div className="text-center p-3 bg-white/60 backdrop-blur-lg rounded-2xl border border-white/50">
-                  <div className="font-number text-sm font-bold text-gray-900">{monthlyData.avgDailyMinutes}분</div>
-                  <div className="text-[10px] text-gray-400 mt-1">일평균</div>
+                  <div className="font-number text-sm font-bold text-fg-primary">{monthlyData.avgDailyMinutes}분</div>
+                  <div className="text-[10px] text-fg-tertiary mt-1">일평균</div>
                 </div>
               </div>
 
@@ -555,7 +555,7 @@ export default function StatsPage() {
                   ) : monthlyData.growthPercent < 0 ? (
                     <ArrowDown className="w-5 h-5 text-orange-600" />
                   ) : (
-                    <TrendingUp className="w-5 h-5 text-gray-500" />
+                    <TrendingUp className="w-5 h-5 text-fg-secondary" />
                   )}
                   <span className={`font-medium text-sm ${
                     monthlyData.growthPercent > 0

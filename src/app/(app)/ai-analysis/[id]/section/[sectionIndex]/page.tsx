@@ -122,7 +122,7 @@ export default function SectionDetailPage() {
     return (
       <div className="px-4 py-6 max-w-lg mx-auto min-h-screen bg-blob-violet">
       <div className="bg-blob-extra" />
-        <div className="text-center py-12 text-gray-500">
+        <div className="text-center py-12 text-fg-secondary">
           섹션 정보를 불러오는 중...
         </div>
       </div>
@@ -153,11 +153,11 @@ export default function SectionDetailPage() {
           <ArrowLeft className="w-5 h-5 text-gray-600" />
         </button>
         <div className="flex-1">
-          <p className="text-xs text-gray-500">{piece.composerShortName}</p>
+          <p className="text-xs text-fg-secondary">{piece.composerShortName}</p>
           <h1 className="text-lg font-bold text-black truncate">{piece.title}</h1>
         </div>
         <div className="text-right">
-          <p className="text-xs text-gray-400">섹션 {sectionIndex + 1}/{sections.length}</p>
+          <p className="text-xs text-fg-tertiary">섹션 {sectionIndex + 1}/{sections.length}</p>
         </div>
       </div>
 
@@ -178,7 +178,7 @@ export default function SectionDetailPage() {
         </div>
         {practiceProgress && (
           <div className="mt-3 pt-3 border-t border-gray-200/50">
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-fg-secondary">
               현재 상태: <span className="font-semibold">{masteryLabels[practiceProgress.mastery]}</span>
               {practiceProgress.practiceCount > 0 && (
                 <> · {practiceProgress.practiceCount}회 연습</>
@@ -197,19 +197,19 @@ export default function SectionDetailPage() {
           </div>
           <div className="grid grid-cols-3 gap-4">
             <div className="text-center p-3 bg-gray-50 rounded-lg">
-              <p className="text-xs text-gray-500 mb-1">연습 템포</p>
+              <p className="text-xs text-fg-secondary mb-1">연습 템포</p>
               <p className="text-xl font-bold text-violet-600">{section.suggestedTempo.practice}</p>
-              <p className="text-xs text-gray-400">BPM</p>
+              <p className="text-xs text-fg-tertiary">BPM</p>
             </div>
             <div className="text-center p-3 bg-gray-50 rounded-lg">
-              <p className="text-xs text-gray-500 mb-1">최소</p>
+              <p className="text-xs text-fg-secondary mb-1">최소</p>
               <p className="text-xl font-bold text-gray-600">{section.suggestedTempo.min}</p>
-              <p className="text-xs text-gray-400">BPM</p>
+              <p className="text-xs text-fg-tertiary">BPM</p>
             </div>
             <div className="text-center p-3 bg-gray-50 rounded-lg">
-              <p className="text-xs text-gray-500 mb-1">최대</p>
+              <p className="text-xs text-fg-secondary mb-1">최대</p>
               <p className="text-xl font-bold text-gray-600">{section.suggestedTempo.max}</p>
-              <p className="text-xs text-gray-400">BPM</p>
+              <p className="text-xs text-fg-tertiary">BPM</p>
             </div>
           </div>
         </div>
@@ -277,16 +277,16 @@ export default function SectionDetailPage() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="text-center p-3 bg-gray-50 rounded-lg">
-              <p className="text-xs text-gray-500 mb-1">연습 횟수</p>
+              <p className="text-xs text-fg-secondary mb-1">연습 횟수</p>
               <p className="text-xl font-bold text-black">{practiceProgress.practiceCount}회</p>
             </div>
             <div className="text-center p-3 bg-gray-50 rounded-lg">
-              <p className="text-xs text-gray-500 mb-1">연습 시간</p>
+              <p className="text-xs text-fg-secondary mb-1">연습 시간</p>
               <p className="text-xl font-bold text-black">{formatPracticeTime(practiceProgress.practiceTime)}</p>
             </div>
           </div>
           {practiceProgress.lastPracticedAt && (
-            <p className="text-xs text-gray-400 mt-3 text-center">
+            <p className="text-xs text-fg-tertiary mt-3 text-center">
               마지막 연습: {new Date(practiceProgress.lastPracticedAt).toLocaleDateString("ko-KR")}
             </p>
           )}

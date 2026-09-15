@@ -51,13 +51,13 @@ export function LessonRequestCard({ request }: LessonRequestCardProps) {
         </span>
       </div>
 
-      <h4 className="font-semibold text-gray-900 text-sm mb-0.5">
+      <h4 className="font-semibold text-fg-primary text-sm mb-0.5">
         {request.composer} - {request.piece}
       </h4>
       <p className="text-xs text-orange-600 font-mono mb-1.5">
         {request.measureStart}-{request.measureEnd} 마디
       </p>
-      <p className="text-xs text-gray-500 line-clamp-1 mb-2">
+      <p className="text-xs text-fg-secondary line-clamp-1 mb-2">
         {request.description}
       </p>
 
@@ -91,7 +91,7 @@ export function LessonRequestCard({ request }: LessonRequestCardProps) {
           </div>
         )}
         {!acceptDeadline && !submitDeadline && (
-          <span className="text-xs text-gray-400">
+          <span className="text-xs text-fg-tertiary">
             {new Date(request.createdAt).toLocaleDateString("ko-KR")}
           </span>
         )}

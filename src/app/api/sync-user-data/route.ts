@@ -86,12 +86,17 @@ export async function GET(request: NextRequest) {
 
     const path = syncPath(userId);
 
-    const { data: blob, error } = await supabaseServer.storage
+    const { data: blob, error: downloadError } = await supabaseServer.storage
       .from(BUCKET)
       .download(path);
 
-    if (error || !blob) {
-      // 파일 없음 = 첫 동기화
+    if (downloadError) {
+      if (downloadError.message !== "Object not found") {
+        console.error("[sync-user-data] Storage 오류:", downloadError.message);
+      }
+      return NextResponse.json({ success: true, data: {} });
+    }
+    if (!blob) {
       return NextResponse.json({ success: true, data: {} });
     }
 

@@ -90,7 +90,7 @@ export default function InviteAcceptPage() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-orange-50 to-white">
         <div className="text-center">
           <Loader2 className="w-8 h-8 text-orange-600 animate-spin mx-auto mb-3" />
-          <p className="text-sm text-gray-500">초대 정보를 불러오는 중...</p>
+          <p className="text-sm text-fg-secondary">초대 정보를 불러오는 중...</p>
         </div>
       </div>
     );
@@ -103,8 +103,8 @@ export default function InviteAcceptPage() {
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <XCircle className="w-8 h-8 text-red-500" />
           </div>
-          <h1 className="text-xl font-bold text-gray-900 mb-2">초대를 찾을 수 없습니다</h1>
-          <p className="text-sm text-gray-500 mb-6">{error}</p>
+          <h1 className="text-xl font-bold text-fg-primary mb-2">초대를 찾을 수 없습니다</h1>
+          <p className="text-sm text-fg-secondary mb-6">{error}</p>
           <button
             onClick={() => router.push("/")}
             className="px-6 py-3 bg-orange-600 text-white rounded-xl font-semibold text-sm"
@@ -123,8 +123,8 @@ export default function InviteAcceptPage() {
           <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle className="w-10 h-10 text-green-600" />
           </div>
-          <h1 className="text-xl font-bold text-gray-900 mb-2">초대를 수락했습니다!</h1>
-          <p className="text-sm text-gray-500 mb-6">
+          <h1 className="text-xl font-bold text-fg-primary mb-2">초대를 수락했습니다!</h1>
+          <p className="text-sm text-fg-secondary mb-6">
             {invitation?.teacherName} 선생님의 학생으로 등록되었습니다.
           </p>
           <button
@@ -153,7 +153,7 @@ export default function InviteAcceptPage() {
           <div className="w-14 h-14 bg-orange-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
             <Music className="w-7 h-7 text-orange-600" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Sempre</h1>
+          <h1 className="text-2xl font-bold text-fg-primary">Sempre</h1>
         </div>
 
         {/* Invitation Card */}
@@ -162,10 +162,10 @@ export default function InviteAcceptPage() {
             <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3">
               <UserPlus className="w-8 h-8 text-orange-600" />
             </div>
-            <h2 className="text-lg font-bold text-gray-900 mb-1">
+            <h2 className="text-lg font-bold text-fg-primary mb-1">
               학생 초대
             </h2>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-fg-secondary">
               <span className="font-semibold text-orange-600">{invitation.teacherName}</span> 선생님이
               {invitation.studentName ? ` ${invitation.studentName}님을` : ""} 학생으로 초대했습니다.
             </p>
@@ -179,7 +179,7 @@ export default function InviteAcceptPage() {
                   {invitation.teacherName[0]}
                 </span>
               </div>
-              <p className="text-sm font-semibold text-gray-900">{invitation.teacherName} 선생님</p>
+              <p className="text-sm font-semibold text-fg-primary">{invitation.teacherName} 선생님</p>
               {invitation.teacherSpecialty.length > 0 && (
                 <div className="flex justify-center gap-1 mt-1.5">
                   {invitation.teacherSpecialty.map((s) => (
@@ -205,8 +205,8 @@ export default function InviteAcceptPage() {
           {/* Status Messages */}
           {isExpired && (
             <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-xl mb-4">
-              <Clock className="w-5 h-5 text-gray-400 shrink-0" />
-              <p className="text-sm text-gray-500">이 초대는 만료되었습니다. 선생님에게 새 초대를 요청하세요.</p>
+              <Clock className="w-5 h-5 text-fg-tertiary shrink-0" />
+              <p className="text-sm text-fg-secondary">이 초대는 만료되었습니다. 선생님에게 새 초대를 요청하세요.</p>
             </div>
           )}
           {isCanceled && (

@@ -28,9 +28,9 @@ interface AnalysisEditFormProps {
 // ── 공통 스타일 ──
 const inputClass = 'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent';
 const textareaClass = `${inputClass} min-h-[80px] resize-y`;
-const labelClass = 'block text-xs font-medium text-gray-500 mb-1';
+const labelClass = 'block text-xs font-medium text-fg-secondary mb-1';
 const addBtnClass = 'flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-violet-700 bg-violet-50 rounded-lg hover:bg-violet-100 transition-colors';
-const removeBtnClass = 'p-1 rounded-md hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors flex-shrink-0';
+const removeBtnClass = 'p-1 rounded-md hover:bg-red-50 text-fg-tertiary hover:text-red-500 transition-colors flex-shrink-0';
 
 /** 접히기/펼치기 섹션 */
 function Section({ title, defaultOpen = false, children }: { title: string; defaultOpen?: boolean; children: React.ReactNode }) {
@@ -43,7 +43,7 @@ function Section({ title, defaultOpen = false, children }: { title: string; defa
         className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold text-gray-800 hover:bg-gray-50 transition-colors rounded-lg"
       >
         {title}
-        {open ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
+        {open ? <ChevronDown className="w-4 h-4 text-fg-tertiary" /> : <ChevronRight className="w-4 h-4 text-fg-tertiary" />}
       </button>
       {open && <div className="px-4 pb-4 space-y-3">{children}</div>}
     </div>
@@ -257,7 +257,7 @@ export function AnalysisEditForm({ analysis, onSave, onCancel, saving }: Analysi
           {/* 6. 구조/화성 분석 - Sections */}
           <Section title="6. 구조/화성 분석">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-gray-500">섹션 구간</span>
+              <span className="text-xs font-medium text-fg-secondary">섹션 구간</span>
               <button
                 type="button"
                 className={addBtnClass}
@@ -325,7 +325,7 @@ export function AnalysisEditForm({ analysis, onSave, onCancel, saving }: Analysi
             {/* 기술 카테고리 */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-medium text-gray-500">기술 카테고리</span>
+                <span className="text-xs font-medium text-fg-secondary">기술 카테고리</span>
                 <button
                   type="button"
                   className={addBtnClass}
@@ -373,7 +373,7 @@ export function AnalysisEditForm({ analysis, onSave, onCancel, saving }: Analysi
             {/* 구간별 연습 가이드 */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-medium text-gray-500">구간별 연습 가이드</span>
+                <span className="text-xs font-medium text-fg-secondary">구간별 연습 가이드</span>
                 <button
                   type="button"
                   className={addBtnClass}
@@ -421,7 +421,7 @@ export function AnalysisEditForm({ analysis, onSave, onCancel, saving }: Analysi
             {/* 4주 루틴 */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-medium text-gray-500">4주 연습 루틴</span>
+                <span className="text-xs font-medium text-fg-secondary">4주 연습 루틴</span>
                 <button
                   type="button"
                   className={addBtnClass}
@@ -530,7 +530,7 @@ export function AnalysisEditForm({ analysis, onSave, onCancel, saving }: Analysi
           {/* 8. 추천 연주 */}
           <Section title="8. 추천 연주">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-gray-500">추천 연주 목록</span>
+              <span className="text-xs font-medium text-fg-secondary">추천 연주 목록</span>
               <button
                 type="button"
                 className={addBtnClass}

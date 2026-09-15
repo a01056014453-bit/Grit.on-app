@@ -84,14 +84,14 @@ export default function UsersPage() {
       render: (row) => (
         <div>
           <div className="flex items-center gap-2">
-            <p className="font-medium text-gray-900">{row.nickname}</p>
+            <p className="font-medium text-fg-primary">{row.nickname}</p>
             {row.isToday && (
               <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 font-semibold">
                 NEW
               </span>
             )}
           </div>
-          {row.email && <p className="text-xs text-gray-400">{row.email}</p>}
+          {row.email && <p className="text-xs text-fg-tertiary">{row.email}</p>}
         </div>
       ),
     },
@@ -126,7 +126,7 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-bold text-gray-900">사용자 관리</h1>
+      <h1 className="text-xl font-bold text-fg-primary">사용자 관리</h1>
 
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700">

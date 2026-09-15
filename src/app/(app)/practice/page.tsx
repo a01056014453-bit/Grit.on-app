@@ -129,10 +129,10 @@ function PlayableTimelineSession({ session }: { session: import("@/lib/drill-rec
           )}
         </div>
         <div className="flex items-center gap-2 mt-1">
-          {session.detail && <span className="text-[12px] text-gray-400">{session.detail}</span>}
-          {session.detail && session.duration && <span className="text-[12px] text-gray-400">·</span>}
+          {session.detail && <span className="text-[12px] text-fg-tertiary">{session.detail}</span>}
+          {session.detail && session.duration && <span className="text-[12px] text-fg-tertiary">·</span>}
           {session.duration && (
-            <span className="text-[12px] text-gray-400 flex items-center gap-0.5">
+            <span className="text-[12px] text-fg-tertiary flex items-center gap-0.5">
               <Clock className="w-3 h-3" />
               {session.duration}
             </span>
@@ -1439,7 +1439,7 @@ function PracticePageContent() {
           <h1 className="text-xl font-bold text-black">
             {activeDrill ? "연습 준비 완료" : "연습 세션"}
           </h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <p className="text-sm text-fg-secondary mt-0.5">
             {hasPermission === false
               ? "마이크 권한이 필요합니다"
               : activeDrill
@@ -1501,15 +1501,15 @@ function PracticePageContent() {
               <Music2 className="w-6 h-6 text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-bold text-gray-900 truncate">{selectedSong.title}</p>
+              <p className="font-bold text-fg-primary truncate">{selectedSong.title}</p>
               {(selectedSong as any).composer && (
-                <p className="text-sm text-gray-500 mt-0.5">{(selectedSong as any).composer}</p>
+                <p className="text-sm text-fg-secondary mt-0.5">{(selectedSong as any).composer}</p>
               )}
               <p className="text-xs text-primary mt-1">곡이 선택되었습니다. 시작 버튼을 누르세요</p>
             </div>
             <button
               onClick={() => setSelectedSong(null)}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-fg-tertiary hover:text-gray-600"
             >
               <X className="w-5 h-5" />
             </button>
@@ -1525,7 +1525,7 @@ function PracticePageContent() {
               <Music2 className="w-6 h-6 text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-bold text-gray-900 truncate">{activeDrill.song}</p>
+              <p className="font-bold text-fg-primary truncate">{activeDrill.song}</p>
               <p className="text-sm text-gray-600 mt-0.5">
                 {activeDrill.measures} · {activeDrill.title}
               </p>
@@ -1537,12 +1537,12 @@ function PracticePageContent() {
             </div>
             <button
               onClick={() => setActiveDrill(null)}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-fg-tertiary hover:text-gray-600"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
-          <p className="text-xs text-gray-500 mt-3 mb-3">
+          <p className="text-xs text-fg-secondary mt-3 mb-3">
             아래 시작 버튼을 눌러 연습을 시작하세요
           </p>
         </div>
@@ -1589,7 +1589,7 @@ function PracticePageContent() {
             <div className="rounded-[20px] p-4" style={{ background: "rgba(255,255,255,0.55)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", border: "1px solid rgba(255,255,255,0.6)", boxShadow: "0 8px 32px rgba(124,58,237,0.08)" }}>
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-[15px] font-bold text-gray-900">{calYear}년 {calMonth + 1}월</span>
+                  <span className="text-[15px] font-bold text-fg-primary">{calYear}년 {calMonth + 1}월</span>
                   {calViewMode === "month" && calPracticeDays > 0 && (
                     <span className="flex items-center gap-1 text-sm text-violet-600 font-bold">
                       <Check className="w-4 h-4" />{calPracticeDays}
@@ -1600,20 +1600,20 @@ function PracticePageContent() {
                   <div className="flex items-center bg-white/40 rounded-lg p-0.5 mr-1">
                     <button
                       onClick={() => { setCalViewMode("week"); setCalMonth(calSelectedDate.getMonth()); setCalYear(calSelectedDate.getFullYear()); }}
-                      className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all ${calViewMode === "week" ? "bg-violet-500 text-white shadow-sm" : "text-gray-400"}`}
+                      className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all ${calViewMode === "week" ? "bg-violet-500 text-white shadow-sm" : "text-fg-tertiary"}`}
                     >주</button>
                     <button
                       onClick={() => { setCalViewMode("month"); setCalMonth(calSelectedDate.getMonth()); setCalYear(calSelectedDate.getFullYear()); }}
-                      className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all ${calViewMode === "month" ? "bg-violet-500 text-white shadow-sm" : "text-gray-400"}`}
+                      className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all ${calViewMode === "month" ? "bg-violet-500 text-white shadow-sm" : "text-fg-tertiary"}`}
                     >월</button>
                   </div>
-                  <button onClick={() => navigateCalendar(-1)} className="p-1.5 rounded-full hover:bg-white/30 transition-colors"><ChevronLeft className="w-4 h-4 text-gray-400" /></button>
-                  <button onClick={() => navigateCalendar(1)} className="p-1.5 rounded-full hover:bg-white/30 transition-colors"><ChevronRight className="w-4 h-4 text-gray-400" /></button>
+                  <button onClick={() => navigateCalendar(-1)} className="p-1.5 rounded-full hover:bg-white/30 transition-colors"><ChevronLeft className="w-4 h-4 text-fg-tertiary" /></button>
+                  <button onClick={() => navigateCalendar(1)} className="p-1.5 rounded-full hover:bg-white/30 transition-colors"><ChevronRight className="w-4 h-4 text-fg-tertiary" /></button>
                 </div>
               </div>
               <div className="grid grid-cols-7 gap-1 mb-0.5">
                 {calDayNames.map((day, i) => (
-                  <div key={day} className={`text-center text-[11px] font-medium py-0.5 ${i === 0 ? "text-red-400" : i === 6 ? "text-blue-400" : "text-gray-400"}`}>{day}</div>
+                  <div key={day} className={`text-center text-[11px] font-medium py-0.5 ${i === 0 ? "text-red-400" : i === 6 ? "text-blue-400" : "text-fg-tertiary"}`}>{day}</div>
                 ))}
               </div>
 
@@ -1657,7 +1657,7 @@ function PracticePageContent() {
                         <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold transition-all ${countStyle} ${isSelected && !isToday ? "ring-2 ring-violet-400 ring-offset-1 ring-offset-transparent" : ""}`}>
                           {dayStatus === "complete" ? "✓" : remainingCount > 0 ? remainingCount : count > 0 ? count : isFuture && hasSchedule ? "·" : ""}
                         </div>
-                        <span className={`text-[9px] mt-0.5 ${isOtherMonth ? "text-gray-300" : dow === 0 ? "text-red-400" : dow === 6 ? "text-blue-400" : "text-gray-500"}`}>{day}</span>
+                        <span className={`text-[9px] mt-0.5 ${isOtherMonth ? "text-gray-300" : dow === 0 ? "text-red-400" : dow === 6 ? "text-blue-400" : "text-fg-secondary"}`}>{day}</span>
                       </button>
                     );
                   })}
@@ -1702,7 +1702,7 @@ function PracticePageContent() {
                         <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold transition-all ${countStyle} ${isSelected && !isToday ? "ring-2 ring-violet-400 ring-offset-1 ring-offset-transparent" : ""}`}>
                           {dayStatus === "complete" ? "✓" : remainingCount > 0 ? remainingCount : count > 0 ? count : isFuture && hasSchedule ? "·" : ""}
                         </div>
-                        <span className={`text-[9px] mt-0.5 ${dow === 0 ? "text-red-400" : dow === 6 ? "text-blue-400" : "text-gray-500"}`}>{day}</span>
+                        <span className={`text-[9px] mt-0.5 ${dow === 0 ? "text-red-400" : dow === 6 ? "text-blue-400" : "text-fg-secondary"}`}>{day}</span>
                       </button>
                     );
                   })}
@@ -1713,19 +1713,19 @@ function PracticePageContent() {
               <div className="flex items-center justify-end gap-3 mt-3">
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 rounded-full bg-violet-200/60" />
-                  <span className="text-[10px] text-gray-400">완료</span>
+                  <span className="text-[10px] text-fg-tertiary">완료</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 rounded-full bg-violet-500/80" />
-                  <span className="text-[10px] text-gray-400">미완료</span>
+                  <span className="text-[10px] text-fg-tertiary">미완료</span>
                 </div>
               </div>
 
               {/* Selected Date Summary */}
               <div className="pt-3 mt-3" style={{ borderTop: "1px solid rgba(255,255,255,0.3)" }}>
                 <div>
-                  <h3 className="text-[14px] font-bold text-gray-900">{calSelectedDate.getMonth() + 1}월 {calSelectedDate.getDate()}일 {calWeekdayNames[calSelectedDate.getDay()]}</h3>
-                  <p className="text-[11px] text-gray-400/80 mt-0.5">
+                  <h3 className="text-[14px] font-bold text-fg-primary">{calSelectedDate.getMonth() + 1}월 {calSelectedDate.getDate()}일 {calWeekdayNames[calSelectedDate.getDay()]}</h3>
+                  <p className="text-[11px] text-fg-tertiary/80 mt-0.5">
                     {recSessions.length > 0
                       ? `${recSessions.length}개 연습${recTotalRecordings > 0 ? ` · ${recTotalRecordings}개 녹음` : ""}`
                       : "연습 기록이 없습니다"}
@@ -1736,7 +1736,7 @@ function PracticePageContent() {
           {/* ─── SESSION TIMELINE (체크리스트 대신 타임라인만 표시) ─── */}
           {recSessions.length > 0 ? (
             <div className="mt-3 pt-3" style={{ borderTop: "1px solid rgba(255,255,255,0.3)" }}>
-              <span className="text-[13px] font-bold text-gray-900 block mb-3">
+              <span className="text-[13px] font-bold text-fg-primary block mb-3">
                 연습 타임라인
               </span>
               <div className="ml-2 relative">
@@ -1751,7 +1751,7 @@ function PracticePageContent() {
             </div>
           ) : (
             <div className="mt-4 text-center py-4">
-              <p className="text-[12px] text-gray-400 mb-2">이 날은 연습 기록이 없습니다</p>
+              <p className="text-[12px] text-fg-tertiary mb-2">이 날은 연습 기록이 없습니다</p>
               <button
                 onClick={() => setIsScheduleModalOpen(true)}
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-violet-600 text-white text-[13px] font-medium hover:bg-violet-700 transition-colors"
@@ -1766,7 +1766,7 @@ function PracticePageContent() {
           {selectedDateIncompleteDrills.length > 0 && (
             <div className="mt-3 pt-3" style={{ borderTop: "1px solid rgba(255,255,255,0.3)" }}>
               <div className="flex items-center gap-2 mb-3">
-                <span className="text-[13px] font-bold text-gray-900">미완료 연습</span>
+                <span className="text-[13px] font-bold text-fg-primary">미완료 연습</span>
                 <span className="text-[10px] text-white bg-violet-500 px-1.5 py-0.5 rounded-full font-semibold">
                   {selectedDateIncompleteDrills.length}
                 </span>
@@ -1777,7 +1777,7 @@ function PracticePageContent() {
                     <div className="w-5 h-5 rounded-full border-2 border-violet-300 shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-800 truncate">{drill.song}</p>
-                      <p className="text-xs text-gray-400 truncate">
+                      <p className="text-xs text-fg-tertiary truncate">
                         {drill.measures && `${drill.measures}`}
                         {drill.title && drill.title !== "연습" && ` · ${drill.title}`}
                       </p>
@@ -1804,7 +1804,7 @@ function PracticePageContent() {
                 {carryOverDrills.map((drill) => (
                   <div key={drill.id} className="bg-white rounded-lg px-3 py-2 text-sm text-gray-700">
                     <span className="font-medium">{drill.song}</span>
-                    <span className="text-gray-400 mx-1">·</span>
+                    <span className="text-fg-tertiary mx-1">·</span>
                     <span>{drill.measures}</span>
                   </div>
                 ))}
@@ -1819,7 +1819,7 @@ function PracticePageContent() {
                 </button>
                 <button
                   onClick={handleDismissCarryOver}
-                  className="px-4 py-2 bg-white text-gray-500 rounded-lg text-sm border border-gray-200"
+                  className="px-4 py-2 bg-white text-fg-secondary rounded-lg text-sm border border-gray-200"
                 >
                   무시
                 </button>
@@ -1837,7 +1837,7 @@ function PracticePageContent() {
                 </div>
                 <button
                   onClick={() => setIsRoutineModalOpen(true)}
-                  className="text-xs text-gray-500 hover:text-black"
+                  className="text-xs text-fg-secondary hover:text-black"
                 >
                   + 새 루틴
                 </button>
@@ -1855,7 +1855,7 @@ function PracticePageContent() {
                       <div className="px-3 py-2.5 flex items-center justify-between">
                         <div className="flex-1">
                           <p className="text-sm font-medium text-black">{routine.name}</p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-fg-secondary">
                             {routine.drills.length}개 항목
                             {routine.days.length > 0 && (
                               <span className="ml-1">
@@ -1878,7 +1878,7 @@ function PracticePageContent() {
                             onClick={() => handleDeleteRoutine(routine.id)}
                             className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-red-100 group"
                           >
-                            <Trash2 className="w-3.5 h-3.5 text-gray-400 group-hover:text-red-500" />
+                            <Trash2 className="w-3.5 h-3.5 text-fg-tertiary group-hover:text-red-500" />
                           </button>
                         </div>
                       </div>
@@ -1952,7 +1952,7 @@ function PracticePageContent() {
             <div className="space-y-3">
               {/* 곡 선택 */}
               <div>
-                <label className="text-xs font-medium text-gray-500 mb-2 block">곡 선택</label>
+                <label className="text-xs font-medium text-fg-secondary mb-2 block">곡 선택</label>
 
                 {/* 기존 곡 목록 */}
                 {existingSongs.length > 0 && !newDrill.isNewSong && (
@@ -1977,7 +1977,7 @@ function PracticePageContent() {
                 {!newDrill.isNewSong ? (
                   <button
                     onClick={() => setNewDrill({ ...newDrill, isNewSong: true, selectedSong: "" })}
-                    className="w-full py-2.5 border-2 border-dashed border-gray-300 rounded-lg text-sm text-gray-500 hover:border-black hover:text-black transition-colors flex items-center justify-center gap-2"
+                    className="w-full py-2.5 border-2 border-dashed border-gray-300 rounded-lg text-sm text-fg-secondary hover:border-black hover:text-black transition-colors flex items-center justify-center gap-2"
                   >
                     <Plus className="w-4 h-4" />
                     새 곡 추가
@@ -1988,7 +1988,7 @@ function PracticePageContent() {
                       <span className="text-xs font-medium text-gray-600">새 곡 정보</span>
                       <button
                         onClick={() => setNewDrill({ ...newDrill, isNewSong: false, composer: "", songTitle: "" })}
-                        className="text-xs text-gray-500 hover:text-black"
+                        className="text-xs text-fg-secondary hover:text-black"
                       >
                         취소
                       </button>
@@ -2011,7 +2011,7 @@ function PracticePageContent() {
 
               {/* 마디 구간 */}
               <div>
-                <label className="text-xs font-medium text-gray-500 mb-1 block">마디 구간</label>
+                <label className="text-xs font-medium text-fg-secondary mb-1 block">마디 구간</label>
                 <input
                   type="text"
                   value={newDrill.measures}
@@ -2023,7 +2023,7 @@ function PracticePageContent() {
 
               {/* 연습 내용 */}
               <div>
-                <label className="text-xs font-medium text-gray-500 mb-1 block">연습 내용 (선택)</label>
+                <label className="text-xs font-medium text-fg-secondary mb-1 block">연습 내용 (선택)</label>
                 <input
                   type="text"
                   value={newDrill.title}
@@ -2035,7 +2035,7 @@ function PracticePageContent() {
 
               {/* Mode Toggle */}
               <div>
-                <label className="text-xs font-medium text-gray-500 mb-2 block">연습 목표</label>
+                <label className="text-xs font-medium text-fg-secondary mb-2 block">연습 목표</label>
                 <div className="flex gap-2 mb-3">
                   <button
                     onClick={() => setNewDrill({ ...newDrill, mode: "duration" })}
@@ -2069,7 +2069,7 @@ function PracticePageContent() {
                       -
                     </button>
                     <span className="text-2xl font-bold text-black w-16 text-center">{newDrill.duration}</span>
-                    <span className="text-gray-500">분</span>
+                    <span className="text-fg-secondary">분</span>
                     <button
                       onClick={() => setNewDrill({ ...newDrill, duration: Math.min(60, newDrill.duration + 1) })}
                       className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center text-lg font-medium"
@@ -2086,7 +2086,7 @@ function PracticePageContent() {
                       -
                     </button>
                     <span className="text-2xl font-bold text-black w-16 text-center">{newDrill.recurrence}</span>
-                    <span className="text-gray-500">회</span>
+                    <span className="text-fg-secondary">회</span>
                     <button
                       onClick={() => setNewDrill({ ...newDrill, recurrence: Math.min(20, newDrill.recurrence + 1) })}
                       className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center text-lg font-medium"
@@ -2144,7 +2144,7 @@ function PracticePageContent() {
             <div className="space-y-4">
               {/* Routine Name */}
               <div>
-                <label className="text-xs font-medium text-gray-500 mb-1 block">루틴 이름</label>
+                <label className="text-xs font-medium text-fg-secondary mb-1 block">루틴 이름</label>
                 <input
                   type="text"
                   value={newRoutine.name}
@@ -2156,7 +2156,7 @@ function PracticePageContent() {
 
               {/* Days Selection */}
               <div>
-                <label className="text-xs font-medium text-gray-500 mb-2 block">반복 요일 (선택 안하면 매일)</label>
+                <label className="text-xs font-medium text-fg-secondary mb-2 block">반복 요일 (선택 안하면 매일)</label>
                 <div className="flex gap-1.5">
                   {dayNames.map((name, idx) => (
                     <button
@@ -2176,7 +2176,7 @@ function PracticePageContent() {
 
               {/* Drills in Routine */}
               <div>
-                <label className="text-xs font-medium text-gray-500 mb-2 block">
+                <label className="text-xs font-medium text-fg-secondary mb-2 block">
                   연습 항목 ({newRoutine.drills.length}개)
                 </label>
 
@@ -2187,10 +2187,10 @@ function PracticePageContent() {
                         key={drill.id}
                         className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2"
                       >
-                        <span className="text-xs text-gray-400 w-4">{idx + 1}</span>
+                        <span className="text-xs text-fg-tertiary w-4">{idx + 1}</span>
                         <div className="flex-1 text-sm">
                           <span className="font-medium text-black">{drill.song}</span>
-                          <span className="text-gray-400 mx-1">·</span>
+                          <span className="text-fg-tertiary mx-1">·</span>
                           <span className="text-gray-600">{drill.measures}</span>
                         </div>
                         <button
@@ -2202,7 +2202,7 @@ function PracticePageContent() {
                           }}
                           className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-red-100"
                         >
-                          <X className="w-3 h-3 text-gray-400 hover:text-red-500" />
+                          <X className="w-3 h-3 text-fg-tertiary hover:text-red-500" />
                         </button>
                       </div>
                     ))}
@@ -2229,7 +2229,7 @@ function PracticePageContent() {
                       ))}
                       <button
                         onClick={() => setRoutineDrill({ ...routineDrill, isNewSong: true, selectedSong: "" })}
-                        className="w-full py-2 border border-dashed border-gray-300 rounded-lg text-xs text-gray-500 hover:border-black hover:text-black flex items-center justify-center gap-1"
+                        className="w-full py-2 border border-dashed border-gray-300 rounded-lg text-xs text-fg-secondary hover:border-black hover:text-black flex items-center justify-center gap-1"
                       >
                         <Plus className="w-3 h-3" />
                         다른 곡
@@ -2241,7 +2241,7 @@ function PracticePageContent() {
                         <span className="text-xs font-medium text-gray-600">새 곡</span>
                         <button
                           onClick={() => setRoutineDrill({ ...routineDrill, isNewSong: false, composer: "", songTitle: "" })}
-                          className="text-xs text-gray-500"
+                          className="text-xs text-fg-secondary"
                         >
                           취소
                         </button>

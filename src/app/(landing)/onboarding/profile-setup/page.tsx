@@ -252,8 +252,11 @@ export default function ProfileSetupPage() {
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        console.error("[profile-setup] 프로필 저장 실패:", data.error);
+        const ct = res.headers.get("content-type") ?? "";
+        const msg = ct.includes("application/json")
+          ? (await res.json()).error
+          : `HTTP ${res.status}`;
+        console.error("[profile-setup] 프로필 저장 실패:", msg);
       }
     } catch (err) {
       console.error("[profile-setup] 프로필 저장 오류:", err);
@@ -315,7 +318,7 @@ export default function ProfileSetupPage() {
             </div>
           ))}
         </div>
-        <p className="text-xs text-gray-400 mt-2 text-right">{step + 1} / {totalSteps}</p>
+        <p className="text-xs text-fg-tertiary mt-2 text-right">{step + 1} / {totalSteps}</p>
       </div>
 
       {/* Step Content */}
@@ -333,10 +336,10 @@ export default function ProfileSetupPage() {
             {/* Step 0: 약관 동의 */}
             {step === 0 && (
               <div>
-                <h1 className="text-2xl font-black text-gray-900 mb-2">
+                <h1 className="text-2xl font-black text-fg-primary mb-2">
                   서비스 이용 동의
                 </h1>
-                <p className="text-sm text-gray-500 mb-8">
+                <p className="text-sm text-fg-secondary mb-8">
                   Sempre를 시작하기 전에 동의가 필요해요
                 </p>
 
@@ -358,7 +361,7 @@ export default function ProfileSetupPage() {
                       <Check className="w-4 h-4 text-white" />
                     )}
                   </div>
-                  <span className="text-base font-bold text-gray-900">전체 동의</span>
+                  <span className="text-base font-bold text-fg-primary">전체 동의</span>
                 </button>
 
                 <div className="space-y-1 bg-white rounded-2xl border border-gray-200 overflow-hidden">
@@ -377,7 +380,7 @@ export default function ProfileSetupPage() {
                         <span className="text-violet-600 font-medium">[필수]</span> 서비스 이용약관
                       </span>
                     </button>
-                    <Link href="/terms" className="text-xs text-gray-400 underline">보기</Link>
+                    <Link href="/terms" className="text-xs text-fg-tertiary underline">보기</Link>
                   </div>
 
                   <div className="h-px bg-gray-100 mx-4" />
@@ -397,7 +400,7 @@ export default function ProfileSetupPage() {
                         <span className="text-violet-600 font-medium">[필수]</span> 개인정보 처리방침
                       </span>
                     </button>
-                    <Link href="/privacy" className="text-xs text-gray-400 underline">보기</Link>
+                    <Link href="/privacy" className="text-xs text-fg-tertiary underline">보기</Link>
                   </div>
 
                   <div className="h-px bg-gray-100 mx-4" />
@@ -433,7 +436,7 @@ export default function ProfileSetupPage() {
                         {agreeMarketing && <Check className="w-3 h-3 text-white" />}
                       </div>
                       <span className="text-sm text-gray-700">
-                        <span className="text-gray-400">[선택]</span> 마케팅 정보 수신 동의
+                        <span className="text-fg-tertiary">[선택]</span> 마케팅 정보 수신 동의
                       </span>
                     </button>
                   </div>
@@ -444,10 +447,10 @@ export default function ProfileSetupPage() {
             {/* Step 1: Nickname */}
             {step === 1 && (
               <div>
-                <h1 className="text-2xl font-black text-gray-900 mb-2">
+                <h1 className="text-2xl font-black text-fg-primary mb-2">
                   별명을 정해주세요
                 </h1>
-                <p className="text-sm text-gray-500 mb-8">
+                <p className="text-sm text-fg-secondary mb-8">
                   다른 연주자들에게 보여지는 이름이에요
                 </p>
 
@@ -458,7 +461,7 @@ export default function ProfileSetupPage() {
                     onChange={(e) => handleNicknameChange(e.target.value)}
                     placeholder="별명 입력 (2~12자)"
                     maxLength={12}
-                    className={`w-full px-4 py-4 rounded-2xl border-2 bg-white text-lg font-semibold text-gray-900 placeholder:text-gray-300 focus:outline-none transition-colors ${
+                    className={`w-full px-4 py-4 rounded-2xl border-2 bg-white text-lg font-semibold text-fg-primary placeholder:text-gray-300 focus:outline-none transition-colors ${
                       nicknameStatus === "taken"
                         ? "border-red-400 focus:border-red-400"
                         : nicknameStatus === "available"
@@ -475,7 +478,7 @@ export default function ProfileSetupPage() {
                 {/* Nickname status message */}
                 <div className="h-5 mb-3">
                   {nicknameStatus === "checking" && (
-                    <p className="text-xs text-gray-400 flex items-center gap-1">
+                    <p className="text-xs text-fg-tertiary flex items-center gap-1">
                       <Loader2 className="w-3 h-3 animate-spin" />
                       확인 중...
                     </p>
@@ -504,10 +507,10 @@ export default function ProfileSetupPage() {
 
                 {nickname && nicknameStatus !== "taken" && (
                   <div className="mt-6 p-4 rounded-2xl bg-white border border-gray-100 shadow-sm">
-                    <p className="text-xs text-gray-400 mb-1">미리보기</p>
+                    <p className="text-xs text-fg-tertiary mb-1">미리보기</p>
                     <div className="flex items-center gap-3">
                       <span className="text-3xl">{profileEmoji}</span>
-                      <span className="text-lg font-bold text-gray-900">{nickname}</span>
+                      <span className="text-lg font-bold text-fg-primary">{nickname}</span>
                     </div>
                   </div>
                 )}
@@ -517,10 +520,10 @@ export default function ProfileSetupPage() {
             {/* Step 2: Age Group */}
             {step === 2 && (
               <div>
-                <h1 className="text-2xl font-black text-gray-900 mb-2">
+                <h1 className="text-2xl font-black text-fg-primary mb-2">
                   나이대를 선택해주세요
                 </h1>
-                <p className="text-sm text-gray-500 mb-8">
+                <p className="text-sm text-fg-secondary mb-8">
                   같은 또래 연주자들과 비교할 수 있어요
                 </p>
 
@@ -545,10 +548,10 @@ export default function ProfileSetupPage() {
             {/* Step 3: Instruments */}
             {step === 3 && (
               <div>
-                <h1 className="text-2xl font-black text-gray-900 mb-2">
+                <h1 className="text-2xl font-black text-fg-primary mb-2">
                   연주하는 악기를 선택해주세요
                 </h1>
-                <p className="text-sm text-gray-500 mb-8">
+                <p className="text-sm text-fg-secondary mb-8">
                   여러 개 선택할 수 있어요
                 </p>
 
@@ -582,10 +585,10 @@ export default function ProfileSetupPage() {
             {/* Step 4: Profile Photo + Emoji */}
             {step === 4 && (
               <div>
-                <h1 className="text-2xl font-black text-gray-900 mb-2">
+                <h1 className="text-2xl font-black text-fg-primary mb-2">
                   프로필을 꾸며주세요
                 </h1>
-                <p className="text-sm text-gray-500 mb-8">
+                <p className="text-sm text-fg-secondary mb-8">
                   사진 또는 이모지로 나를 표현해보세요
                 </p>
 
@@ -617,12 +620,12 @@ export default function ProfileSetupPage() {
                 {profileImagePreview && (
                   <button
                     onClick={() => { setProfileImageFile(null); setProfileImagePreview(null); }}
-                    className="block mx-auto text-xs text-gray-400 underline mb-4"
+                    className="block mx-auto text-xs text-fg-tertiary underline mb-4"
                   >
                     사진 제거
                   </button>
                 )}
-                <p className="text-center text-xs text-gray-400 mb-6">
+                <p className="text-center text-xs text-fg-tertiary mb-6">
                   {profileImagePreview ? "사진이 설정되었습니다" : "사진이 없으면 이모지가 표시됩니다"}
                 </p>
 
@@ -646,7 +649,7 @@ export default function ProfileSetupPage() {
 
                 {/* Preview card */}
                 <div className="p-5 rounded-2xl bg-white border border-gray-100 shadow-sm">
-                  <p className="text-xs text-gray-400 mb-3">프로필 미리보기</p>
+                  <p className="text-xs text-fg-tertiary mb-3">프로필 미리보기</p>
                   <div className="flex items-center gap-4">
                     <div className="w-14 h-14 rounded-full bg-violet-50 border-2 border-violet-200 flex items-center justify-center overflow-hidden">
                       {profileImagePreview ? (
@@ -656,10 +659,10 @@ export default function ProfileSetupPage() {
                       )}
                     </div>
                     <div>
-                      <p className="text-lg font-bold text-gray-900">{nickname || "사용자"}</p>
+                      <p className="text-lg font-bold text-fg-primary">{nickname || "사용자"}</p>
                       <div className="flex items-center gap-2 mt-1 flex-wrap">
                         {ageGroup && (
-                          <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-xs rounded-full">
+                          <span className="px-2 py-0.5 bg-gray-100 text-fg-secondary text-xs rounded-full">
                             {ageGroup}
                           </span>
                         )}
@@ -751,7 +754,7 @@ export default function ProfileSetupPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
-              className="text-3xl font-black text-gray-900 mb-2"
+              className="text-3xl font-black text-fg-primary mb-2"
             >
               환영합니다!
             </motion.h1>
@@ -760,7 +763,7 @@ export default function ProfileSetupPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6 }}
-              className="text-gray-500 text-center leading-relaxed"
+              className="text-fg-secondary text-center leading-relaxed"
             >
               모든 준비가 완료됐어요<br />
               이제 연습을 시작해볼까요?

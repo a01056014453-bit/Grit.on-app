@@ -69,7 +69,7 @@ export default function SupportPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-bold text-gray-900">CS 지원</h1>
+      <h1 className="text-xl font-bold text-fg-primary">CS 지원</h1>
 
       <div className="grid grid-cols-4 gap-4">
         <StatCard
@@ -100,7 +100,7 @@ export default function SupportPage() {
       <DataTable columns={columns} data={requests} />
 
       {requests.length === 0 && (
-        <div className="text-center py-12 text-gray-400 text-sm">
+        <div className="text-center py-12 text-fg-tertiary text-sm">
           피드백 요청 데이터가 없습니다.
         </div>
       )}

@@ -211,7 +211,7 @@ export default function HomePage() {
       <div className="flex items-center justify-between mb-8 pt-2">
         <div>
           <div>
-            <h1 className="text-[22px] font-bold text-gray-900 leading-tight">
+            <h1 className="text-[22px] font-bold text-fg-primary leading-tight">
               {greeting} <span className="bg-gradient-to-r from-violet-700 to-violet-400 bg-clip-text text-transparent">{userName}</span>님 {(() => {
                 const h = new Date().getHours();
                 if (h < 6) return "🌙";
@@ -220,7 +220,7 @@ export default function HomePage() {
                 return "🌙";
               })()}
             </h1>
-            <p className="text-sm text-gray-500 mt-0.5">
+            <p className="text-sm text-fg-secondary mt-0.5">
               {dailyMessage}
             </p>
           </div>
@@ -284,7 +284,7 @@ export default function HomePage() {
           background={
             <div className="absolute top-3 right-2 opacity-30 select-none pointer-events-none">
               <div className="bg-violet-200 rounded-lg px-2.5 py-1.5">
-                <span className="text-xs font-bold text-gray-900">Dolce</span>
+                <span className="text-xs font-bold text-fg-primary">Dolce</span>
                 <span className="text-[10px] text-violet-700 ml-1 font-semibold">돌체</span>
               </div>
             </div>
@@ -331,7 +331,7 @@ export default function HomePage() {
             <div className="absolute top-2 right-2 opacity-20 group-hover:opacity-30 transition-opacity select-none pointer-events-none">
               <div className="bg-white/60 rounded-lg p-2 shadow-sm border border-white/40">
                 <div className="text-[8px] font-bold text-gray-700 text-center mb-1">2월 2026</div>
-                <div className="grid grid-cols-7 gap-x-[5px] gap-y-[3px] text-[7px] text-gray-400 text-center mb-0.5">
+                <div className="grid grid-cols-7 gap-x-[5px] gap-y-[3px] text-[7px] text-fg-tertiary text-center mb-0.5">
                   {["일","월","화","수","목","금","토"].map((d) => (
                     <span key={d}>{d}</span>
                   ))}
@@ -342,7 +342,7 @@ export default function HomePage() {
                     const practiced = [2, 3, 5, 7, 9, 10, 11, 12, 14, 15, 16].includes(day);
                     return (
                       <div key={i} className="relative flex items-center justify-center w-4 h-4">
-                        <span className={practiced ? "text-violet-700 font-bold" : "text-gray-400"}>{day}</span>
+                        <span className={practiced ? "text-violet-700 font-bold" : "text-fg-tertiary"}>{day}</span>
                         {practiced && (
                           <Check className="absolute -top-0.5 -right-0.5 w-2 h-2 text-violet-500" />
                         )}

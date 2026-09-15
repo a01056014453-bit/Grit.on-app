@@ -92,8 +92,8 @@ export default function PlansPage() {
       <div className="bg-blob-extra" />
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-gray-900">연습 계획</h1>
-        <p className="text-sm text-gray-500 mt-0.5">
+        <h1 className="text-xl font-bold text-fg-primary">연습 계획</h1>
+        <p className="text-sm text-fg-secondary mt-0.5">
           주간 연습 계획을 확인하세요
         </p>
       </div>
@@ -101,8 +101,8 @@ export default function PlansPage() {
       {/* Weekly Calendar */}
       <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-gray-900 text-sm">이번 주</h3>
-          <Calendar className="w-4 h-4 text-gray-400" />
+          <h3 className="font-semibold text-fg-primary text-sm">이번 주</h3>
+          <Calendar className="w-4 h-4 text-fg-tertiary" />
         </div>
         <div className="grid grid-cols-7 gap-2">
           {weeklyData.map((data, index) => {
@@ -110,7 +110,7 @@ export default function PlansPage() {
             return (
               <div key={index} className="text-center">
                 <div
-                  className={`text-xs mb-1 ${isToday ? "font-bold text-primary" : "text-gray-500"}`}
+                  className={`text-xs mb-1 ${isToday ? "font-bold text-primary" : "text-fg-secondary"}`}
                 >
                   {weekDays[index]}
                 </div>
@@ -136,9 +136,9 @@ export default function PlansPage() {
       {/* Today's Plan */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-gray-900">오늘의 계획</h3>
+          <h3 className="font-semibold text-fg-primary">오늘의 계획</h3>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-fg-secondary">
               {completedCount}/{todayPlan.length} 완료
             </span>
             <span className="text-xs font-medium text-primary bg-primary/5 px-2 py-1 rounded-full">
@@ -184,7 +184,7 @@ export default function PlansPage() {
                   <div className="flex items-center gap-2">
                     <h4
                       className={`font-medium text-base ${
-                        plan.completed ? "text-gray-400 line-through" : "text-gray-900"
+                        plan.completed ? "text-fg-tertiary line-through" : "text-fg-primary"
                       }`}
                     >
                       {plan.piece}
@@ -197,7 +197,7 @@ export default function PlansPage() {
                   </div>
                   <p
                     className={`text-sm mt-0.5 ${
-                      plan.completed ? "text-gray-400" : "text-gray-500"
+                      plan.completed ? "text-fg-tertiary" : "text-fg-secondary"
                     }`}
                   >
                     {plan.measures}
@@ -212,7 +212,7 @@ export default function PlansPage() {
                 <div
                   className={`flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-md ${
                     plan.completed
-                      ? "text-gray-400 bg-gray-100"
+                      ? "text-fg-tertiary bg-gray-100"
                       : "text-slate-500 bg-slate-50"
                   }`}
                 >
@@ -227,7 +227,7 @@ export default function PlansPage() {
 
       {/* AI Suggestions */}
       <div className="space-y-3">
-        <h3 className="font-semibold text-gray-900">AI 분석 및 추천</h3>
+        <h3 className="font-semibold text-fg-primary">AI 분석 및 추천</h3>
         {aiSuggestions.map((suggestion) => (
           <div
             key={suggestion.id}
@@ -254,7 +254,7 @@ export default function PlansPage() {
                 </span>
               </div>
               <div>
-                <h4 className="font-medium text-gray-900 text-sm">{suggestion.title}</h4>
+                <h4 className="font-medium text-fg-primary text-sm">{suggestion.title}</h4>
                 <p className="text-xs text-gray-600 mt-1">{suggestion.description}</p>
               </div>
             </div>
@@ -275,12 +275,12 @@ export default function PlansPage() {
           <div className="relative w-full max-w-lg bg-white rounded-t-2xl p-5 pb-24 animate-in slide-in-from-bottom duration-300">
             {/* Header */}
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-lg font-bold text-gray-900">새 계획 추가</h3>
+              <h3 className="text-lg font-bold text-fg-primary">새 계획 추가</h3>
               <button
                 onClick={() => setIsModalOpen(false)}
                 className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
               >
-                <X className="w-4 h-4 text-gray-500" />
+                <X className="w-4 h-4 text-fg-secondary" />
               </button>
             </div>
 
@@ -329,7 +329,7 @@ export default function PlansPage() {
               <button
                 onClick={handleAddPlan}
                 disabled={!selectedSongId || !practiceContent}
-                className="w-full py-3.5 bg-primary text-white rounded-xl font-semibold text-sm hover:bg-primary/90 transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed mt-2"
+                className="w-full py-3.5 bg-primary text-white rounded-xl font-semibold text-sm hover:bg-primary/90 transition-colors disabled:bg-gray-200 disabled:text-fg-tertiary disabled:cursor-not-allowed mt-2"
               >
                 추가하기
               </button>

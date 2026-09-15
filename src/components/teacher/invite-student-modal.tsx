@@ -109,14 +109,14 @@ export function InviteStudentModal({ isOpen, onClose, onSuccess }: InviteStudent
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2">
             <UserPlus className="w-5 h-5 text-orange-600" />
-            <h2 className="text-lg font-bold text-gray-900">학생 초대</h2>
+            <h2 className="text-lg font-bold text-fg-primary">학생 초대</h2>
           </div>
           <button
             onClick={handleClose}
             className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center"
             aria-label="닫기"
           >
-            <X className="w-4 h-4 text-gray-500" />
+            <X className="w-4 h-4 text-fg-secondary" />
           </button>
         </div>
 
@@ -126,14 +126,14 @@ export function InviteStudentModal({ isOpen, onClose, onSuccess }: InviteStudent
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle className="w-8 h-8 text-green-600" />
             </div>
-            <p className="text-lg font-semibold text-gray-900 mb-1">초대 링크가 생성되었습니다</p>
-            <p className="text-sm text-gray-500 mb-5">
+            <p className="text-lg font-semibold text-fg-primary mb-1">초대 링크가 생성되었습니다</p>
+            <p className="text-sm text-fg-secondary mb-5">
               링크를 학생에게 카카오톡, 문자 등으로 보내주세요.
             </p>
 
             {/* 링크 표시 */}
             <div className="flex items-center gap-2 bg-gray-50 rounded-xl p-3 mb-4">
-              <Link className="w-4 h-4 text-gray-400 shrink-0" />
+              <Link className="w-4 h-4 text-fg-tertiary shrink-0" />
               <span className="text-xs text-gray-600 truncate flex-1 text-left">{inviteUrl}</span>
             </div>
 
@@ -166,14 +166,14 @@ export function InviteStudentModal({ isOpen, onClose, onSuccess }: InviteStudent
           </div>
         ) : (
           <>
-            <p className="text-sm text-gray-500 mb-5">
+            <p className="text-sm text-fg-secondary mb-5">
               초대 링크를 생성하여 학생에게 공유할 수 있습니다.
             </p>
 
             {/* 학생 이름 */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                학생 이름 <span className="text-gray-400 font-normal">(선택)</span>
+                학생 이름 <span className="text-fg-tertiary font-normal">(선택)</span>
               </label>
               <input
                 type="text"
@@ -187,7 +187,7 @@ export function InviteStudentModal({ isOpen, onClose, onSuccess }: InviteStudent
             {/* 카테고리 */}
             <div className="mb-5">
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                분류 <span className="text-gray-400 font-normal">(선택)</span>
+                분류 <span className="text-fg-tertiary font-normal">(선택)</span>
               </label>
               <div className="flex gap-2">
                 {CATEGORIES.map((c) => (

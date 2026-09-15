@@ -640,8 +640,8 @@ export default function ComposerResourcesPage() {
     <div>
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">학술자료 DB</h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <h1 className="text-2xl font-bold text-fg-primary">학술자료 DB</h1>
+        <p className="text-sm text-fg-secondary mt-1">
           PDF를 여러 개 드래그해서 한번에 업로드
         </p>
       </div>
@@ -713,7 +713,7 @@ export default function ComposerResourcesPage() {
             PDF 파일을 드래그하거나 클릭해서 선택 (여러 개 가능)
           </p>
           {!hasItems && (
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-fg-tertiary">
               AI가 작곡가, 제목, 저자, 대상곡 등을 자동으로 추출합니다
             </p>
           )}
@@ -724,7 +724,7 @@ export default function ComposerResourcesPage() {
           <div className="mt-4 space-y-3">
             {/* 상태 요약 바 */}
             <div className="flex items-center justify-between px-1">
-              <div className="flex items-center gap-3 text-xs text-gray-500">
+              <div className="flex items-center gap-3 text-xs text-fg-secondary">
                 <span>총 {items.length}개</span>
                 {processingCount > 0 && (
                   <span className="flex items-center gap-1 text-violet-600">
@@ -759,7 +759,7 @@ export default function ComposerResourcesPage() {
                 )}
                 <button
                   onClick={clearAll}
-                  className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                  className="px-3 py-1.5 text-xs text-fg-secondary hover:text-gray-700 transition-colors"
                 >
                   전체 취소
                 </button>
@@ -786,7 +786,7 @@ export default function ComposerResourcesPage() {
         <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
           <div className="flex items-center gap-2 mb-3">
             <Sparkles className="w-5 h-5 text-violet-500" />
-            <h3 className="text-sm font-bold text-gray-900">곡 DB 자동 분석</h3>
+            <h3 className="text-sm font-bold text-fg-primary">곡 DB 자동 분석</h3>
             {analyzing && (
               <span className="flex items-center gap-1 text-xs text-violet-600">
                 <Loader2 className="w-3 h-3 animate-spin" />
@@ -796,7 +796,7 @@ export default function ComposerResourcesPage() {
             {!analyzing && (
               <button
                 onClick={() => setAnalysisJobs([])}
-                className="ml-auto text-xs text-gray-400 hover:text-gray-600"
+                className="ml-auto text-xs text-fg-tertiary hover:text-gray-600"
               >
                 닫기
               </button>
@@ -819,12 +819,12 @@ export default function ComposerResourcesPage() {
                 <div className="flex items-center justify-between">
                   <p className="truncate">
                     <span className="font-medium text-gray-800">{job.composer}</span>
-                    <span className="text-gray-400 mx-2">—</span>
+                    <span className="text-fg-tertiary mx-2">—</span>
                     <span className="text-gray-700">{job.pieceTitle}</span>
                   </p>
                   <span className="shrink-0 ml-3">
                     {job.status === "idle" && (
-                      <span className="text-xs text-gray-400">대기</span>
+                      <span className="text-xs text-fg-tertiary">대기</span>
                     )}
                     {job.status === "analyzing" && (
                       <span className="flex items-center gap-1 text-xs text-violet-600">
@@ -854,7 +854,7 @@ export default function ComposerResourcesPage() {
 
       {/* Search */}
       <div className="relative mb-4">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-tertiary" />
         <input
           type="text"
           value={searchQuery}
@@ -868,7 +868,7 @@ export default function ComposerResourcesPage() {
       {loading ? (
         <div className="text-center py-12">
           <Loader2 className="w-8 h-8 text-violet-500 animate-spin mx-auto mb-3" />
-          <p className="text-sm text-gray-500">로딩 중...</p>
+          <p className="text-sm text-fg-secondary">로딩 중...</p>
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
@@ -876,7 +876,7 @@ export default function ComposerResourcesPage() {
           <p className="font-semibold text-gray-700">
             {searchQuery ? "검색 결과가 없습니다" : "등록된 학술자료가 없습니다"}
           </p>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-fg-secondary mt-1">
             {searchQuery ? "다른 키워드로 검색해보세요" : "위에 PDF를 드래그해서 등록하세요"}
           </p>
         </div>
@@ -885,32 +885,32 @@ export default function ComposerResourcesPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50">
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">작곡가</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">자료 제목</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">유형</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">대상곡</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">저자 / 연도</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">분량</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500">관리</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-fg-secondary">작곡가</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-fg-secondary">자료 제목</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-fg-secondary">유형</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-fg-secondary">대상곡</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-fg-secondary">저자 / 연도</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-fg-secondary">분량</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-fg-secondary">관리</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {filtered.map((r) => (
                 <tr key={r.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900">{r.composer}</td>
+                  <td className="px-4 py-3 text-sm font-medium text-fg-primary">{r.composer}</td>
                   <td className="px-4 py-3 text-sm text-gray-700 max-w-[240px] truncate">{r.title}</td>
                   <td className="px-4 py-3">
                     <span className="text-xs px-2 py-1 rounded-full bg-violet-50 text-violet-700 font-medium">
                       {TYPE_LABELS[r.resource_type] || r.resource_type}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-500 max-w-[180px] truncate">
+                  <td className="px-4 py-3 text-sm text-fg-secondary max-w-[180px] truncate">
                     {r.piece_title || "-"}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-500">
+                  <td className="px-4 py-3 text-sm text-fg-secondary">
                     {[r.author, r.year].filter(Boolean).join(", ") || "-"}
                   </td>
-                  <td className="px-4 py-3 text-xs text-gray-400">
+                  <td className="px-4 py-3 text-xs text-fg-tertiary">
                     {r.extracted_text.length.toLocaleString()}자
                     {r.page_count ? ` · ${r.page_count}p` : ""}
                   </td>
@@ -918,7 +918,7 @@ export default function ComposerResourcesPage() {
                     {r.pdf_storage_path && (
                       <button
                         onClick={() => handleDownloadPdf(r.pdf_storage_path!)}
-                        className="p-1.5 text-gray-400 hover:text-violet-600 transition-colors"
+                        className="p-1.5 text-fg-tertiary hover:text-violet-600 transition-colors"
                         title="PDF 원본 보기"
                       >
                         <Download className="w-4 h-4" />
@@ -926,7 +926,7 @@ export default function ComposerResourcesPage() {
                     )}
                     <button
                       onClick={() => setDeleteTarget(r)}
-                      className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"
+                      className="p-1.5 text-fg-tertiary hover:text-red-500 transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -942,7 +942,7 @@ export default function ComposerResourcesPage() {
       {deleteTarget && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-xl">
-            <h3 className="text-lg font-bold text-gray-900 mb-2">자료 삭제</h3>
+            <h3 className="text-lg font-bold text-fg-primary mb-2">자료 삭제</h3>
             <p className="text-sm text-gray-600 mb-4">
               &quot;{deleteTarget.title}&quot;을(를) 삭제하시겠습니까?
             </p>
@@ -992,7 +992,7 @@ function BatchItemCard({
     pending: {
       icon: <Loader2 className="w-4 h-4 animate-spin" />,
       bg: "bg-gray-50 border-gray-200",
-      text: "text-gray-500",
+      text: "text-fg-secondary",
       label: "대기 중",
     },
     extracting: {
@@ -1040,9 +1040,9 @@ function BatchItemCard({
       {/* 헤더: 파일명 + 상태 + 액션 */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2 min-w-0">
-          <FileText className="w-4 h-4 text-gray-400 shrink-0" />
+          <FileText className="w-4 h-4 text-fg-tertiary shrink-0" />
           <span className="text-sm font-medium text-gray-800 truncate">{file.name}</span>
-          <span className="text-xs text-gray-400 shrink-0">
+          <span className="text-xs text-fg-tertiary shrink-0">
             ({(file.size / 1024).toFixed(0)} KB)
           </span>
         </div>
@@ -1054,7 +1054,7 @@ function BatchItemCard({
           {status !== "saving" && status !== "done" && (
             <button
               onClick={onRemove}
-              className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+              className="p-1 text-fg-tertiary hover:text-gray-600 transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
@@ -1093,7 +1093,7 @@ function BatchItemCard({
                 ] as const
               ).map(({ label, key }) => (
                 <div key={key}>
-                  <label className="block text-[10px] text-gray-400 mb-0.5">{label}</label>
+                  <label className="block text-[10px] text-fg-tertiary mb-0.5">{label}</label>
                   <input
                     type="text"
                     value={meta[key]}
@@ -1106,30 +1106,30 @@ function BatchItemCard({
           ) : (
             <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs">
               <span>
-                <span className="text-gray-400">작곡가</span>{" "}
+                <span className="text-fg-tertiary">작곡가</span>{" "}
                 <span className="font-medium text-gray-800">{meta.composer}</span>
               </span>
               <span>
-                <span className="text-gray-400">유형</span>{" "}
+                <span className="text-fg-tertiary">유형</span>{" "}
                 <span className="font-medium text-gray-800">
                   {TYPE_LABELS[meta.resource_type] || meta.resource_type}
                 </span>
               </span>
               {meta.piece_title && (
                 <span>
-                  <span className="text-gray-400">대상곡</span>{" "}
+                  <span className="text-fg-tertiary">대상곡</span>{" "}
                   <span className="font-medium text-gray-800">{meta.piece_title}</span>
                 </span>
               )}
               <span>
-                <span className="text-gray-400">저자</span>{" "}
+                <span className="text-fg-tertiary">저자</span>{" "}
                 <span className="font-medium text-gray-800">{meta.author || "-"}</span>
               </span>
               <span>
-                <span className="text-gray-400">연도</span>{" "}
+                <span className="text-fg-tertiary">연도</span>{" "}
                 <span className="font-medium text-gray-800">{meta.year || "-"}</span>
               </span>
-              <span className="text-gray-400">
+              <span className="text-fg-tertiary">
                 {pageCount}p · {extractedText.length.toLocaleString()}자
               </span>
             </div>
@@ -1137,7 +1137,7 @@ function BatchItemCard({
           <div className="mt-2 flex items-center gap-2">
             <button
               onClick={onToggleEdit}
-              className="flex items-center gap-1 text-[11px] text-gray-500 hover:text-gray-700 transition-colors"
+              className="flex items-center gap-1 text-[11px] text-fg-secondary hover:text-gray-700 transition-colors"
             >
               <Pencil className="w-3 h-3" />
               {editMode ? "닫기" : "수정"}

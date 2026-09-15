@@ -9,7 +9,7 @@ export default function TermsPage() {
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-3xl mx-auto px-6 py-12">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">
+        <h1 className="text-3xl font-bold text-fg-primary mb-6">
           Sempre(셈프레) 서비스 이용약관
         </h1>
         <p className="text-sm font-semibold text-gray-700 mb-4">
@@ -24,7 +24,7 @@ export default function TermsPage() {
         <div className="space-y-10 text-gray-700 text-[15px] leading-relaxed">
           {/* 1 */}
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">
+            <h2 className="text-xl font-semibold text-fg-primary mb-3">
               제1조 (목적)
             </h2>
             <p>
@@ -36,7 +36,7 @@ export default function TermsPage() {
 
           {/* 2 */}
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">
+            <h2 className="text-xl font-semibold text-fg-primary mb-3">
               제2조 (용어의 정의)
             </h2>
             <ol className="list-decimal pl-5 space-y-2">
@@ -61,7 +61,7 @@ export default function TermsPage() {
 
           {/* 3 */}
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">
+            <h2 className="text-xl font-semibold text-fg-primary mb-3">
               제3조 (약관의 효력 및 변경)
             </h2>
             <ol className="list-decimal pl-5 space-y-2">
@@ -84,7 +84,7 @@ export default function TermsPage() {
 
           {/* 4 */}
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">
+            <h2 className="text-xl font-semibold text-fg-primary mb-3">
               제4조 (이용계약의 체결)
             </h2>
             <ol className="list-decimal pl-5 space-y-2">
@@ -110,7 +110,7 @@ export default function TermsPage() {
 
           {/* 5 */}
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">
+            <h2 className="text-xl font-semibold text-fg-primary mb-3">
               제5조 (서비스의 내용)
             </h2>
             <p className="mb-3">회사가 제공하는 서비스는 다음과 같습니다.</p>
@@ -144,7 +144,7 @@ export default function TermsPage() {
 
           {/* 6 */}
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">
+            <h2 className="text-xl font-semibold text-fg-primary mb-3">
               제6조 (이용자의 의무)
             </h2>
             <p className="mb-3">이용자는 다음 행위를 하여서는 안 됩니다.</p>
@@ -164,7 +164,7 @@ export default function TermsPage() {
 
           {/* 7 */}
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">
+            <h2 className="text-xl font-semibold text-fg-primary mb-3">
               제7조 (회사의 의무)
             </h2>
             <ol className="list-decimal pl-5 space-y-2">
@@ -185,7 +185,7 @@ export default function TermsPage() {
 
           {/* 8 */}
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">
+            <h2 className="text-xl font-semibold text-fg-primary mb-3">
               제8조 (서비스의 변경 및 중단)
             </h2>
             <ol className="list-decimal pl-5 space-y-2">
@@ -206,7 +206,7 @@ export default function TermsPage() {
 
           {/* 9 */}
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">
+            <h2 className="text-xl font-semibold text-fg-primary mb-3">
               제9조 (지식재산권)
             </h2>
             <ol className="list-decimal pl-5 space-y-2">
@@ -229,7 +229,7 @@ export default function TermsPage() {
 
           {/* 10 */}
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">
+            <h2 className="text-xl font-semibold text-fg-primary mb-3">
               제10조 (서비스 이용 요금)
             </h2>
             <ol className="list-decimal pl-5 space-y-2">
@@ -245,7 +245,7 @@ export default function TermsPage() {
 
           {/* 11 */}
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">
+            <h2 className="text-xl font-semibold text-fg-primary mb-3">
               제11조 (면책사항)
             </h2>
             <ol className="list-decimal pl-5 space-y-2">
@@ -270,7 +270,7 @@ export default function TermsPage() {
 
           {/* 12 */}
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">
+            <h2 className="text-xl font-semibold text-fg-primary mb-3">
               제12조 (회원 탈퇴 및 자격 제한)
             </h2>
             <ol className="list-decimal pl-5 space-y-2">
@@ -292,7 +292,7 @@ export default function TermsPage() {
 
           {/* 13 */}
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">
+            <h2 className="text-xl font-semibold text-fg-primary mb-3">
               제13조 (분쟁해결)
             </h2>
             <ol className="list-decimal pl-5 space-y-2">
@@ -313,7 +313,7 @@ export default function TermsPage() {
 
           {/* 14 */}
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">
+            <h2 className="text-xl font-semibold text-fg-primary mb-3">
               제14조 (부칙)
             </h2>
             <ol className="list-decimal pl-5 space-y-2">
@@ -326,7 +326,7 @@ export default function TermsPage() {
 
           {/* 문의 */}
           <section className="border-t border-gray-200 pt-8">
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">
+            <h2 className="text-xl font-semibold text-fg-primary mb-3">
               문의처
             </h2>
             <ul className="space-y-1">

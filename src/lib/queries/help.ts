@@ -259,10 +259,39 @@ export async function getHelpStats(): Promise<{
     (expertData ?? []).map((r: Record<string, unknown>) => r.expert_id)
   );
 
+  // 평균 응답 시간: 요청 생성 → 채택된 제안 제출까지 (closed 요청 기준)
+  let avgResponseHours = 0;
+  const { data: closedRows } = await db
+    .from("help_requests")
+    .select(
+      "created_at, help_proposals!help_requests_accepted_proposal_fk(submitted_at)"
+    )
+    .eq("status", "closed")
+    .not("accepted_proposal_id", "is", null);
+
+  if (closedRows && closedRows.length > 0) {
+    const hours: number[] = closedRows
+      .map((row: Record<string, unknown>) => {
+        const proposal = row.help_proposals as { submitted_at?: string } | null;
+        if (!row.created_at || !proposal?.submitted_at) return null;
+        const diffMs =
+          new Date(proposal.submitted_at).getTime() -
+          new Date(row.created_at as string).getTime();
+        return diffMs > 0 ? diffMs / (1000 * 60 * 60) : null;
+      })
+      .filter((h: number | null): h is number => h !== null);
+    if (hours.length > 0) {
+      avgResponseHours =
+        Math.round(
+          (hours.reduce((a: number, b: number) => a + b, 0) / hours.length) * 10,
+        ) / 10;
+    }
+  }
+
   return {
     activeExperts: uniqueExperts.size,
     completedCount: completedCount ?? 0,
-    avgResponseHours: 4.2, // TODO: 실제 계산
+    avgResponseHours,
   };
 }
 

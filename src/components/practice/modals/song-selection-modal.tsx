@@ -48,7 +48,7 @@ export function SongSelectionModal({
               placeholder="곡 검색..."
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-white/30 bg-white/30 backdrop-blur-sm text-sm focus:outline-none focus:ring-2 focus:ring-violet-300/40 placeholder:text-gray-400"
+              className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-white/30 bg-white/30 backdrop-blur-sm text-sm focus:outline-none focus:ring-2 focus:ring-violet-300/40 placeholder:text-fg-tertiary"
             />
           </div>
           <button
@@ -87,8 +87,8 @@ export function SongSelectionModal({
                   />
                 </div>
                 <div className="flex-1">
-                  <p className="font-semibold text-gray-900">{song.title}</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="font-semibold text-fg-primary">{song.title}</p>
+                  <p className="text-xs text-fg-secondary">
                     {song.duration}
                   </p>
                 </div>
@@ -98,7 +98,7 @@ export function SongSelectionModal({
                       <Check className="w-4 h-4 text-white" />
                     </div>
                   ) : (
-                    <span className="text-xs text-gray-400">
+                    <span className="text-xs text-fg-tertiary">
                       {song.lastPracticed}
                     </span>
                   )}
@@ -108,7 +108,7 @@ export function SongSelectionModal({
           ))}
 
           {filteredSongs.length === 0 && (
-            <div className="text-center py-8 text-gray-400">
+            <div className="text-center py-8 text-fg-tertiary">
               <Music className="w-8 h-8 mx-auto mb-2 opacity-50" />
               <p className="text-sm">검색 결과가 없습니다</p>
               <button

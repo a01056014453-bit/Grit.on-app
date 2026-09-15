@@ -43,7 +43,7 @@ export default function UserDetailPage() {
   if (!user) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-gray-400">로딩 중...</p>
+        <p className="text-fg-tertiary">로딩 중...</p>
       </div>
     );
   }
@@ -52,9 +52,9 @@ export default function UserDetailPage() {
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <Link href="/admin/users" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-          <ArrowLeft className="w-5 h-5 text-gray-500" />
+          <ArrowLeft className="w-5 h-5 text-fg-secondary" />
         </Link>
-        <h1 className="text-xl font-bold text-gray-900">사용자 상세</h1>
+        <h1 className="text-xl font-bold text-fg-primary">사용자 상세</h1>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 p-6">
@@ -64,8 +64,8 @@ export default function UserDetailPage() {
               {user.nickname.charAt(0)}
             </div>
             <div>
-              <h2 className="text-lg font-bold text-gray-900">{user.nickname}</h2>
-              {user.name && <p className="text-sm text-gray-500">{user.name}</p>}
+              <h2 className="text-lg font-bold text-fg-primary">{user.nickname}</h2>
+              {user.name && <p className="text-sm text-fg-secondary">{user.name}</p>}
               <div className="flex items-center gap-2 mt-1">
                 <StatusBadge label={user.instrument} variant="purple" />
                 {user.level && <StatusBadge label={user.level} variant="info" />}
@@ -76,34 +76,34 @@ export default function UserDetailPage() {
               </div>
             </div>
           </div>
-          <p className="text-xs text-gray-400">가입일: {new Date(user.createdAt).toLocaleDateString('ko-KR')}</p>
+          <p className="text-xs text-fg-tertiary">가입일: {new Date(user.createdAt).toLocaleDateString('ko-KR')}</p>
         </div>
 
         <div className="grid grid-cols-5 gap-4 mt-6">
           <div className="text-center p-3 bg-gray-50 rounded-lg">
             <Trophy className="w-5 h-5 text-violet-500 mx-auto mb-1" />
-            <p className="text-xs text-gray-500">그릿 점수</p>
-            <p className="font-number text-lg font-bold text-gray-900">{user.gritScore?.toLocaleString() ?? '-'}</p>
+            <p className="text-xs text-fg-secondary">그릿 점수</p>
+            <p className="font-number text-lg font-bold text-fg-primary">{user.gritScore?.toLocaleString() ?? '-'}</p>
           </div>
           <div className="text-center p-3 bg-gray-50 rounded-lg">
             <Clock className="w-5 h-5 text-blue-500 mx-auto mb-1" />
-            <p className="text-xs text-gray-500">총 연습</p>
-            <p className="font-number text-lg font-bold text-gray-900">{user.totalPracticeHours?.toFixed(1) ?? '0'}h</p>
+            <p className="text-xs text-fg-secondary">총 연습</p>
+            <p className="font-number text-lg font-bold text-fg-primary">{user.totalPracticeHours?.toFixed(1) ?? '0'}h</p>
           </div>
           <div className="text-center p-3 bg-gray-50 rounded-lg">
             <Flame className="w-5 h-5 text-orange-500 mx-auto mb-1" />
-            <p className="text-xs text-gray-500">연속일</p>
-            <p className="font-number text-lg font-bold text-gray-900">{user.streakDays ?? 0}일</p>
+            <p className="text-xs text-fg-secondary">연속일</p>
+            <p className="font-number text-lg font-bold text-fg-primary">{user.streakDays ?? 0}일</p>
           </div>
           <div className="text-center p-3 bg-gray-50 rounded-lg">
             <Music className="w-5 h-5 text-green-500 mx-auto mb-1" />
-            <p className="text-xs text-gray-500">현재 곡</p>
-            <p className="text-sm font-medium text-gray-900 truncate">{user.currentPiece ?? '-'}</p>
+            <p className="text-xs text-fg-secondary">현재 곡</p>
+            <p className="text-sm font-medium text-fg-primary truncate">{user.currentPiece ?? '-'}</p>
           </div>
           <div className="text-center p-3 bg-gray-50 rounded-lg">
-            <Clock className="w-5 h-5 text-gray-500 mx-auto mb-1" />
-            <p className="text-xs text-gray-500">세션 수</p>
-            <p className="font-number text-lg font-bold text-gray-900">{user.practiceSessionCount}</p>
+            <Clock className="w-5 h-5 text-fg-secondary mx-auto mb-1" />
+            <p className="text-xs text-fg-secondary">세션 수</p>
+            <p className="font-number text-lg font-bold text-fg-primary">{user.practiceSessionCount}</p>
           </div>
         </div>
       </div>
@@ -126,28 +126,28 @@ export default function UserDetailPage() {
 
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">목표 설정</h3>
+          <h3 className="text-sm font-semibold text-fg-primary mb-3">목표 설정</h3>
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-gray-500">일일 목표</span>
+              <span className="text-fg-secondary">일일 목표</span>
               <span className="font-number font-medium">{user.dailyGoal ? `${user.dailyGoal}분` : '미설정'}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-500">주간 목표</span>
+              <span className="text-fg-secondary">주간 목표</span>
               <span className="font-number font-medium">{user.weeklyGoal ? `${user.weeklyGoal}분` : '미설정'}</span>
             </div>
           </div>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">계정 정보</h3>
+          <h3 className="text-sm font-semibold text-fg-primary mb-3">계정 정보</h3>
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-gray-500">마지막 접속</span>
+              <span className="text-fg-secondary">마지막 접속</span>
               <span>{user.lastActiveAt ? new Date(user.lastActiveAt).toLocaleDateString('ko-KR') : '-'}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-500">ID</span>
-              <span className="text-xs text-gray-400 font-mono">{user.id.slice(0, 8)}...</span>
+              <span className="text-fg-secondary">ID</span>
+              <span className="text-xs text-fg-tertiary font-mono">{user.id.slice(0, 8)}...</span>
             </div>
           </div>
         </div>
