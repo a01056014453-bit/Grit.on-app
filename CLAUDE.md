@@ -92,9 +92,10 @@ TEST_BASE_URL=http://localhost:3000 npx vitest run tests/api   # 로컬 dev 서�
 ### 인증·인가
 - `src/middleware.ts` → `lib/supabase-middleware.ts`의 `updateSession()`: 매 요청 세션 쿠키 갱신. `/admin`은 로그인 상태에서 `ADMIN_USER_IDS`(쉼표 구분)에 없으면 `/`로 리다이렉트
 - 페이지 보호는 `components/AuthGuard.tsx`(`(app)` 라우트 그룹). 세션 확인 → 온보딩 여부 → `pullUserData()` → 푸시 구독 순
+- `/admin` 미들웨어는 fail-closed: `ADMIN_USER_IDS`가 비어 있으면 로그인 유저도 전부 `/`로 리다이렉트. `/mockups`(개발용 화면 클론)는 `mockups/layout.tsx`가 프로덕션에서 404 처리
 - 소셜 로그인은 provider별 커스텀 콜백(`app/auth/{google,kakao,apple}/callback` → `/api/auth/*`에서 code→id_token 교환 → `signInWithIdToken`). `app/auth/callback`은 Supabase PKCE. `/api/auth/kakao`는 로그인이 아니라 **선생님 본인인증 전용**
 - API Route 유저 식별은 `lib/api-auth.ts`의 `getRequestUserId(request)`(쿠키 → Bearer 순)가 정식 헬퍼. 기존 라우트 다수가 `createServerClient().auth.getUser()`를 인라인으로 복붙했지만 **신규 코드는 헬퍼를 쓸 것**
-- 서버 전용 시크릿: `CRON_SECRET`(`Authorization: Bearer`), `INTERNAL_CALL_SECRET`(`x-internal-call` 헤더, **16자 이상일 때만 유효**). 통과 시 rate limit 무제한 + 캐시 무시. cron 라우트의 가드는 `if (!cronSecret || ...)`(fail-closed)와 `if (cronSecret && ...)`(fail-open)이 섞여 있음 — **신규 cron은 fail-closed 패턴**으로
+- 서버 전용 시크릿: `CRON_SECRET`(`Authorization: Bearer`), `INTERNAL_CALL_SECRET`(`x-internal-call` 헤더, **16자 이상일 때만 유효**). 통과 시 rate limit 무제한 + 캐시 무시. cron 라우트 가드는 전부 `if (!cronSecret || ...)`(fail-closed) — 시크릿 미설정이면 401. **신규 cron도 같은 패턴**으로
 
 ### DB 접근 3계층
 | 용도 | 클라이언트 | 파일 |
@@ -125,7 +126,7 @@ TEST_BASE_URL=http://localhost:3000 npx vitest run tests/api   # 로컬 dev 서�
 5. 프롬프트는 전부 `lib/analysis-prompts.ts`. 악기별 전문가 페르소나는 `lib/analysis-agents/agent-{piano,strings,woodwinds,brass,percussion-harp}.ts`에서 `getInstrumentAgent()`로 선택(미인식 시 PIANO 폴백)
 6. 저장 전 `lib/analysis-validation.ts`의 `validateAnalysisOutput()` — **실패해도 저장은 진행**(경고만). 결과는 `song_analyses.content` JSONB, 개인 이력은 `user_analysis_history`
 - v1(`/api/analyze-song`)은 단일 gpt-4o 호출·캐시 없음, 레거시. 클라이언트 측 "분석한 곡" 목록은 `lib/user-analyses.ts`가 정본(`analyzed-songs-store.ts`, `song-analysis-store.ts`는 잔재 — 새로 참조하지 말 것)
-- Rate limit(`lib/rate-limiters.ts`): Free 1회/일, Pro(`profiles.subscription_plan === 'pro'`) 5회/일, 어드민·내부 호출 무제한. `lib/rate-limit.ts`는 **인메모리**라 서버리스 인스턴스마다 따로 센다. identifier는 IP 기반(`getClientIdentifier`)
+- Rate limit: UI 경로의 일일 한도는 **`start/route.ts`의 `checkDailyQuota`**(로그인 유저는 `analysis_jobs` 24h 건수, 비로그인은 IP 인메모리)에서 건다. 본 분석 라우트의 `lib/rate-limiters.ts` 한도(Free 1·Pro 5/일, IP 기반)는 직접 호출에만 적용되고 내부 호출(start→v2)은 우회하므로 여기에 한도를 추가해도 UI에는 효과 없음. `lib/rate-limit.ts`는 **인메모리**라 서버리스 인스턴스마다 따로 센다
 - 크론 `pre-analyze`/`analyze-designated`가 `lib/data/popular-pieces.ts` / `designated_pieces` 중 미분석 곡을 self-fetch로 채움
 
 ### 알림·이벤트
@@ -214,6 +215,7 @@ TEST_BASE_URL=http://localhost:3000 npx vitest run tests/api   # 로컬 dev 서�
 | `AGENTS.md` | Codex 등 다른 에이전트용 지침 (오디오 상수 등 일부 stale) |
 | `DEVELOPER_GUIDE.md` | 개발자 온보딩, 분석 파이프라인 개요 (Claude 사용 표기 등 일부 stale) |
 | `docs/prd/*.md` | 기능별 PRD (곡 분석, 크레딧, 피드백 SLA·영상 업로드·선생님 리뷰, 랭킹) |
+| `docs/launch-checklist.md` | 출시 전 결정·수정·확인 목록과 진행 상태 |
 | `PROGRESS.md` | 초기 개발 기록 — stale, 참고만 |
 
 ---
