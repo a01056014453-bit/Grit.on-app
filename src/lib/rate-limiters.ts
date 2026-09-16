@@ -49,3 +49,9 @@ export const helpRequestLimiter = createRateLimiter({
   interval: TEN_MINUTES,
   maxRequests: 10,
 });
+
+/** 이벤트 트래킹 (IP당 분당 60회) — service role insert 남용 방지 */
+export const analyticsTrackLimiter = createRateLimiter({
+  interval: 60 * 1000,
+  maxRequests: 60,
+});

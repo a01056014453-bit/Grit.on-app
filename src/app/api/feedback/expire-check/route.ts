@@ -99,9 +99,13 @@ async function sendExpirePush(userId: string, body: string, requestId: string): 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL
       || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
 
+    // push/send는 CRON_SECRET Bearer 또는 유저 세션이 필요 — 크론에는 세션이 없으므로 Bearer 첨부
     await fetch(`${baseUrl}/api/push/send`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.CRON_SECRET ?? ""}`,
+      },
       body: JSON.stringify({
         userId,
         title: "피드백 요청 만료",

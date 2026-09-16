@@ -46,9 +46,9 @@ export async function updateSession(request: NextRequest) {
       // (미들웨어에서 리다이렉트하지 않음 — SSO 외 로그인 지원을 위해)
       return supabaseResponse;
     }
-    // 로그인 됨: 어드민 ID 검증
+    // 로그인 됨: 어드민 ID 검증 (fail-closed — ADMIN_USER_IDS가 비어 있으면 아무도 통과 못 함)
     const adminIds = getAdminUserIds();
-    if (adminIds.size > 0 && !adminIds.has(user.id)) {
+    if (!adminIds.has(user.id)) {
       const homeUrl = new URL("/", request.url);
       return NextResponse.redirect(homeUrl);
     }

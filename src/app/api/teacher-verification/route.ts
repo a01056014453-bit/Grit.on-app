@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
 import { supabaseServer } from "@/lib/supabase-server";
+import { getRequestUserId } from "@/lib/api-auth";
 
 /**
  * GET /api/teacher-verification?userId=xxx&localId=yyy
@@ -72,56 +72,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "id, name 필수" }, { status: 400 });
     }
 
-    // 1. 인증 시도: cookie 기반
-    let userId: string | null = null;
-
-    const supabaseAuth = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return request.cookies.getAll();
-          },
-          setAll() {},
-        },
-      }
-    );
-
-    const { data: { user } } = await supabaseAuth.auth.getUser();
-    if (user) {
-      userId = user.id;
-    }
-
-    // 2. cookie 인증 실패 시: Authorization 헤더에서 토큰 추출
-    if (!userId) {
-      const authHeader = request.headers.get("authorization");
-      if (authHeader?.startsWith("Bearer ")) {
-        const token = authHeader.slice(7);
-        const { data: { user: tokenUser } } = await supabaseServer.auth.getUser(token);
-        if (tokenUser) {
-          userId = tokenUser.id;
-        }
-      }
-    }
-
-    // 3. userId로 프로필 존재 확인 (인증 대체)
-    if (!userId && body.userId) {
-      const { data: profile } = await supabaseServer
-        .from("profiles")
-        .select("id")
-        .eq("id", body.userId)
-        .single();
-      if (profile) {
-        userId = body.userId;
-      }
-    }
+    // 인증: cookie → Bearer 순 (lib/api-auth). body.userId 같은 클라이언트 값은 신뢰하지 않는다.
+    const userId = await getRequestUserId(request);
 
     if (!userId) {
       return NextResponse.json(
         { error: "인증 실패. 로그인 후 다시 시도해주세요." },
         { status: 401 }
       );
+    }
+
+    // id는 클라이언트가 생성한 teachers PK — 다른 유저의 행을 덮어쓰지 못하게 소유자 검사
+    const { data: existing } = await supabaseServer
+      .from("teachers")
+      .select("user_id")
+      .eq("id", id)
+      .maybeSingle();
+    if (existing && existing.user_id !== userId) {
+      return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
     }
 
     // 4. teachers 테이블에 upsert
