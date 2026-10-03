@@ -12,7 +12,7 @@ export default function PrivacyPage() {
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-3xl mx-auto px-6 py-12">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">
+        <h1 className="text-3xl font-bold text-fg-primary mb-6">
           Sempre(셈프레) 개인정보 처리방침
         </h1>
         <p className="text-sm font-semibold text-gray-700 mb-4">
@@ -28,7 +28,7 @@ export default function PrivacyPage() {
         <div className="space-y-10 text-gray-700 text-[15px] leading-relaxed">
           {/* 1 */}
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">
+            <h2 className="text-xl font-semibold text-fg-primary mb-3">
               1. 개인정보의 처리 목적·수집 항목·보유 및 이용 기간
             </h2>
             <p className="mb-3">
@@ -114,7 +114,7 @@ export default function PrivacyPage() {
 
           {/* 2 */}
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">
+            <h2 className="text-xl font-semibold text-fg-primary mb-3">
               2. 만 14세 미만 아동의 개인정보 처리
             </h2>
             <ol className="list-decimal pl-5 space-y-2">
@@ -143,7 +143,7 @@ export default function PrivacyPage() {
 
           {/* 3 */}
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">
+            <h2 className="text-xl font-semibold text-fg-primary mb-3">
               3. 개인정보의 제3자 제공
             </h2>
             <p className="mb-3">
@@ -170,7 +170,7 @@ export default function PrivacyPage() {
 
           {/* 4 */}
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">
+            <h2 className="text-xl font-semibold text-fg-primary mb-3">
               4. 개인정보 처리업무의 위탁
             </h2>
             <p className="mb-3">
@@ -193,7 +193,7 @@ export default function PrivacyPage() {
 
           {/* 5 */}
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">
+            <h2 className="text-xl font-semibold text-fg-primary mb-3">
               5. 개인정보의 국외 이전
             </h2>
             <hr className="border-gray-200 mb-4" />
@@ -238,23 +238,6 @@ export default function PrivacyPage() {
                   <tr>
                     <td className={`${tdClass} font-semibold`}>미국</td>
                     <td className={`${tdClass} font-semibold`}>
-                      Google (Gemini)
-                    </td>
-                    <td className={tdClass}>
-                      분석용 텍스트, 사용자 질의 내용, 시스템 로그 일부
-                    </td>
-                    <td className={tdClass}>API 호출 시 암호화 전송</td>
-                    <td className={tdClass}>
-                      <strong>원포인트 클리닉</strong> 생성 및 음악적 질의응답
-                      처리
-                    </td>
-                    <td className={`${tdClass} font-semibold`}>
-                      목적 달성 시 또는 2년 이내
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className={`${tdClass} font-semibold`}>미국</td>
-                    <td className={`${tdClass} font-semibold`}>
                       Perplexity, Inc.
                     </td>
                     <td className={tdClass}>
@@ -285,18 +268,19 @@ export default function PrivacyPage() {
                     </td>
                   </tr>
                   <tr>
-                    <td className={`${tdClass} font-semibold`}>미국 / 유럽</td>
+                    <td className={`${tdClass} font-semibold`}>미국</td>
                     <td className={`${tdClass} font-semibold`}>
-                      PostHog, Inc.
+                      Functional Software, Inc. (Sentry)
                     </td>
                     <td className={tdClass}>
-                      앱 내 행동 로그, 접속 환경, 이벤트 기록
+                      오류 로그, 접속 환경(브라우저·기기 정보), 오류 발생 시점의
+                      화면 조작 기록
                     </td>
-                    <td className={tdClass}>SDK 통신 시 실시간 전송</td>
+                    <td className={tdClass}>오류 발생 시 SDK를 통해 암호화 전송</td>
                     <td className={tdClass}>
-                      서비스 이용 패턴 분석 및 기능 개선
+                      서비스 오류 진단 및 안정성 개선
                     </td>
-                    <td className={`${tdClass} font-semibold`}>3개월 후 파기</td>
+                    <td className={`${tdClass} font-semibold`}>수집 후 90일 이내 파기</td>
                   </tr>
                 </tbody>
               </table>
@@ -305,7 +289,7 @@ export default function PrivacyPage() {
 
           {/* 6 */}
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">
+            <h2 className="text-xl font-semibold text-fg-primary mb-3">
               6. 개인정보의 파기 절차 및 방법
             </h2>
             <ul className="list-disc pl-5 space-y-1">
@@ -322,7 +306,7 @@ export default function PrivacyPage() {
 
           {/* 7 */}
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">
+            <h2 className="text-xl font-semibold text-fg-primary mb-3">
               7. 정보주체와 법정대리인의 권리·행사 방법
             </h2>
             <p>
@@ -334,7 +318,7 @@ export default function PrivacyPage() {
 
           {/* 8 */}
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">
+            <h2 className="text-xl font-semibold text-fg-primary mb-3">
               8. 개인정보의 안전성 확보조치
             </h2>
             <p className="mb-3">
@@ -443,12 +427,13 @@ export default function PrivacyPage() {
 
           {/* 9 */}
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">
+            <h2 className="text-xl font-semibold text-fg-primary mb-3">
               9. 쿠키·행태정보 수집 및 거부
             </h2>
             <p className="mb-2">
-              1. 회사는 PostHog 등으로 서비스 이용 행태를 분석하고, 온보딩
-              개선·에러 진단·맞춤 기능 추천에 활용합니다.
+              1. 회사는 서비스 이용 기록(화면 조회, 기능 사용 이벤트, 접속
+              환경)을 자체 데이터베이스에 수집하여 온보딩 개선·에러 진단·맞춤
+              기능 추천에 활용합니다.
             </p>
             <p>
               2. 이용자는 브라우저 설정(크롬: 설정 → 개인정보 및 보안 → 쿠키)
@@ -468,7 +453,7 @@ export default function PrivacyPage() {
 
           {/* 10 */}
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">
+            <h2 className="text-xl font-semibold text-fg-primary mb-3">
               10. 추가적 이용·제공 판단 기준
             </h2>
             <p>
@@ -480,7 +465,7 @@ export default function PrivacyPage() {
 
           {/* 11 */}
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">
+            <h2 className="text-xl font-semibold text-fg-primary mb-3">
               11. 가명정보의 처리
             </h2>
             <p className="mb-3">
@@ -553,7 +538,7 @@ export default function PrivacyPage() {
               </li>
             </ul>
 
-            <h3 className="text-base font-semibold text-gray-900 mb-2">
+            <h3 className="text-base font-semibold text-fg-primary mb-2">
               [학습 데이터 제외(Opt-out) 권리]
             </h3>
             <ol className="list-decimal pl-5 space-y-2">
@@ -577,7 +562,7 @@ export default function PrivacyPage() {
 
           {/* 12 */}
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">
+            <h2 className="text-xl font-semibold text-fg-primary mb-3">
               12. 개인정보 보호책임자
             </h2>
             <ul className="list-disc pl-5 space-y-1">
@@ -601,7 +586,7 @@ export default function PrivacyPage() {
 
           {/* 13 */}
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">
+            <h2 className="text-xl font-semibold text-fg-primary mb-3">
               13. 권익침해 구제방법
             </h2>
             <p className="mb-2">
@@ -616,7 +601,7 @@ export default function PrivacyPage() {
 
           {/* 14 */}
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">
+            <h2 className="text-xl font-semibold text-fg-primary mb-3">
               14. 링크
             </h2>
             <p>
@@ -628,7 +613,7 @@ export default function PrivacyPage() {
 
           {/* 15 */}
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">
+            <h2 className="text-xl font-semibold text-fg-primary mb-3">
               15. 부칙
             </h2>
             <p>

@@ -105,8 +105,8 @@ export function DailyGoal({ completed, target, onTargetChange }: DailyGoalProps)
     <div className="block bg-white/40 backdrop-blur-xl rounded-3xl p-6 border border-white/50 shadow-sm">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h4 className="font-bold text-gray-900 text-xl">오늘의 목표</h4>
-          <p className="text-xs text-gray-500 mt-1">매일 조금씩 성장하는 습관</p>
+          <h4 className="font-bold text-fg-primary text-xl">오늘의 목표</h4>
+          <p className="text-xs text-fg-secondary mt-1">매일 조금씩 성장하는 습관</p>
         </div>
         <div className="flex items-center gap-2">
           <div>
@@ -124,7 +124,7 @@ export function DailyGoal({ completed, target, onTargetChange }: DailyGoalProps)
                 className="fixed bg-white rounded-2xl shadow-xl border border-gray-100 py-2 min-w-[160px] max-h-[300px] overflow-y-auto"
                 style={{ top: dropdownPos.top, right: dropdownPos.right, zIndex: 9999 }}
               >
-                <p className="text-xs text-gray-500 px-4 py-1 border-b border-gray-100 mb-1">
+                <p className="text-xs text-fg-secondary px-4 py-1 border-b border-gray-100 mb-1">
                   목표 시간 설정
                 </p>
                 {GOAL_OPTIONS.map((minutes) => (
@@ -161,7 +161,7 @@ export function DailyGoal({ completed, target, onTargetChange }: DailyGoalProps)
             showValue={false}
           />
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-xs text-gray-500">달성률</span>
+            <span className="text-xs text-fg-secondary">달성률</span>
             <motion.span
               className="text-xl font-bold bg-gradient-to-r from-violet-700 to-violet-400 bg-clip-text text-transparent"
               initial={{ scale: 0.5, opacity: 0 }}
@@ -175,7 +175,7 @@ export function DailyGoal({ completed, target, onTargetChange }: DailyGoalProps)
 
         <div className="flex-1 flex flex-col justify-center gap-3">
           <div className="flex flex-col">
-            <span className="text-xs font-medium text-gray-400">현재 연습</span>
+            <span className="text-xs font-medium text-fg-tertiary">현재 연습</span>
             <div className="flex items-baseline gap-1">
               <motion.span
                 className="text-3xl font-bold bg-gradient-to-r from-violet-700 to-violet-400 bg-clip-text text-transparent"
@@ -185,7 +185,7 @@ export function DailyGoal({ completed, target, onTargetChange }: DailyGoalProps)
               >
                 {displayCompleted}
               </motion.span>
-              <span className="text-sm font-medium text-gray-500">/ {target}분</span>
+              <span className="text-sm font-medium text-fg-secondary">/ {target}분</span>
             </div>
           </div>
 
@@ -205,9 +205,9 @@ export function DailyGoal({ completed, target, onTargetChange }: DailyGoalProps)
 
       {/* 오늘의 명언 */}
       <div className="mt-5 pt-4 border-t border-violet-200/60">
-        <p className="text-xs text-gray-400 mb-1">오늘의 명언</p>
+        <p className="text-xs text-fg-tertiary mb-1">오늘의 명언</p>
         <p className="text-sm text-gray-600 italic">&quot;{quote.text}&quot;</p>
-        <p className="text-xs text-gray-400 mt-1">— {quote.author}</p>
+        <p className="text-xs text-fg-tertiary mt-1">— {quote.author}</p>
       </div>
     </div>
   );

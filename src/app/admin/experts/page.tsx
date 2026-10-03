@@ -124,7 +124,7 @@ export default function ExpertsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-bold text-gray-900">전문가 검증</h1>
+      <h1 className="text-xl font-bold text-fg-primary">전문가 검증</h1>
 
       <div className="grid grid-cols-4 gap-4">
         <StatCard title="대기 중" value={pending} icon={Clock} changeType={pending > 0 ? "negative" : "neutral"} change={pending > 0 ? "처리 필요" : ""} />
@@ -140,7 +140,7 @@ export default function ExpertsPage() {
             onClick={() => setFilter(f)}
             className={cn(
               'px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
-              filter === f ? 'bg-violet-100 text-violet-700' : 'text-gray-500 hover:bg-gray-100',
+              filter === f ? 'bg-violet-100 text-violet-700' : 'text-fg-secondary hover:bg-gray-100',
             )}
           >
             {f === 'all' ? '전체' : f === 'pending' ? '대기' : f === 'approved' ? '승인' : '거절'}
@@ -153,13 +153,13 @@ export default function ExpertsPage() {
           {filtered.length === 0 ? (
             <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
               <Inbox className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-              <p className="text-sm text-gray-400">
+              <p className="text-sm text-fg-tertiary">
                 {filter === 'all'
                   ? '아직 신청이 없습니다'
                   : '해당 상태의 신청이 없습니다'}
               </p>
               {filter === 'all' && (
-                <p className="text-xs text-gray-400 mt-1">
+                <p className="text-xs text-fg-tertiary mt-1">
                   앱 프로필 → 선생님 등록에서 신청하면 여기에 표시됩니다
                 </p>
               )}
@@ -175,11 +175,11 @@ export default function ExpertsPage() {
                 )}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <span className="font-medium text-gray-900">{v.applicantName}</span>
+                  <span className="font-medium text-fg-primary">{v.applicantName}</span>
                   <StatusBadge label={statusLabel(v.status)} variant={getStatusVariant(statusLabel(v.status))} />
                 </div>
-                <p className="text-xs text-gray-500">{v.specialty.join(' · ')}</p>
-                <p className="text-xs text-gray-400 mt-1">
+                <p className="text-xs text-fg-secondary">{v.specialty.join(' · ')}</p>
+                <p className="text-xs text-fg-tertiary mt-1">
                   {v.appliedAt ? new Date(v.appliedAt).toLocaleDateString('ko-KR') : '-'}
                 </p>
               </button>
@@ -192,21 +192,21 @@ export default function ExpertsPage() {
             <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-lg font-bold text-gray-900">{selected.applicantName}</h2>
-                  <p className="text-sm text-gray-500 mt-1">{selected.specialty.join(' · ')}</p>
+                  <h2 className="text-lg font-bold text-fg-primary">{selected.applicantName}</h2>
+                  <p className="text-sm text-fg-secondary mt-1">{selected.specialty.join(' · ')}</p>
                 </div>
                 <StatusBadge label={statusLabel(selected.status)} variant={getStatusVariant(statusLabel(selected.status))} />
               </div>
 
               <div className="grid grid-cols-2 gap-4 text-center">
                 <div className="p-3 bg-gray-50 rounded-lg">
-                  <p className="text-xs text-gray-500">신청일</p>
+                  <p className="text-xs text-fg-secondary">신청일</p>
                   <p className="text-sm font-medium mt-1">
                     {selected.appliedAt ? new Date(selected.appliedAt).toLocaleDateString('ko-KR') : '-'}
                   </p>
                 </div>
                 <div className="p-3 bg-gray-50 rounded-lg">
-                  <p className="text-xs text-gray-500">서류 수</p>
+                  <p className="text-xs text-fg-secondary">서류 수</p>
                   <p className="text-sm font-medium mt-1">{selected.documents.length}건</p>
                 </div>
               </div>
@@ -263,14 +263,14 @@ export default function ExpertsPage() {
               ) : (
                 <div className="p-4 rounded-lg border border-gray-200 bg-gray-50">
                   <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-gray-400" />
-                    <span className="text-sm text-gray-500">AI 사전 심사 결과 없음</span>
+                    <Sparkles className="w-4 h-4 text-fg-tertiary" />
+                    <span className="text-sm text-fg-secondary">AI 사전 심사 결과 없음</span>
                   </div>
                 </div>
               )}
 
               <div>
-                <h3 className="text-sm font-semibold text-gray-900 mb-3">제출 서류</h3>
+                <h3 className="text-sm font-semibold text-fg-primary mb-3">제출 서류</h3>
                 <div className="space-y-4">
                   {selected.documents.map((doc, i) => {
                     const aiDoc = selected.aiReview?.documents.find((d) => d.documentId === doc.id);
@@ -279,9 +279,9 @@ export default function ExpertsPage() {
                     return (
                       <div key={i} className="p-4 bg-gray-50 rounded-lg border border-gray-100">
                         <div className="flex items-center gap-2 mb-3">
-                          <FileText className="w-4 h-4 text-gray-400" />
+                          <FileText className="w-4 h-4 text-fg-tertiary" />
                           <span className="text-sm font-medium text-gray-700">{docTypeLabel(doc.type)}</span>
-                          <span className="text-xs text-gray-400 ml-auto">
+                          <span className="text-xs text-fg-tertiary ml-auto">
                             {new Date(doc.uploadedAt).toLocaleDateString('ko-KR')}
                           </span>
                         </div>
@@ -298,8 +298,8 @@ export default function ExpertsPage() {
                         )}
 
                         <div className="bg-white p-3 rounded border border-gray-200 mb-2">
-                          <p className="text-xs text-gray-500">파일명</p>
-                          <p className="text-sm text-gray-900">{doc.fileName}</p>
+                          <p className="text-xs text-fg-secondary">파일명</p>
+                          <p className="text-sm text-fg-primary">{doc.fileName}</p>
                         </div>
 
                         {/* AI 문서별 분석 결과 */}
@@ -314,24 +314,24 @@ export default function ExpertsPage() {
                             </div>
                             <div className="grid grid-cols-2 gap-2 text-gray-600">
                               <div>
-                                <span className="text-gray-400">유효성: </span>
+                                <span className="text-fg-tertiary">유효성: </span>
                                 <span className={aiDoc.isValid ? 'text-green-700 font-medium' : 'text-red-700 font-medium'}>
                                   {aiDoc.isValid ? '유효' : '확인 필요'}
                                 </span>
                               </div>
                               <div>
-                                <span className="text-gray-400">신뢰도: </span>
+                                <span className="text-fg-tertiary">신뢰도: </span>
                                 <span className="font-medium">{Math.round(aiDoc.confidence * 100)}%</span>
                               </div>
                               {aiDoc.institution && (
                                 <div>
-                                  <span className="text-gray-400">기관: </span>
+                                  <span className="text-fg-tertiary">기관: </span>
                                   <span>{aiDoc.institution}</span>
                                 </div>
                               )}
                               {aiDoc.major && (
                                 <div>
-                                  <span className="text-gray-400">전공: </span>
+                                  <span className="text-fg-tertiary">전공: </span>
                                   <span>{aiDoc.major}</span>
                                 </div>
                               )}
@@ -386,7 +386,7 @@ export default function ExpertsPage() {
               )}
             </div>
           ) : (
-            <div className="bg-white rounded-xl border border-gray-200 p-12 text-center text-gray-400">
+            <div className="bg-white rounded-xl border border-gray-200 p-12 text-center text-fg-tertiary">
               <FileText className="w-12 h-12 mx-auto mb-3 text-gray-300" />
               <p className="text-sm">좌측에서 신청을 선택하세요</p>
             </div>

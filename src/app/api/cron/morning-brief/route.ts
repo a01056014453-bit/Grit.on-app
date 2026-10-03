@@ -89,9 +89,7 @@ export async function GET(request: NextRequest) {
           {
             type: "button",
             text: { type: "plain_text", text: "어드민 열기" },
-            url: process.env.NEXT_PUBLIC_APP_URL
-              ? `${process.env.NEXT_PUBLIC_APP_URL}/admin`
-              : "https://griton-app.vercel.app/admin",
+            url: `${process.env.NEXT_PUBLIC_APP_URL || "https://withsempre.com"}/admin`,
           },
         ],
       },

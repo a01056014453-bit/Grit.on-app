@@ -87,18 +87,30 @@ export async function POST(request: NextRequest) {
     }
 
     // ── 4. Storage에서 오디오 파일 + 동기화 데이터 삭제 ──
-    const { data: userFiles } = await supabaseServer.storage
-      .from("recordings")
-      .list(userId);
-
-    if (userFiles && userFiles.length > 0) {
-      const filePaths = userFiles.map((f) => `${userId}/${f.name}`);
-      await supabaseServer.storage.from("recordings").remove(filePaths);
+    // Storage 목록은 기본 페이지 크기로 잘릴 수 있으므로 모든 페이지를 수집한다.
+    for (const [bucket, folder, owns] of [
+      ['recordings', userId, () => true],
+      ['avatars', 'profiles', (name: string) => name.startsWith(userId + '.')],
+    ] as const) {
+      const paths: string[] = [];
+      for (let offset = 0; ; offset += 100) {
+        const { data: files, error } = await supabaseServer.storage.from(bucket)
+          .list(folder, { limit: 100, offset, sortBy: { column: 'name', order: 'asc' } });
+        if (error) { deleteErrors.push(bucket + ': ' + error.message); break; }
+        for (const file of files ?? []) {
+          if (file.id && owns(file.name)) paths.push(folder + '/' + file.name);
+        }
+        if (!files || files.length < 100) break;
+      }
+      for (let offset = 0; offset < paths.length; offset += 100) {
+        const { error } = await supabaseServer.storage.from(bucket).remove(paths.slice(offset, offset + 100));
+        if (error) deleteErrors.push(bucket + ': ' + error.message);
+      }
     }
-
-    await supabaseServer.storage
-      .from("recordings")
-      .remove([`sync/${userId}.json`]);
+    const { error: syncError } = await supabaseServer.storage.from('recordings').remove([
+      'sync/' + userId + '.json',
+    ]);
+    if (syncError) deleteErrors.push('recordings sync: ' + syncError.message);
 
     // ── 5. profiles 테이블 삭제 ──
     const { error: profileError } = await supabaseServer

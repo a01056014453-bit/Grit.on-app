@@ -21,6 +21,9 @@ jobs:
   review:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
     # fork PR에서는 실행 안 함 (보안)
     if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name == 'push'
     steps:

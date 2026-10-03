@@ -144,7 +144,6 @@ export function submitVerification(input: SubmitVerificationInput): TeacherVerif
 async function submitVerificationToSupabase(v: TeacherVerification): Promise<void> {
   // Supabase auth 토큰 가져오기
   const { data: { session } } = await supabase.auth.getSession();
-  const userId = await getAuthUserId();
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -165,7 +164,6 @@ async function submitVerificationToSupabase(v: TeacherVerification): Promise<voi
       documents: v.documents.map((d) => ({ id: d.id, type: d.type, fileName: d.fileName, uploadedAt: d.uploadedAt })),
       aiReview: v.aiReview ?? null,
       appliedAt: v.appliedAt,
-      userId: userId || undefined,
     }),
   });
 

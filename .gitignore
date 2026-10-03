@@ -25,6 +25,7 @@ public/workbox-*.js.map
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+dev-server*.log
 scripts/dev-debugger/logs/*.jsonl
 
 # Local env files
@@ -41,3 +42,15 @@ scripts/dev-debugger/logs/*.jsonl
 *.tsbuildinfo
 next-env.d.ts
 .env*.local
+
+# Local Android packaging tools and signing material
+.local-tools/
+*.jks
+*.keystore
+*.apk
+*.aab
+android/.gradle/
+android/app/build/
+android/local.properties
+
+android/releases/

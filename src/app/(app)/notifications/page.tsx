@@ -107,15 +107,15 @@ function NotificationItem({
         </div>
         <h3
           className={`text-sm font-semibold leading-snug ${
-            notification.read ? "text-gray-500" : "text-gray-900"
+            notification.read ? "text-fg-secondary" : "text-fg-primary"
           }`}
         >
           {notification.title}
         </h3>
-        <p className="text-xs text-gray-500 mt-0.5 line-clamp-2 leading-relaxed">
+        <p className="text-xs text-fg-secondary mt-0.5 line-clamp-2 leading-relaxed">
           {notification.description}
         </p>
-        <span className="text-[11px] text-gray-400 mt-1 block">
+        <span className="text-[11px] text-fg-tertiary mt-1 block">
           {getRelativeTime(notification.createdAt)}
         </span>
       </div>
@@ -187,7 +187,7 @@ export default function NotificationsPage() {
           </button>
           <div className="flex items-center gap-2">
             <Bell className="w-5 h-5 text-violet-600" />
-            <h1 className="text-xl font-bold text-gray-900">알림</h1>
+            <h1 className="text-xl font-bold text-fg-primary">알림</h1>
             {unreadCount > 0 && (
               <span className="bg-violet-600 text-white text-xs font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center">
                 {unreadCount}
@@ -211,8 +211,8 @@ export default function NotificationsPage() {
           <div className="w-16 h-16 bg-white/40 backdrop-blur-xl rounded-full flex items-center justify-center mx-auto mb-4 border border-white/50">
             <Bell className="w-8 h-8 text-violet-300" />
           </div>
-          <p className="text-gray-500 font-medium">알림이 없습니다</p>
-          <p className="text-sm text-gray-400 mt-1">
+          <p className="text-fg-secondary font-medium">알림이 없습니다</p>
+          <p className="text-sm text-fg-tertiary mt-1">
             새로운 소식이 있으면 알려드릴게요
           </p>
         </div>

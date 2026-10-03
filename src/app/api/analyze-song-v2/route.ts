@@ -58,17 +58,17 @@ function getAdminIds(): Set<string> {
 
 type AnalysisInstrument = string;
 
-/** Pro 사용자 확인 (profiles.subscription_tier) */
+/** Pro 사용자 확인 (profiles.subscription_plan) */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function isProUser(userId: string | null): Promise<boolean> {
   if (!userId) return false;
   try {
     const { data } = await (supabaseServer as any)
       .from("profiles")
-      .select("subscription_tier")
+      .select("subscription_plan")
       .eq("id", userId)
       .single();
-    return data?.subscription_tier === "pro";
+    return data?.subscription_plan === "pro";
   } catch { return false; }
 }
 

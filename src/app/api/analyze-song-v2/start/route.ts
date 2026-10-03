@@ -8,6 +8,8 @@ import { z } from "zod";
 import { supabaseServer } from "@/lib/supabase-server";
 import { createServerClient } from "@supabase/ssr";
 import { waitUntil } from "@vercel/functions";
+import { songAnalysisV2Limiter } from "@/lib/rate-limiters";
+import { getClientIdentifier } from "@/lib/api-utils";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabaseServer as any;
@@ -17,6 +19,50 @@ const RequestSchema = z.object({
   title: z.string().min(1).max(200),
   instrument: z.string().max(50).optional().default("piano"),
 });
+
+// 신규 분석 일일 한도 (캐시 히트는 무제한). 본 분석 라우트(/api/analyze-song-v2)는 내부 호출로
+// rate limit을 우회하므로, UI 경로의 한도는 여기서 걸어야 한다.
+const DAILY_LIMIT = { free: 1, pro: 5 } as const;
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+function getAdminIds(): Set<string> {
+  return new Set((process.env.ADMIN_USER_IDS ?? "").split(",").map((s) => s.trim()).filter(Boolean));
+}
+
+/**
+ * 로그인 유저: analysis_jobs 기준 24시간 내 생성 건수로 판단 (서버리스 인스턴스와 무관).
+ * 비로그인: IP 기반 인메모리 리미터 (Free 한도).
+ * 반환값이 null이면 허용, 문자열이면 거부 사유.
+ */
+async function checkDailyQuota(req: NextRequest, userId: string | null): Promise<string | null> {
+  if (!userId) {
+    return songAnalysisV2Limiter(getClientIdentifier(req)).success
+      ? null
+      : "곡 분석은 하루에 1회만 가능합니다. 로그인하면 이력이 저장됩니다.";
+  }
+  if (getAdminIds().has(userId)) return null;
+
+  let isPro = false;
+  try {
+    const { data } = await db.from("profiles").select("subscription_plan").eq("id", userId).single();
+    isPro = data?.subscription_plan === "pro";
+  } catch { /* 프로필 없음 → free */ }
+  const limit = isPro ? DAILY_LIMIT.pro : DAILY_LIMIT.free;
+
+  const { count } = await db
+    .from("analysis_jobs")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .neq("status", "failed")
+    .gte("created_at", new Date(Date.now() - ONE_DAY_MS).toISOString());
+
+  if ((count ?? 0) >= limit) {
+    return isPro
+      ? `Pro 플랜 일일 한도(${limit}회)를 초과했습니다.`
+      : "곡 분석은 하루에 1회만 가능합니다. 내일 다시 시도해주세요.";
+  }
+  return null;
+}
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
@@ -101,6 +147,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         cached: false,
         message: "이미 분석이 진행 중입니다.",
       });
+    }
+
+    // 일일 한도 (캐시 히트·진행 중 job 재사용은 위에서 이미 반환됨)
+    const quotaError = await checkDailyQuota(req, userId);
+    if (quotaError) {
+      return NextResponse.json({ success: false, error: quotaError }, { status: 429 });
     }
 
     // 새 job 생성

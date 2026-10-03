@@ -35,7 +35,7 @@ export function AdminHeader() {
           {breadcrumbs.map((crumb, i) => (
             <span key={i} className="flex items-center gap-1">
               {i > 0 && <span className="text-gray-300">/</span>}
-              <span className={i === breadcrumbs.length - 1 ? 'text-gray-900 font-medium' : 'text-gray-400'}>
+              <span className={i === breadcrumbs.length - 1 ? 'text-fg-primary font-medium' : 'text-fg-tertiary'}>
                 {crumb}
               </span>
             </span>
@@ -44,7 +44,7 @@ export function AdminHeader() {
       </div>
       <div className="flex items-center gap-3">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-tertiary" />
           <input
             type="text"
             placeholder="검색..."
@@ -52,7 +52,7 @@ export function AdminHeader() {
           />
         </div>
         <button className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors">
-          <Bell className="w-4.5 h-4.5 text-gray-500" />
+          <Bell className="w-4.5 h-4.5 text-fg-secondary" />
           <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
         </button>
         <div className="w-8 h-8 bg-violet-600 rounded-full flex items-center justify-center text-white text-xs font-bold">

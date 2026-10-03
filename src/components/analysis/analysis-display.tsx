@@ -40,14 +40,14 @@ function OverviewSection({ content }: { content: SongAnalysisContentV2 }) {
           { label: "형식", value: overview.form },
         ].filter(item => item.value).map((item, i) => (
           <div key={i} className="bg-violet-50/50 rounded-xl p-3">
-            <p className="text-xs text-gray-500 mb-0.5">{item.label}</p>
-            <p className="text-sm font-medium text-gray-900">{item.value}</p>
+            <p className="text-xs text-fg-secondary mb-0.5">{item.label}</p>
+            <p className="text-sm font-medium text-fg-primary">{item.value}</p>
           </div>
         ))}
       </div>
       {overview.musical_features.length > 0 && (
         <div>
-          <p className="text-xs text-gray-500 mb-2">음악적 특징</p>
+          <p className="text-xs text-fg-secondary mb-2">음악적 특징</p>
           <div className="flex flex-wrap gap-2">
             {overview.musical_features.map((f, i) => (
               <span key={i} className="text-xs px-3 py-1.5 rounded-full bg-violet-100/60 text-violet-700 font-medium">
@@ -169,14 +169,14 @@ function StructureHarmonySection({ content }: { content: SongAnalysisContentV2 }
           <div key={i} className="bg-violet-50/40 rounded-xl p-3">
             <div className="flex items-start justify-between gap-2 mb-1">
               <span className="font-semibold text-sm text-violet-700">{s.section}</span>
-              <span className="text-xs text-gray-400 shrink-0">{s.measures}</span>
+              <span className="text-xs text-fg-tertiary shrink-0">{s.measures}</span>
             </div>
             <div className="flex flex-wrap gap-1.5 mb-1.5">
               {s.key_signature && <span className="text-[10px] px-2 py-0.5 bg-violet-100/60 text-violet-600 rounded-full">{s.key_signature}</span>}
               {s.time_signature && <span className="text-[10px] px-2 py-0.5 bg-violet-100/60 text-violet-600 rounded-full">{s.time_signature}</span>}
               {s.tempo && <span className="text-[10px] px-2 py-0.5 bg-violet-100/60 text-violet-600 rounded-full">{s.tempo}</span>}
             </div>
-            {s.mood && <p className="text-xs text-gray-500 italic mb-1">{s.mood}</p>}
+            {s.mood && <p className="text-xs text-fg-secondary italic mb-1">{s.mood}</p>}
             <p className="text-sm text-gray-600">{s.description}</p>
           </div>
         ))}
@@ -209,7 +209,7 @@ function PracticeMethodSection({ content }: { content: SongAnalysisContentV2 }) 
             className={`flex-1 text-xs font-medium py-2 px-3 rounded-lg transition-colors ${
               activeTab === tab.key
                 ? "bg-white text-violet-700 shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
+                : "text-fg-secondary hover:text-gray-700"
             }`}
           >
             {tab.label}
@@ -261,7 +261,7 @@ function PracticeMethodSection({ content }: { content: SongAnalysisContentV2 }) 
                   <div key={j} className="bg-white/60 rounded-lg p-3">
                     <div className="flex items-center gap-2 mb-1.5">
                       <span className="text-xs font-bold text-violet-600 bg-violet-100/60 px-2 py-0.5 rounded">{day.day}</span>
-                      <span className="text-xs text-gray-500">{day.focus}</span>
+                      <span className="text-xs text-fg-secondary">{day.focus}</span>
                     </div>
                     <ul className="space-y-1">
                       {day.tasks.map((task, k) => (
@@ -317,18 +317,18 @@ function PerformancesSection({ content, analysis }: { content: SongAnalysisConte
               )}
               {!hasUrl && (
                 <div className="w-10 h-10 rounded-full bg-gray-200/50 flex items-center justify-center shrink-0">
-                  <span className="text-sm font-medium text-gray-500">{i + 1}</span>
+                  <span className="text-sm font-medium text-fg-secondary">{i + 1}</span>
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm text-gray-900">{perf.artist}
-                  {perf.year && <span className="text-xs text-gray-400 ml-1.5">({perf.year})</span>}
+                <p className="font-medium text-sm text-fg-primary">{perf.artist}
+                  {perf.year && <span className="text-xs text-fg-tertiary ml-1.5">({perf.year})</span>}
                 </p>
                 {perf.comment && (
-                  <p className="text-xs text-gray-500 mt-0.5">{perf.comment}</p>
+                  <p className="text-xs text-fg-secondary mt-0.5">{perf.comment}</p>
                 )}
               </div>
-              {hasUrl && <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />}
+              {hasUrl && <ChevronRight className="w-4 h-4 text-fg-tertiary shrink-0" />}
             </Wrapper>
           );
         })}
@@ -436,10 +436,10 @@ function V1LegacyDisplay({ analysis, openSections, toggleSection }: {
           {content.recommended_performances.map((perf, i) => (
             <div key={i} className="p-4 rounded-xl bg-white/30 border border-white/30">
               <div className="flex items-center gap-2">
-                <p className="font-medium text-gray-900">{perf.artist}</p>
-                {perf.year && <span className="text-xs text-gray-400">({perf.year})</span>}
+                <p className="font-medium text-fg-primary">{perf.artist}</p>
+                {perf.year && <span className="text-xs text-fg-tertiary">({perf.year})</span>}
               </div>
-              {perf.comment && <p className="text-sm text-gray-500 mt-1">{perf.comment}</p>}
+              {perf.comment && <p className="text-sm text-fg-secondary mt-1">{perf.comment}</p>}
             </div>
           ))}
         </div>
@@ -460,9 +460,9 @@ function V1LegacyDisplay({ analysis, openSections, toggleSection }: {
               <div className="w-10 h-10 rounded-full bg-violet-200/50 flex items-center justify-center shrink-0">
                 {section.icon}
               </div>
-              <h3 className="font-bold text-gray-900 flex-1">{section.title}</h3>
+              <h3 className="font-bold text-fg-primary flex-1">{section.title}</h3>
               <motion.div animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
-                <ChevronDown className="w-5 h-5 text-gray-400" />
+                <ChevronDown className="w-5 h-5 text-fg-tertiary" />
               </motion.div>
             </button>
             <AnimatePresence initial={false}>
@@ -552,9 +552,9 @@ function V2Display({ analysis, openSections, toggleSection }: {
               <div className="w-10 h-10 rounded-full bg-violet-200/50 flex items-center justify-center shrink-0">
                 {section.icon}
               </div>
-              <h3 className="font-bold text-gray-900 flex-1">{section.title}</h3>
+              <h3 className="font-bold text-fg-primary flex-1">{section.title}</h3>
               <motion.div animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
-                <ChevronDown className="w-5 h-5 text-gray-400" />
+                <ChevronDown className="w-5 h-5 text-fg-tertiary" />
               </motion.div>
             </button>
             <AnimatePresence initial={false}>
@@ -636,11 +636,11 @@ export function AnalysisDetailModal({ analysis }: AnalysisDetailModalProps) {
             {content.structure_analysis.map((s, i) => (
               <div key={i} className="bg-gray-50 rounded-lg p-3">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="font-semibold text-sm text-gray-900">{s.section}</span>
-                  {s.measures && <span className="text-xs text-gray-400">마디 {s.measures}</span>}
+                  <span className="font-semibold text-sm text-fg-primary">{s.section}</span>
+                  {s.measures && <span className="text-xs text-fg-tertiary">마디 {s.measures}</span>}
                   {s.key_tempo && <span className="text-xs text-violet-500">{s.key_tempo}</span>}
                 </div>
-                {s.character && <p className="text-xs text-gray-500 mb-1">{s.character}</p>}
+                {s.character && <p className="text-xs text-fg-secondary mb-1">{s.character}</p>}
                 <p className="text-sm text-gray-700">{s.description}</p>
               </div>
             ))}
@@ -651,7 +651,7 @@ export function AnalysisDetailModal({ analysis }: AnalysisDetailModalProps) {
           <div className="space-y-3">
             {content.technique_tips.map((t, i) => (
               <div key={i} className="bg-gray-50 rounded-lg p-3">
-                <span className="font-semibold text-sm text-gray-900">{t.section}</span>
+                <span className="font-semibold text-sm text-fg-primary">{t.section}</span>
                 {t.problem && <p className="text-sm text-red-600 mt-1">문제: {t.problem}</p>}
                 {t.solution && <p className="text-sm text-green-700">해결: {t.solution}</p>}
                 {t.practice && <p className="text-sm text-blue-700">연습법: {t.practice}</p>}
@@ -668,8 +668,8 @@ export function AnalysisDetailModal({ analysis }: AnalysisDetailModalProps) {
           <div className="space-y-2">
             {content.recommended_performances.map((p, i) => (
               <div key={i} className="bg-gray-50 rounded-lg p-3">
-                <span className="font-semibold text-sm text-gray-900">{p.artist}</span>
-                <span className="text-xs text-gray-400 ml-2">({p.year})</span>
+                <span className="font-semibold text-sm text-fg-primary">{p.artist}</span>
+                <span className="text-xs text-fg-tertiary ml-2">({p.year})</span>
                 <p className="text-sm text-gray-600 mt-0.5">{p.comment}</p>
               </div>
             ))}
@@ -696,8 +696,8 @@ export function AnalysisDetailModal({ analysis }: AnalysisDetailModalProps) {
               { label: "형식", value: v2.song_overview.form },
             ].filter(x => x.value).map((x, i) => (
               <div key={i} className="bg-gray-50 rounded-lg p-2">
-                <p className="text-xs text-gray-400">{x.label}</p>
-                <p className="text-sm text-gray-900">{x.value}</p>
+                <p className="text-xs text-fg-tertiary">{x.label}</p>
+                <p className="text-sm text-fg-primary">{x.value}</p>
               </div>
             ))}
           </div>
@@ -772,8 +772,8 @@ export function AnalysisDetailModal({ analysis }: AnalysisDetailModalProps) {
             {v2.structure_analysis_v2.sections.map((s, i) => (
               <div key={i} className="bg-gray-50 rounded-lg p-3">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="font-semibold text-sm text-gray-900">{s.section}</span>
-                  <span className="text-xs text-gray-400">{s.measures}</span>
+                  <span className="font-semibold text-sm text-fg-primary">{s.section}</span>
+                  <span className="text-xs text-fg-tertiary">{s.measures}</span>
                 </div>
                 <div className="flex flex-wrap gap-1 mb-1">
                   {s.key_signature && <span className="text-[10px] px-1.5 py-0.5 bg-violet-50 text-violet-600 rounded">{s.key_signature}</span>}
@@ -829,8 +829,8 @@ export function AnalysisDetailModal({ analysis }: AnalysisDetailModalProps) {
             {v2.recommended_performances_v2.map((p, i) => (
               <div key={i} className="bg-gray-50 rounded-lg p-3">
                 <div className="flex items-center gap-2">
-                  <span className="font-semibold text-sm text-gray-900">{p.artist}</span>
-                  {p.year && <span className="text-xs text-gray-400">({p.year})</span>}
+                  <span className="font-semibold text-sm text-fg-primary">{p.artist}</span>
+                  {p.year && <span className="text-xs text-fg-tertiary">({p.year})</span>}
                   {p.youtube_url && (
                     <a href={p.youtube_url} target="_blank" rel="noopener noreferrer"
                       className="ml-auto shrink-0 flex items-center gap-1 text-xs text-red-600 hover:text-red-700 font-medium"

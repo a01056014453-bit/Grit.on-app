@@ -1,3 +1,5 @@
+// 자동 생성 파일 — Supabase CLI(generate types)로만 갱신, 직접 수정 금지
+
 export type Json =
   | string
   | number

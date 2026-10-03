@@ -106,7 +106,7 @@ export function QuoteCard() {
   return (
     <div className="bg-gray-50 rounded-xl p-4">
       <div className="flex flex-col gap-2">
-        <span className="text-[10px] font-semibold tracking-wider uppercase text-gray-400">
+        <span className="text-[10px] font-semibold tracking-wider uppercase text-fg-tertiary">
           오늘의 명언
         </span>
 
@@ -116,7 +116,7 @@ export function QuoteCard() {
           </p>
           <footer className="mt-2 flex items-center gap-2">
             <div className="h-px w-6 bg-gray-300" />
-            <cite className="text-[10px] font-medium text-gray-500 not-italic">
+            <cite className="text-[10px] font-medium text-fg-secondary not-italic">
               {quote.author}
             </cite>
           </footer>

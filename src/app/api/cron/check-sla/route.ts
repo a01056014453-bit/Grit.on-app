@@ -7,13 +7,13 @@ const db = supabaseServer as any;
 
 /**
  * GET /api/cron/check-sla
- * Vercel Cron으로 매시간 실행
+ * Vercel Cron으로 실행 (스케줄은 vercel.json)
  * 수락 마감 임박한 피드백 요청 → Slack 알림 + 선생님 푸시
  */
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -68,27 +68,8 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 만료된 SENT 요청 자동 처리
-    const { data: expiredRequests } = await db
-      .from("feedback_requests")
-      .select("id")
-      .eq("status", "SENT")
-      .lt("accept_deadline", now.toISOString());
-
-    if (expiredRequests && expiredRequests.length > 0) {
-      for (const req of expiredRequests) {
-        await db
-          .from("feedback_requests")
-          .update({ status: "EXPIRED", updated_at: now.toISOString() })
-          .eq("id", req.id);
-      }
-    }
-
-    return NextResponse.json({
-      success: true,
-      urgent: urgentRequests.length,
-      expired: expiredRequests?.length ?? 0,
-    });
+    // 만료 처리는 /api/feedback/expire-check가 단일 경로로 담당 (payment_status·푸시까지 처리)
+    return NextResponse.json({ success: true, urgent: urgentRequests.length });
   } catch (err) {
     console.error("[cron/check-sla]", err);
     return NextResponse.json({ error: "Failed" }, { status: 500 });

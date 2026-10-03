@@ -39,13 +39,13 @@ export function Modal({ isOpen, onClose, title, children, showClose = true }: Mo
         {/* Header */}
         {(title || showClose) && (
           <div className="sticky top-0 bg-white/30 backdrop-blur-xl border-b border-white/30 px-5 py-4 flex items-center justify-between z-10">
-            <h2 className="text-lg font-bold text-gray-900">{title}</h2>
+            <h2 className="text-lg font-bold text-fg-primary">{title}</h2>
             {showClose && (
               <button
                 onClick={onClose}
                 className="w-8 h-8 rounded-full bg-white/40 backdrop-blur-sm flex items-center justify-center hover:bg-white/60 transition-colors"
               >
-                <X className="w-4 h-4 text-gray-500" />
+                <X className="w-4 h-4 text-fg-secondary" />
               </button>
             )}
           </div>

@@ -1,0 +1,26 @@
+{
+  "recommendations": [
+    "anthropic.claude-code",
+    "dbaeumer.vscode-eslint",
+    "bradlc.vscode-tailwindcss",
+    "vitest.explorer",
+    "eamodio.gitlens",
+    "github.vscode-pull-request-github",
+    "github.vscode-github-actions",
+    "redhat.vscode-yaml",
+    "christian-kohler.path-intellisense",
+    "christian-kohler.npm-intellisense",
+    "usernamehw.errorlens",
+    "mikestead.dotenv",
+    "ms-vscode.powershell"
+  ],
+  "unwantedRecommendations": [
+    "ritwickdey.liveserver",
+    "ms-vscode.live-server",
+    "formulahendry.code-runner",
+    "rvest.vs-code-prettier-eslint",
+    "nucllear.vscode-extension-auto-import",
+    "styled-components.vscode-styled-components",
+    "stylelint.vscode-stylelint"
+  ]
+}

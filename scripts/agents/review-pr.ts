@@ -3,7 +3,7 @@ import { buildPrReviewPrompt } from './prompts.js';
 import { sendSlackReport } from './slack-report.js';
 import { MODEL } from './types.js';
 import type { AgentResult } from './types.js';
-import { execSync } from 'child_process';
+import { execFileSync, execSync } from 'child_process';
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -39,7 +39,9 @@ export async function reviewPr(prNumber: number): Promise<void> {
 
   if (!resultText) return;
 
-  execSync(`gh pr comment ${prNumber} --body "${resultText.replace(/"/g, '\\"').slice(0, 60000)}"`, {
+  // 리뷰 본문을 셸 문자열에 넣지 않고 stdin으로 전달 — 따옴표·괄호·$( 가 있어도 깨지지 않음
+  execFileSync('gh', ['pr', 'comment', String(prNumber), '--body-file', '-'], {
+    input: resultText.slice(0, 60000),
     encoding: 'utf-8',
   });
 

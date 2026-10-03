@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase-server";
 import type { EventType } from "@/lib/analytics";
+import { analyticsTrackLimiter } from "@/lib/rate-limiters";
+import { getClientIdentifier, rateLimitResponse } from "@/lib/api-utils";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabaseServer as any;
@@ -8,6 +10,11 @@ const db = supabaseServer as any;
 /** POST /api/analytics/track — 사용자 이벤트 기록 (service role) */
 export async function POST(request: NextRequest) {
   try {
+    const rateLimit = analyticsTrackLimiter(getClientIdentifier(request));
+    if (!rateLimit.success) {
+      return rateLimitResponse(rateLimit.resetAt);
+    }
+
     const body = await request.json();
     const { event, userId, properties, timestamp, userAgent, platform, standalone } = body;
 

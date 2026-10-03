@@ -3,6 +3,7 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Home, Play, User, Zap, Trophy, Inbox, Users, LayoutDashboard, Pause, Square, X } from "lucide-react";
+import { LESSONS_ENABLED } from "@/lib/release-scope";
 import { cn } from "@/lib/utils";
 import { useTeacherMode } from "@/hooks/useTeacherMode";
 import {
@@ -55,7 +56,7 @@ export function BottomNavigation() {
   }, []);
 
   const navItems = useMemo(
-    () => (isTeacher && teacherMode ? teacherNavItems : studentNavItems),
+    () => (LESSONS_ENABLED && isTeacher && teacherMode ? teacherNavItems : studentNavItems),
     [isTeacher, teacherMode],
   );
 
@@ -119,8 +120,8 @@ export function BottomNavigation() {
                   <Play className="w-5 h-5 text-red-600" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-gray-900">연습 중입니다</h3>
-                  <p className="text-xs text-gray-500">어떻게 할까요?</p>
+                  <h3 className="text-base font-bold text-fg-primary">연습 중입니다</h3>
+                  <p className="text-xs text-fg-secondary">어떻게 할까요?</p>
                 </div>
               </div>
             </div>
@@ -158,7 +159,7 @@ export function BottomNavigation() {
               {/* 취소 */}
               <button
                 onClick={() => setGuardModal(null)}
-                className="w-full flex items-center justify-center gap-2 p-3 rounded-xl text-gray-500 hover:bg-gray-50 transition-colors"
+                className="w-full flex items-center justify-center gap-2 p-3 rounded-xl text-fg-secondary hover:bg-gray-50 transition-colors"
               >
                 <X className="w-4 h-4" />
                 <span className="text-sm font-medium">연습 계속하기</span>
@@ -168,7 +169,7 @@ export function BottomNavigation() {
         </div>
       )}
 
-      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-100 safe-bottom">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-nav-bg border-t border-nav-border safe-bottom">
         {/* 에러 메시지 */}
         {guardError && (
           <div className="bg-red-100 text-red-700 text-center py-1.5 text-[11px] font-medium">
@@ -204,7 +205,7 @@ export function BottomNavigation() {
                   onClick={(e) => handleNavClick(e, item.href, item.exact)}
                   className={cn(
                     "flex flex-col items-center justify-center w-16 h-full transition-colors relative",
-                    active ? "text-black" : "text-gray-400",
+                    active ? "text-nav-active" : "text-nav-inactive",
                   )}
                 >
                   {showIndicator && (

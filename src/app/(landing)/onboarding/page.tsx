@@ -101,14 +101,14 @@ function PracticeFlowVisual() {
       <div className="bg-white rounded-2xl p-4 shadow-sm border border-violet-100 overflow-hidden">
         {/* Timer display - like real app */}
         <div className="text-center mb-3">
-          <div className="font-mono text-4xl font-semibold tracking-tight text-gray-900 pf-timer-display">
+          <div className="font-mono text-4xl font-semibold tracking-tight text-fg-primary pf-timer-display">
             <span>12</span>
             <span className="mx-0.5 text-violet-400 animate-pulse">:</span>
             <span>34</span>
           </div>
           <div className="flex items-center justify-center gap-1.5 mt-1 pf-status">
             <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-            <span className="text-[10px] text-gray-500 font-medium">녹음 중</span>
+            <span className="text-[10px] text-fg-secondary font-medium">녹음 중</span>
           </div>
         </div>
 
@@ -156,16 +156,16 @@ function FeedbackFlowVisual() {
             <div key={s} className={`flex-1 h-1 rounded-full ${s <= 2 ? "bg-violet-500" : "bg-gray-200"}`} />
           ))}
         </div>
-        <p className="text-[9px] text-gray-400 mb-2">단계 2/4</p>
+        <p className="text-[9px] text-fg-tertiary mb-2">단계 2/4</p>
 
         {/* Song info inputs - like real feedback/new */}
         <div className="grid grid-cols-2 gap-2 mb-2">
           <div className="px-2 py-1.5 rounded-lg border border-gray-200 bg-gray-50">
-            <p className="text-[8px] text-gray-400">작곡가</p>
+            <p className="text-[8px] text-fg-tertiary">작곡가</p>
             <p className="text-[10px] font-semibold text-gray-800">F. Chopin</p>
           </div>
           <div className="px-2 py-1.5 rounded-lg border border-gray-200 bg-gray-50">
-            <p className="text-[8px] text-gray-400">곡 제목</p>
+            <p className="text-[8px] text-fg-tertiary">곡 제목</p>
             <p className="text-[10px] font-semibold text-gray-800">Ballade No.1</p>
           </div>
         </div>
@@ -175,11 +175,11 @@ function FeedbackFlowVisual() {
           <div className="flex-1 px-2 py-1.5 rounded-lg border border-violet-300 bg-violet-50 text-center">
             <p className="text-[10px] font-bold text-violet-700">3</p>
           </div>
-          <span className="text-[10px] text-gray-400">~</span>
+          <span className="text-[10px] text-fg-tertiary">~</span>
           <div className="flex-1 px-2 py-1.5 rounded-lg border border-violet-300 bg-violet-50 text-center">
             <p className="text-[10px] font-bold text-violet-700">5</p>
           </div>
-          <span className="text-[9px] text-gray-400">마디</span>
+          <span className="text-[9px] text-fg-tertiary">마디</span>
         </div>
 
         {/* Problem type grid - like real app */}
@@ -190,7 +190,7 @@ function FeedbackFlowVisual() {
               className={`px-2 py-1.5 rounded-lg border text-[9px] font-medium text-center ${
                 i === 0
                   ? "border-violet-400 bg-violet-50 text-violet-700"
-                  : "border-gray-200 text-gray-400"
+                  : "border-gray-200 text-fg-tertiary"
               }`}
             >
               {type}
@@ -206,14 +206,14 @@ function FeedbackFlowVisual() {
               <p className="text-[9px] font-semibold text-gray-700">김지수 선생님</p>
               <div className="flex items-center gap-0.5">
                 <span className="text-[8px] text-amber-500">★</span>
-                <span className="text-[8px] text-gray-400">4.9</span>
+                <span className="text-[8px] text-fg-tertiary">4.9</span>
               </div>
             </div>
             <div className="ml-auto flex items-center gap-0.5 text-green-600">
               <span className="text-[9px] font-bold">무료</span>
             </div>
           </div>
-          <p className="text-[9px] text-gray-500 leading-relaxed">왼손 터치를 좀 더 가볍게, 손목 힘을 빼보세요</p>
+          <p className="text-[9px] text-fg-secondary leading-relaxed">왼손 터치를 좀 더 가볍게, 손목 힘을 빼보세요</p>
         </div>
       </div>
     </div>
@@ -225,7 +225,7 @@ function TodoFlowVisual() {
     <div className="w-full max-w-xs mx-auto">
       <div className="bg-white rounded-2xl p-4 shadow-sm border border-green-100 overflow-hidden">
         <div className="flex items-center justify-between mb-3">
-          <p className="text-xs font-semibold text-gray-500">오늘의 연습</p>
+          <p className="text-xs font-semibold text-fg-secondary">오늘의 연습</p>
           <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center todo-add-btn">
             <span className="text-white text-sm font-bold leading-none">+</span>
           </div>
@@ -241,7 +241,7 @@ function TodoFlowVisual() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-gray-800 todo-text-1">쇼팽 에튀드 Op.10 No.1</p>
-              <p className="text-[10px] text-gray-400 mt-0.5">느린 템포 연습 · 20분</p>
+              <p className="text-[10px] text-fg-tertiary mt-0.5">느린 템포 연습 · 20분</p>
             </div>
           </div>
         </div>
@@ -252,7 +252,7 @@ function TodoFlowVisual() {
             <div className="w-5 h-5 rounded-full border-2 border-gray-300 flex-shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-gray-800">바흐 인벤션 No.8</p>
-              <p className="text-[10px] text-gray-400 mt-0.5">양손 합치기 · 15분</p>
+              <p className="text-[10px] text-fg-tertiary mt-0.5">양손 합치기 · 15분</p>
             </div>
           </div>
         </div>
@@ -263,7 +263,7 @@ function TodoFlowVisual() {
             <div className="w-5 h-5 rounded-full border-2 border-gray-300 flex-shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-gray-800">스케일 연습</p>
-              <p className="text-[10px] text-gray-400 mt-0.5">C장조 · 10분</p>
+              <p className="text-[10px] text-fg-tertiary mt-0.5">C장조 · 10분</p>
             </div>
           </div>
         </div>
@@ -271,7 +271,7 @@ function TodoFlowVisual() {
         {/* Progress bar */}
         <div className="mt-3 pt-3 border-t border-gray-100">
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[10px] text-gray-400">오늘 진행률</span>
+            <span className="text-[10px] text-fg-tertiary">오늘 진행률</span>
             <span className="text-[10px] font-bold text-green-500 todo-progress-text">33%</span>
           </div>
           <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
@@ -397,7 +397,7 @@ export default function OnboardingPage() {
       {slide.type === "welcome" || (slide.type === "feature" && !slide.isLast) ? (
         <button
           onClick={handleSkip}
-          className="absolute top-12 right-6 text-sm text-gray-400 z-20 font-medium"
+          className="absolute top-12 right-6 text-sm text-fg-tertiary z-20 font-medium"
         >
           건너뛰기
         </button>
@@ -462,10 +462,10 @@ export default function OnboardingPage() {
                     {slide.badge}
                   </span>
                 )}
-                <h2 className="text-2xl font-black text-gray-900 leading-tight mb-3 whitespace-pre-line">
+                <h2 className="text-2xl font-black text-fg-primary leading-tight mb-3 whitespace-pre-line">
                   {slide.title}
                 </h2>
-                <p className="text-gray-500 text-sm leading-relaxed">
+                <p className="text-fg-secondary text-sm leading-relaxed">
                   {slide.desc}
                 </p>
               </div>
@@ -520,7 +520,7 @@ export default function OnboardingPage() {
             {micStatus === "idle" && (
               <button
                 onClick={completeOnboarding}
-                className="w-full mt-3 text-sm text-gray-400 font-medium"
+                className="w-full mt-3 text-sm text-fg-tertiary font-medium"
               >
                 나중에 할게요
               </button>

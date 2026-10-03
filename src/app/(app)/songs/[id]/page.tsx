@@ -255,8 +255,8 @@ function SongDetailContent() {
               <ArrowLeft className="w-5 h-5 text-gray-600" />
             </button>
             <div className="flex-1">
-              <h1 className="text-lg font-bold text-gray-900">AI 곡 분석</h1>
-              <p className="text-xs text-gray-500">작품 정보와 연주 가이드</p>
+              <h1 className="text-lg font-bold text-fg-primary">AI 곡 분석</h1>
+              <p className="text-xs text-fg-secondary">작품 정보와 연주 가이드</p>
             </div>
           </div>
           <div className="bg-white/40 backdrop-blur-xl rounded-3xl p-8 border border-white/50 shadow-sm mb-6">
@@ -270,8 +270,8 @@ function SongDetailContent() {
                 </div>
               </div>
               <div className="text-center mt-2">
-                <p className="font-semibold text-gray-900">AI가 곡을 분석하고 있습니다</p>
-                <p className="text-sm text-gray-500 mt-1">{songTitle}</p>
+                <p className="font-semibold text-fg-primary">AI가 곡을 분석하고 있습니다</p>
+                <p className="text-sm text-fg-secondary mt-1">{songTitle}</p>
                 {loadingMessage && (
                   <p className="text-xs text-violet-500 mt-2 animate-pulse">{loadingMessage}</p>
                 )}
@@ -305,13 +305,13 @@ function SongDetailContent() {
               <ArrowLeft className="w-5 h-5 text-gray-600" />
             </button>
             <div className="flex-1">
-              <h1 className="text-lg font-bold text-gray-900">AI 곡 분석</h1>
+              <h1 className="text-lg font-bold text-fg-primary">AI 곡 분석</h1>
             </div>
           </div>
           <div className="bg-white/40 backdrop-blur-xl rounded-3xl p-8 border border-white/50 shadow-sm text-center">
             <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
-            <p className="font-semibold text-gray-900 mb-2">분석 실패</p>
-            <p className="text-sm text-gray-500 mb-6">{error}</p>
+            <p className="font-semibold text-fg-primary mb-2">분석 실패</p>
+            <p className="text-sm text-fg-secondary mb-6">{error}</p>
             <button
               onClick={loadAIAnalysis}
               className="px-6 py-2.5 rounded-xl bg-violet-600 text-white font-medium text-sm hover:bg-violet-700 transition-colors"
@@ -338,8 +338,8 @@ function SongDetailContent() {
             <ArrowLeft className="w-5 h-5 text-gray-600" />
           </button>
           <div className="flex-1">
-            <h1 className="text-lg font-bold text-gray-900">AI 곡 분석</h1>
-            <p className="text-xs text-gray-500">작품 정보와 연주 가이드</p>
+            <h1 className="text-lg font-bold text-fg-primary">AI 곡 분석</h1>
+            <p className="text-xs text-fg-secondary">작품 정보와 연주 가이드</p>
           </div>
           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg">
             <Sparkles className="w-5 h-5 text-white" />
@@ -366,7 +366,7 @@ function SongDetailContent() {
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <h2 className="text-xl font-bold text-gray-900 leading-tight">{analysis.meta.title}</h2>
+              <h2 className="text-xl font-bold text-fg-primary leading-tight">{analysis.meta.title}</h2>
               <p className="text-sm text-gray-600 mt-1">{analysis.meta.composer}</p>
               <div className="flex flex-wrap gap-2 mt-3">
                 <span className={`text-xs px-3 py-1 rounded-full font-medium ${getDifficultyColor(analysis.meta.difficulty_level)}`}>
@@ -388,18 +388,18 @@ function SongDetailContent() {
           {/* Quick Info */}
           <div className="grid grid-cols-2 gap-3 mt-5 pt-5 border-t border-gray-100">
             <div className="bg-violet-50/50 rounded-xl p-3 text-center">
-              <p className="text-sm font-bold text-gray-900">{analysis.meta.opus || "-"}</p>
-              <p className="text-xs text-gray-500 mt-0.5">작품번호</p>
+              <p className="text-sm font-bold text-fg-primary">{analysis.meta.opus || "-"}</p>
+              <p className="text-xs text-fg-secondary mt-0.5">작품번호</p>
             </div>
             <div className="bg-violet-50/50 rounded-xl p-3 text-center">
-              <p className="text-sm font-bold text-gray-900">{analysis.meta.key || "-"}</p>
-              <p className="text-xs text-gray-500 mt-0.5">조성</p>
+              <p className="text-sm font-bold text-fg-primary">{analysis.meta.key || "-"}</p>
+              <p className="text-xs text-fg-secondary mt-0.5">조성</p>
             </div>
           </div>
 
           {isCached && (
             <div className="mt-4 pt-4 border-t border-gray-100">
-              <p className="text-xs text-gray-500 flex items-center gap-1.5">
+              <p className="text-xs text-fg-secondary flex items-center gap-1.5">
                 <CheckCircle className="w-3.5 h-3.5 text-green-500" />
                 저장된 분석 결과를 불러왔습니다
               </p>

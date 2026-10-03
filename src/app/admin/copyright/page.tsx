@@ -70,7 +70,7 @@ export default function CopyrightPage() {
       render: (row) => (
         <div>
           <p className="font-medium">{row.piece_title}</p>
-          <p className="text-xs text-gray-400">{row.piece_composer}</p>
+          <p className="text-xs text-fg-tertiary">{row.piece_composer}</p>
         </div>
       ),
     },
@@ -88,7 +88,7 @@ export default function CopyrightPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-bold text-gray-900">콘텐츠 관리</h1>
+      <h1 className="text-xl font-bold text-fg-primary">콘텐츠 관리</h1>
 
       <div className="grid grid-cols-3 gap-4">
         <StatCard
@@ -115,7 +115,7 @@ export default function CopyrightPage() {
             onClick={() => setTab(t)}
             className={cn(
               'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
-              tab === t ? 'bg-violet-100 text-violet-700' : 'text-gray-500 hover:bg-gray-100',
+              tab === t ? 'bg-violet-100 text-violet-700' : 'text-fg-secondary hover:bg-gray-100',
             )}
           >
             {t === 'recordings' ? '녹음' : '영상'}
@@ -127,7 +127,7 @@ export default function CopyrightPage() {
         <>
           <DataTable columns={recordingColumns} data={recordings} />
           {recordings.length === 0 && (
-            <div className="text-center py-12 text-gray-400 text-sm">
+            <div className="text-center py-12 text-fg-tertiary text-sm">
               녹음 데이터가 없습니다.
             </div>
           )}
@@ -138,7 +138,7 @@ export default function CopyrightPage() {
         <>
           <DataTable columns={videoColumns} data={videos} />
           {videos.length === 0 && (
-            <div className="text-center py-12 text-gray-400 text-sm">
+            <div className="text-center py-12 text-fg-tertiary text-sm">
               영상 데이터가 없습니다.
             </div>
           )}

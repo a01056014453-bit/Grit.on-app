@@ -121,7 +121,7 @@ export function ProgressRing({
       {showValue && (
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           {showLabel && (
-            <span className="text-xs text-gray-500 mb-0.5">달성률</span>
+            <span className="text-xs text-fg-secondary mb-0.5">달성률</span>
           )}
           <span className="text-lg font-bold bg-gradient-to-r from-violet-700 to-violet-400 bg-clip-text text-transparent">
             {displayValue}%

@@ -3,7 +3,8 @@
 import { useState, useCallback } from "react";
 
 interface UseVideoUploadOptions {
-  type: "student" | "demo";
+  /** room은 upload()의 requestId 자리에 roomId를 넘긴다 */
+  type: "student" | "demo" | "room";
   maxSizeMB?: number;
 }
 
@@ -18,7 +19,7 @@ interface UseVideoUploadReturn {
 const ALLOWED_TYPES = ["video/mp4", "video/webm", "video/quicktime"];
 
 /**
- * 피드백 영상 업로드 훅
+ * 피드백·입시룸 영상 업로드 훅
  * Supabase Storage signed URL로 직접 업로드 (Vercel body 크기 제한 우회)
  */
 export function useVideoUpload({

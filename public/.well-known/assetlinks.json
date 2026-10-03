@@ -1,0 +1,15 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.withsempre.app",
+      "sha256_cert_fingerprints": [
+        "CB:98:C0:87:D1:17:87:EF:14:0A:60:A7:F9:9F:3A:59:CE:7F:B0:28:EF:C8:8F:19:5E:70:30:C8:03:29:DD:A6",
+        "B6:CE:01:82:49:6E:C3:E0:92:0C:8B:D4:F6:9A:1F:38:ED:94:77:4A:7F:42:35:44:EF:4D:57:A9:7D:0E:E3:DF"
+      ]
+    }
+  }
+]

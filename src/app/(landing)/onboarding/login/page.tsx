@@ -77,6 +77,26 @@ export default function LoginRequiredPage() {
     window.location.href = url;
   };
 
+  const handleDevLogin = async () => {
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: process.env.NEXT_PUBLIC_DEV_TEST_EMAIL || "dev@test.com",
+        password: process.env.NEXT_PUBLIC_DEV_TEST_PASSWORD || "devtest1234",
+      });
+      if (error || !data.user) {
+        alert(`테스트 로그인 실패: ${error?.message}\nSupabase 대시보드에서 dev@test.com 계정을 먼저 생성해주세요.`);
+        return;
+      }
+      localStorage.setItem("sempre-auth", "dev");
+      localStorage.setItem("grit-on-logged-in", "true");
+      localStorage.setItem("grit-on-user-id", data.user.id);
+      router.replace("/");
+    } catch (err) {
+      alert(`테스트 로그인 오류: ${err}`);
+    }
+  };
+
   const handleAppleLogin = () => {
     trackEvent({ event: "signup_started", properties: { method: "apple" } });
     const clientId = "com.5F62DDJA3X.sempre.web";
@@ -99,7 +119,7 @@ export default function LoginRequiredPage() {
             <div className="w-20 h-20 rounded-full bg-violet-100 border-2 border-violet-200 flex items-center justify-center text-4xl mx-auto mb-4">
               {profile.profileEmoji}
             </div>
-            <h1 className="text-2xl font-black text-gray-900">
+            <h1 className="text-2xl font-black text-fg-primary">
               안녕하세요, {profile.nickname}님!
             </h1>
           </motion.div>
@@ -113,10 +133,10 @@ export default function LoginRequiredPage() {
             <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center mx-auto mb-6 shadow-lg">
               <span className="text-[15px] font-black text-white tracking-tight" style={{ fontFamily: "var(--font-montserrat), Montserrat, sans-serif" }}>sempre</span>
             </div>
-            <h1 className="text-3xl font-black text-gray-900 mb-3">
+            <h1 className="text-3xl font-black text-fg-primary mb-3">
               Sempre
             </h1>
-            <p className="text-base text-gray-500 leading-relaxed">
+            <p className="text-base text-fg-secondary leading-relaxed">
               클래식 연주자를 위한<br />AI 연습 코치
             </p>
           </motion.div>
@@ -157,13 +177,21 @@ export default function LoginRequiredPage() {
               Apple로 계속하기
             </button>
           )}
+          {process.env.NODE_ENV === "development" && (
+            <button
+              onClick={handleDevLogin}
+              className="w-full flex items-center justify-center gap-3 py-3 rounded-2xl font-semibold text-sm bg-amber-100 border border-amber-300 text-amber-800 hover:bg-amber-200 active:scale-[0.98] transition-all"
+            >
+              🛠 개발용 테스트 로그인
+            </button>
+          )}
         </motion.div>
 
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1 }}
-          className="mt-6 text-center text-xs text-gray-400"
+          className="mt-6 text-center text-xs text-fg-tertiary"
         >
           계속하면{" "}
           <Link href="/terms" className="underline hover:text-gray-300 transition-colors">

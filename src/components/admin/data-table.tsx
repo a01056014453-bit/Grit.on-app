@@ -27,7 +27,7 @@ export function DataTable<T>({
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50/50">
               {columns.map((col) => (
-                <th key={col.key} className={cn('px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider', col.className)}>
+                <th key={col.key} className={cn('px-4 py-3 text-left text-xs font-medium text-fg-secondary uppercase tracking-wider', col.className)}>
                   {col.header}
                 </th>
               ))}
@@ -36,7 +36,7 @@ export function DataTable<T>({
           <tbody className="divide-y divide-gray-100">
             {data.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-12 text-center text-sm text-gray-400">
+                <td colSpan={columns.length} className="px-4 py-12 text-center text-sm text-fg-tertiary">
                   {emptyMessage}
                 </td>
               </tr>

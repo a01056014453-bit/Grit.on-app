@@ -17,10 +17,10 @@ function PracticeGauge({ percent }: { percent: number }) {
 
   return (
     <div className="text-center">
-      <p className="text-3xl font-bold text-gray-900 mb-1">
+      <p className="text-3xl font-bold text-fg-primary mb-1">
         {clampedPercent}%
       </p>
-      <p className="text-xs text-gray-500 mb-3">순 연습시간</p>
+      <p className="text-xs text-fg-secondary mb-3">순 연습시간</p>
       <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
         <div
           className={`h-full bg-gradient-to-r ${gaugeColor} rounded-full transition-all duration-700 ease-out`}
@@ -193,12 +193,12 @@ export function PracticeAnalysisModal({
             <Loader2 className="w-10 h-10 text-violet-600 animate-spin" />
           </div>
           <h3 className="text-xl font-bold text-black mb-2">연습 분석 중...</h3>
-          <p className="text-sm text-gray-500 mb-3">
+          <p className="text-sm text-fg-secondary mb-3">
             AI가 녹음을 정밀 분석하고 있습니다
           </p>
           {analysisProgress > 0 && (
             <div className="mb-4">
-              <div className="flex justify-between text-xs text-gray-400 mb-1">
+              <div className="flex justify-between text-xs text-fg-tertiary mb-1">
                 <span>분석 진행률</span>
                 <span>{analysisProgress}%</span>
               </div>
@@ -285,7 +285,7 @@ export function PracticeAnalysisModal({
                     style={{ width: `${goalProgress}%` }}
                   />
                 </div>
-                <p className="text-[10px] text-gray-500 mt-1.5 text-center">
+                <p className="text-[10px] text-fg-secondary mt-1.5 text-center">
                   오늘의 목표 {Math.round(goalProgress)}% 달성 ({formatTimeDisplay(netPracticeTime)}/{dailyGoal}분)
                   {goalProgress >= 100 && " 🎉"}
                 </p>
@@ -298,7 +298,7 @@ export function PracticeAnalysisModal({
                     <Activity className="w-3.5 h-3.5 text-violet-500" />
                     <span className="text-xs font-medium text-gray-700">AI 분석 결과</span>
                   </div>
-                  <span className="text-lg font-bold text-gray-900">{summary.instrumentPercent}%</span>
+                  <span className="text-lg font-bold text-fg-primary">{summary.instrumentPercent}%</span>
                 </div>
                 <div className="h-2 bg-gray-200 rounded-full overflow-hidden mb-3">
                   <div
@@ -378,7 +378,7 @@ export function PracticeAnalysisModal({
                         style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
                       />
                     </div>
-                    <span className="text-[10px] text-gray-400 shrink-0">
+                    <span className="text-[10px] text-fg-tertiary shrink-0">
                       {formatTimeShort(currentTime)}/{formatTimeShort(duration || totalDuration)}
                     </span>
                   </div>

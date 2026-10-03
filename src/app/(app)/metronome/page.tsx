@@ -428,7 +428,7 @@ export default function MetronomePage() {
           <span className="text-xs text-muted-foreground">{Math.round(volume * 100)}%</span>
         </div>
         <div className="flex items-center gap-3">
-          <VolumeX className="w-4 h-4 text-gray-400 shrink-0" />
+          <VolumeX className="w-4 h-4 text-fg-tertiary shrink-0" />
           <input
             type="range"
             min="0"
@@ -437,7 +437,7 @@ export default function MetronomePage() {
             onChange={(e) => setVolume(Number(e.target.value) / 100)}
             className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-green-500"
           />
-          <Volume2 className="w-4 h-4 text-gray-400 shrink-0" />
+          <Volume2 className="w-4 h-4 text-fg-tertiary shrink-0" />
         </div>
       </div>
 

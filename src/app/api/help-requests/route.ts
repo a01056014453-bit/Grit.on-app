@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase-server";
+import { helpRequestLimiter } from "@/lib/rate-limiters";
+import { getClientIdentifier, rateLimitResponse } from "@/lib/api-utils";
 
 // help_requests/help_proposals 테이블이 database.ts 타입에 아직 없으므로 untyped 사용
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -97,6 +99,11 @@ export async function GET(request: NextRequest) {
 /** POST /api/help-requests — 새 해결 요청 생성 */
 export async function POST(request: NextRequest) {
   try {
+    const rateLimit = helpRequestLimiter(getClientIdentifier(request));
+    if (!rateLimit.success) {
+      return rateLimitResponse(rateLimit.resetAt);
+    }
+
     const body = await request.json();
 
     const {

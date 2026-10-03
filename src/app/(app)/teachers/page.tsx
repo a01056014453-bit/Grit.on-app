@@ -128,8 +128,8 @@ export default function TeachersPage() {
           <ArrowLeft className="w-5 h-5 text-gray-600" />
         </button>
         <div className="flex-1">
-          <h1 className="text-lg font-bold text-gray-900">선생님 찾기</h1>
-          <p className="text-xs text-gray-500">나에게 맞는 선생님을 찾아 1:1 피드백을 요청하세요</p>
+          <h1 className="text-lg font-bold text-fg-primary">선생님 찾기</h1>
+          <p className="text-xs text-fg-secondary">나에게 맞는 선생님을 찾아 1:1 피드백을 요청하세요</p>
         </div>
         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
           <Users className="w-5 h-5 text-white" />
@@ -139,18 +139,18 @@ export default function TeachersPage() {
       <div className="grid grid-cols-3 gap-2 mb-6">
         <div className="bg-white/50 backdrop-blur-xl rounded-2xl p-3 border border-white/60 shadow-sm text-center">
           <Users className="w-5 h-5 text-violet-600 mx-auto mb-1" />
-          <div className="text-lg font-bold text-gray-900">{allTeachers.length}</div>
-          <div className="text-[10px] text-gray-500">등록 선생님</div>
+          <div className="text-lg font-bold text-fg-primary">{allTeachers.length}</div>
+          <div className="text-[10px] text-fg-secondary">등록 선생님</div>
         </div>
         <div className="bg-white/50 backdrop-blur-xl rounded-2xl p-3 border border-white/60 shadow-sm text-center">
           <Star className="w-5 h-5 text-amber-500 mx-auto mb-1" />
-          <div className="text-lg font-bold text-gray-900">{allTeachers.length > 0 ? avgRating : "-"}</div>
-          <div className="text-[10px] text-gray-500">평균 평점</div>
+          <div className="text-lg font-bold text-fg-primary">{allTeachers.length > 0 ? avgRating : "-"}</div>
+          <div className="text-[10px] text-fg-secondary">평균 평점</div>
         </div>
         <div className="bg-white/50 backdrop-blur-xl rounded-2xl p-3 border border-white/60 shadow-sm text-center">
           <Clock className="w-5 h-5 text-blue-500 mx-auto mb-1" />
-          <div className="text-lg font-bold text-gray-900">{avgResponseTime}</div>
-          <div className="text-[10px] text-gray-500">평균 응답</div>
+          <div className="text-lg font-bold text-fg-primary">{avgResponseTime}</div>
+          <div className="text-[10px] text-fg-secondary">평균 응답</div>
         </div>
       </div>
 
@@ -162,14 +162,14 @@ export default function TeachersPage() {
           <Inbox className="w-5 h-5 text-violet-600" />
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-bold text-gray-900">내 피드백 보관함</h3>
-          <p className="text-[11px] text-gray-500">요청한 피드백 진행 상황 확인</p>
+          <h3 className="text-sm font-bold text-fg-primary">내 피드백 보관함</h3>
+          <p className="text-[11px] text-fg-secondary">요청한 피드백 진행 상황 확인</p>
         </div>
-        <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
+        <ChevronRight className="w-4 h-4 text-fg-tertiary shrink-0" />
       </Link>
 
       <div className="relative mb-4">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-tertiary" />
         <input
           type="text"
           placeholder="이름, 전공, 전문 분야 검색..."
@@ -180,7 +180,7 @@ export default function TeachersPage() {
         <button
           onClick={() => setShowFilters(!showFilters)}
           className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg transition-colors ${
-            showFilters ? "bg-violet-600 text-white" : "text-gray-400 hover:bg-white/60"
+            showFilters ? "bg-violet-600 text-white" : "text-fg-tertiary hover:bg-white/60"
           }`}
         >
           <SlidersHorizontal className="w-4 h-4" />
@@ -190,7 +190,7 @@ export default function TeachersPage() {
       {showFilters && (
         <div className="bg-white/50 backdrop-blur-xl rounded-2xl p-4 border border-white/60 shadow-sm mb-4 space-y-4">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-900">상세 필터</span>
+            <span className="text-sm font-medium text-fg-primary">상세 필터</span>
             {hasActiveFilters && (
               <button
                 onClick={clearFilters}
@@ -203,7 +203,7 @@ export default function TeachersPage() {
           </div>
 
           <div>
-            <label className="text-xs text-gray-500 mb-1.5 block">
+            <label className="text-xs text-fg-secondary mb-1.5 block">
               최소 평점
             </label>
             <div className="flex gap-2">
@@ -265,12 +265,12 @@ export default function TeachersPage() {
         {isLoading ? (
           <div className="text-center py-12">
             <div className="w-8 h-8 border-2 border-violet-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-            <p className="text-sm text-gray-500">선생님 목록을 불러오는 중...</p>
+            <p className="text-sm text-fg-secondary">선생님 목록을 불러오는 중...</p>
           </div>
         ) : filteredTeachers.length === 0 ? (
           <div className="text-center py-12 bg-white/50 backdrop-blur-xl rounded-2xl border border-white/60 shadow-sm">
             <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500">조건에 맞는 선생님이 없습니다</p>
+            <p className="text-fg-secondary">조건에 맞는 선생님이 없습니다</p>
             <button
               onClick={clearFilters}
               className="mt-3 text-sm text-violet-600 font-medium"
