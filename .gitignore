@@ -42,3 +42,15 @@ scripts/dev-debugger/logs/*.jsonl
 *.tsbuildinfo
 next-env.d.ts
 .env*.local
+
+# Local Android packaging tools and signing material
+.local-tools/
+*.jks
+*.keystore
+*.apk
+*.aab
+android/.gradle/
+android/app/build/
+android/local.properties
+
+android/releases/

@@ -1,4 +1,5 @@
 "use client";
+import { LESSONS_ENABLED } from "@/lib/release-scope";
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
@@ -752,7 +753,7 @@ export default function ProfilePage() {
 
 
       {/* ─── Teacher Section ─── */}
-      <motion.div
+      {LESSONS_ENABLED && (<motion.div
         className="bg-white/40 backdrop-blur-xl rounded-3xl border border-white/50 shadow-sm overflow-hidden mb-6"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -838,7 +839,7 @@ export default function ProfilePage() {
             <ChevronRight className="w-4 h-4 text-fg-tertiary" />
           </Link>
         )}
-      </motion.div>
+      </motion.div>)}
 
       {/* ─── Settings List ─── */}
       <motion.div

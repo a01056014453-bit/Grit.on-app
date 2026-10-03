@@ -15,6 +15,7 @@ import { syncUserData } from "@/lib/sync-user-data";
 import { usePracticeSessions } from "@/hooks/usePracticeSessions";
 import { useTeacherMode } from "@/hooks/useTeacherMode";
 import { getUnreadCount } from "@/lib/notification-store";
+import { LESSONS_ENABLED } from "@/lib/release-scope";
 import { TeacherDashboard } from "@/components/teacher";
 
 export default function HomePage() {
@@ -200,7 +201,7 @@ export default function HomePage() {
   }
 
   // 선생님 모드일 때 대시보드 렌더링
-  if (isTeacher && teacherMode) {
+  if (LESSONS_ENABLED && isTeacher && teacherMode) {
     return <TeacherDashboard teacherProfileId={teacherProfileId || "t8"} onToggleMode={toggleMode} />;
   }
 
@@ -290,7 +291,7 @@ export default function HomePage() {
             </div>
           }
         />
-        <BentoCard
+        {LESSONS_ENABLED && (<BentoCard
           Icon={Users}
           name="원포인트 레슨"
           description="전문가의 시선으로 막힌 구간의 해법을 제시합니다"
@@ -319,7 +320,7 @@ export default function HomePage() {
               </div>
             </div>
           }
-        />
+        />)}
         <BentoCard
           Icon={BookOpen}
           name="연습 기록"
@@ -354,7 +355,7 @@ export default function HomePage() {
             </div>
           }
         />
-        <BentoCard
+        {LESSONS_ENABLED && (<BentoCard
           Icon={GraduationCap}
           name="입시룸"
           description="다른 학생들의 연습을 참고하세요"
@@ -368,7 +369,7 @@ export default function HomePage() {
               </div>
             </div>
           }
-        />
+        />)}
       </BentoGrid>
 
 

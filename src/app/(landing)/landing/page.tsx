@@ -1,5 +1,6 @@
 "use client";
 
+import { LESSONS_ENABLED } from "@/lib/release-scope";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useEffect } from "react";
@@ -275,7 +276,7 @@ export default function LandingPage() {
       </section>
 
       {/* SECTION 6 — Feature 4: 레슨 기반 연습 시스템 */}
-      <section className="py-32 px-6">
+      {LESSONS_ENABLED && (<section className="py-32 px-6">
         <div className="max-w-5xl mx-auto">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             {/* Mockup */}
@@ -324,10 +325,10 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
-      </section>
+      </section>)}
 
       {/* SECTION 7 — Feature 5: 원포인트 레슨 요청 */}
-      <section className="py-32 px-6 bg-gray-50">
+      {LESSONS_ENABLED && (<section className="py-32 px-6 bg-gray-50">
         <div className="max-w-5xl mx-auto">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             {/* Text */}
@@ -380,7 +381,7 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
-      </section>
+      </section>)}
 
       {/* SECTION 8 — Feature 6: 메트로놈 + 음악 용어 */}
       <section className="py-32 px-6">

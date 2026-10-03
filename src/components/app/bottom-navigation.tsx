@@ -3,6 +3,7 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Home, Play, User, Zap, Trophy, Inbox, Users, LayoutDashboard, Pause, Square, X } from "lucide-react";
+import { LESSONS_ENABLED } from "@/lib/release-scope";
 import { cn } from "@/lib/utils";
 import { useTeacherMode } from "@/hooks/useTeacherMode";
 import {
@@ -55,7 +56,7 @@ export function BottomNavigation() {
   }, []);
 
   const navItems = useMemo(
-    () => (isTeacher && teacherMode ? teacherNavItems : studentNavItems),
+    () => (LESSONS_ENABLED && isTeacher && teacherMode ? teacherNavItems : studentNavItems),
     [isTeacher, teacherMode],
   );
 
