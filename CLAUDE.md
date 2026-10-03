@@ -130,6 +130,7 @@ TEST_BASE_URL=http://localhost:3000 npx vitest run tests/api   # 로컬 dev 서�
 - 크론 `pre-analyze`/`analyze-designated`가 `lib/data/popular-pieces.ts` / `designated_pieces` 중 미분석 곡을 self-fetch로 채움
 
 ### 알림·이벤트
+- 영상 업로드는 **signed URL 직접 업로드**(`hooks/useVideoUpload.ts` → `/api/feedback/upload-url`, type `student|demo|room`). Vercel 함수 body 한도(~4.5MB) 때문에 파일을 API Route로 보내면 안 된다. 용량·MIME 상한은 Storage 버킷 설정이 강제
 - 웹 푸시: 서버 `/api/push/send`(web-push VAPID), 클라이언트 래퍼 `lib/push-notify.ts`·`lib/push-subscribe.ts`, 인앱 알림은 `lib/notification-store.ts`(순수 로컬)
 - 이벤트 트래킹: `lib/analytics.ts`의 `trackEvent()` → `/api/analytics/track` → `user_events` 테이블
 - Slack: `lib/slack.ts`의 `sendSlackNotification(channel, msg)`(채널별 `SLACK_WEBHOOK_*` env). `/api/slack/events`는 서명 검증 후 Claude로 응답하는 봇
@@ -156,7 +157,7 @@ TEST_BASE_URL=http://localhost:3000 npx vitest run tests/api   # 로컬 dev 서�
 
 - **원포인트 레슨 크레딧 수익배분**: 플랫폼 70% / 선생님 30% (v2 예정 — v1은 플랫폼 100%, `docs/prd/feedback-credit-system.md` 참조)
 - **파트너**: Wonart, Leanup, Piu
-- ⚠️ **현재 무료 출시 상태**: PG(토스페이먼츠) 미연동. `/api/credits/charge`는 501 반환, 충전/Pro 버튼은 "준비 중" 안내만 표시
+- ⚠️ **현재 무료 출시 상태**: PG(토스페이먼츠) 미연동. `/api/credits/charge`는 501 반환. 크레딧·Pro UI는 숨김 — `/credits`는 `credits/layout.tsx`가 `/`로 리다이렉트하고 피드백 요청은 `credit_amount` 0으로 생성. 유료 전환 전까지 화면에 크레딧·가격 문구를 새로 넣지 말 것
 
 ---
 

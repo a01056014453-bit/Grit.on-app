@@ -463,13 +463,15 @@ export default function RoomsPage() {
                         <Video className="w-3 h-3" />
                         {room.videoCount}개
                       </span>
-                      <span className="text-violet-500 font-medium">
-                        마감{" "}
-                        {new Date(room.school.deadline ?? "").toLocaleDateString(
-                          "ko-KR",
-                          { month: "numeric", day: "numeric" }
-                        )}
-                      </span>
+                      {room.school.deadline && (
+                        <span className="text-violet-500 font-medium">
+                          마감{" "}
+                          {new Date(room.school.deadline).toLocaleDateString(
+                            "ko-KR",
+                            { month: "numeric", day: "numeric" }
+                          )}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <ChevronRight className="w-4 h-4 text-fg-tertiary shrink-0" />

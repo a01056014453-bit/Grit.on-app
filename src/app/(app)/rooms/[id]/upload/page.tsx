@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { getSchoolById } from "@/lib/queries";
+import { useVideoUpload } from "@/hooks/useVideoUpload";
 import type { School } from "@/types";
 
 export default function RoomUploadPage() {
@@ -26,9 +27,11 @@ export default function RoomUploadPage() {
   const [measureEnd, setMeasureEnd] = useState("");
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
-  const [faceBlur, setFaceBlur] = useState(true);
   const [anonymous, setAnonymous] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+
+  const videoUpload = useVideoUpload({ type: "room" });
 
   useEffect(() => {
     async function load() {
@@ -65,8 +68,8 @@ export default function RoomUploadPage() {
       return;
     }
 
-    if (file.size > 500 * 1024 * 1024) {
-      alert("파일 크기는 500MB 이하여야 합니다.");
+    if (file.size > 50 * 1024 * 1024) {
+      alert("파일 크기는 50MB 이하여야 합니다.");
       return;
     }
 
@@ -86,29 +89,41 @@ export default function RoomUploadPage() {
   const handleUpload = async () => {
     if (!canUpload || !videoFile) return;
     setIsUploading(true);
+    setUploadError("");
     try {
       // rooms 테이블에서 room_id 조회
       const roomRes = await fetch(`/api/db/query?table=rooms&filter=school_id.eq.${schoolId}&limit=1`);
       const roomData = await roomRes.json();
       const roomId = roomData?.data?.[0]?.id || schoolId;
 
-      const formData = new FormData();
-      formData.append("file", videoFile);
-      formData.append("roomId", roomId);
-      formData.append("pieceComposer", "");
-      formData.append("pieceTitle", pieceName);
-      formData.append("section", "");
-      formData.append("userName", anonymous ? "익명" : "연습생");
+      // 1. Storage에 직접 업로드 (signed URL — 서버 함수 body 한도를 거치지 않음)
+      const videoUrl = await videoUpload.upload(videoFile, roomId);
+      if (!videoUrl) {
+        // 실패 사유는 videoUpload.error로 표시된다
+        return;
+      }
 
-      const res = await fetch("/api/rooms/upload-video", { method: "POST", body: formData });
+      // 2. 영상 정보 등록
+      const res = await fetch("/api/rooms/upload-video", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          roomId,
+          videoUrl,
+          pieceComposer: "",
+          pieceTitle: pieceName,
+          section: "",
+          userName: anonymous ? "익명" : "연습생",
+        }),
+      });
       const data = await res.json();
       if (data.success) {
         router.push(`/rooms/${schoolId}`);
       } else {
-        alert(data.error || "업로드에 실패했습니다.");
+        setUploadError(data.error || "업로드에 실패했습니다.");
       }
     } catch {
-      alert("업로드 중 오류가 발생했습니다.");
+      setUploadError("업로드 중 오류가 발생했습니다.");
     } finally {
       setIsUploading(false);
     }
@@ -149,7 +164,7 @@ export default function RoomUploadPage() {
           >
             <Video className="w-14 h-14 text-gray-300 mx-auto mb-3" />
             <p className="text-sm font-medium text-gray-600">탭하여 영상 선택</p>
-            <p className="text-xs text-fg-tertiary mt-1">MP4, MOV (최대 500MB)</p>
+            <p className="text-xs text-fg-tertiary mt-1">MP4, MOV, WebM (최대 50MB)</p>
           </button>
         ) : (
           <div className="relative bg-white/60 backdrop-blur-sm rounded-2xl border border-white/60 overflow-hidden">
@@ -224,15 +239,13 @@ export default function RoomUploadPage() {
 
         {/* Options */}
         <div className="bg-white/60 backdrop-blur-sm rounded-2xl border border-white/60 p-4 space-y-3">
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={faceBlur}
-              onChange={(e) => setFaceBlur(e.target.checked)}
-              className="rounded accent-violet-600 w-4 h-4"
-            />
+          {/* 얼굴 자동 블러는 아직 미구현 — 기능 완성(v2) 전까지 선택 불가로 표시 */}
+          <div className="flex items-center gap-3 opacity-60">
             <span className="text-sm text-fg-primary">얼굴 자동 블러 처리</span>
-          </label>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface-card text-fg-secondary font-medium">
+              준비 중
+            </span>
+          </div>
           <label className="flex items-center gap-3 cursor-pointer">
             <input
               type="checkbox"
@@ -251,6 +264,27 @@ export default function RoomUploadPage() {
             업로드한 영상은 룸 규칙에 따라 관리되며, 워터마크가 자동 삽입됩니다.
           </p>
         </div>
+
+        {/* 업로드 진행률 · 오류 */}
+        {videoUpload.uploading && (
+          <div className="p-3 bg-tint-violet-subtle rounded-xl">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-medium text-fg-brand">영상 업로드 중...</p>
+              <span className="text-xs font-bold text-fg-brand">{videoUpload.progress}%</span>
+            </div>
+            <div className="h-1.5 bg-tint-violet-strong rounded-full overflow-hidden">
+              <div
+                className="h-full bg-primary rounded-full transition-all"
+                style={{ width: `${videoUpload.progress}%` }}
+              />
+            </div>
+          </div>
+        )}
+        {(videoUpload.error || uploadError) && (
+          <div className="p-3 bg-status-error-tint rounded-xl">
+            <p className="text-xs text-status-error-text">{videoUpload.error || uploadError}</p>
+          </div>
+        )}
 
         {/* Upload Button */}
         <button

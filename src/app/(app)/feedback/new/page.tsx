@@ -10,7 +10,6 @@ import {
   Video,
   Music,
   Shield,
-  Eye,
   EyeOff,
   Info,
   AlertCircle,
@@ -24,7 +23,6 @@ import { addNotification } from "@/lib/notification-store";
 import { sendPushToUser } from "@/lib/push-notify";
 import { getUserId } from "@/lib/user-id";
 import { useVideoUpload } from "@/hooks/useVideoUpload";
-import { getCreditBalance } from "@/lib/queries/credits";
 import { Teacher, ProblemType, PROBLEM_TYPE_LABELS } from "@/types";
 import { ComposerAutocomplete, TitleAutocomplete } from "@/components/ui/composer-autocomplete";
 
@@ -61,8 +59,6 @@ function NewFeedbackRequestContent() {
 
   // Teacher data
   const [teacher, setTeacher] = useState<Teacher | null>(null);
-  const [creditBalance, setCreditBalance] = useState<number | null>(null);
-  const FEEDBACK_COST = 2; // 피드백 1건 = 2크레딧
 
   // Form states
   const [composer, setComposer] = useState("");
@@ -72,7 +68,6 @@ function NewFeedbackRequestContent() {
   const [problemType, setProblemType] = useState<ProblemType | "">("");
   const [description, setDescription] = useState("");
   const [videoFile, setVideoFile] = useState<File | null>(null);
-  const [faceBlur, setFaceBlur] = useState(true);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
@@ -83,11 +78,6 @@ function NewFeedbackRequestContent() {
   useEffect(() => {
     if (teacherId) {
       getTeacherById(teacherId).then((t) => setTeacher(t));
-    }
-    // 크레딧 잔액 조회
-    const userId = getUserId();
-    if (userId) {
-      getCreditBalance(userId).then((b) => setCreditBalance(b.balance));
     }
   }, [teacherId]);
 
@@ -116,9 +106,9 @@ function NewFeedbackRequestContent() {
         problemType: problemType as ProblemType,
         description,
         videoUrl: undefined,
-        faceBlurred: faceBlur,
+        faceBlurred: false, // 얼굴 블러 미구현(v2) — 처리하지 않은 영상을 블러됨으로 표시하지 않는다
         status: "DRAFT",
-        creditAmount: FEEDBACK_COST,
+        creditAmount: 0, // 무료 출시 — 크레딧 차감 없음
         paymentStatus: "pending",
       });
 
@@ -271,21 +261,6 @@ function NewFeedbackRequestContent() {
                   {s}
                 </span>
               ))}
-            </div>
-
-            <div className="flex items-center justify-between pt-3 border-t border-border">
-              <span className="text-xs text-violet-600 font-medium bg-violet-50 px-2 py-0.5 rounded-full">
-                {FEEDBACK_COST}크레딧 필요
-              </span>
-              {creditBalance !== null && (
-                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                  creditBalance >= FEEDBACK_COST
-                    ? "text-green-600 bg-green-50"
-                    : "text-red-600 bg-red-50"
-                }`}>
-                  잔액: {creditBalance}크레딧
-                </span>
-              )}
             </div>
           </div>
 
@@ -459,35 +434,19 @@ function NewFeedbackRequestContent() {
               개인정보 보호
             </h2>
 
-            <button
-              onClick={() => setFaceBlur(!faceBlur)}
-              className={`w-full p-4 rounded-xl border flex items-center justify-between transition-all ${
-                faceBlur ? "border-primary bg-primary/5" : "border-border bg-card"
-              }`}
-            >
+            {/* 얼굴 자동 블러는 아직 미구현 — 기능 완성(v2) 전까지 선택 불가로 표시 */}
+            <div className="w-full p-4 rounded-xl border border-border bg-card flex items-center justify-between opacity-60">
               <div className="flex items-center gap-3">
-                {faceBlur ? (
-                  <Eye className="w-5 h-5 text-primary" />
-                ) : (
-                  <EyeOff className="w-5 h-5 text-muted-foreground" />
-                )}
+                <EyeOff className="w-5 h-5 text-muted-foreground" />
                 <div className="text-left">
                   <p className="text-sm font-medium text-foreground">얼굴 자동 블러</p>
-                  <p className="text-xs text-muted-foreground">AI가 얼굴을 자동으로 블러 처리</p>
+                  <p className="text-xs text-muted-foreground">영상은 원본 그대로 선생님에게 전달됩니다</p>
                 </div>
               </div>
-              <div
-                className={`w-12 h-6 rounded-full transition-colors ${
-                  faceBlur ? "bg-primary" : "bg-secondary"
-                }`}
-              >
-                <div
-                  className={`w-5 h-5 rounded-full bg-white shadow transition-transform mt-0.5 ${
-                    faceBlur ? "translate-x-6" : "translate-x-0.5"
-                  }`}
-                />
-              </div>
-            </button>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground font-medium">
+                준비 중
+              </span>
+            </div>
           </div>
 
           {/* 업로드 진행률 */}

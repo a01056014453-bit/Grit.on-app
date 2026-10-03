@@ -238,23 +238,6 @@ export default function PrivacyPage() {
                   <tr>
                     <td className={`${tdClass} font-semibold`}>미국</td>
                     <td className={`${tdClass} font-semibold`}>
-                      Google (Gemini)
-                    </td>
-                    <td className={tdClass}>
-                      분석용 텍스트, 사용자 질의 내용, 시스템 로그 일부
-                    </td>
-                    <td className={tdClass}>API 호출 시 암호화 전송</td>
-                    <td className={tdClass}>
-                      <strong>원포인트 클리닉</strong> 생성 및 음악적 질의응답
-                      처리
-                    </td>
-                    <td className={`${tdClass} font-semibold`}>
-                      목적 달성 시 또는 2년 이내
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className={`${tdClass} font-semibold`}>미국</td>
-                    <td className={`${tdClass} font-semibold`}>
                       Perplexity, Inc.
                     </td>
                     <td className={tdClass}>
@@ -285,18 +268,19 @@ export default function PrivacyPage() {
                     </td>
                   </tr>
                   <tr>
-                    <td className={`${tdClass} font-semibold`}>미국 / 유럽</td>
+                    <td className={`${tdClass} font-semibold`}>미국</td>
                     <td className={`${tdClass} font-semibold`}>
-                      PostHog, Inc.
+                      Functional Software, Inc. (Sentry)
                     </td>
                     <td className={tdClass}>
-                      앱 내 행동 로그, 접속 환경, 이벤트 기록
+                      오류 로그, 접속 환경(브라우저·기기 정보), 오류 발생 시점의
+                      화면 조작 기록
                     </td>
-                    <td className={tdClass}>SDK 통신 시 실시간 전송</td>
+                    <td className={tdClass}>오류 발생 시 SDK를 통해 암호화 전송</td>
                     <td className={tdClass}>
-                      서비스 이용 패턴 분석 및 기능 개선
+                      서비스 오류 진단 및 안정성 개선
                     </td>
-                    <td className={`${tdClass} font-semibold`}>3개월 후 파기</td>
+                    <td className={`${tdClass} font-semibold`}>수집 후 90일 이내 파기</td>
                   </tr>
                 </tbody>
               </table>
@@ -447,8 +431,9 @@ export default function PrivacyPage() {
               9. 쿠키·행태정보 수집 및 거부
             </h2>
             <p className="mb-2">
-              1. 회사는 PostHog 등으로 서비스 이용 행태를 분석하고, 온보딩
-              개선·에러 진단·맞춤 기능 추천에 활용합니다.
+              1. 회사는 서비스 이용 기록(화면 조회, 기능 사용 이벤트, 접속
+              환경)을 자체 데이터베이스에 수집하여 온보딩 개선·에러 진단·맞춤
+              기능 추천에 활용합니다.
             </p>
             <p>
               2. 이용자는 브라우저 설정(크롬: 설정 → 개인정보 및 보안 → 쿠키)

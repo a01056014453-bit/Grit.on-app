@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            text: `🔔 선생님 인증 수동 처리 필요: ${needsReview}건\n자동 승인: ${autoApproved}건\n<${process.env.NEXT_PUBLIC_APP_URL || "https://griton-app.vercel.app"}/admin/experts|어드민에서 확인>`,
+            text: `🔔 선생님 인증 수동 처리 필요: ${needsReview}건\n자동 승인: ${autoApproved}건\n<${process.env.NEXT_PUBLIC_APP_URL || "https://withsempre.com"}/admin/experts|어드민에서 확인>`,
           }),
         }).catch(() => {});
       }
