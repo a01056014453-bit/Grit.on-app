@@ -78,6 +78,7 @@ TEST_BASE_URL=http://localhost:3000 npx vitest run tests/api   # 로컬 dev 서�
 
 - **배포**: 별도 스크립트 없음. `main`에 push하면 Vercel이 즉시 프로덕션 배포 → **`main` 직접 push 금지**, 브랜치 → PR → 머지
 - **dev 확인 환경**: https://dev.withsempre.com 은 Vercel에서 `dev` 브랜치에 묶인 Preview 배포. 머지 전 작업을 올려 보려면 `git push origin <작업브랜치>:dev`(fast-forward만, force 금지). CI는 돌지 않고 Vercel 빌드가 유일한 게이트
+  - Vercel 배포 보호(Vercel Authentication)가 걸려 있어 **팀 Vercel 계정 로그인 후에만 열린다**(비로그인 `curl`은 302). 서버 간 self-fetch는 로그인할 수 없으므로 `x-vercel-protection-bypass: VERCEL_AUTOMATION_BYPASS_SECRET`(Vercel이 자동 주입) 헤더를 붙여야 한다 — `analyze-song-v2/start`가 기준. dev에서 self-fetch를 새로 만들면 같은 헤더를 넣을 것
   - Preview env 제약: `ADMIN_USER_IDS`가 Production 전용이라 `/admin`은 전부 `/`로 리다이렉트, 크론은 실행되지 않고, YouTube·Resend·CoolSMS 키도 없다. `NEXT_PUBLIC_APP_URL`은 `dev` 브랜치 한정으로 `https://dev.withsempre.com`(곡 분석 self-fetch가 프로덕션으로 새지 않게). DB는 프로덕션과 분리돼 있다고 가정하지 말 것
 - **CI 게이트**: `.github/workflows/test.yml`이 `main`/`develop` push와 `main` 대상 PR에서 `npm ci → lint → test:ci → build`. 그 외 브랜치 push는 CI가 돌지 않으므로 push 전 로컬에서 같은 3종을 돌릴 것. (원격에는 `develop`이 아니라 `dev` 브랜치가 있어 실질적으로 `main`과 PR에서만 돈다)
 - **에이전트 워크플로**(`agent-review/issue/autofix/daily.yml`): `scripts/agents/runner.ts <review-pr|review-push|classify-issue|daily-summary|auto-fix>` 를 Anthropic SDK로 실행해 GitHub/Slack에 보고. 트리거는 review=`main` push·PR, issue=이슈 생성, daily=스케줄, autofix=수동(`workflow_dispatch`). 모델은 `scripts/agents/types.ts`의 `MODEL` 상수 한 곳에서 정한다
