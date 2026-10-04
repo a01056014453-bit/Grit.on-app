@@ -71,7 +71,7 @@ src/
 
 ```
 main   → Production 배포 (withsempre.com)
-dev    → 개발용 (Preview 배포 추후 세팅)
+dev    → 머지 전 확인용 Preview 배포 (dev.withsempre.com)
 ```
 
 - `main`에 직접 푸시하면 **즉시 프로덕션 배포**됩니다

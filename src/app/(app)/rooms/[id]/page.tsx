@@ -84,12 +84,11 @@ function formatDate(dateString: string) {
   return date.toLocaleDateString("ko-KR", { month: "numeric", day: "numeric" }) + "일";
 }
 
-function getDaysUntilDeadline(deadline: string): number {
-  const now = new Date();
-  const deadlineDate = new Date(deadline);
-  return Math.ceil(
-    (deadlineDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-  );
+/** 마감일이 없거나 파싱 불가면 null */
+function getDaysUntilDeadline(deadline: string): number | null {
+  const deadlineTime = new Date(deadline).getTime();
+  if (!deadline || Number.isNaN(deadlineTime)) return null;
+  return Math.ceil((deadlineTime - Date.now()) / (1000 * 60 * 60 * 24));
 }
 
 export default function RoomDetailPage() {
@@ -328,9 +327,11 @@ export default function RoomDetailPage() {
           <Music className="w-5 h-5 text-amber-500 mx-auto mb-1.5" />
           <div className={cn(
             "text-lg font-bold",
-            daysUntilDeadline <= 3 ? "text-red-500" : "text-fg-primary"
+            daysUntilDeadline !== null && daysUntilDeadline <= 3 ? "text-red-500" : "text-fg-primary"
           )}>
-            D{daysUntilDeadline >= 0 ? `-${daysUntilDeadline}` : `+${Math.abs(daysUntilDeadline)}`}
+            {daysUntilDeadline === null
+              ? "미정"
+              : `D${daysUntilDeadline >= 0 ? `-${daysUntilDeadline}` : `+${Math.abs(daysUntilDeadline)}`}`}
           </div>
           <div className="text-[10px] text-fg-tertiary">마감</div>
         </div>

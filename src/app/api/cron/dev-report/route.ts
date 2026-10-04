@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
     }
 
     // ─── 3. 주요 API 에러 체크 (간이 헬스체크) ───
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://griton-app.vercel.app";
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://withsempre.com";
     const endpoints = [
       { name: "랭킹 API", url: `${appUrl}/api/rankings` },
       { name: "메인 페이지", url: appUrl },

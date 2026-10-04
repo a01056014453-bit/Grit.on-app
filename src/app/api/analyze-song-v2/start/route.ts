@@ -218,11 +218,14 @@ async function runAnalysisInBackground({
     console.log(`[Background] 시작: ${jobId} | ${composer} - ${title}`);
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://withsempre.com";
+    // Preview(dev.withsempre.com)는 Vercel 배포 보호가 걸려 있어 서버 간 호출에 우회 헤더가 필요하다
+    const bypassSecret = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
     const res = await fetch(`${baseUrl}/api/analyze-song-v2`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "x-internal-call": process.env.INTERNAL_CALL_SECRET ?? "",
+        ...(bypassSecret ? { "x-vercel-protection-bypass": bypassSecret } : {}),
       },
       body: JSON.stringify({ composer, title, instrument }),
     });

@@ -77,9 +77,13 @@ TEST_BASE_URL=http://localhost:3000 npx vitest run tests/api   # 로컬 dev 서�
 ### CI · 배포
 
 - **배포**: 별도 스크립트 없음. `main`에 push하면 Vercel이 즉시 프로덕션 배포 → **`main` 직접 push 금지**, 브랜치 → PR → 머지
+- **dev 확인 환경**: https://dev.withsempre.com 은 Vercel에서 `dev` 브랜치에 묶인 Preview 배포. 머지 전 작업을 올려 보려면 `git push origin <작업브랜치>:dev`(fast-forward만, force 금지). CI는 돌지 않고 Vercel 빌드가 유일한 게이트
+  - Vercel 배포 보호(Vercel Authentication)가 걸려 있어 **팀 Vercel 계정 로그인 후에만 열린다**(비로그인 `curl`은 302). 서버 간 self-fetch는 로그인할 수 없으므로 `x-vercel-protection-bypass: VERCEL_AUTOMATION_BYPASS_SECRET`(Vercel이 자동 주입) 헤더를 붙여야 한다 — `analyze-song-v2/start`가 기준. dev에서 self-fetch를 새로 만들면 같은 헤더를 넣을 것
+  - Preview env 제약: `ADMIN_USER_IDS`가 Production 전용이라 `/admin`은 전부 `/`로 리다이렉트, 크론은 실행되지 않고, YouTube·Resend·CoolSMS 키도 없다. `NEXT_PUBLIC_APP_URL`은 `dev` 브랜치 한정으로 `https://dev.withsempre.com`(곡 분석 self-fetch가 프로덕션으로 새지 않게). DB는 프로덕션과 분리돼 있다고 가정하지 말 것
 - **CI 게이트**: `.github/workflows/test.yml`이 `main`/`develop` push와 `main` 대상 PR에서 `npm ci → lint → test:ci → build`. 그 외 브랜치 push는 CI가 돌지 않으므로 push 전 로컬에서 같은 3종을 돌릴 것. (원격에는 `develop`이 아니라 `dev` 브랜치가 있어 실질적으로 `main`과 PR에서만 돈다)
-- **에이전트 워크플로**(`agent-review/issue/autofix/daily.yml`): `scripts/agents/runner.ts <review-pr|review-push|classify-issue|daily-summary|auto-fix>` 를 Anthropic SDK로 실행해 GitHub/Slack에 보고
-- **크론**: `vercel.json`에 정의, 전부 `/api/cron/*` + `/api/feedback/expire-check`. 프로덕션 유일 트리거이므로 경로를 옮기면 `vercel.json`도 같이 수정
+- **에이전트 워크플로**(`agent-review/issue/autofix/daily.yml`): `scripts/agents/runner.ts <review-pr|review-push|classify-issue|daily-summary|auto-fix>` 를 Anthropic SDK로 실행해 GitHub/Slack에 보고. 트리거는 review=`main` push·PR, issue=이슈 생성, daily=스케줄, autofix=수동(`workflow_dispatch`). 모델은 `scripts/agents/types.ts`의 `MODEL` 상수 한 곳에서 정한다
+- **크론**: `vercel.json`에 정의, 전부 `/api/cron/*` + `/api/feedback/expire-check`. 프로덕션 유일 트리거이므로 경로를 옮기면 `vercel.json`도 같이 수정. 스케줄은 UTC
+  - ⚠️ 라우트 파일이 있다고 실행되는 게 아니다. `cron/analyze-designated`는 `vercel.json`에 없고(수동 호출 전용), `cron/pre-analyze`는 스케줄이 `30 15 1 1 *`(연 1회)라 사실상 꺼져 있다 — 라우트 주석의 "매일 실행"은 stale
 
 ### 빌드 함정
 
@@ -89,12 +93,21 @@ TEST_BASE_URL=http://localhost:3000 npx vitest run tests/api   # 로컬 dev 서�
 
 ## 아키텍처 핵심 흐름
 
+### 라우트 구조
+- `app/(app)/*` — 로그인 필요한 본 앱. `(app)/layout.tsx`가 `AuthGuard` → `TrackPageView` → `AppShell`(하단 `BottomNavigation`)로 감싼다. 하단 탭은 `useTeacherMode()` 결과에 따라 학생용/선생님용 세트로 바뀐다
+- `app/(landing)/*` — 비로그인 공개 페이지(랜딩, 온보딩·로그인·프로필 설정, 약관·개인정보·지원)
+- `app/admin/*` — 운영 콘솔. 데이터는 anon 클라이언트가 아니라 `lib/admin/queries.ts` → `/api/admin/*`(service role)로만 읽는다
+- `app/auth/*`(OAuth 콜백), `app/invite/[token]`(선생님 초대 수락), `app/mockups/*`(개발 전용)
+- 루트 `layout.tsx`의 `components/SplashWrapper.tsx`는 스플래시 표시 외에 **전 유저 대상 1회성 정리**(`runDataMigration`)를 돌린다: `CURRENT_DATA_VERSION`이 로컬 값과 다르면 알림·구 온보딩 키 삭제 + IndexedDB `sempre_db` 삭제 + 서비스워커 unregister + 캐시 전체 삭제. 이 버전 숫자를 올리면 모든 기기에서 다시 실행되므로 함부로 올리지 말 것
+- 녹음 중 탭 이동은 `hooks/usePracticeGuard.ts`(모듈 전역 상태)가 가로채 일시정지/종료 확인 모달을 띄운다
+
 ### 인증·인가
 - `src/middleware.ts` → `lib/supabase-middleware.ts`의 `updateSession()`: 매 요청 세션 쿠키 갱신. `/admin`은 로그인 상태에서 `ADMIN_USER_IDS`(쉼표 구분)에 없으면 `/`로 리다이렉트
-- 페이지 보호는 `components/AuthGuard.tsx`(`(app)` 라우트 그룹). 세션 확인 → 온보딩 여부 → `pullUserData()` → 푸시 구독 순
-- `/admin` 미들웨어는 fail-closed: `ADMIN_USER_IDS`가 비어 있으면 로그인 유저도 전부 `/`로 리다이렉트. `/mockups`(개발용 화면 클론)는 `mockups/layout.tsx`가 프로덕션에서 404 처리
+- 페이지 보호는 `components/AuthGuard.tsx`(`(app)` 라우트 그룹). `runStorageMigration()` → 세션 확인(없으면 `/onboarding/login`) → 로컬 `sempre-onboarding-done` 플래그 확인 → **플래그가 없을 때만** 서버 프로필 조회 후 `pullUserData()`(다른 기기에서 가입한 유저 복원), 프로필도 없으면 `/onboarding` → 푸시 구독
+- `/admin` 미들웨어는 fail-closed: `ADMIN_USER_IDS`가 비어 있으면 로그인 유저도 전부 `/`로 리다이렉트. 비로그인 요청은 미들웨어가 통과시키고 `components/admin/AdminGuard.tsx`가 이메일/비밀번호 로그인 폼 + `/api/auth/check-admin`으로 검증한다. `/api/admin/*` 라우트는 각자 `ADMIN_USER_IDS`를 다시 확인한다(미들웨어만 믿지 않음). `/mockups`(개발용 화면 클론)는 `mockups/layout.tsx`가 프로덕션에서 404 처리
 - 소셜 로그인은 provider별 커스텀 콜백(`app/auth/{google,kakao,apple}/callback` → `/api/auth/*`에서 code→id_token 교환 → `signInWithIdToken`). `app/auth/callback`은 Supabase PKCE. `/api/auth/kakao`는 로그인이 아니라 **선생님 본인인증 전용**
 - API Route 유저 식별은 `lib/api-auth.ts`의 `getRequestUserId(request)`(쿠키 → Bearer 순)가 정식 헬퍼. 기존 라우트 다수가 `createServerClient().auth.getUser()`를 인라인으로 복붙했지만 **신규 코드는 헬퍼를 쓸 것**
+- 유저 식별은 **반드시 세션에서** 얻는다. body·query로 받은 `userId`/`studentId`/`expertId`를 소유자로 신뢰하지 말 것(`/api/sync-practice`처럼 body 값을 무시하고 세션 id로 덮어쓰는 것이 기준 패턴). 이 원칙을 아직 따르지 않는 기존 라우트가 남아 있으니, 손대는 김에 세션 기반으로 바꿀 것
 - 서버 전용 시크릿: `CRON_SECRET`(`Authorization: Bearer`), `INTERNAL_CALL_SECRET`(`x-internal-call` 헤더, **16자 이상일 때만 유효**). 통과 시 rate limit 무제한 + 캐시 무시. cron 라우트 가드는 전부 `if (!cronSecret || ...)`(fail-closed) — 시크릿 미설정이면 401. **신규 cron도 같은 패턴**으로
 
 ### DB 접근 3계층
@@ -105,15 +118,18 @@ TEST_BASE_URL=http://localhost:3000 npx vitest run tests/api   # 로컬 dev 서�
 | 서버 (RLS 우회, service role) | `supabaseServer` | `lib/supabase-server.ts` — API Route 전용 |
 
 - `lib/queries/*`는 도메인별 Supabase 접근 레이어(profiles, feedback, rooms, teachers…). 패턴: **읽기는 anon 클라이언트 직접, 쓰기는 `dbMutate()`**
-- `/api/db/mutate`는 테이블 allowlist(`TABLE_USER_COLUMN`) + **insert/upsert 시에만** 소유자 컬럼을 세션 user.id로 강제 주입. **update/delete는 클라이언트가 보낸 `filters`만 적용**하므로 호출부에서 소유자 컬럼을 filters에 반드시 포함할 것. 새 테이블을 쓰려면 allowlist에 추가
-- `/api/db/query`는 읽기 전용 allowlist(rooms, schools, song_analyses, composers 등) + `filter=column.op.value`
-- ⚠️ `lib/db.ts`는 Supabase가 아니라 **IndexedDB 래퍼**(DB명 `griton_db`, store `practice_sessions`) — 연습 세션의 1차 저장소. DB 이름을 바꾸면 기존 유저 데이터가 사라진다
+- `/api/db/mutate`는 테이블 allowlist(`TABLE_USER_COLUMN`) + **insert/upsert 시에만** 소유자 컬럼을 세션 user.id로 강제 주입. **update/delete는 클라이언트가 보낸 `filters`만 적용**하므로 호출부에서 소유자 컬럼을 filters에 반드시 포함할 것. 새 테이블을 쓰려면 allowlist에 추가. `feedbacks`는 소유자 주입이 없는 예외(`__skip__`), `profiles`는 닉네임 중복 시 409
+- `/api/db/query`는 로그인 필수 + 읽기 전용 allowlist(rooms, schools, song_analyses, composers 등) + `filter=column.op.value`. 필터는 **1개**, 연산자는 `eq|neq|gt|lt`뿐이고 항상 `select("*")` — 그 이상이 필요하면 전용 라우트를 만들 것
+- ⚠️ `lib/db.ts`는 Supabase가 아니라 **IndexedDB 래퍼**(DB명 `griton_db`, store `practice_sessions`) — 연습 세션의 1차 저장소. DB 이름을 바꾸면 기존 유저 데이터가 사라진다(`sempre_db`라는 이름은 `SplashWrapper`가 삭제 대상으로 쓰므로 더더욱 금지)
 
 ### 로컬 우선 저장 + 서버 동기화
-- 앱은 **localStorage / IndexedDB-first**. 키 프리픽스는 `sempre-*`(레거시 `grit-on-*`/`griton_*`는 `lib/storage-migration.ts`의 `runStorageMigration()`이 AuthGuard 진입 시 이관). 신규 키는 `sempre-` 프리픽스로
-- `lib/storage-keys.ts`의 상수는 3개뿐이고 나머지 키는 각 `*-store.ts`에 흩어져 있음 — 새 키를 만들면 여기 등록
+- 앱은 **localStorage / IndexedDB-first**. 신규 키는 `sempre-` 프리픽스로
+- ⚠️ **`grit-on-*` 키는 레거시가 아니라 현역이다.** 드릴·루틴·일일 목표·날짜별 완료/스케줄·`grit-on-profile`(선생님 모드 포함)은 지금도 `grit-on-*` 이름으로 읽고 쓰고 동기화한다. `lib/storage-migration.ts`의 `runStorageMigration()`은 AuthGuard 진입 시 `sempre-*`로 **1회 복사**만 하고(원본 유지, 이후 갱신 없음) 그 사본을 읽는 코드는 거의 없다. 기존 키 이름을 `sempre-*`로 "정리"하면 읽기·쓰기·동기화 목록이 어긋나 데이터가 사라진 것처럼 보이므로, 바꾸려면 모든 참조 + `sync-user-data.ts`의 키 목록 + 서버에 저장된 JSON까지 함께 옮겨야 한다
+- `lib/storage-keys.ts`의 상수는 3개뿐이고 나머지 키는 각 `*-store.ts`·페이지에 문자열로 흩어져 있음 — 새 키를 만들면 여기 등록
 - 연습 세션: IndexedDB(`synced=false`) → `lib/sync-practice.ts` → `POST /api/sync-practice` → 오디오 Blob Storage 업로드 → `markSessionSynced()`
-- 그 외 유저 데이터: `lib/sync-user-data.ts`가 지정 키들을 모아 `POST /api/sync-user-data` → **Supabase Storage `recordings` 버킷의 `sync/{userId}.json`**(테이블 아님). 쓰기는 `pushUserDataDebounced(key)`(1.5초), 로그인 시 `pullUserData()`
+- 그 외 유저 데이터: `lib/sync-user-data.ts`가 지정 키들을 모아 `POST /api/sync-user-data` → **Supabase Storage `recordings` 버킷의 `sync/{userId}.json`**(테이블 아님). 쓰기는 `pushUserDataDebounced(key)`(1.5초). pull은 OAuth 콜백 페이지와 AuthGuard(새 기기), 그리고 홈(`(app)/page.tsx`)이 마운트·탭 복귀 때마다 `syncUserData()`(pull → 전체 push) + `syncPracticeSessions()`를 돌린다
+  - 전체 push 대상은 `sync-user-data.ts`의 `SINGLE_KEYS` + 날짜 프리픽스(최근 90일) **allowlist** — 새 키는 여기 추가해야 기기 간 동기화된다. 스토어가 실제로 쓰는 키 이름과 이 목록이 일치하는지 확인할 것(이름이 어긋나면 조용히 누락된다)
+  - pull 병합 규칙은 키마다 다르다: 완료/스케줄/커스텀 드릴은 union, `grit-on-profile`은 로컬 우선, 나머지는 서버 값이 로컬을 덮어쓴다
 - `hooks/usePracticeSessions.ts`는 IndexedDB + 모듈 전역 캐시(3초) + `visibilitychange` 재로드. `lib/page-cache.ts`는 SWR식 localStorage 캐시(stale 5분)
 - 로그인 전 유저 ID: `lib/user-id.ts`의 `getUserId()`가 로컬 UUID 발급, `getAuthUserId()`는 Supabase user.id 우선
 - 선생님 모드 상태는 `lib/teacher-store.ts` + `hooks/useTeacherMode.ts` 한 경로(localStorage + dbMutate + pushUserDataDebounced 혼합)
@@ -127,9 +143,12 @@ TEST_BASE_URL=http://localhost:3000 npx vitest run tests/api   # 로컬 dev 서�
 6. 저장 전 `lib/analysis-validation.ts`의 `validateAnalysisOutput()` — **실패해도 저장은 진행**(경고만). 결과는 `song_analyses.content` JSONB, 개인 이력은 `user_analysis_history`
 - v1(`/api/analyze-song`)은 단일 gpt-4o 호출·캐시 없음, 레거시. 클라이언트 측 "분석한 곡" 목록은 `lib/user-analyses.ts`가 정본(`analyzed-songs-store.ts`, `song-analysis-store.ts`는 잔재 — 새로 참조하지 말 것)
 - Rate limit: UI 경로의 일일 한도는 **`start/route.ts`의 `checkDailyQuota`**(로그인 유저는 `analysis_jobs` 24h 건수, 비로그인은 IP 인메모리)에서 건다. 본 분석 라우트의 `lib/rate-limiters.ts` 한도(Free 1·Pro 5/일, IP 기반)는 직접 호출에만 적용되고 내부 호출(start→v2)은 우회하므로 여기에 한도를 추가해도 UI에는 효과 없음. `lib/rate-limit.ts`는 **인메모리**라 서버리스 인스턴스마다 따로 센다
-- 크론 `pre-analyze`/`analyze-designated`가 `lib/data/popular-pieces.ts` / `designated_pieces` 중 미분석 곡을 self-fetch로 채움
+- 본 분석 라우트를 **직접** 호출하는 화면도 있다: `songs/[id]`(POST)와 `admin/music-db`·`admin/composer-resources`(GET 목록 조회·POST 재분석). 라우트가 export하는 메서드는 GET·POST뿐이다. 이쪽은 job/폴링 없이 응답을 끝까지 기다린다
+- 내부 호출 판정은 `x-internal-call: INTERNAL_CALL_SECRET` **또는** `Authorization: Bearer CRON_SECRET`이고, 둘 다 값이 16자 이상일 때만 인정된다. 내부 호출은 어드민 취급이라 캐시를 무시하고 항상 재분석한다
+- `cron/pre-analyze`(`lib/data/popular-pieces.ts`) / `cron/analyze-designated`(`designated_pieces`)는 미분석 곡을 self-fetch로 채우는 배치지만 현재 스케줄에 걸려 있지 않다(위 "크론" 참조) — 필요하면 `CRON_SECRET` Bearer로 수동 호출
 
 ### 알림·이벤트
+- 영상 업로드는 **signed URL 직접 업로드**(`hooks/useVideoUpload.ts` → `/api/feedback/upload-url`, type `student|demo|room`). Vercel 함수 body 한도(~4.5MB) 때문에 파일을 API Route로 보내면 안 된다. 용량·MIME 상한은 Storage 버킷 설정이 강제
 - 웹 푸시: 서버 `/api/push/send`(web-push VAPID), 클라이언트 래퍼 `lib/push-notify.ts`·`lib/push-subscribe.ts`, 인앱 알림은 `lib/notification-store.ts`(순수 로컬)
 - 이벤트 트래킹: `lib/analytics.ts`의 `trackEvent()` → `/api/analytics/track` → `user_events` 테이블
 - Slack: `lib/slack.ts`의 `sendSlackNotification(channel, msg)`(채널별 `SLACK_WEBHOOK_*` env). `/api/slack/events`는 서명 검증 후 Claude로 응답하는 봇
@@ -156,7 +175,7 @@ TEST_BASE_URL=http://localhost:3000 npx vitest run tests/api   # 로컬 dev 서�
 
 - **원포인트 레슨 크레딧 수익배분**: 플랫폼 70% / 선생님 30% (v2 예정 — v1은 플랫폼 100%, `docs/prd/feedback-credit-system.md` 참조)
 - **파트너**: Wonart, Leanup, Piu
-- ⚠️ **현재 무료 출시 상태**: PG(토스페이먼츠) 미연동. `/api/credits/charge`는 501 반환, 충전/Pro 버튼은 "준비 중" 안내만 표시
+- ⚠️ **현재 무료 출시 상태**: PG(토스페이먼츠) 미연동. `/api/credits/charge`는 501 반환. 크레딧·Pro UI는 숨김 — `/credits`는 `credits/layout.tsx`가 `/`로 리다이렉트하고 피드백 요청은 `credit_amount` 0으로 생성. 유료 전환 전까지 화면에 크레딧·가격 문구를 새로 넣지 말 것
 
 ---
 
@@ -217,6 +236,15 @@ TEST_BASE_URL=http://localhost:3000 npx vitest run tests/api   # 로컬 dev 서�
 | `docs/prd/*.md` | 기능별 PRD (곡 분석, 크레딧, 피드백 SLA·영상 업로드·선생님 리뷰, 랭킹) |
 | `docs/launch-checklist.md` | 출시 전 결정·수정·확인 목록과 진행 상태 |
 | `PROGRESS.md` | 초기 개발 기록 — stale, 참고만 |
+| `ABOUT.md` | 서비스 소개 — 가격 등 일부 stale |
+
+### 소스가 아닌 것 (검색 결과에 섞여도 근거로 쓰지 말 것)
+
+- `ai-analysis-full-code.txt` — 2026-02 시점 분석 코드 덤프. 현재 코드와 다르다. 실제 코드는 `src/app/api/analyze-song-v2/`, `src/lib/analysis-*.ts`
+- `data/song-analysis-cache.json` — 어디서도 import하지 않는 잔재
+- `data_collection` — `.gitmodules` 없이 남은 gitlink(빈 디렉터리)
+- `mockup-screenshots/` — `scripts/capture-mockups.mjs`가 `/mockups`를 찍은 산출물
+- `scripts/*.py`, `scripts/check-*.mjs`, `scripts/test-*.mjs` — 일회성 수동 스크립트. 앱·CI 어디에서도 실행하지 않는다
 
 ---
 
